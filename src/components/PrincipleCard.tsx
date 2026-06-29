@@ -1,0 +1,1 @@
+export function PrincipleCard({ index, text }: { index: number; text: string }) { return <div className="border-t border-line pt-5"><p className="mb-3 font-mono text-xs text-accent">{String(index).padStart(2,"0")}</p><h3 className="text-lg font-semibold tracking-[-0.03em] text-black">{text}</h3></div>; }
