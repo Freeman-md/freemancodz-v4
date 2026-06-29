@@ -1,0 +1,3 @@
+import { externalLinks } from "@/data/navigation";
+import { Button } from "./Button";
+export function CTASection({ copy }: { copy: string }) { return <section className="rounded border border-line bg-black p-8 text-white md:p-12"><p className="max-w-2xl text-3xl font-semibold tracking-[-0.04em] md:text-5xl">{copy}</p><div className="mt-8 flex flex-wrap gap-3"><Button href="/work" variant="accent">View My Work</Button><Button href={externalLinks.linkedin} variant="ghost" target="_blank" rel="noreferrer" className="!bg-black !text-white hover:!bg-ink">Connect on LinkedIn ↗</Button></div></section>; }

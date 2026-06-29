@@ -1,0 +1,11 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root { color-scheme: light; }
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; background: #fff; color: #171717; }
+::selection { background: #6366f1; color: white; }
+.container { @apply mx-auto max-w-7xl px-5 md:px-10; }
+.section { @apply py-20 md:py-28; }
