@@ -10,7 +10,7 @@ export default function AboutPage() {
       <Container className="space-y-20 py-20 md:space-y-[120px] md:py-[120px]">
         <section className="max-w-3xl">
           <h1 className="text-[38px] font-semibold leading-[1.05] tracking-[-0.04em] text-ink md:text-[64px] md:leading-[1.1]">
-            Building systems with quiet confidence.
+            { profile.aboutHeadline }
           </h1>
           <div className="mt-8 space-y-6 text-lg leading-8 text-muted">
             {profile.aboutIntro.map((paragraph) => (
