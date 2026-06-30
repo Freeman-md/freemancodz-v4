@@ -1,136 +1,169 @@
 import { Button } from "@/components/Button";
 import { CTASection } from "@/components/CTASection";
+import { Container } from "@/components/Container";
 import { ExperienceCard } from "@/components/ExperienceCard";
 import { ImagePlaceholder } from "@/components/ImagePlaceholder";
 import { PrincipleCard } from "@/components/PrincipleCard";
 import { ProjectCard } from "@/components/ProjectCard";
 import { QuoteBlock } from "@/components/QuoteBlock";
 import { SectionHeader } from "@/components/SectionHeader";
-import { externalLinks } from "@/data/navigation";
 import { experiences } from "@/data/experience";
+import { externalLinks } from "@/data/navigation";
 import { profile } from "@/data/profile";
 import { featuredProjects } from "@/data/projects";
 
 export default function Home() {
   return (
     <>
-      <section className="container grid min-h-[78vh] items-center gap-12 py-20 md:grid-cols-[1.15fr_0.85fr]">
-        <div>
-          <p className="mb-5 font-mono text-xs uppercase tracking-[0.25em] text-accent">
-            {profile.name}
-          </p>
-          <h1 className="max-w-4xl text-5xl font-semibold leading-[0.95] tracking-[-0.07em] text-black md:text-7xl">
+      <Container className="grid grid-cols-1 items-center gap-8 py-16 md:py-[120px] lg:grid-cols-12">
+        <section className="lg:col-span-7 lg:pr-12">
+          <h1 className="max-w-4xl text-[38px] font-semibold leading-[1.05] tracking-[-0.04em] text-ink md:text-[64px] md:leading-[1.1]">
             {profile.headline}
           </h1>
-          <p className="mt-8 max-w-2xl text-lg leading-8 text-muted">
-            {profile.intro}
+          <p className="mt-6 max-w-2xl text-lg leading-8 text-muted">
+            {profile.heroNote}
           </p>
-          <div className="mt-9 flex flex-wrap gap-3">
-            <Button href="/work">My Work</Button>
+          <div className="mt-10 flex flex-wrap gap-4">
+            <Button href="/work">View My Work</Button>
             <Button
               href={externalLinks.linkedin}
               variant="ghost"
               target="_blank"
               rel="noreferrer"
             >
-              LinkedIn ↗
+              LinkedIn
             </Button>
           </div>
-        </div>
-        <ImagePlaceholder
-          src={externalLinks.heroImage}
-          label="Freeman Madudili · Software Engineer"
-          className="h-[420px] md:h-[560px]"
-        />
-      </section>
-      <section className="border-y border-line bg-surface">
-        <div className="container section">
-          <SectionHeader
-            title="What I Do"
-            copy="Focused engineering support for founders and teams moving from idea to dependable product."
+        </section>
+        <section className="lg:col-span-5">
+          <ImagePlaceholder
+            src={externalLinks.heroImage}
+            label="Freeman Madudili"
+            caption="London, UK"
+            className="h-[400px] md:h-[600px]"
           />
-          <div className="grid gap-4 md:grid-cols-4">
-            {profile.services.map(([title, copy]) => (
-              <div
-                key={title}
-                className="rounded border border-line bg-white p-7"
+        </section>
+      </Container>
+
+      <section className="border-y border-line bg-surface">
+        <Container className="py-16 md:py-24">
+          <div className="mb-12 flex flex-col gap-4 border-b border-line pb-4 md:flex-row md:items-end md:justify-between">
+            <h2 className="text-2xl font-medium tracking-[-0.03em] text-ink md:text-[28px]">
+              Experience Snapshot
+            </h2>
+            {externalLinks.cv ? (
+              <a
+                href={externalLinks.cv}
+                target="_blank"
+                rel="noreferrer"
+                className="font-mono text-[12px] text-accent transition hover:underline"
               >
-                <h3 className="font-semibold text-black">{title}</h3>
-                <p className="mt-3 text-sm leading-6 text-muted">{copy}</p>
-              </div>
+                Full Resume
+              </a>
+            ) : null}
+          </div>
+          <div className="grid gap-6 md:grid-cols-3">
+            {experiences.map((experience) => (
+              <ExperienceCard key={experience.title} experience={experience} />
             ))}
           </div>
-        </div>
+        </Container>
       </section>
-      <section className="container section">
+
+      <Container className="py-16 md:py-[120px]">
+        <section className="relative overflow-hidden rounded-sm border border-black bg-black p-8 text-white md:p-12">
+          <div className="absolute inset-0 opacity-10 [background-image:radial-gradient(#ffffff_1px,transparent_1px)] [background-size:20px_20px]" />
+          <div className="relative max-w-3xl">
+            <div className="mb-6 inline-flex items-center rounded-full bg-white px-3 py-1 font-mono text-[12px] text-black">
+              Current Focus
+            </div>
+            <h2 className="text-3xl font-semibold tracking-[-0.04em] md:text-5xl">
+              AI engineering, backend reliability, and self-healing operations
+              agent research.
+            </h2>
+            <p className="mt-5 text-lg leading-8 text-neutral-300">
+              {profile.currentDirectionSupport}
+            </p>
+          </div>
+        </section>
+      </Container>
+
+      <section className="bg-white py-20 md:py-[120px]">
+        <Container>
+          <QuoteBlock>{profile.philosophyQuestion}</QuoteBlock>
+          <div className="mt-16 grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+            {profile.principles.map((principle, index) => (
+              <PrincipleCard
+                key={principle.title}
+                index={index + 1}
+                title={principle.title}
+                text={principle.body}
+              />
+            ))}
+          </div>
+        </Container>
+      </section>
+
+      <Container className="py-20 md:py-[120px]">
         <SectionHeader
-          eyebrow="How I Think"
-          title="A systems question before every build"
+          title="What I Do"
+          copy="Focused engineering support for founders and teams moving from idea to dependable product."
         />
-        <QuoteBlock>{profile.philosophyQuestion}</QuoteBlock>
-        <div className="mt-12 grid gap-8 md:grid-cols-5">
-          {profile.principles.map((p, i) => (
-            <PrincipleCard key={p} index={i + 1} text={p} />
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+          {profile.services.map(([title, copy]) => (
+            <article
+              key={title}
+              className="rounded-sm border border-line bg-white p-8 transition hover:border-neutral-300 hover:shadow-soft"
+            >
+              <h3 className="text-2xl font-medium tracking-[-0.03em] text-ink">
+                {title}
+              </h3>
+              <p className="mt-4 text-sm leading-6 text-muted">{copy}</p>
+            </article>
           ))}
         </div>
-      </section>
+      </Container>
+
       <section className="border-y border-line bg-surface">
-        <div className="container section">
+        <Container className="py-20 md:py-[120px]">
           <SectionHeader
             title="Selected Work"
-            copy="A concise view of product, automation, AI, and commercial systems work."
+            copy="Curated proof across AI product systems, automation workflows, fintech, and production-minded engineering."
           />
-          <div className="grid gap-5 md:grid-cols-2">
-            {featuredProjects.map((p) => (
-              <ProjectCard key={p.title} project={p} />
+          <div className="grid gap-6 md:grid-cols-2">
+            {featuredProjects.map((project) => (
+              <ProjectCard key={project.title} project={project} compact />
             ))}
           </div>
-          <Button href="/work" variant="ghost" className="mt-8">
-            Explore the Work Page
-          </Button>
-        </div>
+        </Container>
       </section>
-      <section className="container section">
-        <SectionHeader
-          title="Experience Snapshot"
-          copy="Two focused professional contexts: operational pressure and commercial product engineering."
-        />
-        <div className="grid gap-5 md:grid-cols-2">
-          {experiences.map((e) => (
-            <ExperienceCard key={e.title} experience={e} />
-          ))}
-        </div>
-      </section>
-      <section className="border-y border-line bg-surface">
-        <div className="container section grid gap-8 md:grid-cols-2">
-          <div>
-            <SectionHeader title="Education / Research Direction" />
-            <div className="space-y-4 text-lg leading-8 text-muted">
-              <p>{profile.education.current}</p>
-              <p>{profile.education.previous}</p>
-            </div>
-          </div>
-          <div className="rounded border border-line bg-white p-8">
-            <h3 className="text-2xl font-semibold tracking-[-0.04em] text-black">
-              Self-healing backend operations agent
-            </h3>
-            <p className="mt-5 leading-7 text-muted">
-              {profile.education.research}
-            </p>
-            <p className="mt-4 leading-7 text-muted">
-              {profile.education.support}
-            </p>
-          </div>
-        </div>
-      </section>
-      <section className="container section">
-        <SectionHeader
-          eyebrow="Current Direction"
-          title="AI-assisted software engineering"
-          copy={profile.currentDirection}
-        />
+
+      <Container className="grid gap-10 py-20 md:grid-cols-[0.9fr_1.1fr] md:py-[120px]">
+        <section>
+          <SectionHeader
+            title="Education / Research Direction"
+            copy={`${profile.education.current} ${profile.education.previous}`}
+          />
+        </section>
+        <section className="rounded-sm border border-line bg-white p-8 md:p-12">
+          <p className="font-mono text-[12px] tracking-[0.02em] text-muted">
+            Research Direction
+          </p>
+          <h3 className="mt-4 text-3xl font-semibold tracking-[-0.04em] text-ink md:text-5xl">
+            Self-healing backend operations agents.
+          </h3>
+          <p className="mt-6 text-base leading-7 text-muted md:text-lg md:leading-8">
+            {profile.education.research}
+          </p>
+          <p className="mt-4 text-base leading-7 text-muted md:text-lg md:leading-8">
+            {profile.education.support}
+          </p>
+        </section>
+      </Container>
+
+      <Container className="pb-20 md:pb-[120px]">
         <CTASection copy="Want to understand how I think and what I’ve built?" />
-      </section>
+      </Container>
     </>
   );
 }
