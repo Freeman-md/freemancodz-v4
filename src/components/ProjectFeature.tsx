@@ -71,9 +71,10 @@ export function ProjectFeature({
               href={link.href}
               target="_blank"
               rel="noreferrer"
-              className="font-mono text-[12px] text-ink underline decoration-line underline-offset-4 transition hover:text-accent"
+              className="inline-flex items-center gap-1 font-mono text-[12px] font-semibold text-ink underline decoration-line underline-offset-4 transition hover:text-accent"
             >
               {link.label}
+              <span aria-hidden="true">↗</span>
             </a>
           ))}
         </div>

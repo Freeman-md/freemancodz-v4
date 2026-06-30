@@ -38,9 +38,10 @@ export function Navbar() {
           href={externalLinks.linkedin}
           target="_blank"
           rel="noreferrer"
-          className="hidden rounded-sm border border-line px-4 py-2 font-mono text-[12px] text-ink transition hover:bg-surface md:inline-flex"
+          className="hidden items-center gap-2 rounded-sm border border-line px-4 py-2 font-mono text-[12px] text-ink transition hover:bg-surface md:inline-flex"
         >
           LinkedIn
+          <span aria-hidden="true">↗</span>
         </a>
       </nav>
       <div className="flex justify-center gap-8 border-t border-line px-5 py-3 md:hidden">

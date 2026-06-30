@@ -9,28 +9,34 @@ export function CTASection({
   copy: string;
 }) {
   return (
-    <section className="border-t border-line pt-10">
-      <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+    <section className="rounded-lg bg-black px-8 py-10 text-white md:px-12 md:py-12">
+      <div className="flex flex-col gap-8">
         <div className="max-w-3xl">
           {title ? (
-            <p className="mb-3 font-mono text-[12px] tracking-[0.02em] text-muted">
+            <p className="mb-3 font-mono text-[12px] tracking-[0.02em] text-white/65">
               {title}
             </p>
           ) : null}
-          <h2 className="text-3xl font-semibold tracking-[-0.04em] text-ink md:text-5xl">
+          <h2 className="text-3xl font-semibold tracking-[-0.04em] text-white md:text-5xl">
             {copy}
           </h2>
         </div>
         <div className="flex flex-wrap gap-3">
-          <Button href="/work">View My Work</Button>
           <Button
+            href="/work"
+            className="rounded-[3px] border-[#4f46e5] bg-[#4f46e5] text-white hover:border-[#6366f1] hover:bg-[#6366f1]"
+          >
+            View My Work
+          </Button>
+          <a
             href={externalLinks.linkedin}
-            variant="ghost"
             target="_blank"
             rel="noreferrer"
+            className="inline-flex items-center justify-center gap-2 rounded-[3px] border border-white bg-transparent px-5 py-3 font-mono text-[12px] font-medium tracking-[0.02em] text-white transition hover:bg-white/10"
           >
-            LinkedIn
-          </Button>
+            Connect on LinkedIn
+            <span aria-hidden="true">↗</span>
+          </a>
         </div>
       </div>
     </section>
