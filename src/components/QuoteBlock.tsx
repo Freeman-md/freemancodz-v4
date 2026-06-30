@@ -1,2 +1,9 @@
 import type { ReactNode } from "react";
-export function QuoteBlock({ children }: { children: ReactNode }) { return <blockquote className="border-l-4 border-black bg-white py-3 pl-8 text-2xl font-semibold leading-tight tracking-[-0.04em] text-black md:pl-16 md:text-4xl">{children}</blockquote>; }
+
+export function QuoteBlock({ children }: { children: ReactNode }) {
+  return (
+    <blockquote className="mx-auto max-w-4xl border-l-4 border-black pl-8 text-left text-3xl font-medium leading-[1.4] tracking-[-0.03em] text-ink md:text-[32px]">
+      {children}
+    </blockquote>
+  );
+}

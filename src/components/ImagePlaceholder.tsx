@@ -1,17 +1,38 @@
-export function ImagePlaceholder({ src, label, className = "" }: { src?: string; label: string; className?: string }) {
-  if (src) {
-    return (
-      <div className={`relative overflow-hidden rounded border border-line bg-surface ${className}`}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={src} alt={label} className="h-full w-full object-cover grayscale" />
-      </div>
-    );
-  }
+type Props = {
+  src?: string;
+  label: string;
+  className?: string;
+  caption?: string;
+};
+
+export function ImagePlaceholder({
+  src,
+  label,
+  className = "",
+  caption,
+}: Props) {
   return (
-    <div className={`relative overflow-hidden rounded border border-line bg-surface ${className}`}>
-      <div className="absolute inset-0 bg-[linear-gradient(135deg,#fafafa,#ededed)]" />
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(99,102,241,0.14),transparent_35%)]" />
-      <div className="absolute bottom-4 left-4 rounded bg-white px-3 py-2 font-mono text-xs text-ink shadow-soft">{label}</div>
+    <div
+      className={`relative overflow-hidden rounded-sm border border-line bg-surface ${className}`}
+    >
+      {src ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={src}
+          alt={label}
+          className="h-full w-full object-cover grayscale"
+        />
+      ) : (
+        <>
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(99,102,241,0.14),_transparent_30%),linear-gradient(160deg,#ffffff,#efeded_75%)]" />
+          <div className="absolute inset-x-6 top-6 h-px bg-black/6" />
+          <div className="absolute inset-x-6 top-10 h-px bg-black/4" />
+          <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-black/8 to-transparent" />
+        </>
+      )}
+      <div className="absolute bottom-4 right-4 rounded-sm border border-line bg-white/90 px-3 py-1 font-mono text-[11px] text-muted backdrop-blur">
+        {caption || label}
+      </div>
     </div>
   );
 }

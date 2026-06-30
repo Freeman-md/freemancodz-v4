@@ -1,3 +1,48 @@
 import type { Project } from "@/data/projects";
 import { Chip } from "./Chip";
-export function ProjectCard({ project, detailed = false }: { project: Project; detailed?: boolean }) { return <article className="group rounded border border-line bg-white p-8 transition hover:border-neutral-300 hover:shadow-soft"><div className="mb-5 flex flex-wrap items-center gap-2"><Chip>{project.category}</Chip><Chip>{project.role}</Chip></div><h3 className="text-2xl font-semibold tracking-[-0.04em] text-black md:text-3xl">{project.title}</h3><p className="mt-3 leading-7 text-muted">{project.summary}</p><div className="mt-5 flex flex-wrap gap-2">{project.stack.slice(0, detailed ? project.stack.length : 5).map((s)=><Chip key={s}>{s}</Chip>)}</div><p className="mt-6 border-l-2 border-black pl-4 text-sm leading-6 text-ink">{project.outcome}</p>{detailed && <div className="mt-6 space-y-4 text-sm leading-7 text-muted"><p>{project.detail}</p>{project.collaboration && <p>{project.collaboration}</p>}{project.positioning && <p>{project.positioning}</p>}{project.future && <p>{project.future}</p>}</div>}<div className="mt-7 flex flex-wrap gap-4">{project.links.map((link)=><a key={link.label} href={link.href} target="_blank" rel="noreferrer" className="font-mono text-xs font-semibold text-black underline decoration-line underline-offset-4 transition hover:text-accent">{link.label} ↗</a>)}</div></article>; }
+
+export function ProjectCard({
+  project,
+  compact = false,
+}: {
+  project: Project;
+  compact?: boolean;
+}) {
+  return (
+    <article className="group flex h-full flex-col rounded-sm border border-line bg-white p-8 transition hover:border-neutral-300 hover:shadow-soft">
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex flex-wrap gap-2">
+          <Chip>{project.category}</Chip>
+          <Chip>{project.role}</Chip>
+        </div>
+      </div>
+      <h3 className="mt-6 text-2xl font-medium tracking-[-0.03em] text-ink">
+        {project.title}
+      </h3>
+      <p className="mt-3 text-sm leading-6 text-muted">{project.summary}</p>
+      <div className="mt-5 flex flex-wrap gap-2">
+        {project.stack
+          .slice(0, compact ? 3 : 5)
+          .map((item) => (
+            <Chip key={item}>{item}</Chip>
+          ))}
+      </div>
+      <p className="mt-6 border-l-4 border-black pl-4 text-sm leading-6 text-ink">
+        {project.outcome}
+      </p>
+      <div className="mt-auto flex flex-wrap gap-4 pt-8">
+        {project.links.map((link) => (
+          <a
+            key={link.label}
+            href={link.href}
+            target="_blank"
+            rel="noreferrer"
+            className="font-mono text-[12px] text-ink underline decoration-line underline-offset-4 transition hover:text-accent"
+          >
+            {link.label}
+          </a>
+        ))}
+      </div>
+    </article>
+  );
+}
