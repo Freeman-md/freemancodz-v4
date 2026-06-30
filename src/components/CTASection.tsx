@@ -1,5 +1,4 @@
 import { externalLinks } from "@/data/navigation";
-import { Button } from "./Button";
 
 export function CTASection({
   title,
@@ -22,12 +21,12 @@ export function CTASection({
           </h2>
         </div>
         <div className="flex flex-wrap gap-3">
-          <Button
+          <a
             href="/work"
-            className="rounded-[3px] border-[#4f46e5] bg-[#4f46e5] text-white hover:border-[#6366f1] hover:bg-[#6366f1]"
+            className="inline-flex items-center justify-center gap-2 rounded-[3px] border border-[#4f46e5] bg-[#4f46e5] px-5 py-3 font-mono text-[12px] font-medium tracking-[0.02em] text-white transition hover:border-[#6366f1] hover:bg-[#6366f1]"
           >
             View My Work
-          </Button>
+          </a>
           <a
             href={externalLinks.linkedin}
             target="_blank"

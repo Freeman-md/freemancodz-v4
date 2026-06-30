@@ -6,17 +6,12 @@ export const envLinks = {
 };
 
 export const siteAssetLinks = {
-  cv: "https://apiabkeh4moyiebb.private.blob.vercel-storage.com/pdfs/cv?vercel-blob-valid-until=1782808060181&vercel-blob-delegation=eyJzdG9yZUlkIjoic3RvcmVfYXBpQWJLRUg0TU9ZSWViYiIsIm93bmVySWQiOiJ0ZWFtX0Q4S3ZZT21QcElZNWxpUUpsaVNLTTdrMSIsInBhdGhuYW1lIjoiKiIsIm9wZXJhdGlvbnMiOlsiZ2V0IiwiaGVhZCJdLCJ2YWxpZFVudGlsIjoxNzgyODUwNjUxNzg2LCJpYXQiOjE3ODI4MDc0NTE4NjF9.97qMpXJ4sILT5OIIH9YBsSY9ukvWgIa9TGpETER_nSk&vercel-blob-signature=eFsjWN7UA_DLEU8QQDuSdZS9r5R_-t5dF2w34tN4oGs",
-  heroImage:
-    "https://apiabkeh4moyiebb.private.blob.vercel-storage.com/images/me?vercel-blob-valid-until=1782808110689&vercel-blob-delegation=eyJzdG9yZUlkIjoic3RvcmVfYXBpQWJLRUg0TU9ZSWViYiIsIm93bmVySWQiOiJ0ZWFtX0Q4S3ZZT21QcElZNWxpUUpsaVNLTTdrMSIsInBhdGhuYW1lIjoiKiIsIm9wZXJhdGlvbnMiOlsiZ2V0IiwiaGVhZCJdLCJ2YWxpZFVudGlsIjoxNzgyODUwNjUxNzg2LCJpYXQiOjE3ODI4MDc0NTE4NjF9.97qMpXJ4sILT5OIIH9YBsSY9ukvWgIa9TGpETER_nSk&vercel-blob-signature=hcmMzJeHMHDVVhMCCiCNi83hWuM_ZexVvsAentT5Siw",
+  cv: "/api/blob/pdfs/cv",
+  heroImage: "/api/blob/images/me",
   outsideImages: {
-    Strength:
-      "https://apiabkeh4moyiebb.private.blob.vercel-storage.com/images/strength-training?vercel-blob-valid-until=1782808129985&vercel-blob-delegation=eyJzdG9yZUlkIjoic3RvcmVfYXBpQWJLRUg0TU9ZSWViYiIsIm93bmVySWQiOiJ0ZWFtX0Q4S3ZZT21QcElZNWxpUUpsaVNLTTdrMSIsInBhdGhuYW1lIjoiKiIsIm9wZXJhdGlvbnMiOlsiZ2V0IiwiaGVhZCJdLCJ2YWxpZFVudGlsIjoxNzgyODUwNjUxNzg2LCJpYXQiOjE3ODI4MDc0NTE4NjF9.97qMpXJ4sILT5OIIH9YBsSY9ukvWgIa9TGpETER_nSk&vercel-blob-signature=TpgpIdqI7youwrXZkeVp-3FMfk8CbsoAsRvrceRGe1k",
-    Endurance:
-      "https://apiabkeh4moyiebb.private.blob.vercel-storage.com/images/running?vercel-blob-valid-until=1782808120515&vercel-blob-delegation=eyJzdG9yZUlkIjoic3RvcmVfYXBpQWJLRUg0TU9ZSWViYiIsIm93bmVySWQiOiJ0ZWFtX0Q4S3ZZT21QcElZNWxpUUpsaVNLTTdrMSIsInBhdGhuYW1lIjoiKiIsIm9wZXJhdGlvbnMiOlsiZ2V0IiwiaGVhZCJdLCJ2YWxpZFVudGlsIjoxNzgyODUwNjUxNzg2LCJpYXQiOjE3ODI4MDc0NTE4NjF9.97qMpXJ4sILT5OIIH9YBsSY9ukvWgIa9TGpETER_nSk&vercel-blob-signature=OxZEsJ5X-WuWpY35lPFXXnV5-qKUrr-N0d_3j7hQZaQ",
-    Community:
-      "https://apiabkeh4moyiebb.private.blob.vercel-storage.com/images/community?vercel-blob-valid-until=1782808089158&vercel-blob-delegation=eyJzdG9yZUlkIjoic3RvcmVfYXBpQWJLRUg0TU9ZSWViYiIsIm93bmVySWQiOiJ0ZWFtX0Q4S3ZZT21QcElZNWxpUUpsaVNLTTdrMSIsInBhdGhuYW1lIjoiKiIsIm9wZXJhdGlvbnMiOlsiZ2V0IiwiaGVhZCJdLCJ2YWxpZFVudGlsIjoxNzgyODUwNjUxNzg2LCJpYXQiOjE3ODI4MDc0NTE4NjF9.97qMpXJ4sILT5OIIH9YBsSY9ukvWgIa9TGpETER_nSk&vercel-blob-signature=R8yxQ4tyyL5SPx-pvy2AAs7GlgffnrtMPCPdv6HPIIo",
-    "Continuous Learning":
-      "https://apiabkeh4moyiebb.private.blob.vercel-storage.com/images/learning?vercel-blob-valid-until=1782808100813&vercel-blob-delegation=eyJzdG9yZUlkIjoic3RvcmVfYXBpQWJLRUg0TU9ZSWViYiIsIm93bmVySWQiOiJ0ZWFtX0Q4S3ZZT21QcElZNWxpUUpsaVNLTTdrMSIsInBhdGhuYW1lIjoiKiIsIm9wZXJhdGlvbnMiOlsiZ2V0IiwiaGVhZCJdLCJ2YWxpZFVudGlsIjoxNzgyODUwNjUxNzg2LCJpYXQiOjE3ODI4MDc0NTE4NjF9.97qMpXJ4sILT5OIIH9YBsSY9ukvWgIa9TGpETER_nSk&vercel-blob-signature=BKZIMHijXlSt3JGF2C498RgJHUYRhOnlwlG2pu6v-M8",
+    Strength: "/api/blob/images/strength-training",
+    Endurance: "/api/blob/images/running",
+    Community: "/api/blob/images/community",
+    "Continuous Learning": "/api/blob/images/learning",
   },
 };

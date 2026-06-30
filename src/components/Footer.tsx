@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { Button } from "@/components/Button";
 import { externalLinks } from "@/data/navigation";
 
 export function Footer({ cvUrl }: { cvUrl?: string }) {
@@ -8,10 +8,13 @@ export function Footer({ cvUrl }: { cvUrl?: string }) {
         <p className="font-mono text-[11px] font-semibold text-muted">
           © 2026 Freeman Madudili. Built with technical precision.
         </p>
-        <div className="flex flex-wrap gap-6 font-mono text-[12px] text-muted">
-          <Link href="/work" className="transition hover:text-accent">
-            View Work
-          </Link>
+        <div className="flex flex-wrap items-center gap-4 font-mono text-[12px] text-muted">
+          <Button
+            href="/work"
+            className="rounded-[3px] border-[#4f46e5] bg-[#4f46e5] px-4 py-2 text-white hover:border-[#6366f1] hover:bg-[#6366f1]"
+          >
+            View My Work
+          </Button>
           <a
             href={externalLinks.linkedin}
             target="_blank"
