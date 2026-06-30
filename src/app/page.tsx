@@ -11,13 +11,17 @@ import { experiences } from "@/data/experience";
 import { externalLinks } from "@/data/navigation";
 import { profile } from "@/data/profile";
 import { featuredProjects } from "@/data/projects";
+import { siteAssetLinks } from "@/lib/links";
 
 export default function Home() {
   return (
     <>
       <Container className="grid grid-cols-1 items-center gap-8 py-16 md:py-[120px] lg:grid-cols-12">
         <section className="lg:col-span-7 lg:pr-12">
-          <h1 className="max-w-4xl text-[38px] font-semibold leading-[1.05] tracking-[-0.04em] text-ink md:text-[64px] md:leading-[1.1]">
+          <p className="mb-6 font-mono text-[12px] uppercase tracking-[0.38em] text-accent">
+            {profile.name}
+          </p>
+          <h1 className="max-w-5xl text-5xl font-semibold leading-[0.96] tracking-[-0.06em] text-ink md:text-7xl md:leading-[0.96]">
             {profile.headline}
           </h1>
           <p className="mt-6 max-w-2xl text-lg leading-8 text-muted">
@@ -32,12 +36,13 @@ export default function Home() {
               rel="noreferrer"
             >
               LinkedIn
+              <span aria-hidden="true">↗</span>
             </Button>
           </div>
         </section>
         <section className="lg:col-span-5">
           <ImagePlaceholder
-            src={externalLinks.heroImage}
+            src={siteAssetLinks.heroImage}
             label="Freeman Madudili"
             caption="London, UK"
             className="h-[400px] md:h-[600px]"
@@ -51,9 +56,9 @@ export default function Home() {
             <h2 className="text-2xl font-medium tracking-[-0.03em] text-ink md:text-[28px]">
               Experience Snapshot
             </h2>
-            {externalLinks.cv ? (
+            {siteAssetLinks.cv ? (
               <a
-                href={externalLinks.cv}
+                href={siteAssetLinks.cv}
                 target="_blank"
                 rel="noreferrer"
                 className="font-mono text-[12px] text-accent transition hover:underline"
@@ -137,29 +142,6 @@ export default function Home() {
           </div>
         </Container>
       </section>
-
-      <Container className="grid gap-10 py-20 md:grid-cols-[0.9fr_1.1fr] md:py-[120px]">
-        <section>
-          <SectionHeader
-            title="Education / Research Direction"
-            copy={`${profile.education.current} ${profile.education.previous}`}
-          />
-        </section>
-        <section className="rounded-sm border border-line bg-white p-8 md:p-12">
-          <p className="font-mono text-[12px] tracking-[0.02em] text-muted">
-            Research Direction
-          </p>
-          <h3 className="mt-4 text-3xl font-semibold tracking-[-0.04em] text-ink md:text-5xl">
-            Self-healing backend operations agents.
-          </h3>
-          <p className="mt-6 text-base leading-7 text-muted md:text-lg md:leading-8">
-            {profile.education.research}
-          </p>
-          <p className="mt-4 text-base leading-7 text-muted md:text-lg md:leading-8">
-            {profile.education.support}
-          </p>
-        </section>
-      </Container>
 
       <Container className="pb-20 md:pb-[120px]">
         <CTASection copy="Want to understand how I think and what I’ve built?" />

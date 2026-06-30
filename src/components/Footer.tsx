@@ -1,14 +1,14 @@
 import Link from "next/link";
 import { externalLinks } from "@/data/navigation";
 
-export function Footer() {
+export function Footer({ cvUrl }: { cvUrl?: string }) {
   return (
     <footer className="border-t border-line bg-white">
       <div className="mx-auto flex max-w-[1200px] flex-col gap-5 px-5 py-12 md:flex-row md:items-center md:justify-between md:px-6">
-        <p className="font-mono text-[11px] text-muted">
+        <p className="font-mono text-[11px] font-semibold text-muted">
           © 2026 Freeman Madudili. Built with technical precision.
         </p>
-        <div className="flex flex-wrap gap-6 text-sm text-muted">
+        <div className="flex flex-wrap gap-6 font-mono text-[12px] text-muted">
           <Link href="/work" className="transition hover:text-accent">
             View Work
           </Link>
@@ -28,9 +28,9 @@ export function Footer() {
           >
             GitHub
           </a>
-          {externalLinks.cv ? (
+          {cvUrl ? (
             <a
-              href={externalLinks.cv}
+              href={cvUrl}
               target="_blank"
               rel="noreferrer"
               className="transition hover:text-accent"

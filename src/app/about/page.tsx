@@ -2,6 +2,7 @@ import { CTASection } from "@/components/CTASection";
 import { Container } from "@/components/Container";
 import { ImagePlaceholder } from "@/components/ImagePlaceholder";
 import { profile } from "@/data/profile";
+import { siteAssetLinks } from "@/lib/links";
 
 export default function AboutPage() {
   return (
@@ -62,7 +63,7 @@ export default function AboutPage() {
 
         <section>
           <h2 className="text-3xl font-semibold tracking-[-0.04em] text-ink md:text-5xl">
-            Current Direction
+            Current Research
           </h2>
           <div className="mt-8 rounded-sm border border-line bg-[#efeded] p-8 md:p-12">
             <div className="mb-6 flex flex-wrap items-center gap-3">
@@ -91,7 +92,11 @@ export default function AboutPage() {
           <div className="mt-12 grid gap-8 md:grid-cols-2">
             {profile.outsideEngineering.map((item) => (
               <article key={item.title}>
-                <ImagePlaceholder label={item.title} className="h-64" />
+                <ImagePlaceholder
+                  label={item.title}
+                  src={siteAssetLinks.outsideImages[item.title as keyof typeof siteAssetLinks.outsideImages]}
+                  className="h-64"
+                />
                 <h3 className="mt-4 text-2xl font-medium tracking-[-0.03em] text-ink">
                   {item.title}
                 </h3>

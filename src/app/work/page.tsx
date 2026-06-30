@@ -9,8 +9,11 @@ export default function WorkPage() {
     <>
       <Container className="pb-20 pt-44 md:pb-[120px] md:pt-[120px]">
         <section className="max-w-3xl">
-          <h1 className="text-[38px] font-semibold leading-[1.05] tracking-[-0.04em] text-ink md:text-[64px] md:leading-[1.1]">
+          <p className="mb-6 font-mono text-[12px] uppercase tracking-[0.38em] text-accent">
             Selected Engineering Work
+          </p>
+          <h1 className="text-[48px] font-semibold leading-[0.96] tracking-[-0.06em] text-ink md:text-[76px] md:leading-[0.96]">
+            Work that connects product thinking with reliable systems.
           </h1>
           <p className="mt-6 text-lg leading-8 text-muted">
             Selected projects that show how I think, build, and solve problems
