@@ -35,10 +35,12 @@ export const profile = {
     ["Automate Workflows", "Use AI and software to remove repetitive work."],
     ["Design for Growth", "Build systems that remain maintainable as they scale."],
   ],
-  aboutIntro: [
-    "I enjoy solving problems that become more interesting as systems grow. Most of my work sits at the intersection of software engineering, AI, automation, and long-term system reliability.",
-    "I care about systems that stay dependable under pressure, teams that can reason clearly about trade-offs, and products that remain maintainable long after the first release.",
-  ],
+  aboutHeadline: "How I think, work, and approach engineering.",
+aboutIntro: [
+  "The technologies I use will change over time. The principles I build around will not.",
+  "I enjoy solving problems that become more interesting as systems grow, especially around software engineering, AI, automation, and long-term system reliability.",
+  "I care about systems that stay dependable under pressure, teams that can reason clearly about trade-offs, and products that remain maintainable long after the first release.",
+],
   aboutPrinciples: [
     {
       title: "Clarity before complexity",
