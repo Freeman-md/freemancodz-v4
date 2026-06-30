@@ -55,7 +55,7 @@ export default function Home() {
         <Container className="py-16 md:py-24">
           <div className="mb-12 flex flex-col gap-4 border-b border-line pb-4 md:flex-row md:items-end md:justify-between">
             <h2 className="text-2xl font-medium tracking-[-0.03em] text-ink md:text-[28px]">
-              Experience Snapshot
+              Experience
             </h2>
             {siteAssetLinks.cv ? (
               <a
@@ -84,8 +84,7 @@ export default function Home() {
               Current Focus
             </div>
             <h2 className="text-3xl font-semibold tracking-[-0.04em] md:text-5xl">
-              AI engineering, backend reliability, and self-healing operations
-              agent research.
+              {profile.currentDirection}
             </h2>
             <p className="mt-5 text-lg leading-8 text-neutral-300">
               {profile.currentDirectionSupport}
