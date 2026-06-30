@@ -55,7 +55,7 @@ export function ProjectFeature({
         <p className="text-base leading-7 text-ink">{project.detail}</p>
         <div className="border-l-4 border-black pl-4">
           <strong className="block font-mono text-[12px] tracking-[0.02em] text-ink">
-            Outcome / Proof
+            Outcome
           </strong>
           <p className="mt-2 text-sm leading-6 text-muted">{project.outcome}</p>
         </div>
