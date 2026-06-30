@@ -13,12 +13,10 @@ export default function WorkPage() {
             Selected Engineering Work
           </p>
           <h1 className="text-[48px] font-semibold leading-[0.96] tracking-[-0.06em] text-ink md:text-[76px] md:leading-[0.96]">
-            Work that connects product thinking with reliable systems.
+            Projects that show how I think and build.
           </h1>
           <p className="mt-6 text-lg leading-8 text-muted">
-            Selected projects that show how I think, build, and solve problems
-            across product engineering, frontend systems, backend workflows,
-            AI-assisted systems, automation, and reliability.
+            A small set of commercial and personal projects across product engineering, AI automation, and reliable systems.
           </p>
         </section>
 

@@ -114,7 +114,7 @@ export default function Home() {
           title="What I Do"
           copy="Focused engineering support for founders and teams moving from idea to dependable product."
         />
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-6 grid-cols-2 lg:grid-cols-4">
           {profile.services.map(([title, copy]) => (
             <article
               key={title}
@@ -123,7 +123,7 @@ export default function Home() {
               <div className="mb-5 inline-flex h-10 w-10 items-center justify-center rounded-sm bg-accent/10 text-accent">
                 <ServiceIcon title={title} />
               </div>
-              <h3 className="text-2xl font-medium tracking-[-0.03em] text-ink">
+              <h3 className="sm:text-2xl font-medium tracking-[-0.03em] text-ink">
                 {title}
               </h3>
               <p className="mt-4 text-sm leading-6 text-muted">{copy}</p>
@@ -135,7 +135,7 @@ export default function Home() {
       <section className="border-y border-line bg-surface">
         <Container className="py-20 md:py-[120px]">
           <SectionHeader
-            title="Selected Work"
+            title="Featured Work"
             copy="Curated proof across AI product systems, automation workflows, fintech, and production-minded engineering."
           />
           <div className="grid gap-6 md:grid-cols-2">
