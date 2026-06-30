@@ -26,7 +26,7 @@ export default function Home() {
             {profile.headline}
           </h1>
           <p className="mt-6 max-w-2xl text-lg leading-8 text-muted">
-            {profile.heroNote}
+            {profile.intro}
           </p>
           <div className="mt-10 flex flex-wrap gap-4">
             <Button href="/work">View My Work</Button>
