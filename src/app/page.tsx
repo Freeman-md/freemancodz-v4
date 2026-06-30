@@ -95,6 +95,9 @@ export default function Home() {
 
       <section className="bg-white py-20 md:py-[120px]">
         <Container>
+          <p className="mb-6 font-mono text-[12px] uppercase tracking-[0.38em] text-accent">
+            Engineering philosophy
+          </p>
           <QuoteBlock>{profile.philosophyQuestion}</QuoteBlock>
           <div className="mt-16 grid gap-8 md:grid-cols-2 lg:grid-cols-3">
             {profile.principles.map((principle, index) => (

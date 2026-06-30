@@ -5,7 +5,8 @@ export const profile = {
     "I build software that is simple to understand, reliable to operate, and designed to grow. My current work focuses on AI-assisted software engineering, automation, and building systems that remain dependable as they become more complex.",
   heroNote:
     "Building practical AI systems that make engineering workflows faster, clearer, and more reliable.",
-  philosophyQuestion: "What does this system need to be reliable as it grows?",
+  philosophyQuestion:
+    "What does this system need to stay reliable as it grows?",
   principles: [
     {
       title: "Keep it simple",

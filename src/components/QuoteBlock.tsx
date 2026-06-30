@@ -2,8 +2,10 @@ import type { ReactNode } from "react";
 
 export function QuoteBlock({ children }: { children: ReactNode }) {
   return (
-    <blockquote className="mx-auto max-w-4xl border-l-4 border-black pl-8 text-left text-3xl font-medium leading-[1.4] tracking-[-0.03em] text-ink md:text-[32px]">
-      {children}
+    <blockquote className="max-w-4xl text-left font-display text-[2.1rem] leading-[1.22] tracking-[-0.02em] text-ink md:text-[3rem]">
+      <span className="text-accent/65">&ldquo;</span>
+      <span className="px-2 italic">{children}</span>
+      <span className="text-accent/65">&rdquo;</span>
     </blockquote>
   );
 }
