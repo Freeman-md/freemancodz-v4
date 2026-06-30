@@ -73,9 +73,9 @@ export const profile = {
       "The research explores how AI can improve reliability, observability, and operational resilience without sacrificing engineering judgement.",
   },
   currentDirection:
-  "Practical AI systems, engineering workflows, and reliable software operations.",
-currentDirectionSupport:
-  "I’m focused on building AI-assisted systems that make engineering work faster, clearer, and easier to operate. My MSc research into self-healing backend operations agents is one expression of that direction, exploring how production systems can detect, diagnose, and recover from failures while keeping engineers firmly in control.",
+    "Practical AI systems, engineering workflows, and reliable software operations.",
+  currentDirectionSupport:
+    "I’m focused on building AI-assisted systems that make engineering work faster, clearer, and easier to operate. My MSc research into self-healing backend operations agents is one expression of that direction, exploring how production systems can detect, diagnose, and recover from failures while keeping engineers firmly in control.",
   outsideEngineering: [
     {
       title: "Strength",

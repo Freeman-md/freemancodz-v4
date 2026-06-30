@@ -15,6 +15,27 @@ export type Project = {
 
 export const projects: Project[] = [
   {
+    title: "Pay4Me / WithRadius",
+    summary:
+      "A cross-border platform helping international students and relocation users handle education and move-abroad payments worldwide.",
+    category: "Commercial Work / Frontend Product / Fintech",
+    stack: ["Nuxt.js", "Vue.js", "Tailwind CSS", "Laravel"],
+    role: "Frontend Developer / Mid-level Frontend Developer.",
+    links: [{ label: "Live", href: "https://pay4me.app" }, {
+      label: "Current brand",
+      href: "https://withradius.com",
+    }, { label: "Provider-specific product", href: "https://pay.pay4me.app" }],
+    outcome:
+      "The Pay4Me-specific payment provider processed over US$500,000 in payment volume.",
+    collaboration:
+      "Collaborated with backend engineer, mobile engineer, product designer, project manager, Head of Engineering, and the broader product team. Freeman and the frontend-inclined Head of Engineering handled the customer-facing web application.",
+    positioning:
+      "Radius / Pay4Me supports global education and relocation-related payment flows.",
+    detail:
+      "Pay4Me is a cross-border payment platform helping international students and professionals pay tuition, visa, SEVIS, housing, and other relocation-related fees worldwide. Freeman worked on the customer-facing web application using Nuxt.js, Vue.js, Tailwind CSS, while collaborating with the Laravel backend team. The team also built Pay4Me's dedicated payment provider in partnership with a microfinance bank to support payment processing.",
+    featured: true,
+  },
+  {
     title: "Creator Lab",
     summary:
       "An AI feedback engine for LinkedIn creators that turns published posts, metrics, and analysis into practical guidance for the next post.",
@@ -69,27 +90,6 @@ export const projects: Project[] = [
       "Reduces the need to manually check job-related inbox updates. It identifies relevant updates, classifies application statuses, stores state, and sends a readable summary.",
     detail:
       "The service uses a safe retrieval window, dedupes processed messages, normalizes content, classifies relevance and status, stores state in Airtable, and reports through Telegram.",
-    featured: true,
-  },
-  {
-    title: "Pay4Me / WithRadius",
-    summary:
-      "A cross-border platform helping international students and relocation users handle education and move-abroad payments worldwide.",
-    category: "Commercial Work / Frontend Product / Fintech",
-    stack: ["Nuxt.js", "Vue.js", "Tailwind CSS", "Laravel"],
-    role: "Frontend Developer / Mid-level Frontend Developer.",
-    links: [{ label: "Live", href: "https://pay4me.app" }, {
-      label: "Current brand",
-      href: "https://withradius.com",
-    }, { label: "Provider-specific product", href: "https://pay.pay4me.app" }],
-    outcome:
-      "The Pay4Me-specific payment provider processed over US$500,000 in payment volume.",
-    collaboration:
-      "Collaborated with backend engineer, mobile engineer, product designer, project manager, Head of Engineering, and the broader product team. Freeman and the frontend-inclined Head of Engineering handled the customer-facing web application.",
-    positioning:
-      "Radius / Pay4Me supports global education and relocation-related payment flows.",
-    detail:
-      "Pay4Me is a cross-border payment platform helping international students and professionals pay tuition, visa, SEVIS, housing, and other relocation-related fees worldwide. Freeman worked on the customer-facing web application using Nuxt.js, Vue.js, Tailwind CSS, while collaborating with the Laravel backend team. The team also built Pay4Me's dedicated payment provider in partnership with a microfinance bank to support payment processing.",
     featured: true,
   },
   {
