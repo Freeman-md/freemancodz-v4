@@ -1,47 +1,42 @@
 export const profile = {
   name: "Freeman Madudili",
-  headline:
-    "Software Engineer helping founders and teams translate ideas into reliable and scalable systems.",
+  headline: "Building reliable software for ambitious teams.",
   intro:
-    "I build software with a systems mindset, bringing clarity to complex ideas and using AI where it helps teams move faster without losing reliability, maintainability, or long-term thinking.",
+    "I build software that is simple to understand, reliable to operate, and designed to grow. My current work focuses on AI-assisted software engineering, automation, and building systems that remain dependable as they become more complex.",
   heroNote:
-    "Leveraging AI-assisted engineering workflows to simplify complexity without compromising engineering judgement.",
-  philosophyQuestion:
-    "How reliable can this system become while remaining simple, maintainable, and capable of supporting exponential growth?",
+    "Building practical AI systems that make engineering workflows faster, clearer, and more reliable.",
+  philosophyQuestion: "What does this system need to be reliable as it grows?",
   principles: [
     {
-      title: "Clarity before complexity",
+      title: "Keep it simple",
       body: "Simple architectures fail less often and are easier to debug when they do.",
     },
     {
-      title: "Reliability before cleverness",
+      title: "Reliability first",
       body: "Boring technology often yields the most exciting business outcomes when systems need to keep working.",
     },
     {
-      title: "AI supports judgement",
+      title: "Engineering judgement",
       body: "AI accelerates execution, but human engineering judgement remains the final arbiter.",
     },
     {
-      title: "Build for scale",
+      title: "Think long-term",
       body: "Designing boundaries, data models, and workflows that can survive growth without collapse.",
     },
     {
-      title: "Design for observability",
+      title: "Make it observable",
       body: "If a system fails and no one can see why, reliability is only performative.",
     },
   ],
   services: [
-    ["Build Products", "Turn ideas into working software."],
-    ["Improve Systems", "Make existing products clearer, faster, and more reliable."],
-    ["Automate Workflows", "Use software and AI to reduce repetitive work."],
-    [
-      "Design for Growth",
-      "Think about reliability, maintainability, and scale from the start.",
-    ],
+    ["Build Products", "Turn ideas into production-ready software."],
+    ["Improve Systems", "Make software simpler, faster, and more reliable."],
+    ["Automate Workflows", "Use AI and software to remove repetitive work."],
+    ["Design for Growth", "Build systems that remain maintainable as they scale."],
   ],
   aboutIntro: [
-    "I’m a software engineer focused on building reliable, scalable systems and using AI to make engineering workflows sharper, faster, and more practical.",
-    "I care about systems that hold up under pressure, teams that can reason clearly about tradeoffs, and product decisions that remain maintainable as complexity grows.",
+    "I enjoy solving problems that become more interesting as systems grow. Most of my work sits at the intersection of software engineering, AI, automation, and long-term system reliability.",
+    "I care about systems that stay dependable under pressure, teams that can reason clearly about trade-offs, and products that remain maintainable long after the first release.",
   ],
   aboutPrinciples: [
     {
@@ -57,7 +52,7 @@ export const profile = {
       body: "If you cannot see what your system is doing, you cannot trust it. Telemetry is a feature.",
     },
     {
-      title: "AI supports judgement",
+      title: "Engineering judgement",
       body: "Automation amplifies capabilities, but foundational engineering understanding still sets direction.",
     },
   ],
@@ -78,9 +73,9 @@ export const profile = {
       "The research explores how AI can improve reliability, observability, and operational resilience without sacrificing engineering judgement.",
   },
   currentDirection:
-    "Currently focused on AI-assisted software engineering: using AI, automation, and strong engineering fundamentals to help teams move from idea to production faster while keeping systems reliable and scalable.",
+    "I'm currently focused on building practical AI systems, improving engineering workflows, and applying AI to make software more reliable, maintainable, and easier to operate.",
   currentDirectionSupport:
-    "This direction connects directly to my master's research around a self-healing backend operations agent and my broader interest in building systems that can detect issues, reason about failures, and support recovery without compromising engineering control.",
+    "My MSc research into self-healing backend operations agents is one expression of that broader direction, exploring how AI can help production systems detect, diagnose, and recover from failures while keeping engineers firmly in control.",
   outsideEngineering: [
     {
       title: "Strength",

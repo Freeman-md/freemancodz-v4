@@ -7,6 +7,7 @@ import { PrincipleCard } from "@/components/PrincipleCard";
 import { ProjectCard } from "@/components/ProjectCard";
 import { QuoteBlock } from "@/components/QuoteBlock";
 import { SectionHeader } from "@/components/SectionHeader";
+import { ServiceIcon } from "@/components/ServiceIcons";
 import { experiences } from "@/data/experience";
 import { externalLinks } from "@/data/navigation";
 import { profile } from "@/data/profile";
@@ -120,6 +121,9 @@ export default function Home() {
               key={title}
               className="rounded-sm border border-line bg-white p-8 transition hover:border-neutral-300 hover:shadow-soft"
             >
+              <div className="mb-5 inline-flex h-10 w-10 items-center justify-center rounded-sm bg-accent/10 text-accent">
+                <ServiceIcon title={title} />
+              </div>
               <h3 className="text-2xl font-medium tracking-[-0.03em] text-ink">
                 {title}
               </h3>
