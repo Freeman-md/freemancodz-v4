@@ -3,8 +3,8 @@ import type { MatchSiteChunksRow } from "@/lib/rag/types";
 
 export async function matchSiteChunks(
   queryEmbedding: number[],
-  matchCount = 4,
-  matchThreshold = 0.35,
+  matchCount = 6,
+  matchThreshold = 0.25,
 ): Promise<MatchSiteChunksRow[]> {
   if (queryEmbedding.length !== 1536) {
     throw new Error(

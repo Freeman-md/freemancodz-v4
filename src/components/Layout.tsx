@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { FloatingPortfolioChat } from "./chat/FloatingPortfolioChat";
 import { Footer } from "./Footer";
 import { Navbar } from "./Navbar";
 import { siteAssetLinks } from "@/lib/links";
@@ -9,6 +10,7 @@ export function Layout({ children }: { children: ReactNode }) {
       <Navbar />
       <main>{children}</main>
       <Footer cvUrl={siteAssetLinks.cv} />
+      <FloatingPortfolioChat />
     </>
   );
 }

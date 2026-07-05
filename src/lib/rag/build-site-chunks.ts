@@ -44,10 +44,11 @@ function buildProfileChunks(): SiteChunkInput[] {
       category: "Profile",
       url: "/about",
       content: [
-        `${profile.name}.`,
-        profile.headline,
-        profile.intro,
-        profile.heroNote,
+        "Profile information.",
+        `Name: ${profile.name}.`,
+        `Headline: ${profile.headline}`,
+        `Introduction: ${profile.intro}`,
+        `Focus statement: ${profile.heroNote}`,
       ].join(" "),
       keywords: dedupeKeywords([
         profile.name,
@@ -63,9 +64,11 @@ function buildProfileChunks(): SiteChunkInput[] {
       title: "Current Direction",
       category: "Profile",
       url: "/about",
-      content: [profile.currentDirection, profile.currentDirectionSupport].join(
-        " ",
-      ),
+      content: [
+        "Current direction.",
+        `Current direction summary: ${profile.currentDirection}`,
+        `Current direction detail: ${profile.currentDirectionSupport}`,
+      ].join(" "),
       keywords: dedupeKeywords([
         "current direction",
         "ai systems",
@@ -80,10 +83,11 @@ function buildProfileChunks(): SiteChunkInput[] {
       category: "Profile",
       url: "/about",
       content: [
-        profile.education.current,
-        profile.education.previous,
-        profile.education.research,
-        profile.education.support,
+        "Education.",
+        `Current education: ${profile.education.current}`,
+        `Previous education: ${profile.education.previous}`,
+        `Research topic: ${profile.education.research}`,
+        `Research support: ${profile.education.support}`,
       ].join(" "),
       keywords: dedupeKeywords([
         "msc computer science",
@@ -99,10 +103,13 @@ function buildProfileChunks(): SiteChunkInput[] {
       title: "Services and Support",
       category: "Profile",
       url: "/about",
-      content: toSentenceList(
-        "What I do",
-        profile.services.map(([title, copy]) => `${title}: ${copy}`),
-      ),
+      content: [
+        "Skills/services.",
+        toSentenceList(
+          "What I do",
+          profile.services.map(([title, copy]) => `${title}: ${copy}`),
+        ),
+      ].join(" "),
       keywords: dedupeKeywords([
         "build products",
         "improve systems",
@@ -118,6 +125,8 @@ function buildProfileChunks(): SiteChunkInput[] {
       category: "Profile",
       url: "/about",
       content: [
+        "Profile information.",
+        "Engineering philosophy.",
         profile.philosophyQuestion,
         toSentenceList(
           "Principles",
@@ -145,7 +154,9 @@ function buildExperienceChunks(): SiteChunkInput[] {
     category: experience.category,
     url: "/about",
     content: [
-      `${experience.title} at ${experience.company}.`,
+      experience.category === "Academic" ? "Education." : "Experience.",
+      `Title: ${experience.title}.`,
+      `Organization: ${experience.company}.`,
       `Dates: ${experience.dates}.`,
       experience.location ? `Location: ${experience.location}.` : "",
       `Focus: ${experience.focus}`,
@@ -168,7 +179,10 @@ function buildProjectChunks(): SiteChunkInput[] {
     category: project.category,
     url: "/work",
     content: [
-      `${project.title}.`,
+      "Portfolio project.",
+      "Freeman worked on this project.",
+      `Project title: ${project.title}.`,
+      `Category: ${project.category}.`,
       `Summary: ${project.summary}`,
       `Role: ${project.role}`,
       `Stack: ${project.stack.join(", ")}.`,
