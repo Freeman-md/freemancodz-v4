@@ -1,21 +1,16 @@
+import { config as loadEnv } from "dotenv";
 import { createClient } from "@supabase/supabase-js";
-import { formatEmbeddingForPgvector } from "../src/lib/rag/format-embedding";
+import { getEnv } from "../src/lib/config/env";
 import type { Database } from "../src/types/supabase";
 
-function getRequiredEnv(name: "NEXT_PUBLIC_SUPABASE_URL" | "SUPABASE_SECRET_KEY") {
-  const value = process.env[name];
-
-  if (!value) {
-    throw new Error(`Missing required environment variable: ${name}`);
-  }
-
-  return value;
-}
+loadEnv({ path: ".env.local" });
 
 async function main() {
+  const { supabase: supabaseEnv } = getEnv();
+
   const supabase = createClient<Database>(
-    getRequiredEnv("NEXT_PUBLIC_SUPABASE_URL"),
-    getRequiredEnv("SUPABASE_SECRET_KEY"),
+    supabaseEnv.url,
+    supabaseEnv.secretKey,
     {
       auth: {
         autoRefreshToken: false,
@@ -27,7 +22,7 @@ async function main() {
   const dummyVector = Array.from({ length: 1536 }, () => 0);
 
   const { data, error } = await supabase.rpc("match_site_chunks", {
-    query_embedding: formatEmbeddingForPgvector(dummyVector),
+    query_embedding: `${dummyVector.join(",")}`,
     match_count: 4,
     match_threshold: 0.35,
   });
