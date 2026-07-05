@@ -47,7 +47,7 @@ async function main() {
       url: chunk.url,
       content: chunk.content,
       keywords: chunk.keywords,
-      embedding: `${embedding.join(",")}`,
+      embedding: `[${embedding.join(",")}]`,
     });
   }
 

@@ -12,3 +12,7 @@ export function createOpenAIClient() {
 export function getEmbeddingModel() {
   return getEnv().openai.embeddingModel;
 }
+
+export function getResponseModel() {
+  return process.env.OPENAI_MODEL || "gpt-4.1-mini";
+}
