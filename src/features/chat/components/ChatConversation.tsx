@@ -16,6 +16,20 @@ type ChatConversationProps = {
   shouldReduceMotion: boolean | null;
 };
 
+function renderMessageContent(content: string) {
+  return content.split(/(\*\*[^*]+?\*\*)/g).map((part, index) => {
+    if (part.startsWith("**") && part.endsWith("**")) {
+      return (
+        <strong key={`${part}-${index}`} className="font-semibold">
+          {part.slice(2, -2)}
+        </strong>
+      );
+    }
+
+    return part;
+  });
+}
+
 export function ChatConversation({
   isLoading,
   messages,
@@ -78,7 +92,11 @@ export function ChatConversation({
                   )}
                 >
                   <p className="whitespace-pre-wrap text-sm leading-6">
-                    {message.content}
+                    {message.content
+                      ? renderMessageContent(message.content)
+                      : message.role === "assistant" && isLoading && !message.error
+                        ? "Thinking…"
+                        : null}
                   </p>
 
                   {message.sources?.length ? (
@@ -108,25 +126,6 @@ export function ChatConversation({
                   ) : null}
                 </motion.article>
               ))}
-            </AnimatePresence>
-
-            <AnimatePresence initial={false}>
-              {isLoading ? (
-                <motion.div
-                  key="thinking"
-                  initial={shouldReduceMotion ? false : { opacity: 0, x: -16, y: 8 }}
-                  animate={{ opacity: 1, x: 0, y: 0 }}
-                  exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: -4 }}
-                  transition={
-                    shouldReduceMotion
-                      ? { duration: 0 }
-                      : { type: "spring", stiffness: 320, damping: 28 }
-                  }
-                  className="max-w-[90%] rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm text-black/62 shadow-[0_8px_24px_-18px_rgba(0,0,0,0.16)]"
-                >
-                  Thinking…
-                </motion.div>
-              ) : null}
             </AnimatePresence>
 
             <div ref={messagesEndRef} />

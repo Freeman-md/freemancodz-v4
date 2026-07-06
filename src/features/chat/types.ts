@@ -13,8 +13,3 @@ export type ChatMessage = {
   sources?: ChatSource[];
   error?: boolean;
 };
-
-export type ChatResponse = {
-  answer: string;
-  sources: ChatSource[];
-};

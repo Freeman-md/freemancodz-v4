@@ -8,8 +8,9 @@ import {
   type KeyboardEvent,
 } from "react";
 import { useReducedMotion, type Transition } from "framer-motion";
-import { FALLBACK_ANSWER, MAX_MESSAGE_LENGTH } from "../constants";
-import type { ChatMessage, ChatResponse, ChatStage } from "../types";
+import { streamChatResponse } from "../client";
+import { MAX_MESSAGE_LENGTH } from "../constants";
+import type { ChatMessage, ChatStage } from "../types";
 import {
   createAssistantErrorMessage,
   createAssistantMessage,
@@ -99,44 +100,63 @@ export function useFloatingPortfolioChat() {
       return;
     }
 
+    const assistantMessage = createAssistantMessage("");
+
     setStage("conversation");
-    setMessages((current) => [...current, createUserMessage(message)]);
+    setMessages((current) => [
+      ...current,
+      createUserMessage(message),
+      assistantMessage,
+    ]);
     setInput("");
     setIsLoading(true);
     setErrorMessage(null);
 
     try {
-      const response = await fetch("/api/chat", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+      await streamChatResponse(message, {
+        onDelta(delta) {
+          setMessages((current) =>
+            current.map((chatMessage) =>
+              chatMessage.id === assistantMessage.id
+                ? {
+                    ...chatMessage,
+                    content: chatMessage.content + delta,
+                  }
+                : chatMessage,
+            ),
+          );
         },
-        body: JSON.stringify({ message }),
+        onSources(sources) {
+          setMessages((current) =>
+            current.map((chatMessage) =>
+              chatMessage.id === assistantMessage.id
+                ? {
+                    ...chatMessage,
+                    sources,
+                  }
+                : chatMessage,
+            ),
+          );
+        },
       });
-
-      const payload = (await response.json()) as Partial<ChatResponse> & {
-        error?: string;
-      };
-
-      if (!response.ok) {
-        throw new Error(payload.error || "Request failed.");
-      }
-
-      setMessages((current) => [
-        ...current,
-        createAssistantMessage(
-          typeof payload.answer === "string" ? payload.answer : FALLBACK_ANSWER,
-          Array.isArray(payload.sources) ? payload.sources : [],
-        ),
-      ]);
     } catch (error) {
       const messageText =
         error instanceof Error
           ? error.message
           : "Something went wrong while fetching a response.";
+      const errorResponse = createAssistantErrorMessage();
 
       setErrorMessage(messageText);
-      setMessages((current) => [...current, createAssistantErrorMessage()]);
+      setMessages((current) =>
+        current.map((chatMessage) =>
+          chatMessage.id === assistantMessage.id
+            ? {
+                ...errorResponse,
+                id: assistantMessage.id,
+              }
+            : chatMessage,
+        ),
+      );
     } finally {
       setIsLoading(false);
     }
