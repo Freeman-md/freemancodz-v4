@@ -8,6 +8,7 @@ A static Next.js, TypeScript, and Tailwind CSS personal website for Freeman Madu
 - `NEXT_PUBLIC_LINKEDIN_URL` — optional LinkedIn override.
 - `NEXT_PUBLIC_GITHUB_URL` — optional GitHub override.
 - `NEXT_PUBLIC_HERO_IMAGE_URL` — optional hero image URL. A placeholder renders when absent.
+- `NEXT_PUBLIC_SITE_URL` — optional canonical site URL for metadata, sitemap, and social previews.
 
 ## Development
 

@@ -1,8 +1,30 @@
+import type { Metadata } from "next";
 import { CTASection } from "@/components/CTASection";
 import { Container } from "@/components/Container";
 import { ProjectCard } from "@/components/ProjectCard";
 import { ProjectFeature } from "@/components/ProjectFeature";
 import { featuredProjects, otherProjects } from "@/data/projects";
+import { siteConfig } from "@/lib/site-metadata";
+
+export const metadata: Metadata = {
+  title: "Work",
+  description:
+    "Selected engineering work by Freeman Madudili across AI product systems, automation workflows, fintech, and reliable software.",
+  alternates: {
+    canonical: "/work",
+  },
+  openGraph: {
+    title: `Work | ${siteConfig.shortName}`,
+    description:
+      "Selected engineering work across AI product systems, automation workflows, fintech, and reliable software.",
+    url: "/work",
+  },
+  twitter: {
+    title: `Work | ${siteConfig.shortName}`,
+    description:
+      "Selected engineering work across AI product systems, automation workflows, fintech, and reliable software.",
+  },
+};
 
 export default function WorkPage() {
   return (

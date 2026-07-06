@@ -1,8 +1,30 @@
+import type { Metadata } from "next";
 import { CTASection } from "@/components/CTASection";
 import { Container } from "@/components/Container";
 import { ImagePlaceholder } from "@/components/ImagePlaceholder";
 import { profile } from "@/data/profile";
 import { siteAssetLinks } from "@/lib/links";
+import { siteConfig } from "@/lib/site-metadata";
+
+export const metadata: Metadata = {
+  title: "About",
+  description:
+    "How Freeman Madudili thinks, works, and approaches reliable software, AI-assisted engineering, and systems that scale.",
+  alternates: {
+    canonical: "/about",
+  },
+  openGraph: {
+    title: `About | ${siteConfig.shortName}`,
+    description:
+      "Freeman Madudili's engineering philosophy, current research, working style, and direction.",
+    url: "/about",
+  },
+  twitter: {
+    title: `About | ${siteConfig.shortName}`,
+    description:
+      "Freeman Madudili's engineering philosophy, current research, working style, and direction.",
+  },
+};
 
 export default function AboutPage() {
   return (
