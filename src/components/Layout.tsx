@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
-import { FloatingPortfolioChat } from "./chat/FloatingPortfolioChat";
 import { Footer } from "./Footer";
+import { FloatingPortfolioChat } from "./FloatingPortfolioChat";
 import { Navbar } from "./Navbar";
 import { siteAssetLinks } from "@/lib/links";
 
