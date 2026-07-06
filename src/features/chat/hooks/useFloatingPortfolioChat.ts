@@ -14,6 +14,7 @@ import type { ChatMessage, ChatStage } from "../types";
 import {
   createAssistantErrorMessage,
   createAssistantMessage,
+  buildChatHistory,
   createUserMessage,
 } from "../utils";
 
@@ -101,6 +102,7 @@ export function useFloatingPortfolioChat() {
     }
 
     const assistantMessage = createAssistantMessage("");
+    const history = buildChatHistory(messages);
 
     setStage("conversation");
     setMessages((current) => [
@@ -113,7 +115,7 @@ export function useFloatingPortfolioChat() {
     setErrorMessage(null);
 
     try {
-      await streamChatResponse(message, {
+      await streamChatResponse(message, history, {
         onDelta(delta) {
           setMessages((current) =>
             current.map((chatMessage) =>
@@ -144,7 +146,7 @@ export function useFloatingPortfolioChat() {
         error instanceof Error
           ? error.message
           : "Something went wrong while fetching a response.";
-      const errorResponse = createAssistantErrorMessage();
+      const errorResponse = createAssistantErrorMessage(messageText);
 
       setErrorMessage(messageText);
       setMessages((current) =>

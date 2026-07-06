@@ -3,16 +3,29 @@ import { createOpenAIClient, getResponseModel } from "@/lib/openai";
 import { retrieveContext } from "@/lib/rag/retrieve-context";
 import { FALLBACK_ANSWER, MAX_MESSAGE_LENGTH } from "./_lib/constants";
 import { CHAT_SYSTEM_PROMPT } from "./_lib/prompt";
-import type { ChatRequestBody, ChatStreamEvent } from "./_lib/types";
-import { encodeStreamEvent, formatContext } from "./_lib/utils";
+import { checkChatRateLimit } from "./_lib/rate-limit";
+import type {
+  ChatHistoryMessage,
+  ChatRequestBody,
+  ChatStreamEvent,
+} from "./_lib/types";
+import {
+  buildRetrievalQuery,
+  encodeStreamEvent,
+  formatContext,
+  formatHistory,
+  normalizeHistory,
+} from "./_lib/utils";
 
 function createChatStream({
   chunks,
+  history,
   message,
   request,
   sources,
 }: {
   chunks: Awaited<ReturnType<typeof retrieveContext>>["chunks"];
+  history: ChatHistoryMessage[];
   message: string;
   request: Request;
   sources: Awaited<ReturnType<typeof retrieveContext>>["sources"];
@@ -37,6 +50,8 @@ function createChatStream({
         }
 
         const openai = createOpenAIClient();
+        const conversationHistory =
+          formatHistory(history) || "No earlier messages in this browser session.";
         const responseStream = await openai.responses.create(
           {
             model: getResponseModel(),
@@ -55,11 +70,12 @@ function createChatStream({
                 content: [
                   {
                     type: "input_text",
-                    text: `Portfolio information:\n\n${formatContext(chunks)}\n\nUser question:\n${message}`,
+                    text: `Conversation so far:\n\n${conversationHistory}\n\nPortfolio information:\n\n${formatContext(chunks)}\n\nCurrent user question:\n${message}`,
                   },
                 ],
               },
             ],
+            store: false,
             stream: true,
           },
           { signal: request.signal },
@@ -133,8 +149,39 @@ export async function POST(request: Request) {
     );
   }
 
-  const { chunks, sources } = await retrieveContext(message);
-  const stream = createChatStream({ chunks, message, request, sources });
+  const rateLimit = checkChatRateLimit(request);
+
+  if (!rateLimit.allowed) {
+    const retryAfter = Math.max(
+      1,
+      Math.ceil((rateLimit.resetAt - Date.now()) / 1000),
+    );
+
+    return NextResponse.json(
+      { error: rateLimit.error },
+      {
+        status: 429,
+        headers: {
+          "Retry-After": String(retryAfter),
+          "X-RateLimit-Limit": String(rateLimit.limit),
+          "X-RateLimit-Remaining": String(rateLimit.remaining),
+          "X-RateLimit-Reset": String(Math.ceil(rateLimit.resetAt / 1000)),
+        },
+      },
+    );
+  }
+
+  const history = normalizeHistory(body.history);
+  const { chunks, sources } = await retrieveContext(
+    buildRetrievalQuery(message, history),
+  );
+  const stream = createChatStream({
+    chunks,
+    history,
+    message,
+    request,
+    sources,
+  });
 
   return new Response(stream, {
     headers: {

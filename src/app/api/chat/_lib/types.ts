@@ -1,5 +1,11 @@
 export type ChatRequestBody = {
   message?: unknown;
+  history?: unknown;
+};
+
+export type ChatHistoryMessage = {
+  role: "user" | "assistant";
+  content: string;
 };
 
 export type ChatStreamSource = {

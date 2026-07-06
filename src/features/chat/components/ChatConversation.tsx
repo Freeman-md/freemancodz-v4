@@ -7,7 +7,7 @@ import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import type { ChatMessage } from "../types";
-import { isExternalUrl } from "../utils";
+import { isExternalUrl, renderMessageContent } from "../utils";
 
 type ChatConversationProps = {
   isLoading: boolean;
@@ -15,20 +15,6 @@ type ChatConversationProps = {
   messagesEndRef: RefObject<HTMLDivElement | null>;
   shouldReduceMotion: boolean | null;
 };
-
-function renderMessageContent(content: string) {
-  return content.split(/(\*\*[^*]+?\*\*)/g).map((part, index) => {
-    if (part.startsWith("**") && part.endsWith("**")) {
-      return (
-        <strong key={`${part}-${index}`} className="font-semibold">
-          {part.slice(2, -2)}
-        </strong>
-      );
-    }
-
-    return part;
-  });
-}
 
 export function ChatConversation({
   isLoading,
@@ -91,13 +77,13 @@ export function ChatConversation({
                         : "border border-black/10 bg-white text-black",
                   )}
                 >
-                  <p className="whitespace-pre-wrap text-sm leading-6">
+                  <div className="whitespace-pre-wrap text-sm leading-6">
                     {message.content
                       ? renderMessageContent(message.content)
                       : message.role === "assistant" && isLoading && !message.error
                         ? "Thinking…"
                         : null}
-                  </p>
+                  </div>
 
                   {message.sources?.length ? (
                     <div className="mt-3 flex flex-wrap gap-2">

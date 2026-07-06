@@ -1,4 +1,4 @@
-import type { ChatSource } from "./types";
+import type { ChatHistoryMessage, ChatSource } from "./types";
 
 type ChatStreamEvent =
   | { type: "sources"; sources: ChatSource[] }
@@ -26,6 +26,7 @@ async function getErrorMessage(response: Response) {
 
 export async function streamChatResponse(
   message: string,
+  history: ChatHistoryMessage[],
   handlers: StreamChatResponseHandlers,
 ) {
   const response = await fetch("/api/chat", {
@@ -33,7 +34,7 @@ export async function streamChatResponse(
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ message }),
+    body: JSON.stringify({ message, history }),
   });
 
   if (!response.ok) {
