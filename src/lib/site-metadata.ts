@@ -1,7 +1,7 @@
 import { profile } from "@/data/profile";
 import { externalLinks } from "@/data/navigation";
 
-const fallbackSiteUrl = "https://freemancodz.com";
+const fallbackSiteUrl = "https://freemanmadudili.com";
 
 function getSiteUrl() {
   const url = process.env.NEXT_PUBLIC_SITE_URL || fallbackSiteUrl;
