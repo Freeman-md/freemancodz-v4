@@ -3,9 +3,10 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { pathname: string[] } },
+  { params }: { params: Promise<{ pathname: string[] }> },
 ) {
-  const pathname = params.pathname.join("/");
+  const { pathname: pathnameSegments } = await params;
+  const pathname = pathnameSegments.join("/");
 
   const result = await get(pathname, { access: "private" });
 
