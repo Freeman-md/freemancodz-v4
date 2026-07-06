@@ -16,6 +16,7 @@ export function FloatingPortfolioChat() {
       <div ref={chat.shellRef} className="mx-auto flex w-full max-w-[40rem] justify-center">
         <motion.div
           layout
+          initial={false}
           animate={{
             maxWidth: chat.isOpen ? 640 : 320,
             backgroundColor: chat.isOpen ? "#ffffff" : "#000000",
