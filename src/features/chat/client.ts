@@ -1,13 +1,15 @@
-import type { ChatHistoryMessage, ChatSource } from "./types";
+import type { ChatSource } from "./types";
 
 type ChatStreamEvent =
   | { type: "sources"; sources: ChatSource[] }
+  | { type: "response_id"; responseId: string }
   | { type: "delta"; delta: string }
   | { type: "done" }
   | { type: "error"; error: string };
 
 type StreamChatResponseHandlers = {
   onDelta: (delta: string) => void;
+  onResponseId: (responseId: string) => void;
   onSources: (sources: ChatSource[]) => void;
 };
 
@@ -26,7 +28,7 @@ async function getErrorMessage(response: Response) {
 
 export async function streamChatResponse(
   message: string,
-  history: ChatHistoryMessage[],
+  previousResponseId: string | null,
   handlers: StreamChatResponseHandlers,
 ) {
   const response = await fetch("/api/chat", {
@@ -34,7 +36,7 @@ export async function streamChatResponse(
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ message, history }),
+    body: JSON.stringify({ message, previousResponseId }),
   });
 
   if (!response.ok) {
@@ -62,6 +64,11 @@ export async function streamChatResponse(
 
     if (event.type === "delta") {
       handlers.onDelta(event.delta);
+      return false;
+    }
+
+    if (event.type === "response_id") {
+      handlers.onResponseId(event.responseId);
       return false;
     }
 

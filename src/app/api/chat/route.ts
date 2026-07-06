@@ -4,29 +4,23 @@ import { retrieveContext } from "@/lib/rag/retrieve-context";
 import { FALLBACK_ANSWER, MAX_MESSAGE_LENGTH } from "./_lib/constants";
 import { CHAT_SYSTEM_PROMPT } from "./_lib/prompt";
 import { checkChatRateLimit } from "./_lib/rate-limit";
-import type {
-  ChatHistoryMessage,
-  ChatRequestBody,
-  ChatStreamEvent,
-} from "./_lib/types";
+import type { ChatRequestBody, ChatStreamEvent } from "./_lib/types";
 import {
-  buildRetrievalQuery,
   encodeStreamEvent,
   formatContext,
-  formatHistory,
-  normalizeHistory,
+  normalizePreviousResponseId,
 } from "./_lib/utils";
 
 function createChatStream({
   chunks,
-  history,
   message,
+  previousResponseId,
   request,
   sources,
 }: {
   chunks: Awaited<ReturnType<typeof retrieveContext>>["chunks"];
-  history: ChatHistoryMessage[];
   message: string;
+  previousResponseId: string | null;
   request: Request;
   sources: Awaited<ReturnType<typeof retrieveContext>>["sources"];
 }) {
@@ -35,6 +29,7 @@ function createChatStream({
   return new ReadableStream<Uint8Array>({
     async start(controller) {
       let didStreamText = false;
+      let responseId: string | null = null;
 
       function write(event: ChatStreamEvent) {
         controller.enqueue(encoder.encode(encodeStreamEvent(event)));
@@ -43,39 +38,24 @@ function createChatStream({
       try {
         write({ type: "sources", sources });
 
-        if (chunks.length === 0) {
+        if (chunks.length === 0 && !previousResponseId) {
           write({ type: "delta", delta: FALLBACK_ANSWER });
           write({ type: "done" });
           return;
         }
 
         const openai = createOpenAIClient();
-        const conversationHistory =
-          formatHistory(history) || "No earlier messages in this browser session.";
+        const portfolioInformation =
+          chunks.length > 0
+            ? formatContext(chunks)
+            : "No additional portfolio information is available for this message. Use prior conversation only if it contains enough relevant portfolio information.";
         const responseStream = await openai.responses.create(
           {
             model: getResponseModel(),
-            input: [
-              {
-                role: "system",
-                content: [
-                  {
-                    type: "input_text",
-                    text: CHAT_SYSTEM_PROMPT,
-                  },
-                ],
-              },
-              {
-                role: "user",
-                content: [
-                  {
-                    type: "input_text",
-                    text: `Conversation so far:\n\n${conversationHistory}\n\nPortfolio information:\n\n${formatContext(chunks)}\n\nCurrent user question:\n${message}`,
-                  },
-                ],
-              },
-            ],
-            store: false,
+            instructions: CHAT_SYSTEM_PROMPT,
+            input: `Portfolio information:\n\n${portfolioInformation}\n\nCurrent user question:\n${message}`,
+            previous_response_id: previousResponseId,
+            store: true,
             stream: true,
           },
           { signal: request.signal },
@@ -86,9 +66,17 @@ function createChatStream({
             return;
           }
 
+          if (event.type === "response.created") {
+            responseId = event.response.id;
+          }
+
           if (event.type === "response.output_text.delta" && event.delta) {
             didStreamText = true;
             write({ type: "delta", delta: event.delta });
+          }
+
+          if (event.type === "response.completed") {
+            responseId = event.response.id;
           }
 
           if (event.type === "error") {
@@ -104,6 +92,10 @@ function createChatStream({
 
         if (!didStreamText) {
           write({ type: "delta", delta: FALLBACK_ANSWER });
+        }
+
+        if (responseId) {
+          write({ type: "response_id", responseId });
         }
 
         write({ type: "done" });
@@ -171,14 +163,12 @@ export async function POST(request: Request) {
     );
   }
 
-  const history = normalizeHistory(body.history);
-  const { chunks, sources } = await retrieveContext(
-    buildRetrievalQuery(message, history),
-  );
+  const previousResponseId = normalizePreviousResponseId(body.previousResponseId);
+  const { chunks, sources } = await retrieveContext(message);
   const stream = createChatStream({
     chunks,
-    history,
     message,
+    previousResponseId,
     request,
     sources,
   });

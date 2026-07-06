@@ -14,7 +14,6 @@ import type { ChatMessage, ChatStage } from "../types";
 import {
   createAssistantErrorMessage,
   createAssistantMessage,
-  buildChatHistory,
   createUserMessage,
 } from "../utils";
 
@@ -24,6 +23,9 @@ export function useFloatingPortfolioChat() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [previousResponseId, setPreviousResponseId] = useState<string | null>(
+    null,
+  );
 
   const shouldReduceMotion = useReducedMotion();
   const shellRef = useRef<HTMLDivElement | null>(null);
@@ -102,7 +104,6 @@ export function useFloatingPortfolioChat() {
     }
 
     const assistantMessage = createAssistantMessage("");
-    const history = buildChatHistory(messages);
 
     setStage("conversation");
     setMessages((current) => [
@@ -115,7 +116,7 @@ export function useFloatingPortfolioChat() {
     setErrorMessage(null);
 
     try {
-      await streamChatResponse(message, history, {
+      await streamChatResponse(message, previousResponseId, {
         onDelta(delta) {
           setMessages((current) =>
             current.map((chatMessage) =>
@@ -127,6 +128,9 @@ export function useFloatingPortfolioChat() {
                 : chatMessage,
             ),
           );
+        },
+        onResponseId(responseId) {
+          setPreviousResponseId(responseId);
         },
         onSources(sources) {
           setMessages((current) =>

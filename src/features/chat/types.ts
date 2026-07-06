@@ -13,8 +13,3 @@ export type ChatMessage = {
   sources?: ChatSource[];
   error?: boolean;
 };
-
-export type ChatHistoryMessage = {
-  role: "user" | "assistant";
-  content: string;
-};

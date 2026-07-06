@@ -1,11 +1,6 @@
 export type ChatRequestBody = {
   message?: unknown;
-  history?: unknown;
-};
-
-export type ChatHistoryMessage = {
-  role: "user" | "assistant";
-  content: string;
+  previousResponseId?: unknown;
 };
 
 export type ChatStreamSource = {
@@ -16,6 +11,7 @@ export type ChatStreamSource = {
 
 export type ChatStreamEvent =
   | { type: "sources"; sources: ChatStreamSource[] }
+  | { type: "response_id"; responseId: string }
   | { type: "delta"; delta: string }
   | { type: "done" }
   | { type: "error"; error: string };

@@ -1,9 +1,5 @@
 import { createElement, type ReactNode } from "react";
-import {
-  MAX_HISTORY_MESSAGE_LENGTH,
-  MAX_HISTORY_MESSAGES,
-} from "./constants";
-import type { ChatHistoryMessage, ChatMessage } from "./types";
+import type { ChatMessage } from "./types";
 
 export function isExternalUrl(url: string) {
   return /^https?:\/\//.test(url);
@@ -35,16 +31,6 @@ export function createAssistantErrorMessage(
     content,
     error: true,
   };
-}
-
-export function buildChatHistory(messages: ChatMessage[]): ChatHistoryMessage[] {
-  return messages
-    .filter((message) => !message.error && message.content.trim().length > 0)
-    .slice(-MAX_HISTORY_MESSAGES)
-    .map((message) => ({
-      role: message.role,
-      content: message.content.trim().slice(0, MAX_HISTORY_MESSAGE_LENGTH),
-    }));
 }
 
 function getSafeHref(href: string) {
