@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 
 import {
   getPortfolioSeedData,
@@ -69,6 +70,17 @@ function createClient(store: Store, failure?: Error): PrismaClient & { disconnec
 }
 
 async function run() {
+  const runnerSource = await readFile(
+    new URL("../seed-portfolio-data.ts", import.meta.url),
+    "utf8",
+  );
+  const environmentLoad = runnerSource.indexOf('loadEnv({ path: ".env.local" });');
+  const prismaImport = runnerSource.indexOf('await import("../src/lib/prisma")');
+
+  assert.notEqual(environmentLoad, -1);
+  assert.notEqual(prismaImport, -1);
+  assert.ok(environmentLoad < prismaImport);
+
   const data = getPortfolioSeedData();
   assert.equal(data.profiles.length, 1);
   assert.equal(data.educations.length, 1);

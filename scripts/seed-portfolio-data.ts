@@ -1,4 +1,8 @@
+import { config as loadEnv } from "dotenv";
+
 import { seedPortfolioData } from "./lib/portfolio-seed";
+
+loadEnv({ path: ".env.local" });
 
 async function main() {
   const { prisma } = await import("../src/lib/prisma");
