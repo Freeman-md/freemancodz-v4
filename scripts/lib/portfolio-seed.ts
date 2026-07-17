@@ -4,21 +4,20 @@ import { projects } from "@/data/projects";
 import type { PrismaClient } from "@/generated/prisma/client";
 
 export type PortfolioSeedData = {
-  profiles: {
-    name: string;
-    headline: string;
-    intro: string;
-    heroNote: string;
-    philosophyQuestion: string;
-    aboutHeadline: string;
-    currentDirection: string;
-    currentDirectionSupport: string;
-  }[];
-  educations: {
-    current: string;
-    previous: string;
-    research: string;
-    support: string;
+  contentBlocks: {
+    key: string;
+    page: "HOME" | "ABOUT";
+    section:
+      | "HERO"
+      | "PHILOSOPHY"
+      | "CURRENT_DIRECTION"
+      | "ABOUT_HEADER"
+      | "ABOUT_INTRO"
+      | "EDUCATION"
+      | "WORK_PROCESS"
+      | "OUTSIDE_ENGINEERING";
+    position: number;
+    content: Record<string, string>;
   }[];
   principles: { section: "home" | "about"; title: string; body: string; position: number }[];
   services: {
@@ -27,12 +26,6 @@ export type PortfolioSeedData = {
     description: string;
     cta: string;
     assistantPrompt?: string;
-    position: number;
-  }[];
-  contentItems: {
-    section: "about_intro" | "work_process" | "outside_engineering";
-    title: string | null;
-    body: string;
     position: number;
   }[];
   experiences: {
@@ -63,19 +56,72 @@ export type PortfolioSeedData = {
 
 export function getPortfolioSeedData(): PortfolioSeedData {
   return {
-    profiles: [
+    contentBlocks: [
       {
-        name: profile.name,
-        headline: profile.headline,
-        intro: profile.intro,
-        heroNote: profile.heroNote,
-        philosophyQuestion: profile.philosophyQuestion,
-        aboutHeadline: profile.aboutHeadline,
-        currentDirection: profile.currentDirection,
-        currentDirectionSupport: profile.currentDirectionSupport,
+        key: "home.hero",
+        page: "HOME",
+        section: "HERO",
+        position: 0,
+        content: {
+          name: profile.name,
+          headline: profile.headline,
+          intro: profile.intro,
+          heroNote: profile.heroNote,
+        },
       },
+      {
+        key: "home.philosophy",
+        page: "HOME",
+        section: "PHILOSOPHY",
+        position: 0,
+        content: { philosophyQuestion: profile.philosophyQuestion },
+      },
+      {
+        key: "home.current-direction",
+        page: "HOME",
+        section: "CURRENT_DIRECTION",
+        position: 0,
+        content: {
+          currentDirection: profile.currentDirection,
+          currentDirectionSupport: profile.currentDirectionSupport,
+        },
+      },
+      {
+        key: "about.header",
+        page: "ABOUT",
+        section: "ABOUT_HEADER",
+        position: 0,
+        content: { aboutHeadline: profile.aboutHeadline },
+      },
+      {
+        key: "about.education",
+        page: "ABOUT",
+        section: "EDUCATION",
+        position: 0,
+        content: { ...profile.education },
+      },
+      ...profile.aboutIntro.map((body, position) => ({
+        key: `about.intro.${position}`,
+        page: "ABOUT" as const,
+        section: "ABOUT_INTRO" as const,
+        position,
+        content: { body },
+      })),
+      ...profile.workProcess.map((body, position) => ({
+        key: `about.work-process.${position}`,
+        page: "ABOUT" as const,
+        section: "WORK_PROCESS" as const,
+        position,
+        content: { body },
+      })),
+      ...profile.outsideEngineering.map((item, position) => ({
+        key: `about.outside-engineering.${position}`,
+        page: "ABOUT" as const,
+        section: "OUTSIDE_ENGINEERING" as const,
+        position,
+        content: { ...item },
+      })),
     ],
-    educations: [profile.education],
     principles: [
       ...profile.principles.map((principle, position) => ({
         ...principle,
@@ -92,26 +138,6 @@ export function getPortfolioSeedData(): PortfolioSeedData {
       ...service,
       position,
     })),
-    contentItems: [
-      ...profile.aboutIntro.map((body, position) => ({
-        section: "about_intro" as const,
-        title: null,
-        body,
-        position,
-      })),
-      ...profile.workProcess.map((body, position) => ({
-        section: "work_process" as const,
-        title: null,
-        body,
-        position,
-      })),
-      ...profile.outsideEngineering.map((item, position) => ({
-        section: "outside_engineering" as const,
-        title: item.title,
-        body: item.description,
-        position,
-      })),
-    ],
     experiences: experiences.map((experience, position) => ({
       ...experience,
       location: experience.location ?? null,
@@ -140,19 +166,15 @@ export async function seedPortfolioData(client: PrismaClient) {
 
   try {
     await client.$transaction(async (transaction) => {
-      await transaction.profile.deleteMany();
-      await transaction.education.deleteMany();
+      await transaction.contentBlock.deleteMany();
       await transaction.principle.deleteMany();
       await transaction.service.deleteMany();
-      await transaction.contentItem.deleteMany();
       await transaction.experience.deleteMany();
       await transaction.project.deleteMany();
 
-      await transaction.profile.createMany({ data: data.profiles });
-      await transaction.education.createMany({ data: data.educations });
+      await transaction.contentBlock.createMany({ data: data.contentBlocks });
       await transaction.principle.createMany({ data: data.principles });
       await transaction.service.createMany({ data: data.services });
-      await transaction.contentItem.createMany({ data: data.contentItems });
       await transaction.experience.createMany({ data: data.experiences });
       await transaction.project.createMany({ data: data.projects });
     });

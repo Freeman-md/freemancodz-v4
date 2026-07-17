@@ -9,7 +9,7 @@ async function main() {
   const data = await seedPortfolioData(prisma);
 
   console.log(
-    `Seeded portfolio data: ${data.profiles.length} profile, ${data.educations.length} education, ${data.principles.length} principles, ${data.services.length} services, ${data.contentItems.length} content items, ${data.experiences.length} experiences, and ${data.projects.length} projects.`,
+    `Seeded portfolio data: ${data.contentBlocks.length} content blocks, ${data.principles.length} principles, ${data.services.length} services, ${data.experiences.length} experiences, and ${data.projects.length} projects.`,
   );
 }
 

@@ -68,7 +68,7 @@ Run the repeatable portfolio seed against the database selected by `DATABASE_URL
 npm run seed:portfolio
 ```
 
-The command uses the server-side Prisma client and replaces the source-owned records in `profiles`, `educations`, `principles`, `services`, `content_items`, `experiences`, and `projects` in a single transaction. It does not seed `site_chunks`, change the static files, or run automatically during deployment. A connection or write failure is reported with a non-zero exit status; Prisma disconnects before the command finishes.
+Apply the current Supabase migrations before running the seed. The amendment migration intentionally changes the schema without embedding portfolio data, so `npm run seed:portfolio` repopulates `content_blocks`, `principles`, `services`, `experiences`, and `projects` from the static TypeScript source in a single transaction. It does not seed `site_chunks`, change the static files, or run automatically during deployment. A connection or write failure is reported with a non-zero exit status; Prisma disconnects before the command finishes.
 
 For a hosted Supabase database, set `DATABASE_URL` in the shell or secret store to that project's direct Postgres connection string, then run the same command. Confirm the selected database is the intended project before executing it. Do not put `DATABASE_URL` in a committed file.
 
