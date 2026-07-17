@@ -41,6 +41,261 @@ Replace the public portfolio pages' static rendering source with server-only Pri
 - Keep the existing static content files available for the seed and existing RAG workflows, but stop importing them as the rendering source of `/`, `/work` and `/about`.
 - Document the database environment requirements and production-build verification process.
 
+## Implementation mental model
+
+The following examples are illustrative rather than mandatory file names. The implementation agent should inspect the repository and preserve its conventions, while keeping equivalent responsibility boundaries.
+
+A suitable small feature structure could look like:
+
+```text
+src/features/portfolio/
+├── data/
+│   ├── profile.query.ts
+│   ├── education.query.ts
+│   ├── principles.query.ts
+│   ├── services.query.ts
+│   ├── content-items.query.ts
+│   ├── experiences.query.ts
+│   └── projects.query.ts
+├── mappers/
+│   ├── profile.mapper.ts
+│   ├── experience.mapper.ts
+│   └── project.mapper.ts
+├── validation/
+│   └── project-links.schema.ts
+├── loaders/
+│   ├── home-page.loader.ts
+│   ├── work-page.loader.ts
+│   └── about-page.loader.ts
+└── types.ts
+```
+
+The intent is:
+
+- query modules only read from Prisma
+- mapper modules only convert database records into UI-facing values
+- validation modules protect unsafe boundaries such as Prisma `Json`
+- page loaders compose smaller queries and mappers for one route
+- page components request page data and render it
+
+### Query example
+
+A query function should perform one focused database read and preserve required ordering:
+
+```ts
+export async function findProjects() {
+  return prisma.project.findMany({
+    orderBy: { position: "asc" },
+  });
+}
+```
+
+A singleton query should make ambiguity explicit rather than silently selecting an arbitrary row:
+
+```ts
+export async function findSingleProfile() {
+  const profiles = await prisma.profile.findMany({ take: 2 });
+
+  if (profiles.length !== 1) {
+    throw new Error(
+      `Expected exactly one profile record, received ${profiles.length}.`,
+    );
+  }
+
+  return profiles[0];
+}
+```
+
+### Validation example
+
+Project links are stored as JSON and must be validated before being exposed to presentation code. The exact validation library is an implementation choice, but the boundary should produce a typed value or a clear project-specific error.
+
+```ts
+export function parseProjectLinks(value: unknown, projectTitle: string) {
+  const result = projectLinksSchema.safeParse(value);
+
+  if (!result.success) {
+    throw new Error(`Invalid links stored for project: ${projectTitle}`);
+  }
+
+  return result.data;
+}
+```
+
+The accepted output shape remains:
+
+```ts
+type ProjectLink = {
+  label: string;
+  href: string;
+};
+```
+
+### Mapper example
+
+A mapper should convert one database record and should not query the database:
+
+```ts
+export function mapProject(record: ProjectRecord): Project {
+  return {
+    title: record.title,
+    summary: record.summary,
+    category: record.category,
+    stack: [...record.stacks],
+    role: record.role,
+    outcome: record.outcome,
+    links: parseProjectLinks(record.links, record.title),
+    detail: record.detail,
+    future: record.future ?? undefined,
+    collaboration: record.collaboration ?? undefined,
+    positioning: record.positioning ?? undefined,
+    featured: record.featured,
+  };
+}
+```
+
+### Page-loader examples
+
+A page loader should compose only the data required by its route. Independent reads should run concurrently where practical.
+
+```ts
+export async function getHomePageData() {
+  const [profileRecord, services, principles, projects, experiences] =
+    await Promise.all([
+      findSingleProfile(),
+      findServices(),
+      findPrinciplesBySection("home"),
+      findFeaturedProjects(),
+      findExperiences(),
+    ]);
+
+  return {
+    profile: mapProfile(profileRecord),
+    services: services.map(mapService),
+    principles: principles.map(mapPrinciple),
+    featuredProjects: projects.map(mapProject),
+    experiences: experiences.map(mapExperience),
+  };
+}
+```
+
+```ts
+export async function getWorkPageData() {
+  const records = await findProjects();
+  const projects = records.map(mapProject);
+
+  return {
+    featuredProjects: projects.filter((project) => project.featured),
+    otherProjects: projects.filter((project) => !project.featured),
+  };
+}
+```
+
+```ts
+export async function getAboutPageData() {
+  const [profileRecord, educationRecord, principles, contentItems] =
+    await Promise.all([
+      findSingleProfile(),
+      findSingleEducation(),
+      findPrinciplesBySection("about"),
+      findAboutContentItems(),
+    ]);
+
+  return {
+    profile: mapProfile(profileRecord),
+    education: mapEducation(educationRecord),
+    principles: principles.map(mapPrinciple),
+    aboutIntro: selectContentSection(contentItems, "about_intro"),
+    workProcess: selectContentSection(contentItems, "work_process"),
+    outsideEngineering: selectContentSection(
+      contentItems,
+      "outside_engineering",
+    ),
+  };
+}
+```
+
+The corresponding page should remain presentation-focused:
+
+```tsx
+export default async function WorkPage() {
+  const { featuredProjects, otherProjects } = await getWorkPageData();
+
+  return (
+    <>
+      {/* Existing page structure and components */}
+    </>
+  );
+}
+```
+
+### Loading-state examples
+
+Loading UI should be route-focused, presentation-only and free of database calls. A suitable route structure could include:
+
+```text
+src/app/loading.tsx
+src/app/work/loading.tsx
+src/app/about/loading.tsx
+```
+
+A loading component may mirror the rough visual structure without pretending to contain real data:
+
+```tsx
+export default function Loading() {
+  return (
+    <main aria-busy="true" aria-label="Loading portfolio content">
+      <div className="animate-pulse">
+        {/* Small route-specific skeleton using existing layout primitives */}
+      </div>
+    </main>
+  );
+}
+```
+
+The loading boundary must not introduce browser-side data fetching or make the route depend on client state.
+
+### Error-state example
+
+An `error.tsx` boundary is a client component because it receives `reset`, but it must only display a safe recovery state. It must not query the database or expose internal error details.
+
+```tsx
+"use client";
+
+export default function Error({ reset }: { reset: () => void }) {
+  return (
+    <main role="alert">
+      <h1>Something went wrong.</h1>
+      <p>The portfolio content could not be displayed.</p>
+      <button type="button" onClick={reset}>
+        Try again
+      </button>
+    </main>
+  );
+}
+```
+
+A database or required-content failure during `next build` must still fail the build. The error boundary is not a fallback for publishing an invalid deployment.
+
+### Test-structure example
+
+Tests should remain focused by module or responsibility rather than becoming one large portfolio integration test.
+
+A suitable structure could be:
+
+```text
+tests/portfolio/
+├── profile.mapper.test.ts
+├── experience.mapper.test.ts
+├── project.mapper.test.ts
+├── project-links.schema.test.ts
+├── home-page.loader.test.ts
+├── work-page.loader.test.ts
+└── about-page.loader.test.ts
+```
+
+If the repository's established convention is `scripts/tests/`, preserve that location while maintaining equivalent separation.
+
 ## Constraints
 
 - Use the existing Prisma schema, generated client and database connection established by the earlier milestones.
