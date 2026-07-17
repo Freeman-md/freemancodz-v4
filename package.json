@@ -13,6 +13,8 @@
     "prisma:generate": "prisma generate",
     "supabase:types": "supabase gen types typescript --local > src/types/supabase.ts",
     "test:rag-rpc": "tsx scripts/test-match-site-chunks.ts",
+    "test:seed": "tsx scripts/tests/portfolio-seed.test.ts",
+    "seed:portfolio": "tsx scripts/seed-portfolio-data.ts",
     "seed:chunks": "tsx scripts/seed-site-chunks.ts"
   },
   "dependencies": {
