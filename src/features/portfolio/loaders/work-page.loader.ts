@@ -9,5 +9,8 @@ export async function getWorkPageData(): Promise<WorkPageData> {
     throw new Error("Required portfolio projects not found");
   }
 
-  return { featuredProjects: projects.filter((project) => project.featured), otherProjects: projects.filter((project) => !project.featured) };
+  return {
+    featuredProjects: projects.filter((project) => project.featured),
+    otherProjects: projects.filter((project) => !project.featured),
+  };
 }
