@@ -1,6 +1,6 @@
 # Milestone 3: Pre-render Portfolio Data from Supabase
 
-**Status:** Draft  
+**Status:** Frozen  
 **Version:** 1.1.0  
 **Last Updated:** 2026-07-17  
 **Depends On:** Milestone 2 and Milestone 2 Amendment 1  

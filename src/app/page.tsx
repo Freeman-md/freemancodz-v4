@@ -9,24 +9,31 @@ import { ProjectCard } from "@/components/ProjectCard";
 import { QuoteBlock } from "@/components/QuoteBlock";
 import { SectionHeader } from "@/components/SectionHeader";
 import { ServiceIcon } from "@/components/ServiceIcons";
-import { experiences } from "@/data/experience";
-import { profile } from "@/data/profile";
-import { featuredProjects } from "@/data/projects";
+import { getHomePageData } from "@/features/portfolio/loaders/home-page.loader";
 import { siteAssetLinks } from "@/lib/links";
 
-export default function Home() {
+export default async function Home() {
+  const {
+    hero,
+    philosophy,
+    currentDirection,
+    services,
+    principles,
+    featuredProjects,
+    experiences,
+  } = await getHomePageData();
   return (
     <>
       <Container className="grid grid-cols-1 items-center gap-8 py-16 md:py-[120px] lg:grid-cols-12">
         <section className="lg:col-span-7 lg:pr-12">
           <p className="mb-6 font-mono text-[12px] uppercase tracking-[0.38em] text-accent">
-            {profile.name}
+            {hero.name}
           </p>
           <h1 className="max-w-5xl text-5xl font-semibold leading-[0.96] tracking-[-0.06em] text-ink md:text-7xl md:leading-[0.96]">
-            {profile.headline}
+            {hero.headline}
           </h1>
           <p className="mt-6 max-w-2xl text-lg leading-8 text-muted">
-            {profile.intro}
+            {hero.intro}
           </p>
           <div className="mt-10 flex flex-wrap gap-4">
             <Button href="/work">View My Work</Button>
@@ -51,7 +58,7 @@ export default function Home() {
           copy="Two connected systems: assistants that handle the interaction, and workflows that handle what happens next."
         />
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-          {profile.services.map((service) => (
+          {services.map((service) => (
             <article
               key={service.title}
               className="flex h-full flex-col rounded-sm border border-line bg-white p-8 transition hover:border-neutral-300 hover:shadow-soft"
@@ -113,10 +120,10 @@ export default function Home() {
               Current Focus
             </div>
             <h2 className="text-3xl font-semibold tracking-[-0.04em] md:text-5xl">
-              {profile.currentDirection}
+              {currentDirection.currentDirection}
             </h2>
             <p className="mt-5 text-lg leading-8 text-neutral-300">
-              {profile.currentDirectionSupport}
+              {currentDirection.currentDirectionSupport}
             </p>
           </div>
         </section>
@@ -152,9 +159,9 @@ export default function Home() {
           <p className="mb-6 font-mono text-[12px] uppercase tracking-[0.38em] text-accent">
             Engineering philosophy
           </p>
-          <QuoteBlock>{profile.philosophyQuestion}</QuoteBlock>
+          <QuoteBlock>{philosophy.philosophyQuestion}</QuoteBlock>
           <div className="mt-16 grid gap-8 md:grid-cols-2 lg:grid-cols-3">
-            {profile.principles.map((principle, index) => (
+            {principles.map((principle, index) => (
               <PrincipleCard
                 key={principle.title}
                 index={index + 1}

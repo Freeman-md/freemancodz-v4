@@ -3,7 +3,7 @@ import { CTASection } from "@/components/CTASection";
 import { Container } from "@/components/Container";
 import { ProjectCard } from "@/components/ProjectCard";
 import { ProjectFeature } from "@/components/ProjectFeature";
-import { featuredProjects, otherProjects } from "@/data/projects";
+import { getWorkPageData } from "@/features/portfolio/loaders/work-page.loader";
 import { siteConfig } from "@/lib/site-metadata";
 
 export const metadata: Metadata = {
@@ -26,7 +26,8 @@ export const metadata: Metadata = {
   },
 };
 
-export default function WorkPage() {
+export default async function WorkPage() {
+  const { featuredProjects, otherProjects } = await getWorkPageData();
   return (
     <>
       <Container className="pb-20 pt-44 md:pb-[120px] md:pt-[120px]">
