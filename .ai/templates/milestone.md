@@ -40,6 +40,8 @@ Describe the outcome in one short paragraph.
 
 ## Acceptance criteria
 
+Include only criteria the implementation and review agents can verify from repository evidence, automated tests, CI or accessible runtime behaviour.
+
 - [ ] The goal is achieved.
 - [ ] All required behaviour is implemented.
 - [ ] Relevant existing behaviour remains intact.
@@ -49,6 +51,14 @@ Describe the outcome in one short paragraph.
 - [ ] The complete independent review is posted to the pull request.
 - [ ] The pull request is not merged by an agent.
 
-## Manual verification
+## Manual tasks
 
-1. Describe the smallest real-world verification required before merge.
+List only the smallest human actions that require private credentials, local infrastructure, production access or human judgement. Use `None` when not required.
+
+1. Manual task or command to run.
+
+## Manual acceptance criteria
+
+These are confirmed by the human after the workflow reaches `ready_for_human`. They do not block the agent workflow from reaching that state.
+
+- [ ] Human-verifiable outcome one.
