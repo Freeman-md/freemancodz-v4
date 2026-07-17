@@ -50,6 +50,33 @@ test("work loader preserves project order when grouping featured work", async ()
   }
 });
 
+test("about loader composes required singleton and ordered section content", async () => {
+  const { prisma } = await import("@/lib/prisma");
+  const { getAboutPageData } = await import("@/features/portfolio/loaders/about-page.loader");
+  const originals = { findUnique: prisma.contentBlock.findUnique, findMany: prisma.contentBlock.findMany, principles: prisma.principle.findMany };
+  prisma.contentBlock.findUnique = (async ({ where }) => ({
+    "about.header": block("about.header", "ABOUT", "ABOUT_HEADER", { aboutHeadline: "About" }),
+    "about.education": block("about.education", "ABOUT", "EDUCATION", { current: "Current", previous: "Previous", research: "Research", support: "Support" }),
+  })[where?.key as string] ?? null) as typeof prisma.contentBlock.findUnique;
+  prisma.contentBlock.findMany = (async ({ where }: { where?: { section?: string } }) => ({
+    ABOUT_INTRO: [block("about.intro.0", "ABOUT", "ABOUT_INTRO", { body: "Intro" })],
+    WORK_PROCESS: [block("about.work-process.0", "ABOUT", "WORK_PROCESS", { body: "Process" })],
+    OUTSIDE_ENGINEERING: [block("about.outside-engineering.0", "ABOUT", "OUTSIDE_ENGINEERING", { title: "Strength", description: "Training" })],
+  })[where?.section as string] ?? []) as unknown as typeof prisma.contentBlock.findMany;
+  prisma.principle.findMany = (async () => [{ title: "Principle", body: "Body" }]) as typeof prisma.principle.findMany;
+  try {
+    const data = await getAboutPageData();
+    assert.equal(data.header.aboutHeadline, "About");
+    assert.deepEqual(data.intro.map((item) => item.body), ["Intro"]);
+    assert.deepEqual(data.workProcess.map((item) => item.body), ["Process"]);
+    assert.deepEqual(data.outsideEngineering.map((item) => item.title), ["Strength"]);
+  } finally {
+    prisma.contentBlock.findUnique = originals.findUnique;
+    prisma.contentBlock.findMany = originals.findMany;
+    prisma.principle.findMany = originals.principles;
+  }
+});
+
 test("loader surfaces database failures instead of falling back to static data", async () => {
   const { prisma } = await import("@/lib/prisma");
   const { getWorkPageData } = await import("@/features/portfolio/loaders/work-page.loader");
@@ -57,6 +84,18 @@ test("loader surfaces database failures instead of falling back to static data",
   prisma.project.findMany = (async () => { throw new Error("database unavailable"); }) as typeof prisma.project.findMany;
   try {
     await assert.rejects(getWorkPageData(), /database unavailable/);
+  } finally {
+    prisma.project.findMany = original;
+  }
+});
+
+test("work loader fails clearly when required projects are absent", async () => {
+  const { prisma } = await import("@/lib/prisma");
+  const { getWorkPageData } = await import("@/features/portfolio/loaders/work-page.loader");
+  const original = prisma.project.findMany;
+  prisma.project.findMany = (async () => []) as unknown as typeof prisma.project.findMany;
+  try {
+    await assert.rejects(getWorkPageData(), /Required portfolio projects not found/);
   } finally {
     prisma.project.findMany = original;
   }

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import type { ContentBlock } from "@/generated/prisma/client";
 import { assertContentBlockIdentity, mapHeroBlock } from "@/features/portfolio/mappers/content-block.mapper";
+import { parseHeroContent } from "@/features/portfolio/schemas/content-blocks/hero.schema";
 import { parseTextBlockContent } from "@/features/portfolio/schemas/content-blocks/text-block.schema";
 
 const hero = {
@@ -24,4 +25,11 @@ test("rejects mismatched required content block identity", () => {
 
 test("rejects malformed repeatable content", () => {
   assert.throws(() => parseTextBlockContent({ body: 1 }, "block: about.intro.0"), /Invalid content stored/);
+});
+
+test("rejects malformed hero content at the JSON boundary", () => {
+  assert.throws(
+    () => parseHeroContent({ name: "Freeman", headline: "Headline", intro: "Intro" }, "home.hero"),
+    /Invalid content stored for block: home\.hero/,
+  );
 });
