@@ -1,17 +1,4 @@
-export type Project = {
-  title: string;
-  summary: string;
-  category: string;
-  stack: string[];
-  role: string;
-  outcome: string;
-  links: { label: string; href: string }[];
-  detail: string;
-  future?: string;
-  collaboration?: string;
-  positioning?: string;
-  featured?: boolean;
-};
+import type { Project } from "@/types/content";
 
 export const projects: Project[] = [
   {

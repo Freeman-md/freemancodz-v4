@@ -62,14 +62,13 @@ export default function Home() {
               <h3 className="text-2xl font-medium tracking-[-0.03em] text-ink md:text-[28px]">
                 {service.title}
               </h3>
+              <p className="mt-4 max-w-xl text-base font-medium leading-7 text-ink">
+                {service.lead}
+              </p>
+
               <p className="mt-4 max-w-xl text-sm leading-6 text-muted">
                 {service.description}
               </p>
-              <div className="mt-6">
-                <span className="inline-flex rounded-full border border-line bg-surface px-3 py-1 font-mono text-[12px] text-muted">
-                  {service.label}
-                </span>
-              </div>
               <div className="mt-8">
                 {service.assistantPrompt ? (
                   <AssistantTriggerButton

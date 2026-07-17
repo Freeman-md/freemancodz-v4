@@ -1,4 +1,4 @@
-import type { Experience } from "@/data/experience";
+import type { Experience } from "@/types/content";
 import { Chip } from "./Chip";
 
 export function ExperienceCard({ experience }: { experience: Experience }) {

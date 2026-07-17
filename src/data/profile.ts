@@ -1,10 +1,4 @@
-export type ProfileService = {
-  title: string;
-  description: string;
-  label: string;
-  cta: string;
-  assistantPrompt?: string;
-};
+import type { ProfileService } from "@/types/content";
 
 export const profile = {
   name: "Freeman Madudili",
@@ -40,27 +34,32 @@ export const profile = {
   services: [
     {
       title: "Customer-Facing Assistants",
+      lead:
+        "Give your customers a faster way to get answers, understand their options and take the next step.",
       description:
-        "Assistants that help people find the right information, understand their options and take action through connected tools and systems.",
-      label: "Answers. Guidance. Actions.",
+        "I build assistants that use your knowledge, connect to your tools and handle useful actions such as collecting details, routing enquiries, updating records or booking calls.",
       cta: "Explore an Assistant",
       assistantPrompt:
         "I’m interested in a customer-facing assistant. Help me understand what one could do for my use case.",
     },
     {
       title: "Operational Workflows",
+      lead:
+        "Reduce the repetitive work slowing you or your team down.",
       description:
-        "Reliable workflows that connect data, tools and people to reduce repetitive work and keep processes moving.",
-      label: "Automation. Routing. Reliability.",
+        "I build reliable workflows that move information between your tools, handle routine decisions and keep processes moving without unnecessary manual effort.",
       cta: "Explore a Workflow",
+      assistantPrompt:
+        "I’m interested in automating a repetitive workflow. Help me identify what could be improved.",
     },
   ] satisfies ProfileService[],
   aboutHeadline: "How I think, work, and approach engineering.",
-aboutIntro: [
-  "The technologies I use will change over time. The principles I build around will not.",
-  "I enjoy solving problems that become more interesting as systems grow, especially around software engineering, AI, automation, and long-term system reliability.",
-  "I care about systems that stay dependable under pressure, teams that can reason clearly about trade-offs, and products that remain maintainable long after the first release.",
-],
+  aboutIntro: [
+    "I care about building software that is clear, useful and dependable.",
+    "My current work focuses on customer-facing assistants and the operational workflows behind them, combining frontend engineering, backend systems and practical AI.",
+    "I start by understanding the problem, then design the simplest system that can solve it well. From there, I build in small increments, make failures visible and improve based on real feedback.",
+    "The tools will change. The principles will not: clarity before complexity, reliability before cleverness and engineering judgement over hype."
+  ],
   aboutPrinciples: [
     {
       title: "Clarity before complexity",

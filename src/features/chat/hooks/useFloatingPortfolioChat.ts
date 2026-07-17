@@ -2,6 +2,7 @@
 
 import {
   useEffect,
+  useEffectEvent,
   useMemo,
   useRef,
   useState,
@@ -39,88 +40,8 @@ export function useFloatingPortfolioChat() {
   const isOpen = stage !== "launcher";
   const isConversation = stage === "conversation";
 
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({
-      block: "end",
-      behavior: shouldReduceMotion ? "auto" : "smooth",
-    });
-  }, [messages, isLoading, stage, shouldReduceMotion]);
-
-  useEffect(() => {
-    if (stage !== "launcher") {
-      textareaRef.current?.focus();
-    }
-  }, [stage]);
-
-  useEffect(() => {
-    if (stage === "launcher" || isLoading) {
-      return;
-    }
-
-    function handlePointerDown(event: PointerEvent) {
-      const target = event.target;
-
-      if (target instanceof Node && !shellRef.current?.contains(target)) {
-        setStage("launcher");
-      }
-    }
-
-    function handleEscape(event: globalThis.KeyboardEvent) {
-      if (event.key === "Escape") {
-        setStage("launcher");
-      }
-    }
-
-    document.addEventListener("pointerdown", handlePointerDown);
-    document.addEventListener("keydown", handleEscape);
-
-    return () => {
-      document.removeEventListener("pointerdown", handlePointerDown);
-      document.removeEventListener("keydown", handleEscape);
-    };
-  }, [stage, isLoading]);
-
-  useEffect(() => {
-    function handleOpenEvent(event: Event) {
-      const detail = (event as CustomEvent<OpenPortfolioChatDetail>).detail;
-
-      setStage(messages.length > 0 ? "conversation" : "composer");
-      setErrorMessage(null);
-
-      if (detail?.message) {
-        setInput(detail.message);
-      }
-    }
-
-    window.addEventListener(OPEN_PORTFOLIO_CHAT_EVENT, handleOpenEvent);
-
-    return () => {
-      window.removeEventListener(OPEN_PORTFOLIO_CHAT_EVENT, handleOpenEvent);
-    };
-  }, [messages.length]);
-
-  const canSubmit = useMemo(() => {
-    const trimmed = input.trim();
-    return trimmed.length > 0 && trimmed.length <= MAX_MESSAGE_LENGTH && !isLoading;
-  }, [input, isLoading]);
-
-  function openChat() {
-    setStage(messages.length > 0 ? "conversation" : "composer");
-  }
-
-  function closeChat() {
-    setStage("launcher");
-  }
-
-  function handleInputChange(value: string) {
-    setInput(value);
-    if (errorMessage) {
-      setErrorMessage(null);
-    }
-  }
-
-  async function handleSubmit() {
-    const message = input.trim();
+  async function submitMessage(rawMessage: string) {
+    const message = rawMessage.trim();
 
     if (!message || message.length > MAX_MESSAGE_LENGTH || isLoading) {
       return;
@@ -189,6 +110,98 @@ export function useFloatingPortfolioChat() {
     } finally {
       setIsLoading(false);
     }
+  }
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({
+      block: "end",
+      behavior: shouldReduceMotion ? "auto" : "smooth",
+    });
+  }, [messages, isLoading, stage, shouldReduceMotion]);
+
+  useEffect(() => {
+    if (stage !== "launcher") {
+      textareaRef.current?.focus();
+    }
+  }, [stage]);
+
+  useEffect(() => {
+    if (stage === "launcher" || isLoading) {
+      return;
+    }
+
+    function handlePointerDown(event: PointerEvent) {
+      const target = event.target;
+
+      if (target instanceof Node && !shellRef.current?.contains(target)) {
+        setStage("launcher");
+      }
+    }
+
+    function handleEscape(event: globalThis.KeyboardEvent) {
+      if (event.key === "Escape") {
+        setStage("launcher");
+      }
+    }
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleEscape);
+
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [stage, isLoading]);
+
+  const handleTriggerOpen = useEffectEvent(
+    async (detail?: OpenPortfolioChatDetail) => {
+      setErrorMessage(null);
+
+      if (detail?.message) {
+        await submitMessage(detail.message);
+        return;
+      }
+
+      setStage(messages.length > 0 ? "conversation" : "composer");
+    },
+  );
+
+  useEffect(() => {
+    function handleOpenEvent(event: Event) {
+      void handleTriggerOpen(
+        (event as CustomEvent<OpenPortfolioChatDetail>).detail,
+      );
+    }
+
+    window.addEventListener(OPEN_PORTFOLIO_CHAT_EVENT, handleOpenEvent);
+
+    return () => {
+      window.removeEventListener(OPEN_PORTFOLIO_CHAT_EVENT, handleOpenEvent);
+    };
+  }, []);
+
+  const canSubmit = useMemo(() => {
+    const trimmed = input.trim();
+    return trimmed.length > 0 && trimmed.length <= MAX_MESSAGE_LENGTH && !isLoading;
+  }, [input, isLoading]);
+
+  function openChat() {
+    setStage(messages.length > 0 ? "conversation" : "composer");
+  }
+
+  function closeChat() {
+    setStage("launcher");
+  }
+
+  function handleInputChange(value: string) {
+    setInput(value);
+    if (errorMessage) {
+      setErrorMessage(null);
+    }
+  }
+
+  async function handleSubmit() {
+    await submitMessage(input);
   }
 
   function handleKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {

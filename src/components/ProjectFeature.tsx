@@ -1,4 +1,4 @@
-import type { Project } from "@/data/projects";
+import type { Project } from "@/types/content";
 import { Chip } from "./Chip";
 
 export function ProjectFeature({
