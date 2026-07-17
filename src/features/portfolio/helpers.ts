@@ -1,5 +1,5 @@
 import type { ZodType } from "zod";
-import { ProjectLinks, projectLinksSchema } from "./schemas/project-links.schema";
+import { type ProjectLinks, projectLinksSchema } from "./schemas/project-links.schema";
 
 export function parseContentBlock<T>(schema: ZodType<T>, value: unknown, key: string): T {
   const result = schema.safeParse(value);
