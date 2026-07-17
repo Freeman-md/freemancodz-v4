@@ -63,6 +63,27 @@ Do not create duplicate branches or pull requests.
 Do not modify checklist boxes in milestone contracts.
 Do not begin a future milestone.
 
+## Post-merge cleanup trigger
+
+After Freeman has merged the completed milestone pull request and deleted its remote feature branch, when Freeman says:
+
+```text
+Sync after merge.
+```
+
+execute `.ai/workflow/post-merge-cleanup.md`.
+
+This workflow must:
+
+- verify the pull request was merged
+- protect uncommitted and unmerged work
+- fetch and prune the remotes
+- switch to the repository's local default branch
+- fast-forward it from the remote default branch
+- delete the completed local milestone branch only when it is fully merged
+- confirm the local default branch matches the remote
+- stop without creating or starting the next milestone
+
 ## Instruction precedence
 
 When instructions conflict, use this order:
@@ -75,5 +96,6 @@ When instructions conflict, use this order:
 6. an active amendment, only for sections it changes
 7. implementation, review and quality prompts
 8. pull-request descriptions and agent summaries
+9. Future branches shouldn't have codex in them. For example /codex/feat/milestone-1-foundation should rather be /feat/milestone-1-foundation.
 
 Pull-request descriptions and summaries are not evidence of correctness.
