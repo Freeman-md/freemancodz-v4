@@ -75,5 +75,6 @@ When instructions conflict, use this order:
 6. an active amendment, only for sections it changes
 7. implementation, review and quality prompts
 8. pull-request descriptions and agent summaries
+9. Future branches shouldn't have codex in them. For example /codex/feat/milestone-1-foundation should rather be /feat/milestone-1-foundation.
 
 Pull-request descriptions and summaries are not evidence of correctness.
