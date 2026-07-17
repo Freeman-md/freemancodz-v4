@@ -64,6 +64,8 @@ Parse the complete result before deciding the next state.
 
 Do not treat agent completion itself as workflow completion.
 
+Keep agent-verifiable acceptance criteria separate from manual tasks and manual acceptance criteria. Pending human-only checks must not be routed back into the implementation-review loop unless the implementation required to support them is missing or incorrect.
+
 ## Review decision
 
 When the review requests changes:
@@ -81,6 +83,7 @@ When the review approves:
 - inspect unresolved review threads
 - run any configured quality agents
 - apply the ready-for-human gate from `lifecycle.md`
+- collect all pending manual tasks and manual acceptance criteria from the parent milestone, active amendment and review result
 
 ## Stop conditions
 
@@ -99,7 +102,11 @@ The final report must include:
 - reviewed head SHA
 - validation and CI status
 - review verdict
-- unresolved manual verification
+- agent acceptance summary
+- manual tasks for the human, including exact commands where provided
+- manual acceptance criteria for the human to confirm
 - blocker or escalation reason, when relevant
+
+When the state is `ready_for_human`, clearly separate completed agent work from pending human work. Do not describe pending manual tasks as implementation failures or blockers.
 
 Do not merge the pull request.
