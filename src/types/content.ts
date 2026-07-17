@@ -1,3 +1,5 @@
+import type { ProjectLinks } from "@/features/portfolio/schemas/project-links.schema";
+
 export type ProfileService = {
   title: string;
   lead: string;
@@ -22,7 +24,7 @@ export type Project = {
   stack: string[];
   role: string;
   outcome: string;
-  links: { label: string; href: string }[];
+  links: ProjectLinks;
   detail: string;
   future?: string;
   collaboration?: string;
