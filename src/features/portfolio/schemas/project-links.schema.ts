@@ -1,20 +1,11 @@
-import type { Project } from "@/types/content";
+import { z } from "zod";
 
-export function parseProjectLinks(value: unknown, projectTitle: string): Project["links"] {
-  if (!Array.isArray(value)) {
-    throw new Error(`Invalid links stored for project: ${projectTitle}`);
-  }
+export const projectLinkSchema = z.object({
+  label: z.string(),
+  href: z.url(),
+});
 
-  return value.map((link) => {
-    if (!link || typeof link !== "object" || Array.isArray(link)) {
-      throw new Error(`Invalid links stored for project: ${projectTitle}`);
-    }
+export const projectLinksSchema = z.array(projectLinkSchema);
 
-    const { label, href } = link as Record<string, unknown>;
-    if (typeof label !== "string" || typeof href !== "string") {
-      throw new Error(`Invalid links stored for project: ${projectTitle}`);
-    }
-
-    return { label, href };
-  });
-}
+export type ProjectLink = z.infer<typeof projectLinkSchema>;
+export type ProjectLinks = z.infer<typeof projectLinksSchema>;

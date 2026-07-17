@@ -1,7 +1,7 @@
-import type { TextBlockContent } from "@/features/portfolio/types";
-import { parseObject, readString } from "./shared";
+import { z } from "zod";
 
-export function parseTextBlockContent(value: unknown, label: string): TextBlockContent {
-  const content = parseObject(value, label);
-  return { body: readString(content, "body", label) };
-}
+export const textBlockContentSchema = z.object({
+  body: z.string(),
+});
+
+export type TextBlockContent = z.infer<typeof textBlockContentSchema>;

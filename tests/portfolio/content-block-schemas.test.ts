@@ -1,28 +1,38 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { parseAboutHeaderContent } from "@/features/portfolio/schemas/content-blocks/about-header.schema";
-import { parseCurrentDirectionContent } from "@/features/portfolio/schemas/content-blocks/current-direction.schema";
-import { parseEducationContent } from "@/features/portfolio/schemas/content-blocks/education.schema";
-import { parseOutsideEngineeringContent } from "@/features/portfolio/schemas/content-blocks/outside-engineering.schema";
-import { parsePhilosophyContent } from "@/features/portfolio/schemas/content-blocks/philosophy.schema";
+import { aboutHeaderContentSchema } from "@/features/portfolio/schemas/content-blocks/about-header.schema";
+import { currentDirectionContentSchema } from "@/features/portfolio/schemas/content-blocks/current-direction.schema";
+import { educationContentSchema } from "@/features/portfolio/schemas/content-blocks/education.schema";
+import { heroContentSchema } from "@/features/portfolio/schemas/content-blocks/hero.schema";
+import { outsideEngineeringContentSchema } from "@/features/portfolio/schemas/content-blocks/outside-engineering.schema";
+import { philosophyContentSchema } from "@/features/portfolio/schemas/content-blocks/philosophy.schema";
+import { textBlockContentSchema } from "@/features/portfolio/schemas/content-blocks/text-block.schema";
 
-test("parses the home singleton payloads", () => {
-  assert.deepEqual(parsePhilosophyContent({ philosophyQuestion: "Question" }, "home.philosophy"), { philosophyQuestion: "Question" });
-  assert.deepEqual(
-    parseCurrentDirectionContent({ currentDirection: "Direction", currentDirectionSupport: "Support" }, "home.current-direction"),
-    { currentDirection: "Direction", currentDirectionSupport: "Support" },
-  );
+const schemas = [
+  [heroContentSchema, { name: "Freeman", headline: "Headline", intro: "Intro", heroNote: "Note" }],
+  [philosophyContentSchema, { philosophyQuestion: "Question" }],
+  [currentDirectionContentSchema, { currentDirection: "Direction", currentDirectionSupport: "Support" }],
+  [aboutHeaderContentSchema, { aboutHeadline: "About" }],
+  [educationContentSchema, { current: "Current", previous: "Previous", research: "Research", support: "Support" }],
+  [textBlockContentSchema, { body: "Body" }],
+  [outsideEngineeringContentSchema, { title: "Strength", description: "Training" }],
+] as const;
+
+test("content block schemas accept valid seeded payload shapes", () => {
+  for (const [schema, payload] of schemas) {
+    assert.deepEqual(schema.parse(payload), payload);
+  }
 });
 
-test("parses about singleton and repeatable payloads", () => {
-  assert.deepEqual(parseAboutHeaderContent({ aboutHeadline: "About" }, "about.header"), { aboutHeadline: "About" });
-  assert.deepEqual(
-    parseEducationContent({ current: "Current", previous: "Previous", research: "Research", support: "Support" }, "about.education"),
-    { current: "Current", previous: "Previous", research: "Research", support: "Support" },
-  );
-  assert.deepEqual(parseOutsideEngineeringContent({ title: "Strength", description: "Training" }, "block: about.outside-engineering.0"), { title: "Strength", description: "Training" });
+test("content block schemas reject missing required fields", () => {
+  for (const [schema] of schemas) {
+    assert.equal(schema.safeParse({}).success, false);
+  }
 });
 
-test("identifies the affected block for malformed singleton payloads", () => {
-  assert.throws(() => parseEducationContent({ current: "Current" }, "about.education"), /block: about\.education/);
+test("content block schemas reject incorrect field types", () => {
+  for (const [schema, payload] of schemas) {
+    const [field] = Object.keys(payload);
+    assert.equal(schema.safeParse({ ...payload, [field]: 1 }).success, false);
+  }
 });

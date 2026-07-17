@@ -1,6 +1,6 @@
 # Milestone 3 Amendment 1: Replace Imperative Content Validation with Zod Schemas
 
-**Status:** Active  
+**Status:** Frozen  
 **Version:** 1.0.0  
 **Last Updated:** 2026-07-17  
 **Amends:** Milestone 3  

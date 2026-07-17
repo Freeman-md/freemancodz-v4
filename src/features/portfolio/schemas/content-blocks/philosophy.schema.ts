@@ -1,7 +1,7 @@
-import type { PhilosophyContent } from "@/features/portfolio/types";
-import { parseObject, readString } from "./shared";
+import { z } from "zod";
 
-export function parsePhilosophyContent(value: unknown, key: string): PhilosophyContent {
-  const content = parseObject(value, `block: ${key}`);
-  return { philosophyQuestion: readString(content, "philosophyQuestion", `block: ${key}`) };
-}
+export const philosophyContentSchema = z.object({
+  philosophyQuestion: z.string(),
+});
+
+export type PhilosophyContent = z.infer<typeof philosophyContentSchema>;

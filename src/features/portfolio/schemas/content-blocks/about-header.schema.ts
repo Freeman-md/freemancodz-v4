@@ -1,7 +1,7 @@
-import type { AboutHeaderContent } from "@/features/portfolio/types";
-import { parseObject, readString } from "./shared";
+import { z } from "zod";
 
-export function parseAboutHeaderContent(value: unknown, key: string): AboutHeaderContent {
-  const content = parseObject(value, `block: ${key}`);
-  return { aboutHeadline: readString(content, "aboutHeadline", `block: ${key}`) };
-}
+export const aboutHeaderContentSchema = z.object({
+  aboutHeadline: z.string(),
+});
+
+export type AboutHeaderContent = z.infer<typeof aboutHeaderContentSchema>;
