@@ -1,3 +1,4 @@
+import { AssistantTriggerButton } from "@/components/AssistantTriggerButton";
 import { Button } from "@/components/Button";
 import { CTASection } from "@/components/CTASection";
 import { Container } from "@/components/Container";
@@ -9,7 +10,6 @@ import { QuoteBlock } from "@/components/QuoteBlock";
 import { SectionHeader } from "@/components/SectionHeader";
 import { ServiceIcon } from "@/components/ServiceIcons";
 import { experiences } from "@/data/experience";
-import { externalLinks } from "@/data/navigation";
 import { profile } from "@/data/profile";
 import { featuredProjects } from "@/data/projects";
 import { siteAssetLinks } from "@/lib/links";
@@ -30,15 +30,9 @@ export default function Home() {
           </p>
           <div className="mt-10 flex flex-wrap gap-4">
             <Button href="/work">View My Work</Button>
-            <Button
-              href={externalLinks.linkedin}
-              variant="ghost"
-              target="_blank"
-              rel="noreferrer"
-            >
-              LinkedIn
-              <span aria-hidden="true">↗</span>
-            </Button>
+            <AssistantTriggerButton variant="ghost">
+              Talk to My Assistant
+            </AssistantTriggerButton>
           </div>
         </section>
         <section className="lg:col-span-5">

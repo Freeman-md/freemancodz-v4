@@ -10,6 +10,10 @@ import {
 import { useReducedMotion, type Transition } from "framer-motion";
 import { streamChatResponse } from "../client";
 import { MAX_MESSAGE_LENGTH } from "../constants";
+import {
+  OPEN_PORTFOLIO_CHAT_EVENT,
+  type OpenPortfolioChatDetail,
+} from "../events";
 import type { ChatMessage, ChatStage } from "../types";
 import {
   createAssistantErrorMessage,
@@ -75,6 +79,25 @@ export function useFloatingPortfolioChat() {
       document.removeEventListener("keydown", handleEscape);
     };
   }, [stage, isLoading]);
+
+  useEffect(() => {
+    function handleOpenEvent(event: Event) {
+      const detail = (event as CustomEvent<OpenPortfolioChatDetail>).detail;
+
+      setStage(messages.length > 0 ? "conversation" : "composer");
+      setErrorMessage(null);
+
+      if (detail?.message) {
+        setInput(detail.message);
+      }
+    }
+
+    window.addEventListener(OPEN_PORTFOLIO_CHAT_EVENT, handleOpenEvent);
+
+    return () => {
+      window.removeEventListener(OPEN_PORTFOLIO_CHAT_EVENT, handleOpenEvent);
+    };
+  }, [messages.length]);
 
   const canSubmit = useMemo(() => {
     const trimmed = input.trim();

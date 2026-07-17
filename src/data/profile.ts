@@ -2,7 +2,7 @@ export const profile = {
   name: "Freeman Madudili",
   headline: "Building reliable software for ambitious teams.",
   intro:
-    "I build software that is simple to understand, reliable to operate, and designed to grow. My current work focuses on AI-assisted software engineering, automation, and building systems that remain dependable as they become more complex.",
+    "I build intuitive customer-facing assistants and reliable operational workflows that help people find information, take action and reduce repetitive work. My work combines frontend engineering, backend systems and practical AI to create software that works beyond the demo.",
   heroNote:
     "Building practical AI systems that make engineering workflows faster, clearer, and more reliable.",
   philosophyQuestion:
@@ -76,9 +76,9 @@ aboutIntro: [
       "The research explores how AI can improve reliability, observability, and operational resilience without sacrificing engineering judgement.",
   },
   currentDirection:
-    "Practical AI systems, engineering workflows, and reliable software operations.",
+    "Customer-facing assistants and reliable operational workflows.",
   currentDirectionSupport:
-    "I’m focused on building AI-assisted systems that make engineering work faster, clearer, and easier to operate. My MSc research into self-healing backend operations agents is one expression of that direction, exploring how production systems can detect, diagnose, and recover from failures while keeping engineers firmly in control.",
+    "I’m focused on building assistants that help people find the right information, understand their options and take action. Behind them, I build reliable workflows that connect tools, data and people to reduce repetitive work and keep processes moving.",
   outsideEngineering: [
     {
       title: "Strength",
