@@ -71,10 +71,21 @@ export default function Home() {
                 </span>
               </div>
               <div className="mt-8">
-                <span className="inline-flex items-center gap-2 font-mono text-[12px] font-medium tracking-[0.02em] text-ink">
-                  {service.cta}
-                  <span aria-hidden="true">↗</span>
-                </span>
+                {service.assistantPrompt ? (
+                  <AssistantTriggerButton
+                    variant="text"
+                    className="px-0 py-0"
+                    detail={{ message: service.assistantPrompt }}
+                  >
+                    {service.cta}
+                    <span aria-hidden="true">↗</span>
+                  </AssistantTriggerButton>
+                ) : (
+                  <span className="inline-flex items-center gap-2 font-mono text-[12px] font-medium tracking-[0.02em] text-ink">
+                    {service.cta}
+                    <span aria-hidden="true">↗</span>
+                  </span>
+                )}
               </div>
             </article>
           ))}

@@ -3,6 +3,7 @@ export type ProfileService = {
   description: string;
   label: string;
   cta: string;
+  assistantPrompt?: string;
 };
 
 export const profile = {
@@ -43,6 +44,8 @@ export const profile = {
         "Assistants that help people find the right information, understand their options and take action through connected tools and systems.",
       label: "Answers. Guidance. Actions.",
       cta: "Explore an Assistant",
+      assistantPrompt:
+        "I’m interested in a customer-facing assistant. Help me understand what one could do for my use case.",
     },
     {
       title: "Operational Workflows",
