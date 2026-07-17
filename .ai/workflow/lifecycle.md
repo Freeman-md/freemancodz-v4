@@ -79,6 +79,8 @@ When review returns `REQUEST_CHANGES` or equivalent blocking findings:
 
 Do not open a replacement pull request to avoid findings.
 
+Manual tasks and manual acceptance criteria are human handoff items. Pending manual work must not be converted into review findings or additional implementation cycles unless repository evidence shows the implementation required to support that manual step is missing or incorrect.
+
 ## Ready-for-human gate
 
 Set `ready_for_human` only when all required conditions are true:
@@ -91,14 +93,19 @@ Set `ready_for_human` only when all required conditions are true:
 - high-severity count is zero
 - required CI checks pass on the reviewed SHA
 - no unresolved review thread remains without a documented valid disposition
-- every acceptance criterion is `PASS` or explicitly `NOT VERIFIED`
+- every agent-verifiable acceptance criterion is `PASS` or explicitly `NOT VERIFIED`
 - every required quality agent configured by the repository has passed
+- all pending manual tasks and manual acceptance criteria are listed for the human
+
+Manual tasks and manual acceptance criteria do not have to be completed for the workflow to reach `ready_for_human`.
 
 Do not invoke another implementation or review agent after this gate passes.
 
 ## Blocked
 
-Use `blocked` when safe progress requires unavailable credentials, permissions, infrastructure, external systems or missing human-provided information.
+Use `blocked` when safe implementation progress requires unavailable credentials, permissions, infrastructure, external systems or missing human-provided information.
+
+Do not use `blocked` merely because a contract contains a manual task that is intentionally deferred until `ready_for_human`.
 
 Report:
 
