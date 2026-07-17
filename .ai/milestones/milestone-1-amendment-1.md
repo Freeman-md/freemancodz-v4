@@ -1,6 +1,6 @@
 # Milestone 1 Amendment 1: Simplify Portfolio Schema
 
-**Status:** Active  
+**Status:** Frozen  
 **Version:** 1.0.0  
 **Last Updated:** 2026-07-17  
 **Parent Milestone:** `.ai/milestones/milestone-1.md`  
