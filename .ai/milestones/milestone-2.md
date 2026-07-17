@@ -1,6 +1,6 @@
 # Milestone 2: Seed Portfolio Data
 
-**Status:** Active  
+**Status:** Frozen
 **Version:** 1.0.0  
 **Last Updated:** 2026-07-17  
 **Depends On:** Milestone 1  

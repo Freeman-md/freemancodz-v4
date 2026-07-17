@@ -21,32 +21,39 @@ model SiteChunk {
   @@map("site_chunks")
 }
 
-model Profile {
-  id                      String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name                    String
-  headline                String
-  intro                   String
-  heroNote                String   @map("hero_note")
-  philosophyQuestion      String   @map("philosophy_question")
-  aboutHeadline           String   @map("about_headline")
-  currentDirection        String   @map("current_direction")
-  currentDirectionSupport String   @map("current_direction_support")
-  createdAt               DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt               DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+enum ContentPage {
+  HOME  @map("home")
+  ABOUT @map("about")
 
-  @@map("profiles")
+  @@map("content_page")
 }
 
-model Education {
-  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  current   String
-  previous  String
-  research  String
-  support   String
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+enum ContentSection {
+  HERO                @map("hero")
+  PHILOSOPHY          @map("philosophy")
+  CURRENT_DIRECTION   @map("current_direction")
+  ABOUT_HEADER        @map("about_header")
+  ABOUT_INTRO         @map("about_intro")
+  EDUCATION           @map("education")
+  WORK_PROCESS        @map("work_process")
+  OUTSIDE_ENGINEERING @map("outside_engineering")
 
-  @@map("educations")
+  @@map("content_section")
+}
+
+model ContentBlock {
+  id        String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  key       String         @unique
+  page      ContentPage
+  section   ContentSection
+  position  Int            @default(0)
+  content   Json           @db.JsonB
+  createdAt DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime       @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([page, section, position])
+  @@index([page, section, position])
+  @@map("content_blocks")
 }
 
 model Principle {
@@ -76,20 +83,6 @@ model Service {
 
   @@unique([position])
   @@map("services")
-}
-
-model ContentItem {
-  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  section   String
-  title     String?
-  body      String
-  position  Int
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
-
-  @@unique([section, position])
-  @@index([section, position])
-  @@map("content_items")
 }
 
 model Experience {

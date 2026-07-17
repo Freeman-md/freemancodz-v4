@@ -26,7 +26,7 @@ Import the repository into Vercel and set optional environment variables in Proj
 
 ## Database foundation
 
-The site continues to render the static content in `src/data/` during this milestone. The database schema represents that content for a later migration, but no static data is seeded and no page reads from Supabase yet.
+The site continues to render the static content in `src/data/`. The portfolio seed copies that content to the database for later use; pages do not read from Supabase yet.
 
 ### Source of truth
 
@@ -55,9 +55,22 @@ supabase db reset --local
 npm run prisma:validate
 npm run prisma:generate
 supabase migration list --local
+npm run seed:portfolio
 ```
 
 `supabase db reset --local` recreates the local database from the committed SQL migrations and is the clean-setup check. Running it again should produce the same schema; it does not create migration files. `supabase migration list --local` confirms the migration history recorded by the local database matches the committed files.
+
+### Portfolio seed
+
+Run the repeatable portfolio seed against the database selected by `DATABASE_URL`:
+
+```bash
+npm run seed:portfolio
+```
+
+Apply the current Supabase migrations before running the seed. The amendment migration intentionally changes the schema without embedding portfolio data, so `npm run seed:portfolio` repopulates `content_blocks`, `principles`, `services`, `experiences`, and `projects` from the static TypeScript source in a single transaction. It does not seed `site_chunks`, change the static files, or run automatically during deployment. A connection or write failure is reported with a non-zero exit status; Prisma disconnects before the command finishes.
+
+For a hosted Supabase database, set `DATABASE_URL` in the shell or secret store to that project's direct Postgres connection string, then run the same command. Confirm the selected database is the intended project before executing it. Do not put `DATABASE_URL` in a committed file.
 
 ### Hosted workflow
 
@@ -71,4 +84,4 @@ supabase db push --linked
 supabase migration list --linked
 ```
 
-`supabase db push` applies only pending files from `supabase/migrations/`, so re-running it is safe when the migration history is in sync. Do not use `supabase db reset --linked` on a production project: it is destructive. Run `supabase db push --include-seed` only for disposable environments; this project intentionally has no content seed data in this milestone.
+`supabase db push` applies only pending files from `supabase/migrations/`, so re-running it is safe when the migration history is in sync. Do not use `supabase db reset --linked` on a production project: it is destructive. This project does not use automatic deployment seeding; use `npm run seed:portfolio` deliberately after selecting the intended database.
