@@ -1,6 +1,6 @@
 # Milestone 1: Supabase Database Foundation
 
-**Status:** Active  
+**Status:** Frozen
 **Version:** 1.0.0  
 **Last Updated:** 2026-07-17  
 **Depends On:** none  

@@ -1,0 +1,164 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model SiteChunk {
+  id        String                   @id
+  title     String
+  category  String
+  url       String
+  content   String
+  keywords  String[]                 @default([])
+  embedding Unsupported("vector")
+  createdAt DateTime                 @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime                 @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  @@map("site_chunks")
+}
+
+model PortfolioProfile {
+  id                      String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                    String
+  headline                String
+  intro                   String
+  heroNote                String               @map("hero_note")
+  philosophyQuestion      String               @map("philosophy_question")
+  aboutHeadline           String               @map("about_headline")
+  currentDirection        String               @map("current_direction")
+  currentDirectionSupport String               @map("current_direction_support")
+  createdAt               DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt               DateTime             @default(now()) @map("updated_at") @db.Timestamptz(6)
+  education               ProfileEducation?
+  principles              ProfilePrinciple[]
+  services                ProfileService[]
+  contentItems            ProfileContentItem[]
+
+  @@map("portfolio_profiles")
+}
+
+model ProfileEducation {
+  profileId String           @id @map("profile_id") @db.Uuid
+  current   String
+  previous  String
+  research  String
+  support   String
+  createdAt DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime         @default(now()) @map("updated_at") @db.Timestamptz(6)
+  profile   PortfolioProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@map("profile_educations")
+}
+
+model ProfilePrinciple {
+  id        String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  profileId String           @map("profile_id") @db.Uuid
+  section   String
+  title     String
+  body      String
+  position  Int
+  createdAt DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime         @default(now()) @map("updated_at") @db.Timestamptz(6)
+  profile   PortfolioProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([profileId, section, position])
+  @@index([profileId, section, position])
+  @@map("profile_principles")
+}
+
+model ProfileService {
+  id              String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  profileId       String           @map("profile_id") @db.Uuid
+  title           String
+  lead            String
+  description     String
+  cta             String
+  assistantPrompt String?          @map("assistant_prompt")
+  position        Int
+  createdAt       DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime         @default(now()) @map("updated_at") @db.Timestamptz(6)
+  profile         PortfolioProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([profileId, position])
+  @@map("profile_services")
+}
+
+model ProfileContentItem {
+  id        String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  profileId String           @map("profile_id") @db.Uuid
+  section   String
+  title     String?
+  body      String
+  position  Int
+  createdAt DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime         @default(now()) @map("updated_at") @db.Timestamptz(6)
+  profile   PortfolioProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([profileId, section, position])
+  @@index([profileId, section, position])
+  @@map("profile_content_items")
+}
+
+model Experience {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title     String
+  company   String
+  dates     String
+  location  String?
+  category  String
+  focus     String
+  position  Int      @unique
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  @@map("experiences")
+}
+
+model Project {
+  id            String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title         String         @unique
+  summary       String
+  category      String
+  role          String
+  outcome       String
+  detail        String
+  future        String?
+  collaboration String?
+  positioning   String?
+  featured      Boolean        @default(false)
+  position      Int            @unique
+  createdAt     DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime       @default(now()) @map("updated_at") @db.Timestamptz(6)
+  stacks        ProjectStack[]
+  links         ProjectLink[]
+
+  @@index([featured, position])
+  @@map("projects")
+}
+
+model ProjectStack {
+  projectId String  @map("project_id") @db.Uuid
+  name      String
+  position  Int
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@id([projectId, position])
+  @@unique([projectId, name])
+  @@map("project_stacks")
+}
+
+model ProjectLink {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  projectId String   @map("project_id") @db.Uuid
+  label     String
+  href      String
+  position  Int
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, position])
+  @@map("project_links")
+}

@@ -4,3 +4,4 @@ out
 .env*.local
 .vercel
 npm-debug.log*
+src/generated/prisma
