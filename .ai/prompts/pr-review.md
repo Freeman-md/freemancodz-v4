@@ -25,7 +25,7 @@ Do not rely on the pull-request description or implementation summary as proof.
 
 Evaluate:
 
-- every acceptance criterion
+- every agent-verifiable acceptance criterion
 - required behaviour and explicit exclusions
 - correctness and failure behaviour
 - regression risk
@@ -33,11 +33,13 @@ Evaluate:
 - scope discipline
 - test quality
 - repository conventions
-- manual verification that remains unproved
+- whether manual tasks and manual acceptance criteria are stated clearly and supported by the implementation
 
 Use direct evidence such as inspected code, relevant tests, command output, runtime behaviour and verified integration behaviour.
 
-Use `NOT VERIFIED` when required access or infrastructure is unavailable. Mocked tests do not prove a real external integration.
+Use `NOT VERIFIED` when agent-verifiable evidence is genuinely unavailable. Mocked tests do not prove a real external integration.
+
+Do not fail the review merely because a manual task or manual acceptance criterion is still pending. Request changes only when the implementation needed to support that manual step is missing, incorrect or undocumented.
 
 ## Findings
 
@@ -76,11 +78,16 @@ Return the review body followed by valid JSON:
   "medium_count": 0,
   "low_count": 0,
   "acceptance_matrix": [
-    {"criterion": "criterion text", "status": "PASS|FAIL|NOT VERIFIED", "evidence": "short evidence"}
+    {"criterion": "agent-verifiable criterion text", "status": "PASS|FAIL|NOT VERIFIED", "evidence": "short evidence"}
   ],
   "findings": [],
-  "manual_verification": []
+  "manual_tasks": [
+    {"task": "human action", "status": "PENDING|COMPLETE", "notes": "required access or command"}
+  ],
+  "manual_acceptance_criteria": [
+    {"criterion": "human-verifiable outcome", "status": "PENDING|PASS|FAIL", "notes": "what the human must confirm"}
+  ]
 }
 ```
 
-Set `ready_for_human` true only when the milestone review itself has no blocking findings. The orchestrator still verifies CI, current SHA, review threads and configured quality checks before final handoff.
+Set `ready_for_human` true only when the milestone review itself has no blocking findings. Pending manual tasks and manual acceptance criteria are allowed. The orchestrator still verifies CI, current SHA, review threads and configured quality checks before final handoff.
