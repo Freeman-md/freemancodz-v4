@@ -1,5 +1,5 @@
 import type { Experience as ExperienceRecord, Principle as PrincipleRecord, Project as ProjectRecord, Service as ServiceRecord } from "@/generated/prisma/client";
-import { parseProjectLinks } from "@/features/portfolio/schemas/parse-project-links";
+import { parseProjectLinks } from "@/features/portfolio/helpers";
 import type { Experience, ProfileService, Project } from "@/types/content";
 import type { Principle } from "@/features/portfolio/types";
 

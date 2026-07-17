@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import type { Project as ProjectRecord } from "@/generated/prisma/client";
 import { mapProject } from "@/features/portfolio/mappers/portfolio.mapper";
-import { parseProjectLinks } from "@/features/portfolio/schemas/parse-project-links";
+import { parseProjectLinks } from "@/features/portfolio/helpers";
 import { projectLinksSchema } from "@/features/portfolio/schemas/project-links.schema";
 
 const project = {

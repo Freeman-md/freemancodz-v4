@@ -4,7 +4,7 @@ import { currentDirectionContentSchema } from "@/features/portfolio/schemas/cont
 import { educationContentSchema } from "@/features/portfolio/schemas/content-blocks/education.schema";
 import { heroContentSchema } from "@/features/portfolio/schemas/content-blocks/hero.schema";
 import { outsideEngineeringContentSchema } from "@/features/portfolio/schemas/content-blocks/outside-engineering.schema";
-import { parseContentBlock } from "@/features/portfolio/schemas/content-blocks/parse-content-block";
+import { parseContentBlock } from "@/features/portfolio/helpers";
 import { philosophyContentSchema } from "@/features/portfolio/schemas/content-blocks/philosophy.schema";
 import { textBlockContentSchema } from "@/features/portfolio/schemas/content-blocks/text-block.schema";
 

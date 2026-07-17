@@ -3,7 +3,7 @@ import test from "node:test";
 import type { ContentBlock } from "@/generated/prisma/client";
 import { assertContentBlockIdentity, mapHeroBlock } from "@/features/portfolio/mappers/content-block.mapper";
 import { heroContentSchema } from "@/features/portfolio/schemas/content-blocks/hero.schema";
-import { parseContentBlock } from "@/features/portfolio/schemas/content-blocks/parse-content-block";
+import { parseContentBlock } from "@/features/portfolio/helpers";
 import { textBlockContentSchema } from "@/features/portfolio/schemas/content-blocks/text-block.schema";
 
 const hero = {
