@@ -21,86 +21,75 @@ model SiteChunk {
   @@map("site_chunks")
 }
 
-model PortfolioProfile {
-  id                      String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+model Profile {
+  id                      String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name                    String
   headline                String
   intro                   String
-  heroNote                String               @map("hero_note")
-  philosophyQuestion      String               @map("philosophy_question")
-  aboutHeadline           String               @map("about_headline")
-  currentDirection        String               @map("current_direction")
-  currentDirectionSupport String               @map("current_direction_support")
-  createdAt               DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt               DateTime             @default(now()) @map("updated_at") @db.Timestamptz(6)
-  education               ProfileEducation?
-  principles              ProfilePrinciple[]
-  services                ProfileService[]
-  contentItems            ProfileContentItem[]
+  heroNote                String   @map("hero_note")
+  philosophyQuestion      String   @map("philosophy_question")
+  aboutHeadline           String   @map("about_headline")
+  currentDirection        String   @map("current_direction")
+  currentDirectionSupport String   @map("current_direction_support")
+  createdAt               DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt               DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
 
-  @@map("portfolio_profiles")
+  @@map("profiles")
 }
 
-model ProfileEducation {
-  profileId String           @id @map("profile_id") @db.Uuid
+model Education {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   current   String
   previous  String
   research  String
   support   String
-  createdAt DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt DateTime         @default(now()) @map("updated_at") @db.Timestamptz(6)
-  profile   PortfolioProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
 
-  @@map("profile_educations")
+  @@map("educations")
 }
 
-model ProfilePrinciple {
-  id        String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  profileId String           @map("profile_id") @db.Uuid
+model Principle {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   section   String
   title     String
   body      String
   position  Int
-  createdAt DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt DateTime         @default(now()) @map("updated_at") @db.Timestamptz(6)
-  profile   PortfolioProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
 
-  @@unique([profileId, section, position])
-  @@index([profileId, section, position])
-  @@map("profile_principles")
+  @@unique([section, position])
+  @@index([section, position])
+  @@map("principles")
 }
 
-model ProfileService {
-  id              String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  profileId       String           @map("profile_id") @db.Uuid
+model Service {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   title           String
   lead            String
   description     String
   cta             String
-  assistantPrompt String?          @map("assistant_prompt")
+  assistantPrompt String?  @map("assistant_prompt")
   position        Int
-  createdAt       DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt       DateTime         @default(now()) @map("updated_at") @db.Timestamptz(6)
-  profile         PortfolioProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
 
-  @@unique([profileId, position])
-  @@map("profile_services")
+  @@unique([position])
+  @@map("services")
 }
 
-model ProfileContentItem {
-  id        String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  profileId String           @map("profile_id") @db.Uuid
+model ContentItem {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   section   String
   title     String?
   body      String
   position  Int
-  createdAt DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt DateTime         @default(now()) @map("updated_at") @db.Timestamptz(6)
-  profile   PortfolioProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
 
-  @@unique([profileId, section, position])
-  @@index([profileId, section, position])
-  @@map("profile_content_items")
+  @@unique([section, position])
+  @@index([section, position])
+  @@map("content_items")
 }
 
 model Experience {
@@ -119,7 +108,7 @@ model Experience {
 }
 
 model Project {
-  id            String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   title         String         @unique
   summary       String
   category      String
@@ -129,36 +118,13 @@ model Project {
   future        String?
   collaboration String?
   positioning   String?
-  featured      Boolean        @default(false)
-  position      Int            @unique
-  createdAt     DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt     DateTime       @default(now()) @map("updated_at") @db.Timestamptz(6)
-  stacks        ProjectStack[]
-  links         ProjectLink[]
+  featured      Boolean  @default(false)
+  position      Int      @unique
+  stacks        String[] @default([])
+  links         Json     @default("[]")
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
 
   @@index([featured, position])
   @@map("projects")
-}
-
-model ProjectStack {
-  projectId String  @map("project_id") @db.Uuid
-  name      String
-  position  Int
-  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
-
-  @@id([projectId, position])
-  @@unique([projectId, name])
-  @@map("project_stacks")
-}
-
-model ProjectLink {
-  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  projectId String   @map("project_id") @db.Uuid
-  label     String
-  href      String
-  position  Int
-  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-
-  @@unique([projectId, position])
-  @@map("project_links")
 }
