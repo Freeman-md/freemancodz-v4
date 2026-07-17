@@ -24,9 +24,9 @@ npm run build
 
 Import the repository into Vercel and set optional environment variables in Project Settings.
 
-## Database foundation
+## Portfolio rendering
 
-The site continues to render the static content in `src/data/`. The portfolio seed copies that content to the database for later use; pages do not read from Supabase yet.
+The public `/`, `/work`, and `/about` pages read seeded portfolio content through the server-only Prisma client during the production build. They are pre-rendered as static HTML; there is no browser-side portfolio fetch or static-data fallback when database content is missing or invalid. The files in `src/data/` remain available for the seed and RAG workflows.
 
 ### Source of truth
 
@@ -43,6 +43,8 @@ DATABASE_URL="postgresql://postgres:postgres@127.0.0.1:54332/postgres?schema=pub
 ```
 
 For a hosted project, copy the direct Postgres connection string from the Supabase dashboard, keep its password secret, and set it as `DATABASE_URL` only in your local shell or secret store.
+
+`DATABASE_URL` must also be available to the production build environment. Before deploying, apply migrations and run `npm run seed:portfolio` against the selected database, then run `npm run build` with the same environment. The build intentionally fails if required portfolio content is unavailable or malformed, preventing an incomplete static deployment.
 
 ### Local workflow
 
