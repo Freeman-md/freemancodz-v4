@@ -107,7 +107,9 @@ function buildProfileChunks(): SiteChunkInput[] {
         "Skills/services.",
         toSentenceList(
           "What I do",
-          profile.services.map(([title, copy]) => `${title}: ${copy}`),
+          profile.services.map(
+            (service) => `${service.title}: ${service.description}`,
+          ),
         ),
       ].join(" "),
       keywords: dedupeKeywords([

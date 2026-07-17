@@ -1,3 +1,10 @@
+export type ProfileService = {
+  title: string;
+  description: string;
+  label: string;
+  cta: string;
+};
+
 export const profile = {
   name: "Freeman Madudili",
   headline: "Building reliable software for ambitious teams.",
@@ -30,11 +37,21 @@ export const profile = {
     },
   ],
   services: [
-    ["Build Products", "Turn ideas into production-ready software."],
-    ["Improve Systems", "Make software simpler, faster, and more reliable."],
-    ["Automate Workflows", "Use AI and software to remove repetitive work."],
-    ["Design for Growth", "Build systems that remain maintainable as they scale."],
-  ],
+    {
+      title: "Customer-Facing Assistants",
+      description:
+        "Assistants that help people find the right information, understand their options and take action through connected tools and systems.",
+      label: "Answers. Guidance. Actions.",
+      cta: "Explore an Assistant",
+    },
+    {
+      title: "Operational Workflows",
+      description:
+        "Reliable workflows that connect data, tools and people to reduce repetitive work and keep processes moving.",
+      label: "Automation. Routing. Reliability.",
+      cta: "Explore a Workflow",
+    },
+  ] satisfies ProfileService[],
   aboutHeadline: "How I think, work, and approach engineering.",
 aboutIntro: [
   "The technologies I use will change over time. The principles I build around will not.",

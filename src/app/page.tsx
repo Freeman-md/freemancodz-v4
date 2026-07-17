@@ -45,6 +45,73 @@ export default function Home() {
         </section>
       </Container>
 
+      <Container className="py-20 md:py-[120px]">
+        <SectionHeader
+          title="What I Build"
+          copy="Two connected systems: assistants that handle the interaction, and workflows that handle what happens next."
+        />
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+          {profile.services.map((service) => (
+            <article
+              key={service.title}
+              className="flex h-full flex-col rounded-sm border border-line bg-white p-8 transition hover:border-neutral-300 hover:shadow-soft"
+            >
+              <div className="mb-5 inline-flex h-10 w-10 items-center justify-center rounded-sm bg-accent/10 text-accent">
+                <ServiceIcon title={service.title} />
+              </div>
+              <h3 className="text-2xl font-medium tracking-[-0.03em] text-ink md:text-[28px]">
+                {service.title}
+              </h3>
+              <p className="mt-4 max-w-xl text-sm leading-6 text-muted">
+                {service.description}
+              </p>
+              <div className="mt-6">
+                <span className="inline-flex rounded-full border border-line bg-surface px-3 py-1 font-mono text-[12px] text-muted">
+                  {service.label}
+                </span>
+              </div>
+              <div className="mt-8">
+                <span className="inline-flex items-center gap-2 font-mono text-[12px] font-medium tracking-[0.02em] text-ink">
+                  {service.cta}
+                  <span aria-hidden="true">↗</span>
+                </span>
+              </div>
+            </article>
+          ))}
+        </div>
+      </Container>
+
+      <section className="border-y border-line bg-surface">
+        <Container className="py-20 md:py-[120px]">
+          <SectionHeader
+            title="Featured Work"
+            copy="Curated proof across AI product systems, automation workflows, fintech, and production-minded engineering."
+          />
+          <div className="grid gap-6 md:grid-cols-2">
+            {featuredProjects.map((project) => (
+              <ProjectCard key={project.title} project={project} compact />
+            ))}
+          </div>
+        </Container>
+      </section>
+
+      <Container className="py-16 md:py-[120px]">
+        <section className="relative overflow-hidden rounded-sm border border-black bg-black p-8 text-white md:p-12">
+          <div className="absolute inset-0 opacity-10 [background-image:radial-gradient(#ffffff_1px,transparent_1px)] [background-size:20px_20px]" />
+          <div className="relative max-w-3xl">
+            <div className="mb-6 inline-flex items-center rounded-full bg-white px-3 py-1 font-mono text-[12px] text-black">
+              Current Focus
+            </div>
+            <h2 className="text-3xl font-semibold tracking-[-0.04em] md:text-5xl">
+              {profile.currentDirection}
+            </h2>
+            <p className="mt-5 text-lg leading-8 text-neutral-300">
+              {profile.currentDirectionSupport}
+            </p>
+          </div>
+        </section>
+      </Container>
+
       <section className="border-y border-line bg-surface">
         <Container className="py-16 md:py-24">
           <div className="mb-12 flex flex-col gap-4 border-b border-line pb-4 md:flex-row md:items-end md:justify-between">
@@ -70,23 +137,6 @@ export default function Home() {
         </Container>
       </section>
 
-      <Container className="py-16 md:py-[120px]">
-        <section className="relative overflow-hidden rounded-sm border border-black bg-black p-8 text-white md:p-12">
-          <div className="absolute inset-0 opacity-10 [background-image:radial-gradient(#ffffff_1px,transparent_1px)] [background-size:20px_20px]" />
-          <div className="relative max-w-3xl">
-            <div className="mb-6 inline-flex items-center rounded-full bg-white px-3 py-1 font-mono text-[12px] text-black">
-              Current Focus
-            </div>
-            <h2 className="text-3xl font-semibold tracking-[-0.04em] md:text-5xl">
-              {profile.currentDirection}
-            </h2>
-            <p className="mt-5 text-lg leading-8 text-neutral-300">
-              {profile.currentDirectionSupport}
-            </p>
-          </div>
-        </section>
-      </Container>
-
       <section className="bg-white py-20 md:py-[120px]">
         <Container>
           <p className="mb-6 font-mono text-[12px] uppercase tracking-[0.38em] text-accent">
@@ -101,43 +151,6 @@ export default function Home() {
                 title={principle.title}
                 text={principle.body}
               />
-            ))}
-          </div>
-        </Container>
-      </section>
-
-      <Container className="py-20 md:py-[120px]">
-        <SectionHeader
-          title="What I Do"
-          copy="Focused engineering support for founders and teams moving from idea to dependable product."
-        />
-        <div className="grid gap-6 grid-cols-2 lg:grid-cols-4">
-          {profile.services.map(([title, copy]) => (
-            <article
-              key={title}
-              className="rounded-sm border border-line bg-white p-8 transition hover:border-neutral-300 hover:shadow-soft"
-            >
-              <div className="mb-5 inline-flex h-10 w-10 items-center justify-center rounded-sm bg-accent/10 text-accent">
-                <ServiceIcon title={title} />
-              </div>
-              <h3 className="sm:text-2xl font-medium tracking-[-0.03em] text-ink">
-                {title}
-              </h3>
-              <p className="mt-4 text-sm leading-6 text-muted">{copy}</p>
-            </article>
-          ))}
-        </div>
-      </Container>
-
-      <section className="border-y border-line bg-surface">
-        <Container className="py-20 md:py-[120px]">
-          <SectionHeader
-            title="Featured Work"
-            copy="Curated proof across AI product systems, automation workflows, fintech, and production-minded engineering."
-          />
-          <div className="grid gap-6 md:grid-cols-2">
-            {featuredProjects.map((project) => (
-              <ProjectCard key={project.title} project={project} compact />
             ))}
           </div>
         </Container>
