@@ -8,16 +8,26 @@ datasource db {
 }
 
 model SiteChunk {
-  id        String                   @id
-  title     String
-  category  String
-  url       String
-  content   String
-  keywords  String[]                 @default([])
-  embedding Unsupported("vector")
-  createdAt DateTime                 @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt DateTime                 @default(now()) @map("updated_at") @db.Timestamptz(6)
+  id         String @id
+  sourceType String
+  sourceId   String
+  chunkIndex Int
 
+  title    String
+  category String
+  url      String
+  content  String
+  keywords String[]
+
+  embedding      Unsupported("vector(1536)")
+  contentHash    String?
+  embeddingModel String?
+  embeddedAt     DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([sourceType, sourceId, chunkIndex])
   @@map("site_chunks")
 }
 
@@ -102,7 +112,7 @@ model Experience {
 
 model Project {
   id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  title         String         @unique
+  title         String   @unique
   summary       String
   category      String
   role          String
