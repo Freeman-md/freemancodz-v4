@@ -39,6 +39,7 @@ model SearchIndexJob {
   attempts     Int      @default(0)
   availableAt  DateTime @default(now()) @map("available_at") @db.Timestamptz(6)
   lockedAt     DateTime? @map("locked_at") @db.Timestamptz(6)
+  lockToken    String?  @map("lock_token") @db.Uuid
   lastError    String?  @map("last_error")
   createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt    DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)

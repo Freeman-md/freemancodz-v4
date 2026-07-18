@@ -36,7 +36,7 @@ The public `/`, `/work`, and `/about` pages read seeded portfolio content throug
 
 ### Source of truth
 
-`supabase/migrations/` is the only migration history. Do not run `prisma migrate`; Prisma is used for its schema model and generated client only. Create future schema changes with `supabase migration new <descriptive_name>`, edit the generated SQL file, and verify it with a local reset.
+`prisma/migrations/` is the only application migration history. Prisma is used for the schema model, generated client, and migration deployment. PostgreSQL-specific SQL such as pgvector, RLS, and triggers lives inside the committed Prisma migration files.
 
 ### Environment
 
@@ -54,19 +54,17 @@ For a hosted project, copy the direct Postgres connection string from the Supaba
 
 ### Local workflow
 
-Docker or another Docker-compatible runtime must be available for the local Supabase stack.
+Start a local PostgreSQL or Supabase database, then provide its direct connection URL in your shell or secret store. Do not commit it.
 
 ```bash
 npm install
-supabase start
-supabase db reset --local
 npm run prisma:validate
 npm run prisma:generate
-supabase migration list --local
+npx prisma migrate deploy
 npm run seed:portfolio
 ```
 
-`supabase db reset --local` recreates the local database from the committed SQL migrations and is the clean-setup check. Running it again should produce the same schema; it does not create migration files. `supabase migration list --local` confirms the migration history recorded by the local database matches the committed files.
+`prisma migrate deploy` applies the committed migration history to the selected database. For a clean local database, recreate the database with your local database tooling and then run the same command; it does not create migration files.
 
 ### Portfolio seed
 
@@ -76,20 +74,17 @@ Run the repeatable portfolio seed against the database selected by `DATABASE_URL
 npm run seed:portfolio
 ```
 
-Apply the current Supabase migrations before running the seed. The amendment migration intentionally changes the schema without embedding portfolio data, so `npm run seed:portfolio` repopulates `content_blocks`, `principles`, `services`, `experiences`, and `projects` from the static TypeScript source in a single transaction. It does not seed `site_chunks`, change the static files, or run automatically during deployment. A connection or write failure is reported with a non-zero exit status; Prisma disconnects before the command finishes.
+Apply the current Prisma migrations before running the seed. The amendment migration intentionally changes the schema without embedding portfolio data, so `npm run seed:portfolio` repopulates `content_blocks`, `principles`, `services`, `experiences`, and `projects` from the static TypeScript source in a single transaction. It does not seed `site_chunks`, change the static files, or run automatically during deployment. A connection or write failure is reported with a non-zero exit status; Prisma disconnects before the command finishes.
 
 For a hosted Supabase database, set `DATABASE_URL` in the shell or secret store to that project's direct Postgres connection string, then run the same command. Confirm the selected database is the intended project before executing it. Do not put `DATABASE_URL` in a committed file.
 
 ### Hosted workflow
 
-Authenticate and link the intended project without committing a project reference or database password:
+Set the intended hosted database's direct `DATABASE_URL` in the shell or secret store, then deploy the committed Prisma migrations:
 
 ```bash
-supabase login
-supabase link --project-ref <project-ref>
-supabase db push --dry-run --linked
-supabase db push --linked
-supabase migration list --linked
+npx prisma migrate deploy
+npm run seed:portfolio
 ```
 
-`supabase db push` applies only pending files from `supabase/migrations/`, so re-running it is safe when the migration history is in sync. Do not use `supabase db reset --linked` on a production project: it is destructive. This project does not use automatic deployment seeding; use `npm run seed:portfolio` deliberately after selecting the intended database.
+`prisma migrate deploy` applies only pending committed migrations, so re-running it is safe when the migration history is in sync. Do not reset a production database. This project does not use automatic deployment seeding; use `npm run seed:portfolio` deliberately after selecting the intended database.
