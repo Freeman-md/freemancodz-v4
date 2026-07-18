@@ -1,6 +1,6 @@
 # Milestone 4: Database-Backed Search Indexing
 
-**Status:** Active  
+**Status:** Frozen
 **Version:** 1.0.0  
 **Last Updated:** 2026-07-18  
 **Depends On:** Milestone 3 and Milestone 3 Amendment 1  

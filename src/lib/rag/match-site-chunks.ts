@@ -1,4 +1,6 @@
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import "server-only";
+import { Prisma } from "@/generated/prisma/client";
+import { prisma } from "@/lib/prisma";
 import type { MatchSiteChunksRow } from "@/lib/rag/types";
 
 export async function matchSiteChunks(
@@ -12,16 +14,11 @@ export async function matchSiteChunks(
     );
   }
 
-  const supabase = createServerSupabaseClient();
-  const { data, error } = await supabase.rpc("match_site_chunks", {
-    query_embedding: `[${queryEmbedding.join(",")}]`,
-    match_count: matchCount,
-    match_threshold: matchThreshold,
-  });
-
-  if (error) {
-    throw new Error(`match_site_chunks RPC failed: ${error.message}`);
-  }
-
-  return data as MatchSiteChunksRow[];
+  const vector = `[${queryEmbedding.join(",")}]`;
+  return prisma.$queryRaw<MatchSiteChunksRow[]>(Prisma.sql`
+    SELECT id, title, category, url, content, keywords,
+      (1 - (embedding <=> ${vector}::vector))::float8 AS similarity
+    FROM site_chunks WHERE (1 - (embedding <=> ${vector}::vector)) >= ${matchThreshold}
+    ORDER BY embedding <=> ${vector}::vector LIMIT ${matchCount}
+  `);
 }

@@ -12,10 +12,12 @@
     "prisma:validate": "prisma validate",
     "prisma:generate": "prisma generate",
     "supabase:types": "supabase gen types typescript --local > src/types/supabase.ts",
-    "test:rag-rpc": "tsx scripts/test-match-site-chunks.ts",
+    "test:rag": "tsx --test tests/rag/*.test.ts",
     "test:portfolio": "NODE_OPTIONS='--conditions=react-server' tsx --test tests/portfolio/*.test.ts && tsx --test tests/portfolio/*.test.tsx",
     "seed:portfolio": "tsx scripts/seed-portfolio-data.ts",
-    "seed:chunks": "tsx scripts/seed-site-chunks.ts"
+    "index:source": "tsx scripts/index-source.ts",
+    "index:rebuild": "tsx scripts/rebuild-search-index.ts",
+    "index:worker": "tsx scripts/process-search-index-jobs.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.4.1",

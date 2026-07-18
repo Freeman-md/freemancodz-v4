@@ -24,6 +24,12 @@ npm run build
 
 Import the repository into Vercel and set optional environment variables in Project Settings.
 
+## Search indexing
+
+Portfolio records are the canonical search source. Run `npm run index:rebuild` after configuring server-side `DATABASE_URL` and `OPENAI_API_KEY`, or let source-table triggers enqueue work and run `npm run index:worker`. Preview a record without writes or embeddings with `npm run index:source -- projects <id> --dry-run`.
+
+For production, configure `SEARCH_INDEX_WORKER_SECRET` only in the server environment, then invoke `POST /api/internal/search-index` once per minute with `Authorization: Bearer <secret>`. A Supabase `pg_cron` + `pg_net` invocation is suitable; keep the deployment URL and secret in Supabase Vault/production configuration rather than this repository.
+
 ## Portfolio rendering
 
 The public `/`, `/work`, and `/about` pages read seeded portfolio content through the server-only Prisma client during the production build. They are pre-rendered as static HTML; there is no browser-side portfolio fetch or static-data fallback when database content is missing or invalid. The files in `src/data/` remain available for the seed and RAG workflows.
