@@ -10,8 +10,8 @@ import { buildPrincipleDocuments } from "../builders/principle.builder";
 import { buildExperienceDocuments } from "../builders/experience.builder";
 import type { IndexableRecord } from "../data/source-reader";
 import type { IndexableSourceType, SearchDocument } from "../types";
+import { planIndexing, type PreparedDocument } from "./indexing-plan.core";
 
-type PreparedDocument = SearchDocument & { id: string; input: string; contentHash: string };
 export type SourcePreview =
   | (PreparedDocument & { expectedAction: "create" | "change" | "skip" })
   | { id: string; expectedAction: "delete" };
@@ -38,15 +38,10 @@ export async function previewSourceRecord({ sourceType, sourceId }: { sourceType
 
 export async function inspectSourceRecord({ sourceType, sourceId }: { sourceType: IndexableSourceType; sourceId: string }): Promise<SourcePreview[]> {
   const [documents, existing, model] = await Promise.all([previewSourceRecord({ sourceType, sourceId }), findSourceChunks(sourceType, sourceId), Promise.resolve(getEmbeddingModel())]);
-  const byId = new Map(existing.map((chunk) => [chunk.id, chunk]));
-  const previews: SourcePreview[] = documents.map((document) => {
-    const previous = byId.get(document.id);
-    return { ...document, expectedAction: !previous ? "create" : previous.contentHash === document.contentHash && previous.embeddingModel === model ? "skip" : "change" };
-  });
-  for (const chunk of existing) {
-    if (!documents.some((document) => document.id === chunk.id)) {
-      previews.push({ id: chunk.id, expectedAction: "delete" });
-    }
+  const plan = planIndexing(documents, existing, model);
+  const previews: SourcePreview[] = plan.current;
+  for (const id of plan.obsoleteIds) {
+    previews.push({ id, expectedAction: "delete" });
   }
   return previews;
 }
@@ -54,11 +49,8 @@ export async function inspectSourceRecord({ sourceType, sourceId }: { sourceType
 export async function indexSourceRecord({ sourceType, sourceId }: { sourceType: IndexableSourceType; sourceId: string }): Promise<IndexingResult> {
   try {
     const [documents, existing, model] = await Promise.all([previewSourceRecord({ sourceType, sourceId }), findSourceChunks(sourceType, sourceId), Promise.resolve(getEmbeddingModel())]);
-    const existingById = new Map(existing.map((chunk) => [chunk.id, chunk]));
-    const changed = documents.filter((document) => {
-      const previous = existingById.get(document.id);
-      return !previous || previous.contentHash !== document.contentHash || previous.embeddingModel !== model;
-    });
+    const plan = planIndexing(documents, existing, model);
+    const changed = plan.current.filter((document) => document.expectedAction !== "skip");
     const embeddings = new Map<string, number[]>();
     if (changed.length) {
       const response = await createOpenAIClient().embeddings.create({ model, input: changed.map((document) => document.input) });
@@ -67,9 +59,8 @@ export async function indexSourceRecord({ sourceType, sourceId }: { sourceType: 
         embeddings.set(changed[index].id, item.embedding);
       }
     }
-    const obsoleteIds = existing.filter((chunk) => !documents.some((document) => document.id === chunk.id)).map((chunk) => chunk.id);
-    await writeSourceChunks(changed.map((document) => ({ ...document, sourceType, sourceId, chunkIndex: document.documentIndex, embedding: embeddings.get(document.id)!, embeddingModel: model, embeddedAt: new Date() })), obsoleteIds);
-    return { created: changed.filter((document) => !existingById.has(document.id)).length, changed: changed.filter((document) => existingById.has(document.id)).length, unchanged: documents.length - changed.length, deleted: obsoleteIds.length, preview: documents };
+    await writeSourceChunks(changed.map((document) => ({ ...document, sourceType, sourceId, chunkIndex: document.documentIndex, embedding: embeddings.get(document.id)!, embeddingModel: model, embeddedAt: new Date() })), plan.obsoleteIds);
+    return { created: plan.current.filter((document) => document.expectedAction === "create").length, changed: plan.current.filter((document) => document.expectedAction === "change").length, unchanged: plan.current.filter((document) => document.expectedAction === "skip").length, deleted: plan.obsoleteIds.length, preview: documents };
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     throw new Error(`Indexing ${sourceType}:${sourceId} failed: ${detail}`, { cause: error });

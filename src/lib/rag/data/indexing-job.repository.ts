@@ -1,26 +1,23 @@
 import "server-only";
 import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
-import { isIndexableSourceType } from "../source-config";
-import type { IndexingJob } from "../types";
-
-export function parseIndexingJob(value: { sourceType: string; sourceId: string; operation: string }): IndexingJob {
-  if (!isIndexableSourceType(value.sourceType) || !value.sourceId || (value.operation !== "upsert" && value.operation !== "delete")) throw new Error("Invalid search indexing job payload");
-  return value as IndexingJob;
-}
+import { parseIndexingJob } from "../indexing-job-validation";
+export { parseIndexingJob } from "../indexing-job-validation";
 
 export async function claimIndexingJobs(limit: number) {
-  const rows = await prisma.$queryRaw<Array<{ id: string; sourceType: string; sourceId: string; operation: string }>>(Prisma.sql`
+  const rows = await prisma.$queryRaw<Array<{ id: string; sourceType: string; sourceId: string; operation: string; lockedAt: Date }>>(Prisma.sql`
     WITH claimed AS (
-      SELECT id FROM "search_index_jobs" WHERE "available_at" <= NOW() AND "locked_at" IS NULL
+      SELECT id FROM "search_index_jobs" WHERE "available_at" <= NOW() AND ("locked_at" IS NULL OR "locked_at" < NOW() - INTERVAL '5 minutes')
       ORDER BY "created_at" FOR UPDATE SKIP LOCKED LIMIT ${limit}
     ) UPDATE "search_index_jobs" AS jobs SET "locked_at" = NOW(), "updated_at" = NOW()
-    FROM claimed WHERE jobs.id = claimed.id RETURNING jobs.id, jobs."sourceType", jobs."sourceId", jobs.operation
+    FROM claimed WHERE jobs.id = claimed.id RETURNING jobs.id, jobs."sourceType", jobs."sourceId", jobs.operation, jobs."locked_at" AS "lockedAt"
   `);
-  return rows.map((row) => ({ id: row.id, job: parseIndexingJob(row) }));
+  return rows.map((row) => ({ id: row.id, lockToken: row.lockedAt, job: parseIndexingJob(row) }));
 }
 
-export function acknowledgeIndexingJob(id: string) { return prisma.searchIndexJob.delete({ where: { id } }); }
+export function acknowledgeIndexingJob(id: string, lockToken: Date) {
+  return prisma.searchIndexJob.deleteMany({ where: { id, lockedAt: lockToken } });
+}
 
 export function retryIndexingJob(id: string, error: unknown) {
   const message = error instanceof Error ? error.message : String(error);
