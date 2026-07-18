@@ -13,3 +13,13 @@ test("unknown content block identity is deliberately not indexed", () => {
   const block = { id: "id", key: "future.unknown", page: "HOME" as const, section: "HERO" as const, position: 0, content: { arbitrary: "raw JSON" }, createdAt: new Date(), updatedAt: new Date() };
   assert.deepEqual(buildContentBlockDocuments(block), []);
 });
+
+test("content-block builder rejects a known key with the wrong page or section", () => {
+  const block = {
+    id: "id", key: "home.hero", page: "ABOUT" as const, section: "HERO" as const,
+    position: 0,
+    content: { name: "Freeman", headline: "Engineer", intro: "Intro", heroNote: "Note" },
+    createdAt: new Date(), updatedAt: new Date(),
+  };
+  assert.throws(() => buildContentBlockDocuments(block), /home\.hero.*HOME\/HERO.*ABOUT\/HERO/);
+});

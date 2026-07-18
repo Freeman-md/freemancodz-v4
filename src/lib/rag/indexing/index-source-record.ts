@@ -12,7 +12,9 @@ import type { IndexableRecord } from "../data/source-reader";
 import type { IndexableSourceType, SearchDocument } from "../types";
 
 type PreparedDocument = SearchDocument & { id: string; input: string; contentHash: string };
-export type SourcePreview = PreparedDocument & { expectedAction: "create" | "change" | "skip" };
+export type SourcePreview =
+  | (PreparedDocument & { expectedAction: "create" | "change" | "skip" })
+  | { id: string; expectedAction: "delete" };
 export type IndexingResult = { created: number; changed: number; unchanged: number; deleted: number; preview: PreparedDocument[] };
 
 function buildDocuments(type: IndexableSourceType, record: IndexableRecord): SearchDocument[] {
@@ -37,10 +39,16 @@ export async function previewSourceRecord({ sourceType, sourceId }: { sourceType
 export async function inspectSourceRecord({ sourceType, sourceId }: { sourceType: IndexableSourceType; sourceId: string }): Promise<SourcePreview[]> {
   const [documents, existing, model] = await Promise.all([previewSourceRecord({ sourceType, sourceId }), findSourceChunks(sourceType, sourceId), Promise.resolve(getEmbeddingModel())]);
   const byId = new Map(existing.map((chunk) => [chunk.id, chunk]));
-  return documents.map((document) => {
+  const previews: SourcePreview[] = documents.map((document) => {
     const previous = byId.get(document.id);
     return { ...document, expectedAction: !previous ? "create" : previous.contentHash === document.contentHash && previous.embeddingModel === model ? "skip" : "change" };
   });
+  for (const chunk of existing) {
+    if (!documents.some((document) => document.id === chunk.id)) {
+      previews.push({ id: chunk.id, expectedAction: "delete" });
+    }
+  }
+  return previews;
 }
 
 export async function indexSourceRecord({ sourceType, sourceId }: { sourceType: IndexableSourceType; sourceId: string }): Promise<IndexingResult> {
