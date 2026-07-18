@@ -11,11 +11,22 @@ import { buildExperienceDocuments } from "../builders/experience.builder";
 import type { IndexableRecord } from "../data/source-reader";
 import type { IndexableSourceType, SearchDocument } from "../types";
 import { planIndexing, type PreparedDocument } from "./indexing-plan.core";
+import { indexSourceRecordCore, type IndexSourceDependencies, type IndexingResult } from "./index-source-record.core";
+export type { IndexSourceDependencies, IndexingResult } from "./index-source-record.core";
 
 export type SourcePreview =
   | (PreparedDocument & { expectedAction: "create" | "change" | "skip" })
   | { id: string; expectedAction: "delete" };
-export type IndexingResult = { created: number; changed: number; unchanged: number; deleted: number; preview: PreparedDocument[] };
+const productionDependencies: IndexSourceDependencies = {
+  preview: previewSourceRecord,
+  findExisting: findSourceChunks,
+  embeddingModel: getEmbeddingModel,
+  async embed(model, input) {
+    const response = await createOpenAIClient().embeddings.create({ model, input });
+    return response.data.map((item) => item.embedding);
+  },
+  write: writeSourceChunks,
+};
 
 function buildDocuments(type: IndexableSourceType, record: IndexableRecord): SearchDocument[] {
   switch (type) {
@@ -46,23 +57,6 @@ export async function inspectSourceRecord({ sourceType, sourceId }: { sourceType
   return previews;
 }
 
-export async function indexSourceRecord({ sourceType, sourceId }: { sourceType: IndexableSourceType; sourceId: string }): Promise<IndexingResult> {
-  try {
-    const [documents, existing, model] = await Promise.all([previewSourceRecord({ sourceType, sourceId }), findSourceChunks(sourceType, sourceId), Promise.resolve(getEmbeddingModel())]);
-    const plan = planIndexing(documents, existing, model);
-    const changed = plan.current.filter((document) => document.expectedAction !== "skip");
-    const embeddings = new Map<string, number[]>();
-    if (changed.length) {
-      const response = await createOpenAIClient().embeddings.create({ model, input: changed.map((document) => document.input) });
-      for (const [index, item] of response.data.entries()) {
-        if (!item.embedding || item.embedding.length !== 1536) throw new Error(`Embedding length was invalid for ${sourceType}:${sourceId}`);
-        embeddings.set(changed[index].id, item.embedding);
-      }
-    }
-    await writeSourceChunks(changed.map((document) => ({ ...document, sourceType, sourceId, chunkIndex: document.documentIndex, embedding: embeddings.get(document.id)!, embeddingModel: model, embeddedAt: new Date() })), plan.obsoleteIds);
-    return { created: plan.current.filter((document) => document.expectedAction === "create").length, changed: plan.current.filter((document) => document.expectedAction === "change").length, unchanged: plan.current.filter((document) => document.expectedAction === "skip").length, deleted: plan.obsoleteIds.length, preview: documents };
-  } catch (error) {
-    const detail = error instanceof Error ? error.message : String(error);
-    throw new Error(`Indexing ${sourceType}:${sourceId} failed: ${detail}`, { cause: error });
-  }
+export function indexSourceRecord(source: { sourceType: IndexableSourceType; sourceId: string }, dependencies = productionDependencies): Promise<IndexingResult> {
+  return indexSourceRecordCore(source, dependencies);
 }

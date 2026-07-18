@@ -28,11 +28,39 @@ Import the repository into Vercel and set optional environment variables in Proj
 
 Portfolio records are the canonical search source. Run `npm run index:rebuild` after configuring server-side `DATABASE_URL` and `OPENAI_API_KEY`, or let source-table triggers enqueue work and run `npm run index:worker`. Preview a record without writes or embeddings with `npm run index:source -- projects <id> --dry-run`.
 
-For production, configure `SEARCH_INDEX_WORKER_SECRET` only in the server environment, then invoke `POST /api/internal/search-index` once per minute with `Authorization: Bearer <secret>`. A Supabase `pg_cron` + `pg_net` invocation is suitable; keep the deployment URL and secret in Supabase Vault/production configuration rather than this repository.
+For production, configure `SEARCH_INDEX_WORKER_SECRET` only in the server environment, then invoke `POST /api/internal/search-index` once per minute with `Authorization: Bearer <secret>`. The exact placeholder-only Supabase scheduler setup is below; keep the deployment URL and secret in Supabase Vault/production configuration rather than this repository.
+
+1. Generate a high-entropy worker secret locally and store the same value as the deployment environment variable `SEARCH_INDEX_WORKER_SECRET`.
+2. In the production Supabase SQL editor, store the endpoint and secret in Vault, replacing placeholders only in that editor:
+
+```sql
+select vault.create_secret('<https://your-deployment.example/api/internal/search-index>', 'search_index_worker_url');
+select vault.create_secret('<worker-secret>', 'search_index_worker_secret');
+```
+
+3. Enable the `pg_cron`, `pg_net`, and `vault` extensions for the project, then schedule the bounded worker request once per minute:
+
+```sql
+select cron.schedule(
+  'process-search-index-jobs',
+  '* * * * *',
+  $$
+    select net.http_post(
+      url := (select decrypted_secret from vault.decrypted_secrets where name = 'search_index_worker_url'),
+      headers := jsonb_build_object(
+        'Authorization',
+        'Bearer ' || (select decrypted_secret from vault.decrypted_secrets where name = 'search_index_worker_secret')
+      )
+    );
+  $$
+);
+```
+
+4. Confirm the schedule exists with `select * from cron.job;`, then update one safe source record and confirm the route processes its queued job. Never commit the URL, secret, Vault output, or a database password.
 
 ## Portfolio rendering
 
-The public `/`, `/work`, and `/about` pages read seeded portfolio content through the server-only Prisma client during the production build. They are pre-rendered as static HTML; there is no browser-side portfolio fetch or static-data fallback when database content is missing or invalid. The files in `src/data/` remain available for the seed and RAG workflows.
+The public `/`, `/work`, and `/about` pages read seeded portfolio content through the server-only Prisma client during the production build. They are pre-rendered as static HTML; there is no browser-side portfolio fetch or static-data fallback when database content is missing or invalid. The files in `src/data/` remain only as seed input; RAG reads the Prisma source tables.
 
 ### Source of truth
 
