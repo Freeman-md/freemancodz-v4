@@ -10,113 +10,153 @@ import { createEmbeddings } from "@/features/search-indexing/embeddings/create-e
 import { prepareSiteChunk } from "@/features/search-indexing/prepare-site-chunk";
 import type {
   EmbeddedSiteChunk,
+  ExistingSiteChunk,
+  IndexableSource,
   IndexableSourceType,
   IndexSourceResult,
   PreparedSiteChunk,
 } from "@/features/search-indexing/types";
 import { getEmbeddingModel } from "@/lib/openai";
+import type { GeneratedEmbedding } from "@/features/search-indexing/embeddings/create-embeddings";
 
 type IndexSourceRecordInput = {
   sourceType: IndexableSourceType;
   sourceId: string;
 };
 
-export async function indexSourceRecord({
-  sourceType,
-  sourceId,
-}: IndexSourceRecordInput): Promise<IndexSourceResult> {
-  try {
-    const source = await findIndexableSource(sourceType, sourceId);
+type IndexSourceRecordDependencies = {
+  findIndexableSource: (
+    sourceType: IndexableSourceType,
+    sourceId: string,
+  ) => Promise<IndexableSource | null>;
+  findIndexedChunksBySource: (
+    sourceType: IndexableSourceType,
+    sourceId: string,
+  ) => Promise<ExistingSiteChunk[]>;
+  createEmbeddings: (inputs: string[]) => Promise<GeneratedEmbedding[]>;
+  replaceIndexedSource: (input: {
+    sourceType: IndexableSourceType;
+    sourceId: string;
+    upserts: EmbeddedSiteChunk[];
+    obsoleteIds: string[];
+  }) => Promise<void>;
+  getEmbeddingModel: () => string;
+};
 
-    if (!source) {
-      throw new Error("Source record was not found.");
-    }
+export function createIndexSourceRecord({
+  findIndexableSource,
+  findIndexedChunksBySource,
+  createEmbeddings,
+  replaceIndexedSource,
+  getEmbeddingModel,
+}: IndexSourceRecordDependencies) {
+  return async function indexSourceRecord({
+    sourceType,
+    sourceId,
+  }: IndexSourceRecordInput): Promise<IndexSourceResult> {
+    try {
+      const source = await findIndexableSource(sourceType, sourceId);
 
-    const preparedChunks = buildSearchDocuments(source).map(prepareSiteChunk);
-    const existingChunks = await findIndexedChunksBySource(
-      sourceType,
-      sourceId,
-    );
-
-    const existingById = new Map(
-      existingChunks.map((chunk) => [chunk.id, chunk]),
-    );
-
-    const embeddingModel = getEmbeddingModel();
-
-    const unchanged: PreparedSiteChunk[] = [];
-    const changed: PreparedSiteChunk[] = [];
-    const created: PreparedSiteChunk[] = [];
-
-    for (const chunk of preparedChunks) {
-      const existing = existingById.get(chunk.id);
-
-      if (!existing) {
-        created.push(chunk);
-        continue;
+      if (!source) {
+        throw new Error("Source record was not found.");
       }
 
-      if (
-        existing.contentHash === chunk.contentHash &&
-        existing.embeddingModel === embeddingModel
-      ) {
-        unchanged.push(chunk);
-        continue;
-      }
+      const preparedChunks = buildSearchDocuments(source).map(prepareSiteChunk);
+      const existingChunks = await findIndexedChunksBySource(
+        sourceType,
+        sourceId,
+      );
 
-      changed.push(chunk);
-    }
+      const existingById = new Map(
+        existingChunks.map((chunk) => [chunk.id, chunk]),
+      );
 
-    const currentIds = new Set(preparedChunks.map((chunk) => chunk.id));
+      const embeddingModel = getEmbeddingModel();
 
-    const obsoleteIds = existingChunks
-      .filter((chunk) => !currentIds.has(chunk.id))
-      .map((chunk) => chunk.id);
+      const unchanged: PreparedSiteChunk[] = [];
+      const changed: PreparedSiteChunk[] = [];
+      const created: PreparedSiteChunk[] = [];
 
-    const chunksToEmbed = [...created, ...changed];
+      for (const chunk of preparedChunks) {
+        const existing = existingById.get(chunk.id);
 
-    const generatedEmbeddings = await createEmbeddings(
-      chunksToEmbed.map((chunk) => chunk.embeddingInput),
-    );
-
-    const embeddedAt = new Date();
-
-    const upserts: EmbeddedSiteChunk[] = chunksToEmbed.map(
-      (chunk, index) => {
-        const generated = generatedEmbeddings[index];
-
-        if (!generated) {
-          throw new Error(`Missing embedding for chunk ${chunk.id}.`);
+        if (!existing) {
+          created.push(chunk);
+          continue;
         }
 
-        return {
-          ...chunk,
-          embedding: generated.embedding,
-          embeddingModel: generated.embeddingModel,
-          embeddedAt,
-        };
-      },
-    );
+        if (
+          existing.contentHash === chunk.contentHash &&
+          existing.embeddingModel === embeddingModel
+        ) {
+          unchanged.push(chunk);
+          continue;
+        }
 
-    await replaceIndexedSource({
-      sourceType,
-      sourceId,
-      upserts,
-      obsoleteIds,
-    });
+        changed.push(chunk);
+      }
 
-    return {
-      created: created.length,
-      changed: changed.length,
-      unchanged: unchanged.length,
-      deleted: obsoleteIds.length,
-    };
-  } catch (error) {
-    const detail = error instanceof Error ? error.message : String(error);
+      const currentIds = new Set(preparedChunks.map((chunk) => chunk.id));
 
-    throw new Error(
-      `Failed to index ${sourceType}:${sourceId}: ${detail}`,
-      { cause: error },
-    );
-  }
+      const obsoleteIds = existingChunks
+        .filter((chunk) => !currentIds.has(chunk.id))
+        .map((chunk) => chunk.id);
+
+      const chunksToEmbed = [...created, ...changed];
+
+      const generatedEmbeddings = chunksToEmbed.length > 0
+        ? await createEmbeddings(
+            chunksToEmbed.map((chunk) => chunk.embeddingInput),
+          )
+        : [];
+
+      const embeddedAt = new Date();
+
+      const upserts: EmbeddedSiteChunk[] = chunksToEmbed.map(
+        (chunk, index) => {
+          const generated = generatedEmbeddings[index];
+
+          if (!generated) {
+            throw new Error(`Missing embedding for chunk ${chunk.id}.`);
+          }
+
+          return {
+            ...chunk,
+            embedding: generated.embedding,
+            embeddingModel: generated.embeddingModel,
+            embeddedAt,
+          };
+        },
+      );
+
+      await replaceIndexedSource({
+        sourceType,
+        sourceId,
+        upserts,
+        obsoleteIds,
+      });
+
+      return {
+        created: created.length,
+        changed: changed.length,
+        unchanged: unchanged.length,
+        deleted: obsoleteIds.length,
+      };
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+
+      throw new Error(
+        `Failed to index ${sourceType}:${sourceId}: ${detail}`,
+        { cause: error },
+      );
+    }
+  };
 }
+
+export const indexSourceRecord = createIndexSourceRecord({
+  findIndexableSource,
+  findIndexedChunksBySource,
+  createEmbeddings,
+  replaceIndexedSource,
+  getEmbeddingModel,
+});

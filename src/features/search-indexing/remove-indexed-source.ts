@@ -11,25 +11,40 @@ type RemoveIndexedSourceInput = {
   sourceId: string;
 };
 
-export async function removeIndexedSource({
-  sourceType,
-  sourceId,
-}: RemoveIndexedSourceInput): Promise<IndexSourceResult> {
-  try {
-    const deleted = await deleteIndexedSource(sourceType, sourceId);
+type RemoveIndexedSourceDependencies = {
+  deleteIndexedSource: (
+    sourceType: IndexableSourceType,
+    sourceId: string,
+  ) => Promise<number>;
+};
 
-    return {
-      created: 0,
-      changed: 0,
-      unchanged: 0,
-      deleted,
-    };
-  } catch (error) {
-    const detail = error instanceof Error ? error.message : String(error);
+export function createRemoveIndexedSource({
+  deleteIndexedSource,
+}: RemoveIndexedSourceDependencies) {
+  return async function removeIndexedSource({
+    sourceType,
+    sourceId,
+  }: RemoveIndexedSourceInput): Promise<IndexSourceResult> {
+    try {
+      const deleted = await deleteIndexedSource(sourceType, sourceId);
 
-    throw new Error(
-      `Failed to remove indexed source ${sourceType}:${sourceId}: ${detail}`,
-      { cause: error },
-    );
-  }
+      return {
+        created: 0,
+        changed: 0,
+        unchanged: 0,
+        deleted,
+      };
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+
+      throw new Error(
+        `Failed to remove indexed source ${sourceType}:${sourceId}: ${detail}`,
+        { cause: error },
+      );
+    }
+  };
 }
+
+export const removeIndexedSource = createRemoveIndexedSource({
+  deleteIndexedSource,
+});
