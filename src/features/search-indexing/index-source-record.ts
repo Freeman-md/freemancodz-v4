@@ -6,7 +6,7 @@ import {
   replaceIndexedSource,
 } from "@/features/search-indexing/data/site-chunk.repository";
 import { findIndexableSource } from "@/features/search-indexing/data/indexing-source.repository";
-import { createEmbeddings } from "@/features/search-indexing/embeddings/create-embeddings";
+import { createEmbeddings } from "@/features/search-indexing/create-embeddings";
 import { prepareSiteChunk } from "@/features/search-indexing/prepare-site-chunk";
 import type {
   EmbeddedSiteChunk,
@@ -18,7 +18,7 @@ import type {
   ReplaceIndexedSourceInput,
 } from "@/features/search-indexing/types";
 import { getEmbeddingModel } from "@/lib/openai";
-import type { GeneratedEmbedding } from "@/features/search-indexing/embeddings/create-embeddings";
+import type { GeneratedEmbedding } from "@/features/search-indexing/create-embeddings";
 
 type IndexSourceRecordInput = {
   sourceType: IndexableSourceType;
