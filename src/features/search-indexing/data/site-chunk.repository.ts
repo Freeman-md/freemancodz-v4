@@ -1,19 +1,12 @@
-import "server-only";
 
-import { Prisma } from "@/generated/prisma/client";
+
 import { prisma } from "@/lib/prisma";
 import type {
   EmbeddedSiteChunk,
   ExistingSiteChunk,
   IndexableSourceType,
+  ReplaceIndexedSourceInput,
 } from "@/features/search-indexing/types";
-
-type ReplaceIndexedSourceInput = {
-  sourceType: IndexableSourceType;
-  sourceId: string;
-  upserts: EmbeddedSiteChunk[];
-  obsoleteIds: string[];
-};
 
 function toVectorLiteral(embedding: number[]): string {
   return `[${embedding.join(",")}]`;

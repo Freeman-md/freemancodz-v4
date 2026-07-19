@@ -1,4 +1,4 @@
-import "server-only";
+
 
 import { buildSearchDocuments } from "@/features/search-indexing/build-search-documents";
 import {
@@ -15,6 +15,7 @@ import type {
   IndexableSourceType,
   IndexSourceResult,
   PreparedSiteChunk,
+  ReplaceIndexedSourceInput,
 } from "@/features/search-indexing/types";
 import { getEmbeddingModel } from "@/lib/openai";
 import type { GeneratedEmbedding } from "@/features/search-indexing/embeddings/create-embeddings";
@@ -34,12 +35,7 @@ type IndexSourceRecordDependencies = {
     sourceId: string,
   ) => Promise<ExistingSiteChunk[]>;
   createEmbeddings: (inputs: string[]) => Promise<GeneratedEmbedding[]>;
-  replaceIndexedSource: (input: {
-    sourceType: IndexableSourceType;
-    sourceId: string;
-    upserts: EmbeddedSiteChunk[];
-    obsoleteIds: string[];
-  }) => Promise<void>;
+  replaceIndexedSource: (input: ReplaceIndexedSourceInput) => Promise<void>;
   getEmbeddingModel: () => string;
 };
 

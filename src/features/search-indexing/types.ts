@@ -62,6 +62,13 @@ export type EmbeddedSiteChunk = PreparedSiteChunk & {
   embeddedAt: Date;
 };
 
+export type ReplaceIndexedSourceInput = {
+  sourceType: IndexableSourceType;
+  sourceId: string;
+  upserts: EmbeddedSiteChunk[];
+  obsoleteIds: string[];
+};
+
 export type IndexSourceResult = {
   created: number;
   changed: number;
