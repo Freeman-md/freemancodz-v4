@@ -1,5 +1,3 @@
-import "server-only";
-
 import { deleteIndexedSource } from "@/features/search-indexing/data/site-chunk.repository";
 import type {
   IndexableSourceType,
