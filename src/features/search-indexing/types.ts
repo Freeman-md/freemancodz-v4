@@ -4,6 +4,7 @@ import type {
   Principle,
   Project,
   Service,
+  SiteChunk,
 } from "@/generated/prisma/client";
 
 export type IndexableSourceType =
@@ -35,16 +36,24 @@ export type IndexableSource =
     record: Experience;
   };
 
-export type SearchDocument = {
+type SearchDocumentContent = Pick<
+  SiteChunk,
+  "title" | "category" | "url" | "content" | "keywords"
+>;
+
+export type SearchDocument = SearchDocumentContent & {
   sourceType: IndexableSourceType;
   sourceId: string;
   documentIndex: number;
-  title: string;
-  category: string;
-  url: string;
-  content: string;
-  keywords: string[];
 };
+
+export type PreparedSiteChunk = SearchDocument & {
+  id: string;
+  chunkIndex: number;
+  embeddingInput: string;
+  contentHash: string;
+};
+
 
 export type IndexSourceResult = {
   created: number;
