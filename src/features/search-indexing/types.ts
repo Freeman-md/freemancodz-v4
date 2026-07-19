@@ -54,6 +54,13 @@ export type PreparedSiteChunk = SearchDocument & {
   contentHash: string;
 };
 
+export type ExistingSiteChunk =  Pick<SiteChunk, "id" | "sourceType" | "sourceId" | "chunkIndex" | "contentHash" | "embeddingModel">;
+
+export type EmbeddedSiteChunk = PreparedSiteChunk & {
+  embedding: number[];
+  embeddingModel: string;
+  embeddedAt: Date;
+};
 
 export type IndexSourceResult = {
   created: number;
