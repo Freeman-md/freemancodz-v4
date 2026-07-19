@@ -10,9 +10,9 @@ CREATE TYPE "content_section" AS ENUM ('hero', 'philosophy', 'current_direction'
 -- CreateTable
 CREATE TABLE "site_chunks" (
     "id" TEXT NOT NULL,
-    "sourceType" TEXT NOT NULL,
-    "sourceId" TEXT NOT NULL,
-    "chunkIndex" INTEGER NOT NULL,
+    "source_type" TEXT NOT NULL,
+    "source_id" TEXT NOT NULL,
+    "chunk_index" INTEGER NOT NULL,
     "title" TEXT NOT NULL,
     "category" TEXT NOT NULL,
     "url" TEXT NOT NULL,
@@ -23,7 +23,7 @@ CREATE TABLE "site_chunks" (
     "embeddingModel" TEXT,
     "embeddedAt" TIMESTAMP(3),
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "updated_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "site_chunks_pkey" PRIMARY KEY ("id")
 );
@@ -109,7 +109,7 @@ CREATE TABLE "projects" (
 );
 
 -- CreateIndex
-CREATE UNIQUE INDEX "site_chunks_sourceType_sourceId_chunkIndex_key" ON "site_chunks"("sourceType", "sourceId", "chunkIndex");
+CREATE UNIQUE INDEX "site_chunks_source_type_source_id_chunk_index_key" ON "site_chunks"("source_type", "source_id", "chunk_index");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "content_blocks_key_key" ON "content_blocks"("key");

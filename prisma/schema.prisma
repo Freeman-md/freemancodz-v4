@@ -9,9 +9,9 @@ datasource db {
 
 model SiteChunk {
   id         String @id
-  sourceType String
-  sourceId   String
-  chunkIndex Int
+  sourceType String @map("source_type")
+  sourceId   String @map("source_id")
+  chunkIndex Int   @map("chunk_index")
 
   title    String
   category String
