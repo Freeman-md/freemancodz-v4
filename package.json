@@ -14,6 +14,7 @@
     "supabase:types": "supabase gen types typescript --local > src/types/supabase.ts",
     "test:rag-rpc": "tsx scripts/test-match-site-chunks.ts",
     "test:portfolio": "NODE_OPTIONS='--conditions=react-server' tsx --test tests/portfolio/*.test.ts && tsx --test tests/portfolio/*.test.tsx",
+    "test:search-indexing": "tsx --test tests/search-indexing/*.test.ts",
     "seed:portfolio": "tsx scripts/seed-portfolio-data.ts",
     "seed:chunks": "tsx scripts/seed-site-chunks.ts"
   },
