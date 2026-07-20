@@ -20,9 +20,9 @@ model SiteChunk {
   keywords String[]
 
   embedding      Unsupported("vector(1536)")
-  contentHash    String?
-  embeddingModel String?
-  embeddedAt     DateTime?
+  contentHash    String?                        @map("content_hash")
+  embeddingModel String?                        @map("embedding_model")
+  embeddedAt     DateTime?                      @map("embedded_at")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)

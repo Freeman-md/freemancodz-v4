@@ -19,9 +19,9 @@ CREATE TABLE "site_chunks" (
     "content" TEXT NOT NULL,
     "keywords" TEXT[],
     "embedding" vector(1536) NOT NULL,
-    "contentHash" TEXT,
-    "embeddingModel" TEXT,
-    "embeddedAt" TIMESTAMP(3),
+    "content_hash" TEXT,
+    "embedding_model" TEXT,
+    "embedded_at" TIMESTAMP(3),
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
