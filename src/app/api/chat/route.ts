@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { createOpenAIClient, getResponseModel } from "@/lib/openai";
-import { retrieveContext } from "@/lib/rag/retrieve-context";
 import { FALLBACK_ANSWER, MAX_MESSAGE_LENGTH } from "./_lib/constants";
 import { CHAT_SYSTEM_PROMPT } from "./_lib/prompt";
 import { checkChatRateLimit } from "./_lib/rate-limit";
@@ -10,6 +9,7 @@ import {
   formatContext,
   normalizePreviousResponseId,
 } from "./_lib/utils";
+import { retrieveContext } from "./_lib/rag/retrieve-context";
 
 function createChatStream({
   chunks,
