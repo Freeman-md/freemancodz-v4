@@ -46,18 +46,18 @@ export async function replaceIndexedSource({
       await transaction.$executeRaw`
         INSERT INTO site_chunks (
           id,
-          "sourceType",
-          "sourceId",
-          "chunkIndex",
+          source_type,
+          source_id,
+          chunk_index,
           title,
           category,
           url,
           content,
           keywords,
           embedding,
-          "contentHash",
-          "embeddingModel",
-          "embeddedAt"
+          content_hash,
+          embedding_model,
+          embedded_at
         )
         VALUES (
           ${chunk.id},
@@ -74,7 +74,7 @@ export async function replaceIndexedSource({
           ${chunk.embeddingModel},
           ${chunk.embeddedAt}
         )
-        ON CONFLICT ("sourceType", "sourceId", "chunkIndex")
+        ON CONFLICT (source_type, source_id, chunk_index)
         DO UPDATE SET
           id = EXCLUDED.id,
           title = EXCLUDED.title,
@@ -83,10 +83,10 @@ export async function replaceIndexedSource({
           content = EXCLUDED.content,
           keywords = EXCLUDED.keywords,
           embedding = EXCLUDED.embedding,
-          "contentHash" = EXCLUDED."contentHash",
-          "embeddingModel" = EXCLUDED."embeddingModel",
-          "embeddedAt" = EXCLUDED."embeddedAt",
-          "updated_at" = NOW()
+          content_hash = EXCLUDED.content_hash,
+          embedding_model = EXCLUDED.embedding_model,
+          embedded_at = EXCLUDED.embedded_at,
+          updated_at = NOW()
       `;
     }
 
