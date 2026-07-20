@@ -36,8 +36,6 @@ function createChatStream({
       }
 
       try {
-        write({ type: "sources", sources });
-
         if (chunks.length === 0 && !previousResponseId) {
           write({ type: "delta", delta: FALLBACK_ANSWER });
           write({ type: "done" });
@@ -89,6 +87,8 @@ function createChatStream({
             );
           }
         }
+
+        write({ type: "sources", sources });
 
         if (!didStreamText) {
           write({ type: "delta", delta: FALLBACK_ANSWER });

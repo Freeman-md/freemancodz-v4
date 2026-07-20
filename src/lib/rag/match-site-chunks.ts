@@ -1,4 +1,4 @@
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { prisma } from "@/lib/prisma";
 import type { MatchSiteChunksRow } from "@/lib/rag/types";
 
 export async function matchSiteChunks(
@@ -12,16 +12,16 @@ export async function matchSiteChunks(
     );
   }
 
-  const supabase = createServerSupabaseClient();
-  const { data, error } = await supabase.rpc("match_site_chunks", {
-    query_embedding: `[${queryEmbedding.join(",")}]`,
-    match_count: matchCount,
-    match_threshold: matchThreshold,
-  });
+  const vector = `[${queryEmbedding.join(",")}]`;
 
-  if (error) {
-    throw new Error(`match_site_chunks RPC failed: ${error.message}`);
-  }
+  const rows = await prisma.$queryRaw<MatchSiteChunksRow[]>`
+    SELECT *
+    FROM match_site_chunks(
+      ${vector}::vector,
+      ${matchCount},
+      ${matchThreshold}
+    );
+  `;
 
-  return data as MatchSiteChunksRow[];
+  return rows;
 }

@@ -15,7 +15,7 @@ function normalizePagePath(path: string) {
   return path !== "/" ? path.replace(/\/$/, "") : path;
 }
 
-export function middleware(req: NextRequest) {
+export function proxy(req: NextRequest) {
   const path = req.nextUrl.pathname;
   const normalizedPath = normalizePagePath(path);
 
