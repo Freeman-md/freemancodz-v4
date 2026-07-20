@@ -15,7 +15,7 @@
     "test:rag-rpc": "tsx scripts/test-match-site-chunks.ts",
     "test:portfolio": "NODE_OPTIONS='--conditions=react-server' tsx --test tests/portfolio/*.test.ts && tsx --test tests/portfolio/*.test.tsx",
     "test:search-indexing": "tsx --test tests/search-indexing/*.test.ts",
-    "seed:portfolio": "tsx scripts/seed-portfolio-data.ts",
+    "seed:portfolio": "tsx --env-file=.env scripts/seed-portfolio-data.ts",
     "index:source": "tsx --env-file=.env scripts/index-source.ts",
     "index:worker": "tsx --env-file=.env scripts/index-worker.ts",
     "index:rebuild": "tsx --env-file=.env scripts/rebuild-search-index.ts",
