@@ -31,6 +31,24 @@ model SiteChunk {
   @@map("site_chunks")
 }
 
+model SearchIndexJob {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  operation   String
+  sourceType  String    @map("source_type")
+  sourceId    String    @map("source_id")
+  status      String    @default("pending")
+  attempts    Int       @default(0)
+  availableAt DateTime  @default(now()) @map("available_at") @db.Timestamptz(6)
+  claimedAt   DateTime? @map("claimed_at") @db.Timestamptz(6)
+  lastError   String?   @map("last_error")
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  processedAt DateTime? @map("processed_at") @db.Timestamptz(6)
+
+  @@index([status, availableAt])
+  @@index([sourceType, sourceId])
+  @@map("search_index_jobs")
+}
+
 enum ContentPage {
   HOME  @map("home")
   ABOUT @map("about")

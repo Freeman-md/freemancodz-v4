@@ -17,6 +17,7 @@
     "test:search-indexing": "tsx --test tests/search-indexing/*.test.ts",
     "seed:portfolio": "tsx scripts/seed-portfolio-data.ts",
     "index:source": "tsx --env-file=.env scripts/index-source.ts",
+    "index:worker": "tsx --env-file=.env scripts/index-worker.ts",
     "index:rebuild": "tsx --env-file=.env scripts/rebuild-search-index.ts",
     "index:preview": "tsx --env-file=.env scripts/preview-search-index.ts"
   },

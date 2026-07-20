@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import type { MatchSiteChunksRow } from "@/lib/rag/types";
+import type { MatchSiteChunksRow } from "./types";
 
 export async function matchSiteChunks(
   queryEmbedding: number[],

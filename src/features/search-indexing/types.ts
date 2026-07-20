@@ -14,6 +14,37 @@ export type IndexableSourceType =
   | "principles"
   | "experiences";
 
+export type SearchIndexJobOperation = "upsert" | "delete";
+
+export type SearchIndexJobStatus =
+  | "pending"
+  | "processing"
+  | "completed"
+  | "failed";
+
+export type SearchIndexJob = {
+  id: string;
+  operation: SearchIndexJobOperation;
+  sourceType: IndexableSourceType;
+  sourceId: string;
+  status: SearchIndexJobStatus;
+  attempts: number;
+  availableAt: Date;
+  claimedAt: Date | null;
+  lastError: string | null;
+  createdAt: Date;
+  processedAt: Date | null;
+};
+
+export type EnqueueIndexJobInput = Pick<
+  SearchIndexJob,
+  "operation" | "sourceType" | "sourceId"
+>;
+
+export type FailIndexJobOptions = {
+  maxAttempts?: number;
+};
+
 export type IndexableSource =
   | {
     sourceType: "content_blocks";
