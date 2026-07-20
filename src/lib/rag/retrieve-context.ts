@@ -41,12 +41,14 @@ export async function retrieveContext(
     throw new Error("Failed to create query embedding.");
   }
 
-  const chunks = await matchSiteChunks(queryEmbedding, 6, 0.25);
+  const chunks = await matchSiteChunks(queryEmbedding, 20, 0.25);
   const sources = chunks.map((chunk) => ({
     id: chunk.id,
     title: chunk.title,
     url: chunk.url,
   }));
+
+  console.log(chunks, sources)
 
   return { chunks, sources };
 }
