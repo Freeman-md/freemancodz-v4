@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createIndexWorker } from "../../scripts/index-worker";
+import { createIndexWorker } from "@/features/search-indexing/index-worker";
+import { runIndexWorkerLoop } from "../../scripts/index-worker";
 import type { SearchIndexJob } from "@/features/search-indexing/types";
 
 function makeJob(overrides: Partial<SearchIndexJob> = {}): SearchIndexJob {
@@ -45,7 +46,12 @@ test("worker indexes upsert jobs, completes them, and logs result counts", async
     },
   });
 
-  assert.equal(await worker.runBatch(), 1);
+  assert.deepEqual(await worker.runBatch(), {
+    claimed: 1,
+    completed: 1,
+    retried: 0,
+    failed: 0,
+  });
   assert.deepEqual(indexed, [{ sourceType: "projects", sourceId: "project-1" }]);
   assert.deepEqual(completed, ["job-1"]);
   assert.deepEqual(logs, [[
@@ -77,7 +83,12 @@ test("worker removes indexed chunks for delete jobs", async () => {
     logger: { log: () => undefined, error: () => undefined },
   });
 
-  await worker.runBatch();
+  assert.deepEqual(await worker.runBatch(), {
+    claimed: 1,
+    completed: 1,
+    retried: 0,
+    failed: 0,
+  });
   assert.deepEqual(removed, [{ sourceType: "services", sourceId: "project-1" }]);
 });
 
@@ -104,7 +115,12 @@ test("worker sends indexing failures to retry handling and logs the retry outcom
     logger: { log: () => undefined, error: (...args: unknown[]) => errors.push(args) },
   });
 
-  await worker.runBatch();
+  assert.deepEqual(await worker.runBatch(), {
+    claimed: 1,
+    completed: 0,
+    retried: 1,
+    failed: 0,
+  });
   assert.equal(retryCalls.length, 1);
   assert.equal(retryCalls[0][0], "job-1");
   assert.ok(retryCalls[0][1] instanceof Error);
@@ -120,4 +136,46 @@ test("worker sends indexing failures to retry handling and logs the retry outcom
       attempts: 1,
     },
   ]]);
+});
+
+test("worker reports terminal failures separately from retryable failures", async () => {
+  const job = makeJob({ attempts: 5 });
+  const worker = createIndexWorker({
+    claimIndexJobs: async () => [job],
+    completeIndexJob: async () => null,
+    failIndexJob: async () => ({ ...job, status: "failed", processedAt: new Date() }),
+    indexSourceRecord: async () => {
+      throw new Error("embedding unavailable");
+    },
+    removeIndexedSource: async () => ({
+      created: 0,
+      changed: 0,
+      unchanged: 0,
+      deleted: 0,
+    }),
+    logger: { log: () => undefined, error: () => undefined },
+  });
+
+  assert.deepEqual(await worker.runBatch(), {
+    claimed: 1,
+    completed: 0,
+    retried: 0,
+    failed: 1,
+  });
+});
+
+test("local CLI loop delegates batch processing to the shared worker operation", async () => {
+  let calls = 0;
+  let stopping = false;
+
+  await runIndexWorkerLoop({
+    runBatch: async () => {
+      calls += 1;
+      stopping = true;
+      return { claimed: 1, completed: 1, retried: 0, failed: 0 };
+    },
+    isStopping: () => stopping,
+  });
+
+  assert.equal(calls, 1);
 });

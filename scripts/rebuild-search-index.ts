@@ -1,7 +1,19 @@
-import { findAllIndexableSources } from "@/features/search-indexing/data/indexing-source.repository";
-import { indexSourceRecord } from "@/features/search-indexing/index-source-record";
+import { requireProductionConfirmation } from "./lib/production-confirmation";
+
+const isProductionRun = process.argv.includes("--production");
 
 async function main() {
+  if (isProductionRun) {
+    requireProductionConfirmation();
+  }
+
+  const [
+    { findAllIndexableSources },
+    { indexSourceRecord },
+  ] = await Promise.all([
+    import("@/features/search-indexing/data/indexing-source.repository"),
+    import("@/features/search-indexing/index-source-record"),
+  ]);
   const sources = await findAllIndexableSources();
 
   const totals = {

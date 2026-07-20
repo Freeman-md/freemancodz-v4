@@ -45,6 +45,16 @@ export type FailIndexJobOptions = {
   maxAttempts?: number;
 };
 
+export type SearchIndexJobStatusSummary = {
+  pending: number;
+  processing: number;
+  completed: number;
+  failed: number;
+  oldestPending: SearchIndexJob | null;
+  staleProcessing: number;
+  recentFailed: SearchIndexJob[];
+};
+
 export type IndexableSource =
   | {
     sourceType: "content_blocks";

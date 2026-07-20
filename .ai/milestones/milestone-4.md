@@ -559,18 +559,47 @@ Use a small server-only Next.js route handler or equivalent Node-compatible entr
 
 The endpoint must:
 
-- accept only `POST`
-- require a server-only secret
-- use a constant-time secret comparison where practical
+- accept only protected `GET` requests from Vercel Cron
+- require `Authorization: Bearer <CRON_SECRET>`
 - return no database credentials, OpenAI details or source content
 - process a bounded batch
 - report only safe counts
 
 Do not duplicate the indexing logic in a Supabase Edge Function merely to use a different runtime.
 
-Document the exact production configuration required to invoke the endpoint once per minute using Supabase `pg_cron`/`pg_net` or another already-supported scheduler. Environment-specific endpoint URLs and secrets must not be committed.
+Document the exact production configuration required to invoke the endpoint every five minutes through Vercel Cron. Environment-specific secrets must not be committed.
 
 Scheduler setup that requires production credentials belongs under manual tasks, but the repository must contain the protected endpoint and clear setup instructions.
+
+### Vercel Cron production operation
+
+`vercel.json` schedules `GET /api/internal/search-index-worker` every five minutes. The route runs in the Node.js runtime, requires `Authorization: Bearer <CRON_SECRET>`, and processes exactly one bounded batch per invocation. Vercel Cron supplies the Bearer value from `CRON_SECRET`; do not put this value in a URL or source control.
+
+Configure these production environment variables in Vercel:
+
+- `DATABASE_URL` — Prisma application connection string.
+- `OPENAI_API_KEY` — embeddings API key.
+- `CRON_SECRET` — secret used by Vercel Cron and the protected worker route.
+- `SEARCH_INDEX_BATCH_LIMIT` — optional batch size from 1 to 20; invalid values use 5.
+
+Future invocations continue draining queued work. `FOR UPDATE SKIP LOCKED` prevents two invocations from claiming the same job, while existing content hashes keep indexing idempotent when no semantic embedding change is required.
+
+Run production migrations manually from a trusted local machine or CI environment with `npm run prisma:migrate:production`. Run production seeds and rebuilds manually with production credentials and the explicit confirmation flag:
+
+```text
+npm run seed:portfolio:production -- --confirm-production
+npm run index:rebuild:production -- --confirm-production
+npm run index:status:production
+```
+
+Never use `prisma migrate reset`, `prisma migrate dev`, or `prisma db push` against production.
+
+First deployment checklist:
+
+1. Set `DATABASE_URL`, `OPENAI_API_KEY`, `CRON_SECRET`, and any desired `SEARCH_INDEX_BATCH_LIMIT` in Vercel production settings.
+2. Run `npm run prisma:migrate:production` from a trusted environment.
+3. Deploy the commit containing `vercel.json` and confirm the cron path is listed in the production deployment.
+4. Use `npm run index:status:production` to confirm queue visibility, then safely update a source and verify a subsequent cron invocation drains its job.
 
 ## Prisma-backed retrieval
 

@@ -1,10 +1,19 @@
 import { config as loadEnv } from "dotenv";
 
 import { seedPortfolioData } from "./lib/portfolio-seed";
+import { requireProductionConfirmation } from "./lib/production-confirmation";
 
-loadEnv({ path: ".env.local" });
+const isProductionRun = process.argv.includes("--production");
+
+if (!isProductionRun) {
+  loadEnv({ path: ".env.local" });
+}
 
 async function main() {
+  if (isProductionRun) {
+    requireProductionConfirmation();
+  }
+
   const { prisma } = await import("../src/lib/prisma");
   const data = await seedPortfolioData(prisma);
 

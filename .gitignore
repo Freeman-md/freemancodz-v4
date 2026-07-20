@@ -2,6 +2,7 @@ node_modules
 .next
 out
 .env*.local
+.env.production.local
 .vercel
 npm-debug.log*
 src/generated/prisma

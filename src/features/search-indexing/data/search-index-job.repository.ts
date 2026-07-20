@@ -3,6 +3,7 @@ import type {
   EnqueueIndexJobInput,
   FailIndexJobOptions,
   SearchIndexJob,
+  SearchIndexJobStatusSummary,
 } from "@/features/search-indexing/types";
 
 const DEFAULT_MAX_ATTEMPTS = 5;
@@ -184,4 +185,41 @@ export async function failIndexJob(
   `;
 
   return job ?? null;
+}
+
+export async function getSearchIndexJobStatus(): Promise<SearchIndexJobStatusSummary> {
+  const [pending, processing, completed, failed, oldestPending, staleProcessing, recentFailed] =
+    await Promise.all([
+      prisma.searchIndexJob.count({ where: { status: "pending" } }),
+      prisma.searchIndexJob.count({ where: { status: "processing" } }),
+      prisma.searchIndexJob.count({ where: { status: "completed" } }),
+      prisma.searchIndexJob.count({ where: { status: "failed" } }),
+      prisma.searchIndexJob.findFirst({
+        where: { status: "pending" },
+        orderBy: [{ availableAt: "asc" }, { createdAt: "asc" }],
+      }),
+      prisma.searchIndexJob.count({
+        where: {
+          status: "processing",
+          claimedAt: {
+            lt: new Date(Date.now() - STALE_PROCESSING_TIMEOUT_MINUTES * 60_000),
+          },
+        },
+      }),
+      prisma.searchIndexJob.findMany({
+        where: { status: "failed" },
+        orderBy: { processedAt: "desc" },
+        take: 5,
+      }),
+    ]);
+
+  return {
+    pending,
+    processing,
+    completed,
+    failed,
+    oldestPending: oldestPending as SearchIndexJob | null,
+    staleProcessing,
+    recentFailed: recentFailed as SearchIndexJob[],
+  };
 }
