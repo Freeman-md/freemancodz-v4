@@ -20,6 +20,7 @@
     "seed:portfolio:production": "tsx --env-file=.env.production.local scripts/seed-portfolio-data.ts --production",
     "index:source": "tsx --env-file=.env scripts/index-source.ts",
     "index:worker": "tsx --env-file=.env scripts/index-worker.ts",
+    "index:worker:production": "tsx --env-file=.env.production.local scripts/index-worker.ts",
     "index:rebuild": "tsx --env-file=.env scripts/rebuild-search-index.ts",
     "index:rebuild:production": "tsx --env-file=.env.production.local scripts/rebuild-search-index.ts --production",
     "index:status": "tsx --env-file=.env scripts/search-index-job-status.ts",
