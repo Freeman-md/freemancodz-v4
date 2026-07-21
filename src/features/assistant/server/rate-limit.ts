@@ -1,3 +1,5 @@
+import "server-only";
+
 import {
   DAILY_RATE_LIMIT_MAX,
   DAILY_RATE_LIMIT_WINDOW_MS,

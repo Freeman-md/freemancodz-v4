@@ -1,3 +1,5 @@
+import "server-only";
+
 import { createOpenAIClient, getEmbeddingModel } from "@/lib/openai";
 import { matchSiteChunks } from "./match-site-chunks";
 import type { MatchSiteChunksRow } from "../types";

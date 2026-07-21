@@ -51,3 +51,22 @@ test("assistant client rejects malformed stream events with a safe error", async
     globalThis.fetch = originalFetch;
   }
 });
+
+test("assistant client reports non-2xx and provider errors safely", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => new Response(JSON.stringify({ error: "Request rejected." }), { status: 429 });
+  try {
+    await assert.rejects(
+      () => streamChatResponse("Hello", null, { onDelta: () => undefined, onResponseId: () => undefined, onSources: () => undefined }),
+      /Request rejected/,
+    );
+
+    globalThis.fetch = async () => streamResponse(['{"type":"error","error":"The assistant could not respond."}\n']);
+    await assert.rejects(
+      () => streamChatResponse("Hello", null, { onDelta: () => undefined, onResponseId: () => undefined, onSources: () => undefined }),
+      /could not respond/,
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});

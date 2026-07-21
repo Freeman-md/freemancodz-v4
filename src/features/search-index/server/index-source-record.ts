@@ -1,3 +1,5 @@
+import "server-only";
+
 
 
 import { buildSearchDocuments } from "@/features/search-index/server/build-search-documents";

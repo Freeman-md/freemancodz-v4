@@ -1,3 +1,5 @@
+import "server-only";
+
 import { createOpenAIClient, getEmbeddingModel } from "@/lib/openai";
 
 export type GeneratedEmbedding = {

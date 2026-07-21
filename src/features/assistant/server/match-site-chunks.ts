@@ -1,3 +1,5 @@
+import "server-only";
+
 import { prisma } from "@/lib/db";
 import type { MatchSiteChunksRow } from "../types";
 

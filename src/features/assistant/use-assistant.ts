@@ -10,6 +10,7 @@ import {
 } from "react";
 import { useReducedMotion, type Transition } from "framer-motion";
 import { streamChatResponse } from "./client";
+import { appendAssistantDelta, attachAssistantSources, replaceAssistantWithError, stageWhenOpening } from "./assistant-session";
 import { MAX_MESSAGE_LENGTH } from "./constants";
 import {
   OPEN_PORTFOLIO_CHAT_EVENT,
@@ -62,31 +63,13 @@ export function useFloatingPortfolioChat() {
     try {
       await streamChatResponse(message, previousResponseId, {
         onDelta(delta) {
-          setMessages((current) =>
-            current.map((chatMessage) =>
-              chatMessage.id === assistantMessage.id
-                ? {
-                    ...chatMessage,
-                    content: chatMessage.content + delta,
-                  }
-                : chatMessage,
-            ),
-          );
+          setMessages((current) => appendAssistantDelta(current, assistantMessage.id, delta));
         },
         onResponseId(responseId) {
           setPreviousResponseId(responseId);
         },
         onSources(sources) {
-          setMessages((current) =>
-            current.map((chatMessage) =>
-              chatMessage.id === assistantMessage.id
-                ? {
-                    ...chatMessage,
-                    sources,
-                  }
-                : chatMessage,
-            ),
-          );
+          setMessages((current) => attachAssistantSources(current, assistantMessage.id, sources));
         },
       });
     } catch (error) {
@@ -97,16 +80,7 @@ export function useFloatingPortfolioChat() {
       const errorResponse = createAssistantErrorMessage(messageText);
 
       setErrorMessage(messageText);
-      setMessages((current) =>
-        current.map((chatMessage) =>
-          chatMessage.id === assistantMessage.id
-            ? {
-                ...errorResponse,
-                id: assistantMessage.id,
-              }
-            : chatMessage,
-        ),
-      );
+      setMessages((current) => replaceAssistantWithError(current, assistantMessage.id, errorResponse));
     } finally {
       setIsLoading(false);
     }
@@ -162,7 +136,7 @@ export function useFloatingPortfolioChat() {
         return;
       }
 
-      setStage(messages.length > 0 ? "conversation" : "composer");
+      setStage(stageWhenOpening(messages));
     },
   );
 
@@ -186,7 +160,7 @@ export function useFloatingPortfolioChat() {
   }, [input, isLoading]);
 
   function openChat() {
-    setStage(messages.length > 0 ? "conversation" : "composer");
+    setStage(stageWhenOpening(messages));
   }
 
   function closeChat() {
