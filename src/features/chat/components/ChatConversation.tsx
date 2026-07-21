@@ -7,7 +7,8 @@ import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import type { ChatMessage } from "../types";
-import { isExternalUrl, renderMessageContent } from "../utils";
+import { isExternalUrl } from "../utils";
+import { renderChatMessageContent } from "../utils/render-chat-message-content";
 
 type ChatConversationProps = {
   isLoading: boolean;
@@ -79,7 +80,7 @@ export function ChatConversation({
                 >
                   <div className="whitespace-pre-wrap text-sm leading-6">
                     {message.content
-                      ? renderMessageContent(message.content)
+                      ? renderChatMessageContent(message.content)
                       : message.role === "assistant" && isLoading && !message.error
                         ? "Thinking…"
                         : null}

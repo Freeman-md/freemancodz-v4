@@ -1,4 +1,5 @@
-import type { MatchSiteChunksRow } from "./types";
+import { MatchSiteChunksRow } from "./types";
+
 
 export function diversifyChunks(
   chunks: MatchSiteChunksRow[],

@@ -1,6 +1,6 @@
 import { createOpenAIClient, getEmbeddingModel } from "@/lib/openai";
 import { matchSiteChunks } from "./match-site-chunks";
-import type { MatchSiteChunksRow } from "./types";
+import { MatchSiteChunksRow } from "./types";
 import { diversifyChunks } from "./diversify-chunk";
 
 export type RetrievedSource = {

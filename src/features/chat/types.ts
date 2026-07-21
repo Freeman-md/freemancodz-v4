@@ -1,10 +1,6 @@
-export type ChatStage = "launcher" | "composer" | "conversation";
+import { ChatSource } from "./application/types";
 
-export type ChatSource = {
-  id: string;
-  title: string;
-  url: string;
-};
+export type ChatStage = "launcher" | "composer" | "conversation";
 
 export type ChatMessage = {
   id: string;

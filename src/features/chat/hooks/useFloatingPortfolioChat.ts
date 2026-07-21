@@ -9,7 +9,7 @@ import {
   type KeyboardEvent,
 } from "react";
 import { useReducedMotion, type Transition } from "framer-motion";
-import { streamChatResponse } from "../client";
+import { streamChatResponse } from "../application/stream-chat-response";
 import { MAX_MESSAGE_LENGTH } from "../constants";
 import {
   OPEN_PORTFOLIO_CHAT_EVENT,
@@ -20,7 +20,7 @@ import {
   createAssistantErrorMessage,
   createAssistantMessage,
   createUserMessage,
-} from "../utils";
+} from "../utils/create-search-message";
 
 export function useFloatingPortfolioChat() {
   const [stage, setStage] = useState<ChatStage>("launcher");

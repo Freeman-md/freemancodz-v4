@@ -1,30 +1,4 @@
-import type { ChatSource } from "./types";
-
-type ChatStreamEvent =
-  | { type: "sources"; sources: ChatSource[] }
-  | { type: "response_id"; responseId: string }
-  | { type: "delta"; delta: string }
-  | { type: "done" }
-  | { type: "error"; error: string };
-
-type StreamChatResponseHandlers = {
-  onDelta: (delta: string) => void;
-  onResponseId: (responseId: string) => void;
-  onSources: (sources: ChatSource[]) => void;
-};
-
-function parseStreamEvent(line: string): ChatStreamEvent {
-  return JSON.parse(line) as ChatStreamEvent;
-}
-
-async function getErrorMessage(response: Response) {
-  try {
-    const payload = (await response.json()) as { error?: unknown };
-    return typeof payload.error === "string" ? payload.error : "Request failed.";
-  } catch {
-    return "Request failed.";
-  }
-}
+import { ChatStreamEvent, StreamChatResponseHandlers } from "./types";
 
 export async function streamChatResponse(
   message: string,
@@ -55,7 +29,7 @@ export async function streamChatResponse(
       return false;
     }
 
-    const event = parseStreamEvent(line);
+    const event = JSON.parse(line) as ChatStreamEvent;
 
     if (event.type === "sources") {
       handlers.onSources(event.sources);

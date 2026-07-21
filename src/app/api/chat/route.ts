@@ -9,7 +9,7 @@ import {
   formatContext,
   normalizePreviousResponseId,
 } from "./_lib/utils";
-import { retrieveContext } from "./_lib/rag/retrieve-context";
+import { retrieveContext } from "../../../features/chat/application/retrieve-context";
 
 function createChatStream({
   chunks,
