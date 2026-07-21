@@ -5,7 +5,7 @@ process.env.DATABASE_URL ??= "postgresql://postgres:postgres@127.0.0.1:5432/post
 
 test("reports a missing required content block by stable key", async () => {
   const { prisma } = await import("@/lib/db");
-  const query = await import("@/features/portfolio/server/content-blocks.query");
+  const query = await import("@/features/portfolio/server/queries/content-blocks.query");
   const original = prisma.contentBlock.findUnique;
   prisma.contentBlock.findUnique = (async () => null) as typeof prisma.contentBlock.findUnique;
 
@@ -18,7 +18,7 @@ test("reports a missing required content block by stable key", async () => {
 
 test("requests repeatable content blocks in stored position order", async () => {
   const { prisma } = await import("@/lib/db");
-  const query = await import("@/features/portfolio/server/content-blocks.query");
+  const query = await import("@/features/portfolio/server/queries/content-blocks.query");
   const original = prisma.contentBlock.findMany;
   let args: unknown;
   prisma.contentBlock.findMany = (async (value) => {

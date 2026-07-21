@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { CTASection } from "@/features/portfolio/components/CTASection";
 import { Container } from "@/components/layout/Container";
 import { ImagePlaceholder } from "@/components/ui/ImagePlaceholder";
-import { getAboutPageData } from "@/features/portfolio/server/about-page.loader";
+import { getAboutPageData } from "@/features/portfolio/server/loaders/about-page.loader";
 import { siteAssetLinks } from "@/lib/links";
 import { siteConfig } from "@/lib/site-metadata";
 

@@ -1,20 +1,20 @@
 import "server-only";
-import { findRequiredContentBlockByKey } from "@/features/portfolio/server/content-blocks.query";
-import { findExperiences } from "@/features/portfolio/server/experiences.query";
-import { findPrinciplesBySection } from "@/features/portfolio/server/principles.query";
-import { findFeaturedProjects } from "@/features/portfolio/server/projects.query";
-import { findServices } from "@/features/portfolio/server/services.query";
+import { findRequiredContentBlockByKey } from "@/features/portfolio/server/queries/content-blocks.query";
+import { findExperiences } from "@/features/portfolio/server/queries/experiences.query";
+import { findPrinciplesBySection } from "@/features/portfolio/server/queries/principles.query";
+import { findFeaturedProjects } from "@/features/portfolio/server/queries/projects.query";
+import { findServices } from "@/features/portfolio/server/queries/services.query";
 import {
   mapCurrentDirectionBlock,
   mapHeroBlock,
   mapPhilosophyBlock,
-} from "@/features/portfolio/server/content-block.mapper";
+} from "@/features/portfolio/server/mappers/content-block.mapper";
 import {
   mapExperience,
   mapPrinciple,
   mapProject,
   mapService,
-} from "@/features/portfolio/server/portfolio.mapper";
+} from "@/features/portfolio/server/mappers/portfolio.mapper";
 import type { HomePageData } from "@/features/portfolio/types";
 
 export async function getHomePageData(): Promise<HomePageData> {

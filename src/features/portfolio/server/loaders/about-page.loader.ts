@@ -2,15 +2,15 @@ import "server-only";
 import {
   findContentBlocksBySection,
   findRequiredContentBlockByKey,
-} from "@/features/portfolio/server/content-blocks.query";
-import { findPrinciplesBySection } from "@/features/portfolio/server/principles.query";
+} from "@/features/portfolio/server/queries/content-blocks.query";
+import { findPrinciplesBySection } from "@/features/portfolio/server/queries/principles.query";
 import {
   mapAboutHeaderBlock,
   mapEducationBlock,
   mapOutsideEngineeringBlock,
   mapTextBlock,
-} from "@/features/portfolio/server/content-block.mapper";
-import { mapPrinciple } from "@/features/portfolio/server/portfolio.mapper";
+} from "@/features/portfolio/server/mappers/content-block.mapper";
+import { mapPrinciple } from "@/features/portfolio/server/mappers/portfolio.mapper";
 import type { AboutPageData } from "@/features/portfolio/types";
 
 export async function getAboutPageData(): Promise<AboutPageData> {

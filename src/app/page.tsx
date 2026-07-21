@@ -9,7 +9,7 @@ import { ProjectCard } from "@/features/portfolio/components/ProjectCard";
 import { QuoteBlock } from "@/components/ui/QuoteBlock";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { ServiceIcon } from "@/components/ui/ServiceIcons";
-import { getHomePageData } from "@/features/portfolio/server/home-page.loader";
+import { getHomePageData } from "@/features/portfolio/server/loaders/home-page.loader";
 import { siteAssetLinks } from "@/lib/links";
 
 export default async function Home() {
