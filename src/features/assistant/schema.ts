@@ -10,8 +10,14 @@ const sourceSchema = z.object({
 
 export const assistantRequestSchema = z.object({
   message: z.string().trim().min(1, "Message is required.").max(MAX_MESSAGE_LENGTH),
-  previousResponseId: z.string().trim().min(1).nullable().optional(),
+  previousResponseId: z.string().nullable().optional().transform(normalizePreviousResponseId),
 });
+
+function normalizePreviousResponseId(value: string | null | undefined) {
+  if (!value) return null;
+  const responseId = value.trim();
+  return responseId.length > 0 && responseId.length <= 200 && responseId.startsWith("resp_") ? responseId : null;
+}
 
 export const assistantStreamEventSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("delta"), delta: z.string() }),

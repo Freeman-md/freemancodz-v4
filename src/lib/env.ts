@@ -23,5 +23,5 @@ export function getOpenAIConfig() {
 }
 
 export function getSearchIndexWorkerSecret() {
-  return process.env.SEARCH_INDEX_WORKER_SECRET;
+  return process.env.SEARCH_INDEX_WORKER_SECRET || process.env.CRON_SECRET;
 }

@@ -4,6 +4,7 @@ import {
   createSearchIndexWorkerRoute,
   resolveSearchIndexBatchLimit,
 } from "@/app/api/internal/search-index-worker/route";
+import { getSearchIndexWorkerSecret } from "@/lib/env";
 
 const batchResult = {
   claimed: 2,
@@ -75,4 +76,19 @@ test("worker route respects valid configured limits and caps them at twenty", as
   assert.deepEqual(capped.calls, [20]);
   assert.equal(resolveSearchIndexBatchLimit("0"), 5);
   assert.equal(resolveSearchIndexBatchLimit("invalid"), 5);
+});
+
+test("worker secret keeps the existing cron configuration as a fallback", () => {
+  const originalWorkerSecret = process.env.SEARCH_INDEX_WORKER_SECRET;
+  const originalCronSecret = process.env.CRON_SECRET;
+  delete process.env.SEARCH_INDEX_WORKER_SECRET;
+  process.env.CRON_SECRET = "existing-cron-secret";
+  try {
+    assert.equal(getSearchIndexWorkerSecret(), "existing-cron-secret");
+  } finally {
+    if (originalWorkerSecret === undefined) delete process.env.SEARCH_INDEX_WORKER_SECRET;
+    else process.env.SEARCH_INDEX_WORKER_SECRET = originalWorkerSecret;
+    if (originalCronSecret === undefined) delete process.env.CRON_SECRET;
+    else process.env.CRON_SECRET = originalCronSecret;
+  }
 });

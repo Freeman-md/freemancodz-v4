@@ -9,6 +9,13 @@ test("assistant request accepts the public payload and normalizes whitespace", (
   assert.equal(result.previousResponseId, null);
 });
 
+test("assistant request recovers from malformed previous response IDs", () => {
+  for (const previousResponseId of ["", "  ", "response_1", "resp_" + "x".repeat(201)]) {
+    assert.equal(assistantRequestSchema.parse({ message: "Question", previousResponseId }).previousResponseId, null);
+  }
+  assert.equal(assistantRequestSchema.parse({ message: "Question", previousResponseId: " resp_123 " }).previousResponseId, "resp_123");
+});
+
 test("assistant request rejects missing and oversized messages", () => {
   assert.equal(assistantRequestSchema.safeParse({}).success, false);
   assert.equal(assistantRequestSchema.safeParse({ message: " ".repeat(501) }).success, false);
