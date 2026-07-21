@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { Project as ProjectRecord } from "@/generated/prisma/client";
-import { mapProject } from "@/features/portfolio/mappers/portfolio.mapper";
-import { parseProjectLinks } from "@/features/portfolio/helpers";
-import { projectLinksSchema } from "@/features/portfolio/schemas/project-links.schema";
+import { mapProject } from "@/features/portfolio/server/mappers/portfolio.mapper";
+import { parseStoredProjectLinks } from "@/features/portfolio/schema";
+import { projectLinksSchema } from "@/features/portfolio/schema";
 
 const project = {
   title: "Example", summary: "Summary", category: "Category", role: "Role", outcome: "Outcome", detail: "Detail",
@@ -20,7 +20,7 @@ test("maps project nullable fields and stacks for the existing UI", () => {
 });
 
 test("reports malformed project links with the affected project", () => {
-  assert.throws(() => parseProjectLinks([{ label: "Live" }], "Example"), /Invalid links stored for project: Example/);
+  assert.throws(() => parseStoredProjectLinks([{ label: "Live" }], "Example"), /Invalid links stored for project: Example/);
 });
 
 test("project link schema validates URLs and link entries", () => {

@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono, Playfair_Display } from "next/font/google";
-// @ts-ignore
 import "./globals.css";
-import { Layout } from "@/components/Layout";
+import { SiteLayout } from "@/components/layout/SiteLayout";
 import { Analytics } from "@vercel/analytics/next"
 import { siteConfig } from "@/lib/site-metadata";
 
@@ -87,7 +86,7 @@ export default function RootLayout({
       className={`${inter.variable} ${jetbrains.variable} ${playfairDisplay.variable}`}
     >
       <body className="font-sans antialiased">
-        <Layout>{children}</Layout>
+        <SiteLayout>{children}</SiteLayout>
         <Analytics />
       </body>
     </html>

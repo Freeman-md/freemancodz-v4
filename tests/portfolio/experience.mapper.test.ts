@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { Experience as ExperienceRecord } from "@/generated/prisma/client";
-import { mapExperience } from "@/features/portfolio/mappers/portfolio.mapper";
+import { mapExperience } from "@/features/portfolio/server/mappers/portfolio.mapper";
 
 test("maps a nullable database experience into optional UI location", () => {
   const record = {

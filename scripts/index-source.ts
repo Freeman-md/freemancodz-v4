@@ -1,4 +1,4 @@
-import { indexSourceRecord } from "@/features/search-indexing/index-source-record";
+import { indexSourceRecord } from "@/features/search-index/server/index-source-record";
 import { parseSourceArguments } from "./lib/indexing-arguments";
 
 async function main() {

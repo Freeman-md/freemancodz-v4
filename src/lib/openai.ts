@@ -1,8 +1,10 @@
+import "server-only";
+
 import OpenAI from "openai";
-import { getEnv } from "@/lib/config/env";
+import { getOpenAIConfig } from "@/lib/env";
 
 export function createOpenAIClient() {
-  const { openai } = getEnv();
+  const openai = getOpenAIConfig();
 
   return new OpenAI({
     apiKey: openai.apiKey,
@@ -10,9 +12,9 @@ export function createOpenAIClient() {
 }
 
 export function getEmbeddingModel() {
-  return getEnv().openai.embeddingModel;
+  return getOpenAIConfig().embeddingModel;
 }
 
 export function getResponseModel() {
-  return process.env.OPENAI_MODEL || "gpt-4.1-mini";
+  return getOpenAIConfig().responseModel;
 }

@@ -1,4 +1,4 @@
-import type { IndexableSourceType } from "@/features/search-indexing/types";
+import type { IndexableSourceType } from "@/features/search-index/types";
 
 const supportedSourceTypes = [
   "content_blocks",

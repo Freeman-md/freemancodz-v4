@@ -1,5 +1,5 @@
-import { profile } from "@/data/profile";
-import { externalLinks } from "@/data/navigation";
+import { profile } from "../../prisma/seed-data/profile";
+import { externalLinks } from "@/lib/navigation";
 
 const fallbackSiteUrl = "https://freemanmadudili.com";
 

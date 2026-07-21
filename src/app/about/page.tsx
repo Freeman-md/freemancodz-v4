@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
-import { CTASection } from "@/components/CTASection";
-import { Container } from "@/components/Container";
-import { ImagePlaceholder } from "@/components/ImagePlaceholder";
-import { getAboutPageData } from "@/features/portfolio/loaders/about-page.loader";
+import { CTASection } from "@/features/portfolio/components/CTASection";
+import { Container } from "@/components/layout/Container";
+import { ImagePlaceholder } from "@/components/ui/ImagePlaceholder";
+import { getAboutPageData } from "@/features/portfolio/server/loaders/about-page.loader";
 import { siteAssetLinks } from "@/lib/links";
 import { siteConfig } from "@/lib/site-metadata";
 
