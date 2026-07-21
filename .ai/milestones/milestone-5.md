@@ -1,6 +1,6 @@
 # Milestone 5: Architecture Simplification and Clean Module Boundaries
 
-**Status:** Draft  
+**Status:** Frozen  
 **Version:** 1.0.0  
 **Last Updated:** 2026-07-21  
 **Depends On:** Milestone 4  

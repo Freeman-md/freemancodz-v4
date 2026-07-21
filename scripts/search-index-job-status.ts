@@ -1,5 +1,5 @@
-import { getSearchIndexJobStatus } from "@/features/search-indexing/data/search-index-job.repository";
-import { prisma } from "@/lib/prisma";
+import { getSearchIndexJobStatus } from "@/features/search-index/server/data/search-index-job.repository";
+import { prisma } from "@/lib/db";
 
 async function main() {
   const status = await getSearchIndexJobStatus();

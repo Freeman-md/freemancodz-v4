@@ -1,15 +1,15 @@
-import { AssistantTriggerButton } from "@/components/AssistantTriggerButton";
-import { Button } from "@/components/Button";
-import { CTASection } from "@/components/CTASection";
-import { Container } from "@/components/Container";
-import { ExperienceCard } from "@/components/ExperienceCard";
-import { ImagePlaceholder } from "@/components/ImagePlaceholder";
-import { PrincipleCard } from "@/components/PrincipleCard";
-import { ProjectCard } from "@/components/ProjectCard";
-import { QuoteBlock } from "@/components/QuoteBlock";
-import { SectionHeader } from "@/components/SectionHeader";
-import { ServiceIcon } from "@/components/ServiceIcons";
-import { getHomePageData } from "@/features/portfolio/loaders/home-page.loader";
+import { AssistantTriggerButton } from "@/features/assistant/components/AssistantTriggerButton";
+import { LinkButton as Button } from "@/components/ui/LinkButton";
+import { CTASection } from "@/features/portfolio/components/CTASection";
+import { Container } from "@/components/layout/Container";
+import { ExperienceCard } from "@/features/portfolio/components/ExperienceCard";
+import { ImagePlaceholder } from "@/components/ui/ImagePlaceholder";
+import { PrincipleCard } from "@/features/portfolio/components/PrincipleCard";
+import { ProjectCard } from "@/features/portfolio/components/ProjectCard";
+import { QuoteBlock } from "@/components/ui/QuoteBlock";
+import { SectionHeader } from "@/components/ui/SectionHeader";
+import { ServiceIcon } from "@/components/ui/ServiceIcons";
+import { getHomePageData } from "@/features/portfolio/server/home-page.loader";
 import { siteAssetLinks } from "@/lib/links";
 
 export default async function Home() {

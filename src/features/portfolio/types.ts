@@ -1,4 +1,8 @@
-import type { Experience, ProfileService, Project } from "@/types/content";
+import type { ProjectLinks } from "./schemas/project-links.schema";
+
+export type ProfileService = { title: string; lead: string; description: string; cta: string; assistantPrompt?: string };
+export type Experience = { title: string; company: string; dates: string; location?: string; focus: string; category: string };
+export type Project = { title: string; summary: string; category: string; stack: string[]; role: string; outcome: string; links: ProjectLinks; detail: string; future?: string; collaboration?: string; positioning?: string; featured?: boolean };
 import type { AboutHeaderContent } from "./schemas/content-blocks/about-header.schema";
 import type { CurrentDirectionContent } from "./schemas/content-blocks/current-direction.schema";
 import type { EducationContent } from "./schemas/content-blocks/education.schema";

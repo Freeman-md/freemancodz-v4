@@ -1,6 +1,6 @@
 import { config as loadEnv } from "dotenv";
 
-import { seedPortfolioData } from "./lib/portfolio-seed";
+import { seedPortfolioData } from "../prisma/seed-data/portfolio-seed";
 import { requireProductionConfirmation } from "./lib/production-confirmation";
 
 const isProductionRun = process.argv.includes("--production");
@@ -14,7 +14,7 @@ async function main() {
     requireProductionConfirmation();
   }
 
-  const { prisma } = await import("../src/lib/prisma");
+  const { prisma } = await import("../src/lib/db");
   const data = await seedPortfolioData(prisma);
 
   console.log(

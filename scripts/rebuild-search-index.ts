@@ -11,8 +11,8 @@ async function main() {
     { findAllIndexableSources },
     { indexSourceRecord },
   ] = await Promise.all([
-    import("@/features/search-indexing/data/indexing-source.repository"),
-    import("@/features/search-indexing/index-source-record"),
+    import("@/features/search-index/server/data/indexing-source.repository"),
+    import("@/features/search-index/server/index-source-record"),
   ]);
   const sources = await findAllIndexableSources();
 

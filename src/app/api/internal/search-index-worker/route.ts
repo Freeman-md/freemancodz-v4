@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import { indexWorker } from "@/features/search-indexing/index-worker";
-import type { IndexWorkerBatchResult } from "@/features/search-indexing/index-worker";
+import { indexWorker } from "@/features/search-index/server/index-worker";
+import type { IndexWorkerBatchResult } from "@/features/search-index/server/index-worker";
+import { getSearchIndexWorkerSecret } from "@/lib/env";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -92,7 +93,7 @@ export function createSearchIndexWorkerRoute({
 }
 
 export const GET = createSearchIndexWorkerRoute({
-  cronSecret: process.env.CRON_SECRET,
+  cronSecret: getSearchIndexWorkerSecret(),
   runBatch: (limit) => indexWorker.runBatch(limit),
   logger: console,
   getBatchLimit: () => process.env.SEARCH_INDEX_BATCH_LIMIT,

@@ -1,11 +1,11 @@
 import { config as loadEnv } from "dotenv";
 
-import { seedPortfolioData } from "../scripts/lib/portfolio-seed";
+import { seedPortfolioData } from "./seed-data/portfolio-seed";
 
 loadEnv({ path: ".env.local" });
 
 async function main() {
-  const { prisma } = await import("../src/lib/prisma");
+  const { prisma } = await import("../src/lib/db");
   const data = await seedPortfolioData(prisma);
 
   console.log(
@@ -23,6 +23,6 @@ main()
     process.exitCode = 1;
   })
   .finally(async () => {
-    const { prisma } = await import("../src/lib/prisma");
+    const { prisma } = await import("../src/lib/db");
     await prisma.$disconnect();
   });

@@ -1,5 +1,5 @@
 import { ImageResponse } from "next/og";
-import { profile } from "@/data/profile";
+import { profile } from "../../prisma/seed-data/profile";
 import { siteConfig } from "@/lib/site-metadata";
 
 export const alt = `${siteConfig.shortName} portfolio hero section`;

@@ -1,6 +1,6 @@
 "use client";
 
-import { Container } from "@/components/Container";
+import { Container } from "@/components/layout/Container";
 
 export default function GlobalError({ reset }: { reset: () => void }) {
   return (
