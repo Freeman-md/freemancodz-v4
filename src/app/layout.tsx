@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono, Playfair_Display } from "next/font/google";
-// @ts-ignore
 import "./globals.css";
 import { SiteLayout } from "@/components/layout/SiteLayout";
 import { Analytics } from "@vercel/analytics/next"

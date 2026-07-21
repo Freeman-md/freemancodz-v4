@@ -1,3 +1,5 @@
+import "server-only";
+
 type RequiredEnvName = "DATABASE_URL" | "OPENAI_API_KEY";
 
 function requireEnv(name: RequiredEnvName) {

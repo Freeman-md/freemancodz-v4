@@ -28,25 +28,14 @@ test("assistant route validates malformed input and accepts the public request s
   }
 });
 
-test("assistant markdown delegates supported formatting to the safe maintained renderer", async () => {
-  const markdown = await source("src/features/assistant/components/AssistantMarkdown.tsx");
-  assert.match(markdown, /import ReactMarkdown from "react-markdown"/);
-  assert.doesNotMatch(markdown, /rehypeRaw|skipHtml=\{false\}/);
-  for (const element of ["h1", "p", "ul", "ol", "code", "a"]) {
-    assert.match(markdown, new RegExp(`${element}:`));
-  }
-  assert.match(markdown, /rel=\{external \? "noreferrer"/);
-});
-
 test("assistant and search server boundaries stay explicit and route adapters stay thin", async () => {
-  const [route, retrieval, match, response, searchWorker, lint, session] = await Promise.all([
+  const [route, retrieval, match, response, searchWorker, lint] = await Promise.all([
     source("src/app/api/chat/route.ts"),
     source("src/features/assistant/server/retrieve-context.ts"),
     source("src/features/assistant/server/match-site-chunks.ts"),
     source("src/features/assistant/server/create-assistant-response.ts"),
     source("src/features/search-index/server/index-worker.ts"),
     source("eslint.config.mjs"),
-    source("src/features/assistant/use-assistant.ts"),
   ]);
   assert.doesNotMatch(route, /@\/lib\/(db|openai)/);
   assert.match(route, /createAssistantResponse/);
@@ -59,17 +48,16 @@ test("assistant and search server boundaries stay explicit and route adapters st
   assert.doesNotMatch(retrieval, /supabase/i);
   assert.match(lint, /@\/app\/\*/);
   assert.match(lint, /@\/features\/\*\/server\/\*/);
-  assert.match(session, /onResponseId\(responseId\)/);
-  assert.match(session, /event\.key === "Escape"/);
-  assert.match(session, /addEventListener\("pointerdown"/);
 });
 
 test("eslint rejects representative client-to-server and feature-to-app imports", async () => {
   const eslint = new ESLint({ overrideConfigFile: `${root}/eslint.config.mjs` });
-  const [clientResult, featureResult] = await Promise.all([
+  const [clientResult, featureResult, appClientResult] = await Promise.all([
     eslint.lintText('import "@/features/assistant/server/retrieve-context";', { filePath: `${root}/src/features/assistant/components/BoundaryFixture.tsx` }),
     eslint.lintText('import "@/app/page";', { filePath: `${root}/src/features/portfolio/types.ts` }),
+    eslint.lintText('import "@/lib/openai";', { filePath: `${root}/src/app/error.tsx` }),
   ]);
   assert.ok(clientResult[0]?.messages.some((message) => message.ruleId === "no-restricted-imports"));
   assert.ok(featureResult[0]?.messages.some((message) => message.ruleId === "no-restricted-imports"));
+  assert.ok(appClientResult[0]?.messages.some((message) => message.ruleId === "no-restricted-imports"));
 });

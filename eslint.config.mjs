@@ -10,9 +10,9 @@ const config = [
     },
   },
   {
-    files: ["src/features/**/components/**/*.{ts,tsx}", "src/features/**/client.ts", "src/features/**/use-*.ts"],
+    files: ["src/components/**/*.{ts,tsx}", "src/features/**/components/**/*.{ts,tsx}", "src/features/**/client.ts", "src/features/**/use-*.ts", "src/app/**/error.tsx"],
     rules: {
-      "no-restricted-imports": ["error", { patterns: ["@/features/*/server/*", "@/lib/db", "@/lib/openai", "@/generated/prisma/*"] }],
+      "no-restricted-imports": ["error", { patterns: ["@/features/*/server/*", "@/lib/db", "@/lib/env", "@/lib/openai", "@/generated/prisma/*"] }],
     },
   },
 ];

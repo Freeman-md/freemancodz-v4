@@ -1,5 +1,5 @@
 import type { Experience as ExperienceRecord, Principle as PrincipleRecord, Project as ProjectRecord, Service as ServiceRecord } from "@/generated/prisma/client";
-import { parseProjectLinks } from "@/features/portfolio/helpers";
+import { parseStoredProjectLinks } from "@/features/portfolio/schema";
 import type { Experience, ProfileService, Project } from "@/features/portfolio/types";
 import type { Principle } from "@/features/portfolio/types";
 
@@ -18,7 +18,7 @@ export function mapExperience(record: ExperienceRecord): Experience {
 export function mapProject(record: ProjectRecord): Project {
   return {
     title: record.title, summary: record.summary, category: record.category, stack: [...record.stacks],
-    role: record.role, outcome: record.outcome, links: parseProjectLinks(record.links, record.title),
+    role: record.role, outcome: record.outcome, links: parseStoredProjectLinks(record.links, record.title),
     detail: record.detail, future: record.future ?? undefined, collaboration: record.collaboration ?? undefined,
     positioning: record.positioning ?? undefined, featured: record.featured,
   };
