@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { access, readFile } from "node:fs/promises";
 import test from "node:test";
 import { ESLint } from "eslint";
 import { POST } from "@/app/api/chat/route";
@@ -60,4 +60,18 @@ test("eslint rejects representative client-to-server and feature-to-app imports"
   assert.ok(clientResult[0]?.messages.some((message) => message.ruleId === "no-restricted-imports"));
   assert.ok(featureResult[0]?.messages.some((message) => message.ruleId === "no-restricted-imports"));
   assert.ok(appClientResult[0]?.messages.some((message) => message.ruleId === "no-restricted-imports"));
+});
+
+test("operational package commands point directly to existing entrypoints", async () => {
+  const packageJson = JSON.parse(await source("package.json")) as { scripts: Record<string, string> };
+  const commandNames = ["seed:portfolio", "seed:portfolio:production", "index:source", "index:worker", "index:worker:production", "index:rebuild", "index:rebuild:production", "index:status", "index:status:production", "index:preview"];
+
+  for (const name of commandNames) {
+    const command = packageJson.scripts[name];
+    assert.match(command, /src\/server\/entrypoints\//);
+    assert.doesNotMatch(command, /scripts\/|prisma\/seed\.ts/);
+    const target = command.match(/src\/server\/entrypoints\/[^\s]+\.ts/)?.[0];
+    assert.ok(target, `${name} resolves an entrypoint`);
+    await access(`${root}/${target}`);
+  }
 });
