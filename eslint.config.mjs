@@ -6,13 +6,41 @@ const config = [
   {
     files: ["src/features/**/*.{ts,tsx}"],
     rules: {
-      "no-restricted-imports": ["error", { patterns: ["@/app/*"] }],
+      "no-restricted-imports": ["error", { patterns: ["@/app/*", "@/server/*"] }],
     },
   },
   {
-    files: ["src/components/**/*.{ts,tsx}", "src/features/**/components/**/*.{ts,tsx}", "src/features/**/client.ts", "src/features/**/use-*.ts", "src/app/**/error.tsx"],
+    files: ["src/server/**/*.{ts,tsx}"],
     rules: {
-      "no-restricted-imports": ["error", { patterns: ["@/features/*/server/*", "@/lib/db", "@/lib/env", "@/lib/openai", "@/generated/prisma/*"] }],
+      "no-restricted-imports": ["error", { patterns: ["@/features/*", "@/app/*"] }],
+    },
+  },
+  {
+    files: ["src/app/api/**/*.{ts,tsx}", "src/server/entrypoints/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-imports": ["error", { patterns: [
+        "@/server/modules/*/repositories/*",
+        "@/server/modules/*/providers/*",
+        "@/server/modules/*/mappers/*",
+        "@/server/modules/*/factories/*",
+        "@/server/modules/*/services/*",
+        "@/server/modules/*/models/*",
+        "@/server/modules/*/schemas/*",
+        "@/server/modules/*/prompts/*",
+        "@/server/modules/*/*.constants"
+      ] }],
+    },
+  },
+  {
+    files: ["src/shared/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-imports": ["error", { patterns: ["@/app/*", "@/features/*", "@/server/*"] }],
+    },
+  },
+  {
+    files: ["src/features/**/{components,hooks,api,state,models}/**/*.{ts,tsx}", "src/app/**/error.tsx"],
+    rules: {
+      "no-restricted-imports": ["error", { patterns: ["@/server/*", "@/generated/prisma/*", "@/lib/db", "@/lib/env", "@/lib/openai", "openai", "@vercel/blob", "server-only"] }],
     },
   },
 ];

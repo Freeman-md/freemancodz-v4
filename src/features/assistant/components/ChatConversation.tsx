@@ -3,11 +3,10 @@
 import type { RefObject } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import Link from "next/link";
-import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { cn } from "@/lib/utils";
-import type { ChatMessage } from "../types";
-import { isExternalUrl } from "../utils";
+import { CardContent, CardHeader, CardTitle } from "@/shared/components/ui/Card";
+import { ScrollArea } from "@/shared/components/ui/ScrollArea";
+import { cn } from "@/shared/utils/class-names";
+import type { ChatMessage } from "@/features/assistant/models/chat-message";
 import { AssistantMarkdown } from "./AssistantMarkdown";
 
 type ChatConversationProps = {
@@ -89,7 +88,7 @@ export function ChatConversation({
                   {message.sources?.length ? (
                     <div className="mt-3 flex flex-wrap gap-2">
                       {message.sources.map((source) =>
-                        isExternalUrl(source.url) ? (
+                        /^https?:\/\//.test(source.url) ? (
                           <a
                             key={source.id}
                             href={source.url}

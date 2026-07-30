@@ -1,0 +1,49 @@
+import { LinkButton as Button } from "@/shared/components/ui/LinkButton";
+import { externalLinks } from "@/shared/config/links";
+import Link from "next/link";
+
+export function Footer({ cvUrl }: { cvUrl?: string }) {
+  return (
+    <footer className="border-t border-line bg-white">
+      <div className="mx-auto flex max-w-[1200px] flex-col gap-5 px-5 py-12 md:flex-row md:items-center md:justify-between md:px-6">
+        <p className="font-mono text-[11px] font-semibold text-muted">
+          © 2026 Freeman Madudili. Built with technical precision.
+        </p>
+        <div className="flex flex-wrap items-center gap-4 font-mono text-[12px] text-muted">
+          <Link
+            href="/work"
+            className="transition hover:text-accent"
+          >
+            View My Work
+          </Link>
+          <a
+            href={externalLinks.linkedin}
+            target="_blank"
+            rel="noreferrer"
+            className="transition hover:text-accent"
+          >
+            LinkedIn
+          </a>
+          <a
+            href={externalLinks.github}
+            target="_blank"
+            rel="noreferrer"
+            className="transition hover:text-accent"
+          >
+            GitHub
+          </a>
+          {cvUrl ? (
+            <a
+              href={cvUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="transition hover:text-accent"
+            >
+              CV
+            </a>
+          ) : null}
+        </div>
+      </div>
+    </footer>
+  );
+}

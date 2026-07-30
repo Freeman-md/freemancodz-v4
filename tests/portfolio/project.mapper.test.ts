@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { Project as ProjectRecord } from "@/generated/prisma/client";
-import { mapProject } from "@/features/portfolio/server/mappers/portfolio.mapper";
-import { parseStoredProjectLinks } from "@/features/portfolio/schema";
-import { projectLinksSchema } from "@/features/portfolio/schema";
+import { mapProject } from "@/server/modules/portfolio/mappers/portfolio-view.mapper";
+import { parseStoredProjectLinks } from "@/server/modules/portfolio/schemas/content-block.schema";
+import { projectLinksSchema } from "@/server/modules/portfolio/schemas/content-block.schema";
 
 const project = {
   title: "Example", summary: "Summary", category: "Category", role: "Role", outcome: "Outcome", detail: "Detail",

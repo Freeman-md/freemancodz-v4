@@ -7,13 +7,11 @@ import type {
   Project,
   Service,
 } from "@/generated/prisma/client";
-import {
-  buildContentBlockDocuments,
-  buildExperienceDocuments,
-  buildPrincipleDocuments,
-  buildProjectDocuments,
-  buildServiceDocuments,
-} from "@/features/search-index/server/builders";
+import { buildContentBlockDocuments } from "@/server/modules/search-index/mappers/build-content-block-documents";
+import { buildExperienceDocuments } from "@/server/modules/search-index/mappers/build-experience-documents";
+import { buildPrincipleDocuments } from "@/server/modules/search-index/mappers/build-principle-documents";
+import { buildProjectDocuments } from "@/server/modules/search-index/mappers/build-project-documents";
+import { buildServiceDocuments } from "@/server/modules/search-index/mappers/build-service-documents";
 
 const timestamp = new Date("2026-07-19T00:00:00.000Z");
 

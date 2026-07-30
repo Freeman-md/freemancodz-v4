@@ -1,7 +1,8 @@
-import type { ProfileService } from "@/features/portfolio/types";
+import type { ProfileService } from "@/server/modules/portfolio/models/portfolio-view";
+import { SITE_OWNER_NAME } from "@/shared/config/site-metadata";
 
 export const profile = {
-  name: "Freeman Madudili",
+  name: SITE_OWNER_NAME,
   headline: "Building reliable software for ambitious teams.",
   intro:
     "I build intuitive customer-facing assistants and reliable operational workflows that help people find information, take action and reduce repetitive work. My work combines frontend engineering, backend systems and practical AI to create software that works beyond the demo.",

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { assistantRequestSchema, assistantStreamEventSchema } from "@/features/assistant/schema";
+import { assistantRequestSchema, assistantStreamEventSchema } from "@/contracts/assistant.contract";
 
 test("assistant request accepts the public payload and normalizes whitespace", () => {
   const result = assistantRequestSchema.parse({ message: "  What has Freeman built?  ", previousResponseId: null });

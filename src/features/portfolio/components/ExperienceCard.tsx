@@ -1,7 +1,8 @@
-import type { Experience } from "@/features/portfolio/types";
-import { Chip } from "@/components/ui/Chip";
+import { Chip } from "@/shared/components/ui/Chip";
 
-export function ExperienceCard({ experience }: { experience: Experience }) {
+type ExperienceCardProps = { title: string; company: string; dates: string; focus: string; category: string };
+
+export function ExperienceCard({ experience }: { experience: ExperienceCardProps }) {
   return (
     <article className="flex h-full flex-col rounded-sm border border-line bg-white p-8 transition hover:border-neutral-300 hover:shadow-soft">
       <div className="mb-8 flex items-start justify-between gap-4">

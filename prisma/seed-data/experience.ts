@@ -1,4 +1,4 @@
-import type { Experience } from "@/features/portfolio/types";
+import type { Experience } from "@/server/modules/portfolio/models/portfolio-view";
 
 export const experiences: Experience[] = [
   {

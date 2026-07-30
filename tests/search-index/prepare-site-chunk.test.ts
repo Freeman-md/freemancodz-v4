@@ -1,8 +1,8 @@
 import { createHash } from "node:crypto";
 import assert from "node:assert/strict";
 import test from "node:test";
-import type { SearchDocument } from "@/features/search-index/types";
-import { prepareSiteChunk } from "@/features/search-index/server/prepare-site-chunk";
+import type { SearchDocument } from "@/server/modules/search-index/models/search-index";
+import { prepareSiteChunk } from "@/server/modules/search-index/factories/site-chunk.factory";
 
 const baseDocument = {
   sourceType: "projects",
