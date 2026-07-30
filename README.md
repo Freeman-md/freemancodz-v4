@@ -23,7 +23,7 @@ npm run prisma:generate
 npm run dev
 ```
 
-Provide `DATABASE_URL` for Prisma. Assistant and indexing operations additionally require `OPENAI_API_KEY`; optional `OPENAI_MODEL` and `OPENAI_EMBEDDING_MODEL` select the existing defaults. `SEARCH_INDEX_WORKER_SECRET` protects the production worker route. Public site and social-link settings use the documented `NEXT_PUBLIC_` variables in `src/lib/links.ts` and `src/lib/site-metadata.ts`.
+Provide `DATABASE_URL` for Prisma. Assistant and indexing operations additionally require `OPENAI_API_KEY`; optional `OPENAI_MODEL` and `OPENAI_EMBEDDING_MODEL` select the existing defaults. `SEARCH_INDEX_WORKER_SECRET` protects the production worker route. Public site and social-link settings use the documented `NEXT_PUBLIC_` variables in `src/shared/config/links.ts` and `src/shared/config/site-metadata.ts`.
 
 Prisma migrations in `prisma/migrations` are the migration source of truth. Supabase remains the PostgreSQL host and optional local database tooling; the application does not use a Supabase JavaScript client.
 
