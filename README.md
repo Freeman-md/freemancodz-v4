@@ -5,12 +5,12 @@ This is a Next.js App Router portfolio. Pages render validated portfolio records
 ## Structure
 
 - `src/app` contains routes, pages, layouts, and thin HTTP adapters.
-- `src/features/portfolio`, `src/features/assistant`, and `src/features/search-index` own product behaviour. Server behaviour stays below each feature's `server` boundary.
-- `src/components/layout` and `src/components/ui` contain only site-wide layout and generic primitives.
+- `src/features` owns browser-facing assistant and portfolio UI; client interactions use feature API adapters.
+- `src/server/modules` owns portfolio, assistant, and search-index use cases. Pages, routes, and other modules import only a module's `public.ts` API.
+- `src/server/infrastructure` owns Prisma, environment, OpenAI, and logging configuration; `src/server/entrypoints` owns CLI, worker, and maintenance adapters.
+- `src/shared` contains domain-free layout, UI primitives, configuration, and utilities. `src/contracts` owns runtime-validated HTTP and stream shapes.
 - `prisma/seed-data` is seed input only; runtime content comes from the database.
-- `src/lib` contains shared database, environment, OpenAI, and small utility modules.
-
-New feature UI, types, schemas, and server operations belong with their feature. A Route Handler validates transport input then calls a feature server operation; scripts call the same reusable operation. Do not import feature server modules from client code.
+New UI belongs in its feature; backend use cases, persistence, and providers belong in the owning server module. Server Components call module `public.ts` directly, while browser code flows through feature API → Route Handler → module `public.ts`. Process entrypoints are thin adapters over the same public services. See `.agents/skills/nextjs-architecture/SKILL.md` for the authoritative standard.
 
 ## Local development
 
