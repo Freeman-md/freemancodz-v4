@@ -1,4 +1,4 @@
-import { indexSourceRecord } from "@/server/modules/search-index/services/index-source-record.service";
+import { indexSourceRecord } from "@/server/modules/search-index/public";
 import { parseIndexSourceInput } from "@/server/modules/search-index/schemas/index-source-input.schema";
 
 async function main() {

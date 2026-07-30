@@ -25,19 +25,6 @@ type RateLimitResult =
 const shortWindowCounters = new Map<string, WindowCounter>();
 const dailyWindowCounters = new Map<string, WindowCounter>();
 
-function getClientIdentifier(request: Request) {
-  const forwardedFor = request.headers.get("x-forwarded-for");
-  const realIp = request.headers.get("x-real-ip");
-  const cfConnectingIp = request.headers.get("cf-connecting-ip");
-
-  return (
-    forwardedFor?.split(",")[0]?.trim() ||
-    realIp?.trim() ||
-    cfConnectingIp?.trim() ||
-    "anonymous"
-  );
-}
-
 function getCounter(
   counters: Map<string, WindowCounter>,
   key: string,
@@ -71,9 +58,8 @@ function pruneExpiredCounters(
 }
 
 /** Bounded best-effort per-instance protection; configure host-level limits for global enforcement. */
-export function checkAssistantRateLimit(request: Request): RateLimitResult {
+export function checkAssistantRateLimit(clientIdentifier: string): RateLimitResult {
   const now = Date.now();
-  const clientIdentifier = getClientIdentifier(request);
 
   pruneExpiredCounters(shortWindowCounters, now);
   pruneExpiredCounters(dailyWindowCounters, now);

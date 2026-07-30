@@ -17,7 +17,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: parsed.error.issues[0]?.message || "Invalid request." }, { status: 400 });
   }
 
-  const rateLimit = checkAssistantRateLimit(request);
+  const rateLimit = checkAssistantRateLimit(
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || request.headers.get("x-real-ip")?.trim() || request.headers.get("cf-connecting-ip")?.trim() || "anonymous",
+  );
   if (!rateLimit.allowed) {
     return NextResponse.json({ error: rateLimit.error }, {
       status: 429,
