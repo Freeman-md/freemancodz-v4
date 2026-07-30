@@ -20,17 +20,3 @@ export function formatContext(chunks: MatchSiteChunksRow[]) {
 export function encodeStreamEvent(event: AssistantStreamEvent) {
   return `${JSON.stringify(event)}\n`;
 }
-
-export function normalizePreviousResponseId(input: unknown) {
-  if (typeof input !== "string") {
-    return null;
-  }
-
-  const responseId = input.trim();
-
-  if (!responseId || responseId.length > 200 || !responseId.startsWith("resp_")) {
-    return null;
-  }
-
-  return responseId;
-}

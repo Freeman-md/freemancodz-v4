@@ -31,10 +31,10 @@ test("assistant route validates malformed input and accepts the public request s
 test("intermediate architecture boundaries remain explicit while mapped paths migrate", async () => {
   const [route, retrieval, match, response, searchWorker, lint] = await Promise.all([
     source("src/app/api/chat/route.ts"),
-    source("src/features/assistant/server/retrieve-context.ts"),
-    source("src/features/assistant/server/match-site-chunks.ts"),
-    source("src/features/assistant/server/create-assistant-response.ts"),
-    source("src/features/search-index/server/index-worker.ts"),
+    source("src/server/modules/assistant/services/retrieve-assistant-context.service.ts"),
+    source("src/server/modules/search-index/repositories/match-site-chunks.repository.ts"),
+    source("src/server/modules/assistant/services/create-assistant-response.service.ts"),
+    source("src/server/modules/search-index/services/run-index-worker.service.ts"),
     source("eslint.config.mjs"),
   ]);
   assert.doesNotMatch(route, /@\/lib\/(db|openai)/);
@@ -43,7 +43,7 @@ test("intermediate architecture boundaries remain explicit while mapped paths mi
   assert.match(match, /^import "server-only";/);
   assert.match(response, /^import "server-only";/);
   assert.match(searchWorker, /^import "server-only";/);
-  assert.match(retrieval, /matchSiteChunks\(queryEmbedding, 20, 0\.25\)/);
+  assert.match(retrieval, /searchSiteIndex\(queryEmbedding\)/);
   assert.match(match, /queryEmbedding\.length !== 1536/);
   assert.doesNotMatch(retrieval, /supabase/i);
   assert.match(lint, /@\/app\/\*/);

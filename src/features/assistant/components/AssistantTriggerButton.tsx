@@ -1,12 +1,13 @@
 "use client";
 
 import type { ReactNode } from "react";
+import type { AssistantTriggerDetail } from "@/contracts/assistant.contract";
 import { dispatchOpenPortfolioChat, type OpenPortfolioChatDetail } from "@/features/assistant/assistant.events";
 
 type AssistantTriggerButtonProps = {
   children: ReactNode;
   className?: string;
-  detail?: OpenPortfolioChatDetail;
+  detail?: AssistantTriggerDetail;
   variant?: "primary" | "ghost" | "accent" | "text";
 };
 

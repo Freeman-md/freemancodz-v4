@@ -1,6 +1,6 @@
 import "server-only";
 
-import { createOpenAIClient, getResponseModel } from "@/server/infrastructure/openai/openai-client";
+import { streamOpenAIResponse } from "../providers/openai-response.provider";
 import { FALLBACK_ANSWER } from "../assistant.constants";
 import { CHAT_SYSTEM_PROMPT } from "../prompts/portfolio-assistant.prompt";
 import { retrieveContext } from "./retrieve-assistant-context.service";
@@ -32,14 +32,12 @@ export function createAssistantResponse({
           return;
         }
 
-        const response = await createOpenAIClient().responses.create({
-          model: getResponseModel(),
-          instructions: CHAT_SYSTEM_PROMPT,
-          input: `Portfolio information:\n\n${chunks.length ? formatContext(chunks) : "No additional portfolio information is available for this message. Use prior conversation only if it contains enough relevant portfolio information."}\n\nCurrent user question:\n${message}`,
-          previous_response_id: previousResponseId,
-          store: true,
-          stream: true,
-        }, { signal });
+        const response = await streamOpenAIResponse(
+          `Portfolio information:\n\n${chunks.length ? formatContext(chunks) : "No additional portfolio information is available for this message. Use prior conversation only if it contains enough relevant portfolio information."}\n\nCurrent user question:\n${message}`,
+          CHAT_SYSTEM_PROMPT,
+          previousResponseId,
+          signal,
+        );
 
         for await (const event of response) {
           if (signal.aborted) return;
