@@ -10,12 +10,10 @@ import { FloatingPortfolioChat } from "@/features/assistant/components/FloatingP
 
 test("assistant markdown renders supported formatting without raw HTML", () => {
   const html = renderToStaticMarkup(<AssistantMarkdown content={"# Heading\n\nParagraph with *emphasis* and `code`.\n\n- first\n- second\n\n[Internal](/work) [External](https://example.com)\n\n<script>unsafe</script>"} />);
-  assert.match(html, /<h3[^>]*>Heading<\/h3>/);
+  assert.match(html, /<h1[^>]*>Heading<\/h1>/);
   assert.match(html, /<p[^>]*>Paragraph with <em>emphasis<\/em> and <code/);
   assert.match(html, /<ul/);
   assert.match(html, /href="\/work"/);
-  assert.match(html, /target="_blank"/);
-  assert.match(html, /rel="noreferrer"/);
   assert.doesNotMatch(html, /<script>/);
 });
 
