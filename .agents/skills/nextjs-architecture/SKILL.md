@@ -319,6 +319,36 @@ infrastructure → business modules
 
 Make dependencies point toward stable business abstractions. Keep controllers, repositories, and providers as replaceable boundary implementations. Prevent circular dependencies rather than hiding them behind a global abstraction.
 
+## Data flow and model ownership
+
+Use these standard paths:
+
+```text
+Server page or Server Component
+→ server/modules/<module>/public.ts
+→ feature component
+
+Client Component
+→ features/<feature>/api
+→ app/api/.../route.ts
+→ server/modules/<module>/public.ts
+```
+
+- Server pages and Server Components may import backend services through the owning module's `public.ts`.
+- Pages and Server Components may import UI components from `features/<feature>/components`.
+- Client Components must never import from `server/`; browser requests and streams must use a feature-owned `api` adapter.
+- Route Handlers must call backend services through the owning module's `public.ts`, never through module internals.
+- Shared request, response, stream, Server Action, and other runtime-boundary shapes belong in `src/contracts`.
+
+The arrows describe data flow and allowed imports; they do not transfer model ownership:
+
+- A server module must never import or return a model owned by `features/`.
+- Keep server-only results in the owning server module's models or service-owned types.
+- Use a runtime-validated contract in `src/contracts` when data crosses into a Client Component, API consumer, stream, Server Action, or another runtime or trust boundary.
+- Use feature models only for browser-owned state, derived presentation data, and UI-only concepts.
+- Passing props between Server Components does not by itself create a client or runtime boundary. Do not create a contract for server-only composition solely because props are involved.
+- Do not create contracts or feature models as architectural placeholders. Create them only when the data has the ownership or boundary described above.
+
 ## Client and server boundaries
 
 - Use Server Components by default.
@@ -339,10 +369,13 @@ Apply these questions in order before creating or moving a file:
 2. Does it run in the browser, on the server, or across a boundary?
 3. Is it framework routing, UI, state, transport, business logic, persistence, provider integration, transformation, construction, validation, or infrastructure?
 4. Which module owns the underlying business meaning?
-5. What dependencies does it require?
-6. Does an existing module already own the responsibility?
-7. Is the proposed name compliant with the naming standard?
-8. Would the placement create a forbidden dependency?
+5. Does its data remain server-only, pass only between Server Components, or cross into a Client Component, API consumer, stream, Server Action, or another runtime/trust boundary?
+6. Does each model remain with its server module, feature, or boundary contract owner without a server module importing or returning a feature model?
+7. Does the caller use the required path: Server Component → module `public.ts`, or Client Component → feature `api` → Route Handler → module `public.ts`?
+8. What dependencies does it require?
+9. Does an existing module already own the responsibility?
+10. Is the proposed name compliant with the naming standard?
+11. Would the placement create a forbidden dependency?
 
 Choose the deterministic outcome:
 
@@ -357,6 +390,12 @@ Choose the deterministic outcome:
 | Module business structure | `server/modules/<module>/models` |
 | Shared boundary validation | `contracts` |
 | Module-private external/untrusted validation | module `schemas` |
+| Server-only service result | Owning server module model or service-owned type |
+| Browser-owned state, derived presentation data, or UI-only concept | Feature `models` |
+| Data crossing into a Client Component, API consumer, stream, Server Action, or other runtime/trust boundary | Runtime-validated `contracts` |
+| Props passed only between Server Components | Keep the server-owned shape; no contract solely for prop passing |
+| Browser request or stream operation | Feature `api`, then Route Handler, then module `public.ts` |
+| Server page or Server Component backend call | Owning module `public.ts` |
 | Shared backend technical setup | `server/infrastructure` |
 | Non-HTTP worker/CLI/cron adapter | `server/entrypoints` |
 | Generic frontend utility | `shared`, only when domain-free and genuinely shared |
@@ -364,11 +403,13 @@ Choose the deterministic outcome:
 
 If no outcome fits, stop. Do not invent a vague folder.
 
-## Implementation validation workflow
+## Planning, implementation, review, and refactor validation
 
-### Before implementation
+Apply this workflow when planning, implementing, reviewing, or refactoring Next.js code. A review must verify the same rules from the resulting code and imports rather than relying on the implementation plan.
 
-Before writing code:
+### Before implementation or refactoring
+
+Before writing or moving code:
 
 1. Identify the owning capability.
 2. Classify every proposed file by runtime and architectural role.
@@ -376,13 +417,16 @@ Before writing code:
 4. Check dependency direction.
 5. Check every file and folder name.
 6. Identify existing `public.ts` APIs to use.
-7. Identify rules that can be enforced mechanically through ESLint, TypeScript, tests, or repository checks.
+7. Trace each server and client data flow through the required import path.
+8. Classify each proposed model as server-owned, feature-owned, or a runtime-boundary contract; do not create placeholder models or contracts.
+9. Verify that no server module will import or return a feature model.
+10. Identify rules that can be enforced mechanically through ESLint, TypeScript, tests, or repository checks.
 
-### During implementation
+### During implementation or refactoring
 
-Ensure controllers remain thin; services own business decisions; repositories own persistence; providers own SDK interactions; mappers and factories remain pure; client/server imports do not cross; cross-module imports use `public.ts`; constants, schemas, and models are not duplicated; and no vague shared or utility folders appear.
+Ensure controllers remain thin; services own business decisions; repositories own persistence; providers own SDK interactions; mappers and factories remain pure; client/server imports do not cross; Server Components and Route Handlers call modules through `public.ts`; Client Components use feature `api` adapters; server modules neither import nor return feature models; runtime-boundary data uses contracts; server-only props do not gain placeholder contracts; cross-module imports use `public.ts`; constants, schemas, and models are not duplicated; and no vague shared or utility folders appear.
 
-### After implementation
+### After implementation, refactoring, or review
 
 Validate:
 
@@ -398,6 +442,12 @@ Validate:
 10. Tests verify behavior rather than internal layout.
 11. Lint or architecture checks are updated when a rule can be automated.
 12. No unexplained exception exists.
+13. Server pages and Server Components call backend services only through module `public.ts` and may compose feature components without importing module internals.
+14. Client Components reach backend behavior only through feature-owned browser API adapters and explicit framework boundaries.
+15. Route Handlers call backend services only through module `public.ts`.
+16. Server modules do not import or return feature-owned models.
+17. Server-only results remain server-owned; runtime-boundary data uses contracts; feature models contain only browser-owned or UI-only concepts.
+18. No contract or feature model exists merely as an architectural placeholder.
 
 Report architecture completion using only one of:
 
