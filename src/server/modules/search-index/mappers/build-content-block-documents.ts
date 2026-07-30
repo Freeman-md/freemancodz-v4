@@ -1,11 +1,11 @@
 import type { ContentBlock } from "@/generated/prisma/client";
-import { aboutHeaderContentSchema } from "@/server/modules/portfolio/schemas/content-block.schema";
-import { currentDirectionContentSchema } from "@/server/modules/portfolio/schemas/content-block.schema";
-import { educationContentSchema } from "@/server/modules/portfolio/schemas/content-block.schema";
-import { heroContentSchema } from "@/server/modules/portfolio/schemas/content-block.schema";
-import { outsideEngineeringContentSchema } from "@/server/modules/portfolio/schemas/content-block.schema";
-import { philosophyContentSchema } from "@/server/modules/portfolio/schemas/content-block.schema";
-import { textBlockContentSchema } from "@/server/modules/portfolio/schemas/content-block.schema";
+import { aboutHeaderContentSchema } from "@/server/modules/portfolio/public";
+import { currentDirectionContentSchema } from "@/server/modules/portfolio/public";
+import { educationContentSchema } from "@/server/modules/portfolio/public";
+import { heroContentSchema } from "@/server/modules/portfolio/public";
+import { outsideEngineeringContentSchema } from "@/server/modules/portfolio/public";
+import { philosophyContentSchema } from "@/server/modules/portfolio/public";
+import { textBlockContentSchema } from "@/server/modules/portfolio/public";
 import type { SearchDocument } from "@/server/modules/search-index/models/search-index.model";
 
 function document(

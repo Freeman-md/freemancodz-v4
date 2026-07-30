@@ -1,37 +1,10 @@
-import { buildSearchDocuments } from "@/server/modules/search-index/mappers/search-document.mapper";
-import { findIndexedChunksBySource } from "@/server/modules/search-index/repositories/site-chunk.repository";
-import { findIndexableSource } from "@/server/modules/search-index/repositories/indexing-source.repository";
-import { prepareSiteChunk } from "@/server/modules/search-index/factories/site-chunk.factory";
+import { previewSearchIndex } from "@/server/modules/search-index/public";
 import { parseIndexSourceInput } from "@/server/modules/search-index/schemas/index-source-input.schema";
-import { getEmbeddingModel } from "@/server/infrastructure/openai/openai-client";
 
 async function main() {
   const input = parseIndexSourceInput(process.argv[2], process.argv[3]);
 
-  const source = await findIndexableSource(
-    input.sourceType,
-    input.sourceId,
-  );
-
-  if (!source) {
-    throw new Error(
-      `Source not found: ${input.sourceType}:${input.sourceId}`,
-    );
-  }
-
-  const preparedChunks = buildSearchDocuments(source).map(prepareSiteChunk);
-
-  const existingChunks = await findIndexedChunksBySource(
-    input.sourceType,
-    input.sourceId,
-  );
-
-  const existingById = new Map(
-    existingChunks.map((chunk) => [chunk.id, chunk]),
-  );
-
-  const currentModel = getEmbeddingModel();
-  const generatedIds = new Set(preparedChunks.map((chunk) => chunk.id));
+  const preview = await previewSearchIndex(input);
 
   console.log("\nSource");
   console.log({
@@ -39,19 +12,11 @@ async function main() {
     sourceId: input.sourceId,
   });
 
-  if (preparedChunks.length === 0) {
+  if (preview.chunks.length === 0) {
     console.log("\nGenerated documents: none");
   }
 
-  for (const chunk of preparedChunks) {
-    const existing = existingById.get(chunk.id);
-
-    const expectedAction = !existing
-      ? "create"
-      : existing.contentHash !== chunk.contentHash ||
-          existing.embeddingModel !== currentModel
-        ? "update"
-        : "unchanged";
+  for (const chunk of preview.chunks) {
 
     console.log("\nGenerated document");
     console.dir(
@@ -74,18 +39,14 @@ async function main() {
       chunkIndex: chunk.chunkIndex,
       embeddingInput: chunk.embeddingInput,
       contentHash: chunk.contentHash,
-      expectedAction,
+      expectedAction: chunk.expectedAction,
     });
   }
 
-  const obsoleteChunks = existingChunks.filter(
-    (chunk) => !generatedIds.has(chunk.id),
-  );
-
-  for (const chunk of obsoleteChunks) {
+  for (const id of preview.obsoleteIds) {
     console.log("\nObsolete chunk");
     console.log({
-      id: chunk.id,
+      id,
       expectedAction: "delete",
     });
   }

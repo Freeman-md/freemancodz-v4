@@ -6,7 +6,7 @@ import Link from "next/link";
 import { CardContent, CardHeader, CardTitle } from "@/shared/components/ui/Card";
 import { ScrollArea } from "@/shared/components/ui/ScrollArea";
 import { cn } from "@/shared/utils/class-names";
-import type { ChatMessage } from "@/features/assistant/models/chat-message.model";
+import type { ChatMessage } from "@/features/assistant/models/chat-message";
 import { isExternalUrl } from "../utils";
 import { AssistantMarkdown } from "./AssistantMarkdown";
 

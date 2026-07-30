@@ -10,13 +10,13 @@ import {
 } from "react";
 import { useReducedMotion, type Transition } from "framer-motion";
 import { streamChatResponse } from "../api/stream-assistant-response";
-import { appendAssistantDelta, attachAssistantSources, replaceAssistantWithError, stageWhenOpening } from "../state/assistant-conversation.state";
+import { appendAssistantDelta, attachAssistantSources, replaceAssistantWithError, stageWhenOpening } from "../state/assistant-conversation";
 import { MAX_MESSAGE_LENGTH } from "../constants";
 import {
   OPEN_PORTFOLIO_CHAT_EVENT,
   type OpenPortfolioChatDetail,
 } from "../assistant.events";
-import type { ChatMessage, ChatStage } from "../models/chat-message.model";
+import type { ChatMessage, ChatStage } from "../models/chat-message";
 import {
   createAssistantErrorMessage,
   createAssistantMessage,

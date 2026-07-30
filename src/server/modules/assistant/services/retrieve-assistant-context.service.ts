@@ -2,7 +2,7 @@ import "server-only";
 
 import { createOpenAIClient, getEmbeddingModel } from "@/server/infrastructure/openai/openai-client";
 import { searchSiteIndex } from "@/server/modules/search-index/public";
-import type { MatchSiteChunksRow } from "@/server/modules/search-index/models/search-index.model";
+import type { MatchSiteChunksRow } from "@/server/modules/search-index/public";
 
 export type RetrievedSource = {
   id: string;

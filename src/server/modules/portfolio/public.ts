@@ -6,3 +6,4 @@ export { getWorkPageData } from "./services/get-work-page-data.service";
 export { getPortfolioAsset } from "./services/get-portfolio-asset.service";
 export { seedPortfolioData } from "./services/seed-portfolio-data.service";
 export type { AboutPageData, HomePageData, WorkPageData } from "./models/portfolio-view.model";
+export { aboutHeaderContentSchema, currentDirectionContentSchema, educationContentSchema, heroContentSchema, outsideEngineeringContentSchema, philosophyContentSchema, textBlockContentSchema } from "./schemas/content-block.schema";

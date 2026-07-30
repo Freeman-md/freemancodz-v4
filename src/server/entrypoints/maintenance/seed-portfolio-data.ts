@@ -1,14 +1,9 @@
-import { config as loadEnv } from "dotenv";
 
 import { getPortfolioSeedData } from "../../../../prisma/seed-data/portfolio-seed";
 import { seedPortfolioData } from "@/server/modules/portfolio/public";
 import { requireProductionConfirmation } from "./require-production-confirmation";
 
 const isProductionRun = process.argv.includes("--production");
-
-if (!isProductionRun) {
-  loadEnv({ path: ".env.local" });
-}
 
 async function main() {
   if (isProductionRun) {
