@@ -6,7 +6,19 @@ const config = [
   {
     files: ["src/features/**/*.{ts,tsx}"],
     rules: {
-      "no-restricted-imports": ["error", { patterns: ["@/app/*"] }],
+      "no-restricted-imports": ["error", { patterns: ["@/app/*", "@/server/*"] }],
+    },
+  },
+  {
+    files: ["src/server/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-imports": ["error", { patterns: ["@/features/*", "@/app/*"] }],
+    },
+  },
+  {
+    files: ["src/shared/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-imports": ["error", { patterns: ["@/app/*", "@/features/*", "@/server/*"] }],
     },
   },
   {

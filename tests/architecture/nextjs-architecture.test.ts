@@ -28,7 +28,7 @@ test("assistant route validates malformed input and accepts the public request s
   }
 });
 
-test("assistant and search server boundaries stay explicit and route adapters stay thin", async () => {
+test("intermediate architecture boundaries remain explicit while mapped paths migrate", async () => {
   const [route, retrieval, match, response, searchWorker, lint] = await Promise.all([
     source("src/app/api/chat/route.ts"),
     source("src/features/assistant/server/retrieve-context.ts"),
