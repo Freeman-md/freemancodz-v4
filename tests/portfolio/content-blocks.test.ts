@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { ContentBlock } from "@/generated/prisma/client";
-import { assertContentBlockIdentity, mapHeroBlock } from "@/features/portfolio/server/mappers/content-block.mapper";
-import { heroContentSchema } from "@/features/portfolio/schema";
-import { parseStoredContent } from "@/features/portfolio/schema";
-import { textBlockContentSchema } from "@/features/portfolio/schema";
+import { assertContentBlockIdentity, mapHeroBlock } from "@/server/modules/portfolio/mappers/content-block.mapper";
+import { heroContentSchema } from "@/server/modules/portfolio/schemas/content-block.schema";
+import { parseStoredContent } from "@/server/modules/portfolio/schemas/content-block.schema";
+import { textBlockContentSchema } from "@/server/modules/portfolio/schemas/content-block.schema";
 
 const hero = {
   key: "home.hero",

@@ -3,7 +3,7 @@ import { CTASection } from "@/features/portfolio/components/CTASection";
 import { Container } from "@/components/layout/Container";
 import { ProjectCard } from "@/features/portfolio/components/ProjectCard";
 import { ProjectFeature } from "@/features/portfolio/components/ProjectFeature";
-import { getWorkPageData } from "@/features/portfolio/server/loaders/work-page.loader";
+import { getWorkPageData } from "@/server/modules/portfolio/public";
 import { siteConfig } from "@/lib/site-metadata";
 
 export const metadata: Metadata = {

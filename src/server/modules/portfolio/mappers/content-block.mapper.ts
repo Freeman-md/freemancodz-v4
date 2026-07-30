@@ -1,12 +1,5 @@
 import type { ContentBlock, ContentPage, ContentSection } from "@/generated/prisma/client";
-import { aboutHeaderContentSchema } from "@/features/portfolio/schema";
-import { currentDirectionContentSchema } from "@/features/portfolio/schema";
-import { educationContentSchema } from "@/features/portfolio/schema";
-import { heroContentSchema } from "@/features/portfolio/schema";
-import { outsideEngineeringContentSchema } from "@/features/portfolio/schema";
-import { parseStoredContent } from "@/features/portfolio/schema";
-import { philosophyContentSchema } from "@/features/portfolio/schema";
-import { textBlockContentSchema } from "@/features/portfolio/schema";
+import { aboutHeaderContentSchema, currentDirectionContentSchema, educationContentSchema, heroContentSchema, outsideEngineeringContentSchema, parseStoredContent, philosophyContentSchema, textBlockContentSchema } from "@/server/modules/portfolio/schemas/content-block.schema";
 
 export function assertContentBlockIdentity(
   block: ContentBlock,

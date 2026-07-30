@@ -2,16 +2,16 @@ import "server-only";
 import {
   findContentBlocksBySection,
   findRequiredContentBlockByKey,
-} from "@/features/portfolio/server/queries/content-blocks.query";
-import { findPrinciplesBySection } from "@/features/portfolio/server/queries/principles.query";
+} from "@/server/modules/portfolio/repositories/content-block.repository";
+import { findPrinciplesBySection } from "@/server/modules/portfolio/repositories/principle.repository";
 import {
   mapAboutHeaderBlock,
   mapEducationBlock,
   mapOutsideEngineeringBlock,
   mapTextBlock,
-} from "@/features/portfolio/server/mappers/content-block.mapper";
-import { mapPrinciple } from "@/features/portfolio/server/mappers/portfolio.mapper";
-import type { AboutPageData } from "@/features/portfolio/types";
+} from "@/server/modules/portfolio/mappers/content-block.mapper";
+import { mapPrinciple } from "@/server/modules/portfolio/mappers/portfolio-view.mapper";
+import type { AboutPageData } from "@/server/modules/portfolio/models/portfolio-view.model";
 
 export async function getAboutPageData(): Promise<AboutPageData> {
   const [

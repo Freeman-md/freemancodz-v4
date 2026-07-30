@@ -1,12 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { aboutHeaderContentSchema } from "@/features/portfolio/schema";
-import { currentDirectionContentSchema } from "@/features/portfolio/schema";
-import { educationContentSchema } from "@/features/portfolio/schema";
-import { heroContentSchema } from "@/features/portfolio/schema";
-import { outsideEngineeringContentSchema } from "@/features/portfolio/schema";
-import { philosophyContentSchema } from "@/features/portfolio/schema";
-import { textBlockContentSchema } from "@/features/portfolio/schema";
+import { aboutHeaderContentSchema } from "@/server/modules/portfolio/schemas/content-block.schema";
+import { currentDirectionContentSchema } from "@/server/modules/portfolio/schemas/content-block.schema";
+import { educationContentSchema } from "@/server/modules/portfolio/schemas/content-block.schema";
+import { heroContentSchema } from "@/server/modules/portfolio/schemas/content-block.schema";
+import { outsideEngineeringContentSchema } from "@/server/modules/portfolio/schemas/content-block.schema";
+import { philosophyContentSchema } from "@/server/modules/portfolio/schemas/content-block.schema";
+import { textBlockContentSchema } from "@/server/modules/portfolio/schemas/content-block.schema";
 
 const schemas = [
   [heroContentSchema, { name: "Freeman", headline: "Headline", intro: "Intro", heroNote: "Note" }],

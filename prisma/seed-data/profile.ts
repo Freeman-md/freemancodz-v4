@@ -1,4 +1,4 @@
-import type { ProfileService } from "@/features/portfolio/types";
+import type { ProfileService } from "@/server/modules/portfolio/models/portfolio-view.model";
 
 export const profile = {
   name: "Freeman Madudili",

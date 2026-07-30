@@ -1,7 +1,6 @@
 import type { Experience as ExperienceRecord, Principle as PrincipleRecord, Project as ProjectRecord, Service as ServiceRecord } from "@/generated/prisma/client";
-import { parseStoredProjectLinks } from "@/features/portfolio/schema";
-import type { Experience, ProfileService, Project } from "@/features/portfolio/types";
-import type { Principle } from "@/features/portfolio/types";
+import { parseStoredProjectLinks } from "@/server/modules/portfolio/schemas/content-block.schema";
+import type { Experience, ProfileService, Project, Principle } from "@/server/modules/portfolio/models/portfolio-view.model";
 
 export function mapService(record: ServiceRecord): ProfileService {
   return { title: record.title, lead: record.lead, description: record.description, cta: record.cta, assistantPrompt: record.assistantPrompt ?? undefined };

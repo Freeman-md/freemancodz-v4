@@ -1,7 +1,7 @@
 import "server-only";
-import { findProjects } from "@/features/portfolio/server/queries/projects.query";
-import { mapProject } from "@/features/portfolio/server/mappers/portfolio.mapper";
-import type { WorkPageData } from "@/features/portfolio/types";
+import { findProjects } from "@/server/modules/portfolio/repositories/project.repository";
+import { mapProject } from "@/server/modules/portfolio/mappers/portfolio-view.mapper";
+import type { WorkPageData } from "@/server/modules/portfolio/models/portfolio-view.model";
 
 export async function getWorkPageData(): Promise<WorkPageData> {
   const projects = (await findProjects()).map(mapProject);
