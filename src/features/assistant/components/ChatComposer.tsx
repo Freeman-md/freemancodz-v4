@@ -2,9 +2,9 @@
 
 import type { KeyboardEvent, RefObject } from "react";
 import { ArrowUpIcon, MessageSquareIcon, XIcon } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { cn } from "@/lib/utils";
+import { Button } from "@/shared/components/ui/Button";
+import { Textarea } from "@/shared/components/ui/Textarea";
+import { cn } from "@/shared/utils/class-names";
 import { MAX_MESSAGE_LENGTH } from "../constants";
 
 type ChatComposerProps = {

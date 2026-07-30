@@ -1,4 +1,4 @@
-import { Chip } from "@/components/ui/Chip";
+import { Chip } from "@/shared/components/ui/Chip";
 
 type ProjectFeatureProps = { title: string; category: string; stack: string[]; role: string; detail: string; outcome: string; links: { label: string; href: string }[] };
 

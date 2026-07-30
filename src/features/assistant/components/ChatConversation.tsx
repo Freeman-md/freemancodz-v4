@@ -3,9 +3,9 @@
 import type { RefObject } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import Link from "next/link";
-import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { cn } from "@/lib/utils";
+import { CardContent, CardHeader, CardTitle } from "@/shared/components/ui/Card";
+import { ScrollArea } from "@/shared/components/ui/ScrollArea";
+import { cn } from "@/shared/utils/class-names";
 import type { ChatMessage } from "@/features/assistant/models/chat-message.model";
 import { isExternalUrl } from "../utils";
 import { AssistantMarkdown } from "./AssistantMarkdown";

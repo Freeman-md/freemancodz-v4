@@ -1,8 +1,8 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { CardContent } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
+import { CardContent } from "@/shared/components/ui/Card";
+import { cn } from "@/shared/utils/class-names";
 import { ChatComposer } from "./ChatComposer";
 import { ChatConversation } from "./ChatConversation";
 import { ChatLauncher } from "./ChatLauncher";

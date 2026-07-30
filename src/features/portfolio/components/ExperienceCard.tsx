@@ -1,4 +1,4 @@
-import { Chip } from "@/components/ui/Chip";
+import { Chip } from "@/shared/components/ui/Chip";
 
 type ExperienceCardProps = { title: string; company: string; dates: string; focus: string; category: string };
 

@@ -1,4 +1,4 @@
-import { externalLinks } from "@/lib/navigation";
+import { externalLinks } from "@/shared/config/navigation.tmp";
 
 export function CTASection({
   title,
