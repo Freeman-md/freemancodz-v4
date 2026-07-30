@@ -1,10 +1,8 @@
-import {
-  buildContentBlockDocuments,
-  buildExperienceDocuments,
-  buildPrincipleDocuments,
-  buildProjectDocuments,
-  buildServiceDocuments,
-} from "@/server/modules/search-index/mappers";
+import { buildContentBlockDocuments } from "./build-content-block-documents";
+import { buildExperienceDocuments } from "./build-experience-documents";
+import { buildPrincipleDocuments } from "./build-principle-documents";
+import { buildProjectDocuments } from "./build-project-documents";
+import { buildServiceDocuments } from "./build-service-documents";
 import type {
   IndexableSource,
   SearchDocument,
