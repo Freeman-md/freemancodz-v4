@@ -14,7 +14,7 @@ async function main() {
     requireProductionConfirmation();
   }
 
-  const { prisma } = await import("../src/lib/db");
+  const { prisma } = await import("../src/server/infrastructure/database/prisma");
   const data = await seedPortfolioData(prisma);
 
   console.log(

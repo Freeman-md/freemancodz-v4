@@ -5,6 +5,7 @@ const config = [
   { ignores: ["src/generated/prisma/**"] },
   {
     files: ["src/features/**/*.{ts,tsx}"],
+    ignores: ["src/features/**/server/**/*.{ts,tsx}"],
     rules: {
       "no-restricted-imports": ["error", { patterns: ["@/app/*", "@/server/*"] }],
     },

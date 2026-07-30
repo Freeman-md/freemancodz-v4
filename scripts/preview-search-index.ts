@@ -3,7 +3,7 @@ import { findIndexedChunksBySource } from "@/features/search-index/server/data/s
 import { findIndexableSource } from "@/features/search-index/server/data/indexing-source.repository";
 import { prepareSiteChunk } from "@/features/search-index/server/prepare-site-chunk";
 import { parseSourceArguments } from "./lib/indexing-arguments";
-import { getEmbeddingModel } from "@/lib/openai";
+import { getEmbeddingModel } from "@/server/infrastructure/openai/openai-client";
 
 async function main() {
   const input = parseSourceArguments();

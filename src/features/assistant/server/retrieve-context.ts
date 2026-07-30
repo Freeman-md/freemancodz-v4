@@ -1,6 +1,6 @@
 import "server-only";
 
-import { createOpenAIClient, getEmbeddingModel } from "@/lib/openai";
+import { createOpenAIClient, getEmbeddingModel } from "@/server/infrastructure/openai/openai-client";
 import { matchSiteChunks } from "./match-site-chunks";
 import type { MatchSiteChunksRow } from "../types";
 import { diversifyChunks } from "./diversify-chunk";

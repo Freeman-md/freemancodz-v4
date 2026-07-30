@@ -2,7 +2,7 @@ import "server-only";
 
 
 
-import { prisma } from "@/lib/db";
+import { prisma } from "@/server/infrastructure/database/prisma";
 import type {
   EmbeddedSiteChunk,
   ExistingSiteChunk,

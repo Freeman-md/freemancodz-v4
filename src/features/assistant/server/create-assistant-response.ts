@@ -1,6 +1,6 @@
 import "server-only";
 
-import { createOpenAIClient, getResponseModel } from "@/lib/openai";
+import { createOpenAIClient, getResponseModel } from "@/server/infrastructure/openai/openai-client";
 import { FALLBACK_ANSWER } from "./chat-stream-constants";
 import { CHAT_SYSTEM_PROMPT } from "./prompt";
 import { retrieveContext } from "./retrieve-context";

@@ -19,7 +19,7 @@ import type {
   PreparedSiteChunk,
   ReplaceIndexedSourceInput,
 } from "@/features/search-index/types";
-import { getEmbeddingModel } from "@/lib/openai";
+import { getEmbeddingModel } from "@/server/infrastructure/openai/openai-client";
 import type { GeneratedEmbedding } from "@/features/search-index/server/create-embeddings";
 
 type IndexSourceRecordInput = {

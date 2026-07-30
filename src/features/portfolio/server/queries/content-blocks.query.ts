@@ -1,6 +1,6 @@
 import "server-only";
 import type { ContentPage, ContentSection } from "@/generated/prisma/client";
-import { prisma } from "@/lib/db";
+import { prisma } from "@/server/infrastructure/database/prisma";
 
 export async function findRequiredContentBlockByKey(key: string) {
   const block = await prisma.contentBlock.findUnique({ where: { key } });

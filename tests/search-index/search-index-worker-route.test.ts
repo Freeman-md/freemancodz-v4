@@ -4,7 +4,7 @@ import {
   createSearchIndexWorkerRoute,
   resolveSearchIndexBatchLimit,
 } from "@/app/api/internal/search-index-worker/route";
-import { getSearchIndexWorkerSecret } from "@/lib/env";
+import { getSearchIndexWorkerSecret } from "@/server/infrastructure/config/env";
 
 const batchResult = {
   claimed: 2,

@@ -7,7 +7,7 @@ const block = (key: string, page: "HOME" | "ABOUT", section: string, content: ob
   ({ key, page, section, content }) as never;
 
 test("home loader composes validated home content and stored collections", async () => {
-  const { prisma } = await import("@/lib/db");
+  const { prisma } = await import("@/server/infrastructure/database/prisma");
   const { getHomePageData } = await import("@/features/portfolio/server/loaders/home-page.loader");
   const originals = { findUnique: prisma.contentBlock.findUnique, service: prisma.service.findMany, principle: prisma.principle.findMany, project: prisma.project.findMany, experience: prisma.experience.findMany };
   prisma.contentBlock.findUnique = (async ({ where }) => ({
@@ -34,7 +34,7 @@ test("home loader composes validated home content and stored collections", async
 });
 
 test("work loader preserves project order when grouping featured work", async () => {
-  const { prisma } = await import("@/lib/db");
+  const { prisma } = await import("@/server/infrastructure/database/prisma");
   const { getWorkPageData } = await import("@/features/portfolio/server/loaders/work-page.loader");
   const original = prisma.project.findMany;
   prisma.project.findMany = (async () => [
@@ -51,7 +51,7 @@ test("work loader preserves project order when grouping featured work", async ()
 });
 
 test("about loader composes required singleton and ordered section content", async () => {
-  const { prisma } = await import("@/lib/db");
+  const { prisma } = await import("@/server/infrastructure/database/prisma");
   const { getAboutPageData } = await import("@/features/portfolio/server/loaders/about-page.loader");
   const originals = { findUnique: prisma.contentBlock.findUnique, findMany: prisma.contentBlock.findMany, principles: prisma.principle.findMany };
   prisma.contentBlock.findUnique = (async ({ where }) => ({
@@ -78,7 +78,7 @@ test("about loader composes required singleton and ordered section content", asy
 });
 
 test("loader surfaces database failures instead of falling back to static data", async () => {
-  const { prisma } = await import("@/lib/db");
+  const { prisma } = await import("@/server/infrastructure/database/prisma");
   const { getWorkPageData } = await import("@/features/portfolio/server/loaders/work-page.loader");
   const original = prisma.project.findMany;
   prisma.project.findMany = (async () => { throw new Error("database unavailable"); }) as typeof prisma.project.findMany;
@@ -90,7 +90,7 @@ test("loader surfaces database failures instead of falling back to static data",
 });
 
 test("work loader fails clearly when required projects are absent", async () => {
-  const { prisma } = await import("@/lib/db");
+  const { prisma } = await import("@/server/infrastructure/database/prisma");
   const { getWorkPageData } = await import("@/features/portfolio/server/loaders/work-page.loader");
   const original = prisma.project.findMany;
   prisma.project.findMany = (async () => []) as unknown as typeof prisma.project.findMany;

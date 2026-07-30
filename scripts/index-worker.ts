@@ -25,7 +25,7 @@ export async function runIndexWorkerLoop({
 async function main() {
   const [{ indexWorker }, { prisma }] = await Promise.all([
     import("@/features/search-index/server/index-worker"),
-    import("@/lib/db"),
+    import("@/server/infrastructure/database/prisma"),
   ]);
   let stopping = false;
 

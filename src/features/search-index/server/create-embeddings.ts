@@ -1,6 +1,6 @@
 import "server-only";
 
-import { createOpenAIClient, getEmbeddingModel } from "@/lib/openai";
+import { createOpenAIClient, getEmbeddingModel } from "@/server/infrastructure/openai/openai-client";
 
 export type GeneratedEmbedding = {
   embedding: number[];
