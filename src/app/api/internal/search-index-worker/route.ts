@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { indexWorker } from "@/features/search-index/server/index-worker";
 import type { IndexWorkerBatchResult } from "@/features/search-index/server/index-worker";
-import { getSearchIndexWorkerSecret } from "@/lib/env";
+import { getSearchIndexWorkerSecret } from "@/server/infrastructure/config/env";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
