@@ -1,5 +1,5 @@
-import { LinkButton as Button } from "@/components/ui/LinkButton";
-import { externalLinks } from "@/lib/navigation";
+import { LinkButton as Button } from "@/shared/components/ui/LinkButton";
+import { externalLinks } from "@/shared/config/navigation.tmp";
 import Link from "next/link";
 
 export function Footer({ cvUrl }: { cvUrl?: string }) {

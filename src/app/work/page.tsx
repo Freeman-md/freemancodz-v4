@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import { CTASection } from "@/features/portfolio/components/CTASection";
-import { Container } from "@/components/layout/Container";
+import { Container } from "@/shared/components/layout/Container";
 import { ProjectCard } from "@/features/portfolio/components/ProjectCard";
 import { ProjectFeature } from "@/features/portfolio/components/ProjectFeature";
 import { getWorkPageData } from "@/server/modules/portfolio/public";
-import { siteConfig } from "@/lib/site-metadata";
+import { siteConfig } from "@/shared/config/site-metadata";
 
 export const metadata: Metadata = {
   title: "Work",

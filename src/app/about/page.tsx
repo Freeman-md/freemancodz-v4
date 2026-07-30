@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import { CTASection } from "@/features/portfolio/components/CTASection";
-import { Container } from "@/components/layout/Container";
-import { ImagePlaceholder } from "@/components/ui/ImagePlaceholder";
+import { Container } from "@/shared/components/layout/Container";
+import { ImagePlaceholder } from "@/shared/components/ui/ImagePlaceholder";
 import { getAboutPageData } from "@/server/modules/portfolio/public";
-import { siteAssetLinks } from "@/lib/links";
-import { siteConfig } from "@/lib/site-metadata";
+import { siteAssetLinks } from "@/shared/config/links";
+import { siteConfig } from "@/shared/config/site-metadata";
 
 export const metadata: Metadata = {
   title: "About",

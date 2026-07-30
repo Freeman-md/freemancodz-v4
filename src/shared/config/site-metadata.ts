@@ -1,5 +1,6 @@
-import { profile } from "../../prisma/seed-data/profile";
-import { externalLinks } from "@/lib/navigation";
+import { externalLinks } from "@/shared/config/navigation.tmp";
+
+export const SITE_OWNER_NAME = "Freeman Madudili";
 
 const fallbackSiteUrl = "https://freemanmadudili.com";
 
@@ -14,9 +15,9 @@ function getSiteUrl() {
 }
 
 export const siteConfig = {
-  name: `${profile.name} | Software Engineer`,
-  shortName: profile.name,
-  title: `${profile.name} | Software Engineer`,
+  name: `${SITE_OWNER_NAME} | Software Engineer`,
+  shortName: SITE_OWNER_NAME,
+  title: `${SITE_OWNER_NAME} | Software Engineer`,
   description:
     "Software Engineer helping founders and teams translate ideas into reliable and scalable systems.",
   url: getSiteUrl(),

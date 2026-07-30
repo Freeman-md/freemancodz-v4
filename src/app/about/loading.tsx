@@ -1,4 +1,4 @@
-import { Container } from "@/components/layout/Container";
+import { Container } from "@/shared/components/layout/Container";
 
 export default function AboutLoading() {
   return (

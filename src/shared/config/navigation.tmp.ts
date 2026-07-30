@@ -1,4 +1,4 @@
-import { envLinks } from "@/lib/links";
+import { envLinks } from "@/shared/config/links";
 
 export const navigation = [
   { label: "Home", href: "/" },

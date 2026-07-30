@@ -1,16 +1,16 @@
 import { AssistantTriggerButton } from "@/features/assistant/components/AssistantTriggerButton";
-import { LinkButton as Button } from "@/components/ui/LinkButton";
+import { LinkButton as Button } from "@/shared/components/ui/LinkButton";
 import { CTASection } from "@/features/portfolio/components/CTASection";
-import { Container } from "@/components/layout/Container";
+import { Container } from "@/shared/components/layout/Container";
 import { ExperienceCard } from "@/features/portfolio/components/ExperienceCard";
-import { ImagePlaceholder } from "@/components/ui/ImagePlaceholder";
+import { ImagePlaceholder } from "@/shared/components/ui/ImagePlaceholder";
 import { PrincipleCard } from "@/features/portfolio/components/PrincipleCard";
 import { ProjectCard } from "@/features/portfolio/components/ProjectCard";
-import { QuoteBlock } from "@/components/ui/QuoteBlock";
-import { SectionHeader } from "@/components/ui/SectionHeader";
-import { ServiceIcon } from "@/components/ui/ServiceIcons";
+import { QuoteBlock } from "@/shared/components/ui/QuoteBlock";
+import { SectionHeader } from "@/shared/components/ui/SectionHeader";
+import { ServiceIcon } from "@/shared/components/ui/ServiceIcons";
 import { getHomePageData } from "@/server/modules/portfolio/public";
-import { siteAssetLinks } from "@/lib/links";
+import { siteAssetLinks } from "@/shared/config/links";
 
 export default async function Home() {
   const {
