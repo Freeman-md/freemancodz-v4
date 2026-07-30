@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
-  createSearchIndexWorkerRoute,
+  createAuthenticatedIndexWorker,
   resolveSearchIndexBatchLimit,
-} from "@/app/api/internal/search-index-worker/route";
+} from "@/server/modules/search-index/public";
 import { getSearchIndexWorkerSecret } from "@/server/infrastructure/config/env";
 
 const batchResult = {
@@ -13,64 +13,58 @@ const batchResult = {
   failed: 0,
 };
 
-function createRoute(overrides: Partial<Parameters<typeof createSearchIndexWorkerRoute>[0]> = {}) {
+function createWorker(overrides: Partial<Parameters<typeof createAuthenticatedIndexWorker>[0]> = {}) {
   const calls: number[] = [];
-  const route = createSearchIndexWorkerRoute({
-    cronSecret: "expected-secret",
+  const worker = createAuthenticatedIndexWorker({
+    getSecret: () => "expected-secret",
     runBatch: async (limit) => {
       calls.push(limit);
       return batchResult;
     },
-    logger: { log: () => undefined, error: () => undefined },
+    logger: { info: () => undefined, error: () => undefined },
     getBatchLimit: () => undefined,
     now: () => 100,
     ...overrides,
   });
 
-  return { calls, route };
+  return { calls, worker };
 }
 
 test("worker route fails closed when CRON_SECRET is missing", async () => {
-  const { calls, route } = createRoute({ cronSecret: undefined });
-  const response = await route(new Request("https://example.test"));
+  const { calls, worker } = createWorker({ getSecret: () => undefined });
+  const response = await worker(null);
 
   assert.equal(response.status, 500);
-  assert.deepEqual(await response.json(), {
+  assert.deepEqual(response, {
+    status: 500,
     error: "Search index worker is not configured.",
   });
   assert.deepEqual(calls, []);
 });
 
 test("worker route rejects missing and invalid bearer tokens", async () => {
-  const { calls, route } = createRoute();
+  const { calls, worker } = createWorker();
 
-  assert.equal((await route(new Request("https://example.test"))).status, 401);
-  assert.equal((await route(new Request("https://example.test", {
-    headers: { Authorization: "Bearer wrong-secret" },
-  }))).status, 401);
+  assert.equal((await worker(null)).status, 401);
+  assert.equal((await worker("Bearer wrong-secret")).status, 401);
   assert.deepEqual(calls, []);
 });
 
 test("worker route processes one default bounded batch for a valid bearer token", async () => {
-  const { calls, route } = createRoute();
-  const response = await route(new Request("https://example.test", {
-    headers: { Authorization: "Bearer expected-secret" },
-  }));
+  const { calls, worker } = createWorker();
+  const response = await worker("Bearer expected-secret");
 
   assert.equal(response.status, 200);
-  assert.deepEqual(await response.json(), batchResult);
+  assert.deepEqual(response, { status: 200, result: batchResult });
   assert.deepEqual(calls, [5]);
 });
 
 test("worker route respects valid configured limits and caps them at twenty", async () => {
-  const request = new Request("https://example.test", {
-    headers: { Authorization: "Bearer expected-secret" },
-  });
-  const configured = createRoute({ getBatchLimit: () => "12" });
-  const capped = createRoute({ getBatchLimit: () => "100" });
+  const configured = createWorker({ getBatchLimit: () => "12" });
+  const capped = createWorker({ getBatchLimit: () => "100" });
 
-  await configured.route(request);
-  await capped.route(request);
+  await configured.worker("Bearer expected-secret");
+  await capped.worker("Bearer expected-secret");
 
   assert.deepEqual(configured.calls, [12]);
   assert.deepEqual(capped.calls, [20]);

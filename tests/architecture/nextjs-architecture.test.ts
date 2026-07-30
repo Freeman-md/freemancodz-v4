@@ -39,16 +39,20 @@ test("assistant route validates malformed input and accepts the public request s
 });
 
 test("final architecture boundaries keep route, module, provider, and search layers explicit", async () => {
-  const [route, retrieval, match, response, searchWorker, lint] = await Promise.all([
+  const [route, workerRoute, retrieval, match, response, searchWorker, seedPortfolioData, lint] = await Promise.all([
     source("src/app/api/chat/route.ts"),
+    source("src/app/api/internal/search-index-worker/route.ts"),
     source("src/server/modules/assistant/services/retrieve-assistant-context.service.ts"),
     source("src/server/modules/search-index/repositories/match-site-chunks.repository.ts"),
     source("src/server/modules/assistant/services/create-assistant-response.service.ts"),
     source("src/server/modules/search-index/services/run-index-worker.service.ts"),
+    source("src/server/modules/portfolio/services/seed-portfolio-data.service.ts"),
     source("eslint.config.mjs"),
   ]);
   assert.doesNotMatch(route, /@\/lib\/(db|openai)/);
   assert.match(route, /createAssistantResponse/);
+  assert.match(workerRoute, /runAuthenticatedIndexWorker/);
+  assert.doesNotMatch(workerRoute, /@\/server\/infrastructure|process\.env|indexWorker|logger/);
   assert.match(retrieval, /^import "server-only";/);
   assert.match(match, /^import "server-only";/);
   assert.match(response, /^import "server-only";/);
@@ -56,6 +60,8 @@ test("final architecture boundaries keep route, module, provider, and search lay
   assert.match(retrieval, /searchSiteIndex\(queryEmbedding\)/);
   assert.match(match, /queryEmbedding\.length !== 1536/);
   assert.doesNotMatch(retrieval, /supabase/i);
+  assert.match(seedPortfolioData, /createSeedPortfolioData/);
+  assert.doesNotMatch(seedPortfolioData, /Prisma|\$disconnect/);
   assert.match(lint, /@\/app\/\*/);
   assert.match(lint, /@\/server\/modules\/\*\/schemas\/\*/);
 });

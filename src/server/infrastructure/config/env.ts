@@ -27,3 +27,7 @@ export function getOpenAIConfig() {
 export function getSearchIndexWorkerSecret() {
   return process.env.SEARCH_INDEX_WORKER_SECRET || process.env.CRON_SECRET;
 }
+
+export function getSearchIndexWorkerBatchLimit() {
+  return process.env.SEARCH_INDEX_BATCH_LIMIT;
+}

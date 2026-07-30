@@ -8,5 +8,7 @@ export { previewSearchIndex } from "./services/preview-search-index.service";
 export { rebuildSearchIndex } from "./services/rebuild-search-index.service";
 export { getSearchIndexJobStatus } from "./services/get-search-index-job-status.service";
 export { parseIndexSourceInput } from "./schemas/index-source-input.schema";
+export { createAuthenticatedIndexWorker, resolveSearchIndexBatchLimit, runAuthenticatedIndexWorker } from "./services/run-authenticated-index-worker.service";
 export type { IndexWorkerBatchResult } from "./services/run-index-worker.service";
+export type { SearchIndexWorkerRequestDependencies, SearchIndexWorkerRequestResult } from "./services/run-authenticated-index-worker.service";
 export type { MatchSiteChunksRow } from "./models/search-index";

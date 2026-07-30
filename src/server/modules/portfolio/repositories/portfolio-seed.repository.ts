@@ -1,10 +1,10 @@
 import "server-only";
 
-import type { PrismaClient } from "@/generated/prisma/client";
 import type { PortfolioSeedData } from "../../../../../prisma/seed-data/portfolio-seed";
+import { prisma } from "@/server/infrastructure/database/prisma";
 
-export async function replacePortfolioSeedData(client: PrismaClient, data: PortfolioSeedData) {
-  await client.$transaction(async (transaction) => {
+export async function replacePortfolioSeedData(data: PortfolioSeedData) {
+  await prisma.$transaction(async (transaction) => {
     await transaction.contentBlock.deleteMany();
     await transaction.principle.deleteMany();
     await transaction.service.deleteMany();

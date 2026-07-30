@@ -11,11 +11,15 @@ async function main() {
   }
 
   const { prisma } = await import("@/server/infrastructure/database/prisma");
-  const data = await seedPortfolioData(prisma, getPortfolioSeedData());
+  try {
+    const data = await seedPortfolioData(getPortfolioSeedData());
 
-  console.log(
-    `Seeded portfolio data: ${data.contentBlocks} content blocks, ${data.principles} principles, ${data.services} services, ${data.experiences} experiences, and ${data.projects} projects.`,
-  );
+    console.log(
+      `Seeded portfolio data: ${data.contentBlocks} content blocks, ${data.principles} principles, ${data.services} services, ${data.experiences} experiences, and ${data.projects} projects.`,
+    );
+  } finally {
+    await prisma.$disconnect();
+  }
 }
 
 main().catch((error) => {
