@@ -1,5 +1,5 @@
-import { assistantStreamEventSchema } from "./schema";
-import type { StreamChatResponseHandlers } from "./types";
+import { assistantStreamEventSchema } from "@/contracts/assistant.contract";
+import type { StreamChatResponseHandlers } from "../models/chat-message.model";
 
 async function getErrorMessage(response: Response) {
   try {

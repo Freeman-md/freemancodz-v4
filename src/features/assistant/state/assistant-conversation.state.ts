@@ -1,4 +1,4 @@
-import type { ChatMessage, ChatSource, ChatStage } from "./types";
+import type { ChatMessage, ChatSource, ChatStage } from "../models/chat-message.model";
 
 export function stageWhenOpening(messages: ChatMessage[]): ChatStage {
   return messages.length > 0 ? "conversation" : "composer";

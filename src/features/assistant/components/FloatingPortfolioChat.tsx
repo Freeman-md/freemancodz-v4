@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import { ChatComposer } from "./ChatComposer";
 import { ChatConversation } from "./ChatConversation";
 import { ChatLauncher } from "./ChatLauncher";
-import { useFloatingPortfolioChat } from "../use-assistant";
+import { useFloatingPortfolioChat } from "../hooks/useAssistant";
 
 export function FloatingPortfolioChat() {
   const {

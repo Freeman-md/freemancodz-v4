@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { appendAssistantDelta, attachAssistantSources, replaceAssistantWithError, stageWhenOpening } from "@/features/assistant/assistant-session";
+import { appendAssistantDelta, attachAssistantSources, replaceAssistantWithError, stageWhenOpening } from "@/features/assistant/state/assistant-conversation.state";
 
 const messages = [{ id: "user", role: "user" as const, content: "Question" }, { id: "assistant", role: "assistant" as const, content: "" }];
 

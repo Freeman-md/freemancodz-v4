@@ -5,7 +5,7 @@ import {
   DAILY_RATE_LIMIT_WINDOW_MS,
   SHORT_RATE_LIMIT_MAX,
   SHORT_RATE_LIMIT_WINDOW_MS,
-} from "./chat-stream-constants";
+} from "../assistant.constants";
 
 type WindowCounter = {
   count: number;

@@ -1,11 +1,11 @@
 import "server-only";
 
 import { createOpenAIClient, getResponseModel } from "@/server/infrastructure/openai/openai-client";
-import { FALLBACK_ANSWER } from "./chat-stream-constants";
-import { CHAT_SYSTEM_PROMPT } from "./prompt";
-import { retrieveContext } from "./retrieve-context";
-import { encodeStreamEvent, formatContext } from "./stream-utils";
-import type { AssistantStreamEvent } from "../schema";
+import { FALLBACK_ANSWER } from "../assistant.constants";
+import { CHAT_SYSTEM_PROMPT } from "../prompts/portfolio-assistant.prompt";
+import { retrieveContext } from "./retrieve-assistant-context.service";
+import { encodeStreamEvent, formatContext } from "../mappers/assistant-stream.mapper";
+import type { AssistantStreamEvent } from "@/contracts/assistant.contract";
 
 export function createAssistantResponse({
   message,

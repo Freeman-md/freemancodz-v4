@@ -1,5 +1,5 @@
-import type { AssistantStreamEvent } from "../schema";
-import type { MatchSiteChunksRow } from "../types";
+import type { AssistantStreamEvent } from "@/contracts/assistant.contract";
+import type { MatchSiteChunksRow } from "@/server/modules/search-index/models/search-index.model";
 
 export function formatContext(chunks: MatchSiteChunksRow[]) {
   return chunks

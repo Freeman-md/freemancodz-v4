@@ -9,19 +9,19 @@ import {
   type KeyboardEvent,
 } from "react";
 import { useReducedMotion, type Transition } from "framer-motion";
-import { streamChatResponse } from "./client";
-import { appendAssistantDelta, attachAssistantSources, replaceAssistantWithError, stageWhenOpening } from "./assistant-session";
-import { MAX_MESSAGE_LENGTH } from "./constants";
+import { streamChatResponse } from "../api/stream-assistant-response";
+import { appendAssistantDelta, attachAssistantSources, replaceAssistantWithError, stageWhenOpening } from "../state/assistant-conversation.state";
+import { MAX_MESSAGE_LENGTH } from "../constants";
 import {
   OPEN_PORTFOLIO_CHAT_EVENT,
   type OpenPortfolioChatDetail,
-} from "./events";
-import type { ChatMessage, ChatStage } from "./types";
+} from "../assistant.events";
+import type { ChatMessage, ChatStage } from "../models/chat-message.model";
 import {
   createAssistantErrorMessage,
   createAssistantMessage,
   createUserMessage,
-} from "./utils/create-search-message";
+} from "../utils/create-search-message";
 
 export function useFloatingPortfolioChat() {
   const [stage, setStage] = useState<ChatStage>("launcher");

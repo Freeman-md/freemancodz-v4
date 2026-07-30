@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { MAX_MESSAGE_LENGTH } from "./constants";
+const MAX_MESSAGE_LENGTH = 500;
 
 const sourceSchema = z.object({
   id: z.string(),

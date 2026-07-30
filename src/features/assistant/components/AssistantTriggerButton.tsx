@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { dispatchOpenPortfolioChat, type OpenPortfolioChatDetail } from "@/features/assistant/events";
+import { dispatchOpenPortfolioChat, type OpenPortfolioChatDetail } from "@/features/assistant/assistant.events";
 
 type AssistantTriggerButtonProps = {
   children: ReactNode;

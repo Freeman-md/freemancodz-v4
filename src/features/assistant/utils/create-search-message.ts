@@ -1,4 +1,4 @@
-import { ChatMessage } from "../types";
+import { ChatMessage } from "@/features/assistant/models/chat-message.model";
 
 export function createUserMessage(content: string): ChatMessage {
   return {

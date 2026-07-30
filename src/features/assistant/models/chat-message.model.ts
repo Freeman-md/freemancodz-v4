@@ -1,4 +1,4 @@
-import type { AssistantSource, AssistantStreamEvent } from "./schema";
+import type { AssistantSource, AssistantStreamEvent } from "@/contracts/assistant.contract";
 
 export type MatchSiteChunksRow = {
   id: string;

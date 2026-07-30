@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 
-import { assistantRequestSchema } from "@/features/assistant/schema";
-import { createAssistantResponse } from "@/features/assistant/server/create-assistant-response";
-import { checkAssistantRateLimit } from "@/features/assistant/server/rate-limit";
+import { assistantRequestSchema } from "@/contracts/assistant.contract";
+import { createAssistantResponse } from "@/server/modules/assistant/public";
+import { checkAssistantRateLimit } from "@/server/modules/assistant/public";
 
 export async function POST(request: Request) {
   let payload: unknown;

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { streamChatResponse } from "@/features/assistant/client";
+import { streamChatResponse } from "@/features/assistant/api/stream-assistant-response";
 
 function streamResponse(lines: string[]) {
   const encoder = new TextEncoder();
