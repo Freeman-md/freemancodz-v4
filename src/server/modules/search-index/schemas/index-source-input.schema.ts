@@ -6,3 +6,7 @@ export const indexSourceInputSchema = z.object({
 });
 
 export type IndexSourceInput = z.infer<typeof indexSourceInputSchema>;
+
+export function parseIndexSourceInput(sourceType: unknown, sourceId: unknown): IndexSourceInput {
+  return indexSourceInputSchema.parse({ sourceType, sourceId });
+}

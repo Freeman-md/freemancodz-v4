@@ -2,11 +2,11 @@ import { buildSearchDocuments } from "@/server/modules/search-index/mappers/sear
 import { findIndexedChunksBySource } from "@/server/modules/search-index/repositories/site-chunk.repository";
 import { findIndexableSource } from "@/server/modules/search-index/repositories/indexing-source.repository";
 import { prepareSiteChunk } from "@/server/modules/search-index/factories/site-chunk.factory";
-import { parseSourceArguments } from "./lib/indexing-arguments";
+import { parseIndexSourceInput } from "@/server/modules/search-index/schemas/index-source-input.schema";
 import { getEmbeddingModel } from "@/server/infrastructure/openai/openai-client";
 
 async function main() {
-  const input = parseSourceArguments();
+  const input = parseIndexSourceInput(process.argv[2], process.argv[3]);
 
   const source = await findIndexableSource(
     input.sourceType,

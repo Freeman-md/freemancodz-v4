@@ -1,4 +1,4 @@
-import { requireProductionConfirmation } from "./lib/production-confirmation";
+import { requireProductionConfirmation } from "./require-production-confirmation";
 
 const isProductionRun = process.argv.includes("--production");
 
