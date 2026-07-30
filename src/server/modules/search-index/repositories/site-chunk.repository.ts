@@ -8,7 +8,7 @@ import type {
   ExistingSiteChunk,
   IndexableSourceType,
   ReplaceIndexedSourceInput,
-} from "@/server/modules/search-index/models/search-index.model";
+} from "@/server/modules/search-index/models/search-index";
 
 function toVectorLiteral(embedding: number[]): string {
   return `[${embedding.join(",")}]`;

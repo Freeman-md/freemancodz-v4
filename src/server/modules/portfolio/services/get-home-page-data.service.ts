@@ -15,7 +15,7 @@ import {
   mapProject,
   mapService,
 } from "@/server/modules/portfolio/mappers/portfolio-view.mapper";
-import type { HomePageData } from "@/server/modules/portfolio/models/portfolio-view.model";
+import type { HomePageData } from "@/server/modules/portfolio/models/portfolio-view";
 
 export async function getHomePageData(): Promise<HomePageData> {
   const [

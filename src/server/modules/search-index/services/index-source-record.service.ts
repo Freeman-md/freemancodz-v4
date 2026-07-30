@@ -18,7 +18,7 @@ import type {
   IndexSourceResult,
   PreparedSiteChunk,
   ReplaceIndexedSourceInput,
-} from "@/server/modules/search-index/models/search-index.model";
+} from "@/server/modules/search-index/models/search-index";
 import { getEmbeddingModel } from "@/server/infrastructure/openai/openai-client";
 import type { GeneratedEmbedding } from "@/server/modules/search-index/providers/openai-embedding.provider";
 

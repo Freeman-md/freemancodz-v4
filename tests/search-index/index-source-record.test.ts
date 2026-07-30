@@ -8,7 +8,7 @@ import { prepareSiteChunk } from "@/server/modules/search-index/factories/site-c
 import type {
   ExistingSiteChunk,
   SearchDocument,
-} from "@/server/modules/search-index/models/search-index.model";
+} from "@/server/modules/search-index/models/search-index";
 
 const timestamp = new Date("2026-07-19T00:00:00.000Z");
 const embeddingModel = "text-embedding-3-small";

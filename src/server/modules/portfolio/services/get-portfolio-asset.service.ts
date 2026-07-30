@@ -1,7 +1,7 @@
 import "server-only";
 
 import { getPrivateBlob } from "../providers/vercel-blob.provider";
-import type { PortfolioAsset } from "../models/portfolio-asset.model";
+import type { PortfolioAsset } from "../models/portfolio-asset";
 
 export async function getPortfolioAsset(pathname: string): Promise<PortfolioAsset> {
   const result = await getPrivateBlob(pathname);

@@ -1,7 +1,7 @@
 import "server-only";
 
 import { prisma } from "@/server/infrastructure/database/prisma";
-import type { MatchSiteChunksRow } from "@/server/modules/search-index/models/search-index.model";
+import type { MatchSiteChunksRow } from "@/server/modules/search-index/models/search-index";
 
 
 export async function matchSiteChunks(

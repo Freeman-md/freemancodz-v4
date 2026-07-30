@@ -11,7 +11,7 @@ import {
   mapTextBlock,
 } from "@/server/modules/portfolio/mappers/content-block.mapper";
 import { mapPrinciple } from "@/server/modules/portfolio/mappers/portfolio-view.mapper";
-import type { AboutPageData } from "@/server/modules/portfolio/models/portfolio-view.model";
+import type { AboutPageData } from "@/server/modules/portfolio/models/portfolio-view";
 
 export async function getAboutPageData(): Promise<AboutPageData> {
   const [

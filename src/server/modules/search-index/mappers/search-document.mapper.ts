@@ -6,7 +6,7 @@ import { buildServiceDocuments } from "./build-service-documents";
 import type {
   IndexableSource,
   SearchDocument,
-} from "@/server/modules/search-index/models/search-index.model";
+} from "@/server/modules/search-index/models/search-index";
 
 export function buildSearchDocuments(
   source: IndexableSource,

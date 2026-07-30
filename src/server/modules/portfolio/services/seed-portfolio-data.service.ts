@@ -2,7 +2,7 @@ import "server-only";
 
 import type { PrismaClient } from "@/generated/prisma/client";
 import type { PortfolioSeedData } from "../../../../../prisma/seed-data/portfolio-seed";
-import type { PortfolioSeedResult } from "../models/portfolio-seed.model";
+import type { PortfolioSeedResult } from "../models/portfolio-seed";
 import { replacePortfolioSeedData } from "../repositories/portfolio-seed.repository";
 
 export async function seedPortfolioData(client: PrismaClient, data: PortfolioSeedData): Promise<PortfolioSeedResult> {

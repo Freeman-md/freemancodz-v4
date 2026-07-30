@@ -1,5 +1,4 @@
-import { previewSearchIndex } from "@/server/modules/search-index/public";
-import { parseIndexSourceInput } from "@/server/modules/search-index/schemas/index-source-input.schema";
+import { parseIndexSourceInput, previewSearchIndex } from "@/server/modules/search-index/public";
 
 async function main() {
   const input = parseIndexSourceInput(process.argv[2], process.argv[3]);

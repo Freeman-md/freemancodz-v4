@@ -7,5 +7,6 @@ export { searchSiteIndex } from "./services/search-site-index.service";
 export { previewSearchIndex } from "./services/preview-search-index.service";
 export { rebuildSearchIndex } from "./services/rebuild-search-index.service";
 export { getSearchIndexJobStatus } from "./services/get-search-index-job-status.service";
+export { parseIndexSourceInput } from "./schemas/index-source-input.schema";
 export type { IndexWorkerBatchResult } from "./services/run-index-worker.service";
-export type { MatchSiteChunksRow } from "./models/search-index.model";
+export type { MatchSiteChunksRow } from "./models/search-index";

@@ -1,5 +1,5 @@
 import type { Experience } from "@/generated/prisma/client";
-import type { SearchDocument } from "@/server/modules/search-index/models/search-index.model";
+import type { SearchDocument } from "@/server/modules/search-index/models/search-index";
 
 export function buildExperienceDocuments(
   experience: Experience,

@@ -1,5 +1,5 @@
 import type { Service } from "@/generated/prisma/client";
-import type { SearchDocument } from "@/server/modules/search-index/models/search-index.model";
+import type { SearchDocument } from "@/server/modules/search-index/models/search-index";
 
 export function buildServiceDocuments(service: Service): SearchDocument[] {
   const content = [

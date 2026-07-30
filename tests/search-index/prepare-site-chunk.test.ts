@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import assert from "node:assert/strict";
 import test from "node:test";
-import type { SearchDocument } from "@/server/modules/search-index/models/search-index.model";
+import type { SearchDocument } from "@/server/modules/search-index/models/search-index";
 import { prepareSiteChunk } from "@/server/modules/search-index/factories/site-chunk.factory";
 
 const baseDocument = {

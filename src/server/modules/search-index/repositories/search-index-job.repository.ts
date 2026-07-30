@@ -6,7 +6,7 @@ import type {
   FailIndexJobOptions,
   SearchIndexJob,
   SearchIndexJobStatusSummary,
-} from "@/server/modules/search-index/models/search-index.model";
+} from "@/server/modules/search-index/models/search-index";
 
 const DEFAULT_MAX_ATTEMPTS = 5;
 const STALE_PROCESSING_TIMEOUT_MINUTES = 10;

@@ -10,7 +10,7 @@ import { removeIndexedSource } from "@/server/modules/search-index/services/remo
 import type {
   IndexSourceResult,
   SearchIndexJob,
-} from "@/server/modules/search-index/models/search-index.model";
+} from "@/server/modules/search-index/models/search-index";
 
 export type IndexWorkerBatchResult = {
   claimed: number;

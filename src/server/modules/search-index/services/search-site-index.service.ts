@@ -1,4 +1,4 @@
-import type { MatchSiteChunksRow } from "@/server/modules/search-index/models/search-index.model";
+import type { MatchSiteChunksRow } from "@/server/modules/search-index/models/search-index";
 import { matchSiteChunks } from "../repositories/match-site-chunks.repository";
 
 

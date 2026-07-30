@@ -4,7 +4,7 @@ import { deleteIndexedSource } from "@/server/modules/search-index/repositories/
 import type {
   IndexableSourceType,
   IndexSourceResult,
-} from "@/server/modules/search-index/models/search-index.model";
+} from "@/server/modules/search-index/models/search-index";
 
 type RemoveIndexedSourceInput = {
   sourceType: IndexableSourceType;

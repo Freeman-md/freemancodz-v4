@@ -1,4 +1,4 @@
-import type { ProfileService } from "@/server/modules/portfolio/models/portfolio-view.model";
+import type { ProfileService } from "@/server/modules/portfolio/models/portfolio-view";
 import { SITE_OWNER_NAME } from "@/shared/config/site-metadata";
 
 export const profile = {

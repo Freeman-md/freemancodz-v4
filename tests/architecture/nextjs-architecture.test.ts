@@ -1,11 +1,21 @@
 import assert from "node:assert/strict";
-import { access, readFile } from "node:fs/promises";
+import { access, readdir, readFile } from "node:fs/promises";
 import test from "node:test";
 import { ESLint } from "eslint";
 import { POST } from "@/app/api/chat/route";
 
 const root = process.cwd();
 const source = (path: string) => readFile(`${root}/${path}`, "utf8");
+
+async function sourceFiles(directory: string): Promise<string[]> {
+  const entries = await readdir(`${root}/${directory}`, { withFileTypes: true });
+  const paths = await Promise.all(entries.map(async (entry) => {
+    const path = `${directory}/${entry.name}`;
+    return entry.isDirectory() ? sourceFiles(path) : [path];
+  }));
+
+  return paths.flat().filter((path) => /\.(ts|tsx)$/.test(path));
+}
 
 test("assistant route validates malformed input and accepts the public request shape", async () => {
   const invalidJson = await POST(new Request("https://example.test/api/chat", { method: "POST", body: "{" }));
@@ -47,19 +57,21 @@ test("final architecture boundaries keep route, module, provider, and search lay
   assert.match(match, /queryEmbedding\.length !== 1536/);
   assert.doesNotMatch(retrieval, /supabase/i);
   assert.match(lint, /@\/app\/\*/);
-  assert.match(lint, /@\/features\/\*\/server\/\*/);
+  assert.match(lint, /@\/server\/modules\/\*\/schemas\/\*/);
 });
 
-test("eslint rejects representative client-to-server and feature-to-app imports", async () => {
+test("eslint rejects representative client-to-server, feature-to-app, and entrypoint-private imports", async () => {
   const eslint = new ESLint({ overrideConfigFile: `${root}/eslint.config.mjs` });
-  const [clientResult, featureResult, appClientResult] = await Promise.all([
-    eslint.lintText('import "@/features/assistant/server/retrieve-context";', { filePath: `${root}/src/features/assistant/components/BoundaryFixture.tsx` }),
+  const [clientResult, featureResult, appClientResult, entrypointResult] = await Promise.all([
+    eslint.lintText('import "@/server/modules/assistant/providers/openai-response.provider";', { filePath: `${root}/src/features/assistant/components/BoundaryFixture.tsx` }),
     eslint.lintText('import "@/app/page";', { filePath: `${root}/src/features/portfolio/types.ts` }),
     eslint.lintText('import "@/lib/openai";', { filePath: `${root}/src/app/error.tsx` }),
+    eslint.lintText('import "@/server/modules/search-index/schemas/index-source-input.schema";', { filePath: `${root}/src/server/entrypoints/cli/BoundaryFixture.ts` }),
   ]);
   assert.ok(clientResult[0]?.messages.some((message) => message.ruleId === "no-restricted-imports"));
   assert.ok(featureResult[0]?.messages.some((message) => message.ruleId === "no-restricted-imports"));
   assert.ok(appClientResult[0]?.messages.some((message) => message.ruleId === "no-restricted-imports"));
+  assert.ok(entrypointResult[0]?.messages.some((message) => message.ruleId === "no-restricted-imports"));
 });
 
 test("operational package commands point directly to existing entrypoints", async () => {
@@ -73,5 +85,28 @@ test("operational package commands point directly to existing entrypoints", asyn
     const target = command.match(/src\/server\/entrypoints\/[^\s]+\.ts/)?.[0];
     assert.ok(target, `${name} resolves an entrypoint`);
     await access(`${root}/${target}`);
+  }
+});
+
+test("final source tree has no legacy ownership paths or cross-module internal imports", async () => {
+  const paths = await sourceFiles("src");
+  const sourceByPath = new Map(await Promise.all(paths.map(async (path) => [path, await source(path)] as const)));
+
+  assert.ok(!paths.some((path) => path.startsWith("src/components/") || path.startsWith("src/lib/") || path.startsWith("src/data/")));
+  assert.ok(!paths.some((path) => /\/(models|state)\/.*\.(model|state)\.tsx?$/.test(path)));
+  assert.ok(!paths.includes("src/server/modules/search-index/mappers/index.ts"));
+
+  for (const [path, contents] of sourceByPath) {
+    assert.doesNotMatch(contents, /@\/features\/[^/]+\/server\//, path);
+    if (path.startsWith("src/features/")) {
+      assert.doesNotMatch(contents, /@\/server\//, path);
+    }
+    if (path.startsWith("src/server/") && !path.startsWith("src/server/entrypoints/")) {
+      assert.doesNotMatch(contents, /@\/features\//, path);
+    }
+    if (path.startsWith("src/app/") || path.startsWith("src/server/entrypoints/")) {
+      const moduleImports = contents.match(/@\/server\/modules\/[^"']+/g) ?? [];
+      assert.ok(moduleImports.every((moduleImport) => moduleImport.endsWith("/public")), path);
+    }
   }
 });

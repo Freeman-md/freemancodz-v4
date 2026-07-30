@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import type {
   PreparedSiteChunk,
   SearchDocument,
-} from "@/server/modules/search-index/models/search-index.model";
+} from "@/server/modules/search-index/models/search-index";
 
 function normalizeKeywords(keywords: string[]): string[] {
   return [...new Set(

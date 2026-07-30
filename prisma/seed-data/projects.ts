@@ -1,4 +1,4 @@
-import type { Project } from "@/server/modules/portfolio/models/portfolio-view.model";
+import type { Project } from "@/server/modules/portfolio/models/portfolio-view";
 
 export const projects: Project[] = [
   {
