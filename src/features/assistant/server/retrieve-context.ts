@@ -1,9 +1,8 @@
 import "server-only";
 
 import { createOpenAIClient, getEmbeddingModel } from "@/server/infrastructure/openai/openai-client";
-import { matchSiteChunks } from "./match-site-chunks";
-import type { MatchSiteChunksRow } from "../types";
-import { diversifyChunks } from "./diversify-chunk";
+import { searchSiteIndex } from "@/server/modules/search-index/public";
+import type { MatchSiteChunksRow } from "@/server/modules/search-index/models/search-index.model";
 
 export type RetrievedSource = {
   id: string;
@@ -44,8 +43,7 @@ export async function retrieveContext(
     throw new Error("Failed to create query embedding.");
   }
 
-  const candidates = await matchSiteChunks(queryEmbedding, 20, 0.25);
-  const chunks = diversifyChunks(candidates, 6);
+  const chunks = await searchSiteIndex(queryEmbedding);
   const sources = chunks.map((chunk) => ({
     id: chunk.id,
     title: chunk.title,

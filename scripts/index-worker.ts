@@ -1,4 +1,4 @@
-import type { IndexWorkerBatchResult } from "@/features/search-index/server/index-worker";
+import type { IndexWorkerBatchResult } from "@/server/modules/search-index/services/run-index-worker.service";
 
 const POLLING_DELAY_MS = 2_000;
 
@@ -24,7 +24,7 @@ export async function runIndexWorkerLoop({
 
 async function main() {
   const [{ indexWorker }, { prisma }] = await Promise.all([
-    import("@/features/search-index/server/index-worker"),
+    import("@/server/modules/search-index/services/run-index-worker.service"),
     import("@/server/infrastructure/database/prisma"),
   ]);
   let stopping = false;

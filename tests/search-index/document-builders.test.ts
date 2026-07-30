@@ -13,7 +13,7 @@ import {
   buildPrincipleDocuments,
   buildProjectDocuments,
   buildServiceDocuments,
-} from "@/features/search-index/server/builders";
+} from "@/server/modules/search-index/mappers";
 
 const timestamp = new Date("2026-07-19T00:00:00.000Z");
 

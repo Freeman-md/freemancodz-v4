@@ -6,7 +6,7 @@ import { heroContentSchema } from "@/server/modules/portfolio/schemas/content-bl
 import { outsideEngineeringContentSchema } from "@/server/modules/portfolio/schemas/content-block.schema";
 import { philosophyContentSchema } from "@/server/modules/portfolio/schemas/content-block.schema";
 import { textBlockContentSchema } from "@/server/modules/portfolio/schemas/content-block.schema";
-import type { SearchDocument } from "@/features/search-index/types";
+import type { SearchDocument } from "@/server/modules/search-index/models/search-index.model";
 
 function document(
   block: ContentBlock,

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createRemoveIndexedSource } from "@/features/search-index/server/remove-indexed-source";
+import { createRemoveIndexedSource } from "@/server/modules/search-index/services/remove-indexed-source.service";
 
 test("removeIndexedSource maps a successful deletion count", async () => {
   const calls: [string, string][] = [];

@@ -1,4 +1,4 @@
-import { getSearchIndexJobStatus } from "@/features/search-index/server/data/search-index-job.repository";
+import { getSearchIndexJobStatus } from "@/server/modules/search-index/repositories/search-index-job.repository";
 import { prisma } from "@/server/infrastructure/database/prisma";
 
 async function main() {

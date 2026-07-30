@@ -3,12 +3,12 @@ import test from "node:test";
 import type { ContentBlock, Project } from "@/generated/prisma/client";
 import {
   createIndexSourceRecord,
-} from "@/features/search-index/server/index-source-record";
-import { prepareSiteChunk } from "@/features/search-index/server/prepare-site-chunk";
+} from "@/server/modules/search-index/services/index-source-record.service";
+import { prepareSiteChunk } from "@/server/modules/search-index/factories/site-chunk.factory";
 import type {
   ExistingSiteChunk,
   SearchDocument,
-} from "@/features/search-index/types";
+} from "@/server/modules/search-index/models/search-index.model";
 
 const timestamp = new Date("2026-07-19T00:00:00.000Z");
 const embeddingModel = "text-embedding-3-small";

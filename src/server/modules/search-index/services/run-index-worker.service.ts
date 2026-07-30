@@ -4,13 +4,13 @@ import {
   claimIndexJobs,
   completeIndexJob,
   failIndexJob,
-} from "@/features/search-index/server/data/search-index-job.repository";
-import { indexSourceRecord } from "@/features/search-index/server/index-source-record";
-import { removeIndexedSource } from "@/features/search-index/server/remove-indexed-source";
+} from "@/server/modules/search-index/repositories/search-index-job.repository";
+import { indexSourceRecord } from "@/server/modules/search-index/services/index-source-record.service";
+import { removeIndexedSource } from "@/server/modules/search-index/services/remove-indexed-source.service";
 import type {
   IndexSourceResult,
   SearchIndexJob,
-} from "@/features/search-index/types";
+} from "@/server/modules/search-index/models/search-index.model";
 
 export type IndexWorkerBatchResult = {
   claimed: number;

@@ -1,7 +1,7 @@
-import { buildSearchDocuments } from "@/features/search-index/server/build-search-documents";
-import { findIndexedChunksBySource } from "@/features/search-index/server/data/site-chunk.repository";
-import { findIndexableSource } from "@/features/search-index/server/data/indexing-source.repository";
-import { prepareSiteChunk } from "@/features/search-index/server/prepare-site-chunk";
+import { buildSearchDocuments } from "@/server/modules/search-index/mappers/search-document.mapper";
+import { findIndexedChunksBySource } from "@/server/modules/search-index/repositories/site-chunk.repository";
+import { findIndexableSource } from "@/server/modules/search-index/repositories/indexing-source.repository";
+import { prepareSiteChunk } from "@/server/modules/search-index/factories/site-chunk.factory";
 import { parseSourceArguments } from "./lib/indexing-arguments";
 import { getEmbeddingModel } from "@/server/infrastructure/openai/openai-client";
 

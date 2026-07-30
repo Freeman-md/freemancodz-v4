@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createIndexWorker } from "@/features/search-index/server/index-worker";
+import { createIndexWorker } from "@/server/modules/search-index/services/run-index-worker.service";
 import { runIndexWorkerLoop } from "../../scripts/index-worker";
-import type { SearchIndexJob } from "@/features/search-index/types";
+import type { SearchIndexJob } from "@/server/modules/search-index/models/search-index.model";
 
 function makeJob(overrides: Partial<SearchIndexJob> = {}): SearchIndexJob {
   return {

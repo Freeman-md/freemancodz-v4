@@ -1,10 +1,10 @@
 import "server-only";
 
-import { deleteIndexedSource } from "@/features/search-index/server/data/site-chunk.repository";
+import { deleteIndexedSource } from "@/server/modules/search-index/repositories/site-chunk.repository";
 import type {
   IndexableSourceType,
   IndexSourceResult,
-} from "@/features/search-index/types";
+} from "@/server/modules/search-index/models/search-index.model";
 
 type RemoveIndexedSourceInput = {
   sourceType: IndexableSourceType;

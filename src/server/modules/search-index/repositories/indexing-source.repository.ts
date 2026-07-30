@@ -4,7 +4,7 @@ import { prisma } from "@/server/infrastructure/database/prisma";
 import type {
   IndexableSource,
   IndexableSourceType,
-} from "@/features/search-index/types";
+} from "@/server/modules/search-index/models/search-index.model";
 
 export async function findIndexableSource(
   sourceType: IndexableSourceType,

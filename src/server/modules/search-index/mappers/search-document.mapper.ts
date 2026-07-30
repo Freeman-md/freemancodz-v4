@@ -4,11 +4,11 @@ import {
   buildPrincipleDocuments,
   buildProjectDocuments,
   buildServiceDocuments,
-} from "@/features/search-index/server/builders";
+} from "@/server/modules/search-index/mappers";
 import type {
   IndexableSource,
   SearchDocument,
-} from "@/features/search-index/types";
+} from "@/server/modules/search-index/models/search-index.model";
 
 export function buildSearchDocuments(
   source: IndexableSource,

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import { indexWorker } from "@/features/search-index/server/index-worker";
-import type { IndexWorkerBatchResult } from "@/features/search-index/server/index-worker";
+import { searchIndexWorkerErrorSchema, searchIndexWorkerResultSchema } from "@/contracts/search-index-worker.contract";
+import { indexWorker } from "@/server/modules/search-index/public";
+import type { IndexWorkerBatchResult } from "@/server/modules/search-index/public";
 import { getSearchIndexWorkerSecret } from "@/server/infrastructure/config/env";
 
 export const runtime = "nodejs";
@@ -71,7 +72,7 @@ export function createSearchIndexWorkerRoute({
         duration,
       });
 
-      return NextResponse.json(result);
+      return NextResponse.json(searchIndexWorkerResultSchema.parse(result));
     } catch (error) {
       const duration = now() - startedAt;
       logger.error("Search index worker batch failed", {
@@ -85,7 +86,7 @@ export function createSearchIndexWorkerRoute({
         error: error instanceof Error ? error.message : "Unknown error",
       });
       return NextResponse.json(
-        { error: "Search index worker failed." },
+        searchIndexWorkerErrorSchema.parse({ error: "Search index worker failed." }),
         { status: 500 },
       );
     }
