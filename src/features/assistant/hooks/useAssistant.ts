@@ -17,11 +17,6 @@ import {
   type OpenPortfolioChatDetail,
 } from "../assistant.events";
 import type { ChatMessage, ChatStage } from "../models/chat-message";
-import {
-  createAssistantErrorMessage,
-  createAssistantMessage,
-  createUserMessage,
-} from "../utils/create-search-message";
 
 export function useAssistant() {
   const [stage, setStage] = useState<ChatStage>("launcher");
@@ -48,12 +43,12 @@ export function useAssistant() {
       return;
     }
 
-    const assistantMessage = createAssistantMessage("");
+    const assistantMessage: ChatMessage = { id: `assistant-${Date.now()}`, role: "assistant", content: "", sources: [] };
 
     setStage("conversation");
     setMessages((current) => [
       ...current,
-      createUserMessage(message),
+      { id: `user-${Date.now()}`, role: "user", content: message },
       assistantMessage,
     ]);
     setInput("");
@@ -77,7 +72,7 @@ export function useAssistant() {
         error instanceof Error
           ? error.message
           : "Something went wrong while fetching a response.";
-      const errorResponse = createAssistantErrorMessage(messageText);
+      const errorResponse: ChatMessage = { id: `assistant-error-${Date.now()}`, role: "assistant", content: messageText, error: true };
 
       setErrorMessage(messageText);
       setMessages((current) => replaceAssistantWithError(current, assistantMessage.id, errorResponse));

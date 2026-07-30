@@ -1,6 +1,6 @@
 import "server-only";
 
-import { createOpenAIClient, getEmbeddingModel } from "@/server/infrastructure/openai/openai-client";
+import { createAssistantQueryEmbedding } from "../providers/openai-query-embedding.provider";
 import { searchSiteIndex } from "@/server/modules/search-index/public";
 import type { MatchSiteChunksRow } from "@/server/modules/search-index/public";
 
@@ -31,13 +31,7 @@ Retrieve information about:
 export async function retrieveContext(
   message: string,
 ): Promise<RetrievedContext> {
-  const openai = createOpenAIClient();
-  const embeddingResponse = await openai.embeddings.create({
-    model: getEmbeddingModel(),
-    input: expandRetrievalQuery(message),
-  });
-
-  const queryEmbedding = embeddingResponse.data[0]?.embedding;
+  const queryEmbedding = await createAssistantQueryEmbedding(expandRetrievalQuery(message));
 
   if (!queryEmbedding) {
     throw new Error("Failed to create query embedding.");
