@@ -1,16 +1,18 @@
-import { get } from "@vercel/blob";
 import { NextRequest, NextResponse } from "next/server";
+import { portfolioAssetPathSchema } from "@/contracts/portfolio-asset.contract";
+import { getPortfolioAsset } from "@/server/modules/portfolio/public";
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ pathname: string[] }> },
 ) {
   const { pathname: pathnameSegments } = await params;
-  const pathname = pathnameSegments.join("/");
+  const parsedPathname = portfolioAssetPathSchema.safeParse(pathnameSegments.join("/"));
+  if (!parsedPathname.success) return new NextResponse("Not found", { status: 404 });
 
-  const result = await get(pathname, { access: "private" });
+  const result = await getPortfolioAsset(parsedPathname.data);
 
-  if (result === null) {
+  if (result.kind === "missing") {
     return new NextResponse("Not found", { status: 404 });
   }
 
@@ -19,8 +21,8 @@ export async function GET(
     "X-Content-Type-Options": "nosniff",
   });
 
-  if (result.blob.contentType) {
-    headers.set("Content-Type", result.blob.contentType);
+  if (result.contentType) {
+    headers.set("Content-Type", result.contentType);
   }
 
   return new NextResponse(result.stream, { headers });

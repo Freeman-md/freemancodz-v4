@@ -1,7 +1,6 @@
 import { experiences } from "./experience";
 import { profile } from "./profile";
 import { projects } from "./projects";
-import type { PrismaClient } from "@/generated/prisma/client";
 
 export type PortfolioSeedData = {
   contentBlocks: {
@@ -159,31 +158,4 @@ export function getPortfolioSeedData(): PortfolioSeedData {
       links: project.links.map((link) => ({ ...link })),
     })),
   };
-}
-
-export async function seedPortfolioData(client: PrismaClient) {
-  const data = getPortfolioSeedData();
-
-  try {
-    await client.$transaction(async (transaction) => {
-      await transaction.contentBlock.deleteMany();
-      await transaction.principle.deleteMany();
-      await transaction.service.deleteMany();
-      await transaction.experience.deleteMany();
-      await transaction.project.deleteMany();
-
-      await transaction.contentBlock.createMany({ data: data.contentBlocks });
-      await transaction.principle.createMany({ data: data.principles });
-      await transaction.service.createMany({ data: data.services });
-      await transaction.experience.createMany({ data: data.experiences });
-      await transaction.project.createMany({ data: data.projects });
-    });
-  } catch (error) {
-    const detail = error instanceof Error ? error.message : String(error);
-    throw new Error(`Portfolio seed failed: ${detail}`, { cause: error });
-  } finally {
-    await client.$disconnect();
-  }
-
-  return data;
 }

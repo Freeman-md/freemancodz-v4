@@ -1,6 +1,7 @@
 import { config as loadEnv } from "dotenv";
 
-import { seedPortfolioData } from "../prisma/seed-data/portfolio-seed";
+import { getPortfolioSeedData } from "../prisma/seed-data/portfolio-seed";
+import { seedPortfolioData } from "@/server/modules/portfolio/public";
 import { requireProductionConfirmation } from "./lib/production-confirmation";
 
 const isProductionRun = process.argv.includes("--production");
@@ -15,10 +16,10 @@ async function main() {
   }
 
   const { prisma } = await import("../src/server/infrastructure/database/prisma");
-  const data = await seedPortfolioData(prisma);
+  const data = await seedPortfolioData(prisma, getPortfolioSeedData());
 
   console.log(
-    `Seeded portfolio data: ${data.contentBlocks.length} content blocks, ${data.principles.length} principles, ${data.services.length} services, ${data.experiences.length} experiences, and ${data.projects.length} projects.`,
+    `Seeded portfolio data: ${data.contentBlocks} content blocks, ${data.principles} principles, ${data.services} services, ${data.experiences} experiences, and ${data.projects} projects.`,
   );
 }
 
