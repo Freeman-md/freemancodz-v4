@@ -23,7 +23,7 @@ import {
   createUserMessage,
 } from "../utils/create-search-message";
 
-export function useFloatingPortfolioChat() {
+export function useAssistant() {
   const [stage, setStage] = useState<ChatStage>("launcher");
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);

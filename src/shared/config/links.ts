@@ -15,3 +15,11 @@ export const siteAssetLinks = {
     "Continuous Learning": "/api/blob/images/learning",
   },
 };
+
+export const navigation = [
+  { label: "Home", href: "/" },
+  { label: "Work", href: "/work" },
+  { label: "About", href: "/about" },
+];
+
+export const externalLinks = envLinks;

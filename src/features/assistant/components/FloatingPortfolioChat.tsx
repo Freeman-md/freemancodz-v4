@@ -6,7 +6,7 @@ import { cn } from "@/shared/utils/class-names";
 import { ChatComposer } from "./ChatComposer";
 import { ChatConversation } from "./ChatConversation";
 import { ChatLauncher } from "./ChatLauncher";
-import { useFloatingPortfolioChat } from "../hooks/useAssistant";
+import { useAssistant } from "../hooks/useAssistant";
 
 export function FloatingPortfolioChat() {
   const {
@@ -28,7 +28,7 @@ export function FloatingPortfolioChat() {
     stage,
     surfaceTransition,
     textareaRef,
-  } = useFloatingPortfolioChat();
+  } = useAssistant();
 
   return (
     <div className="pointer-events-none fixed inset-x-0 bottom-0 z-50 px-3 pb-[max(env(safe-area-inset-bottom),0.75rem)] sm:px-4 sm:pb-[max(env(safe-area-inset-bottom),1.25rem)]">
