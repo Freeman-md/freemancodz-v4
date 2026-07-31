@@ -56,11 +56,14 @@ export class SearchIndexService implements ISearchIndexService {
       const obsoleteIds = existing
         .filter((chunk) => !ids.has(chunk.id))
         .map((chunk) => chunk.id);
-      const embeds = await this.openai.createEmbeddings(
-        [...created, ...changed].map((chunk) => chunk.embeddingInput),
-      );
+      const chunksToEmbed = [...created, ...changed];
+      const embeds = chunksToEmbed.length > 0
+        ? await this.openai.createEmbeddings(
+            chunksToEmbed.map((chunk) => chunk.embeddingInput),
+          )
+        : [];
       const embeddedAt = new Date();
-      const upserts: EmbeddedSiteChunk[] = [...created, ...changed].map(
+      const upserts: EmbeddedSiteChunk[] = chunksToEmbed.map(
         (chunk, index) => ({
           ...chunk,
           embedding: embeds[index]!.embedding,
