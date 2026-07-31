@@ -6,7 +6,7 @@ This file defines repository-wide engineering rules and the entry point for the 
 
 Before planning, implementing, reviewing, or refactoring any Next.js code, read and follow `.agents/skills/nextjs-architecture/SKILL.md`. Treat it as the authoritative architectural standard for all Next.js implementations, milestones, and refactors.
 
-Validate every proposed file location, name, dependency, architectural role, and client/server boundary against that skill before writing code and again before completion. Do not introduce an exception without explicit user approval. Existing repository inconsistencies do not override the skill.
+Validate every proposed file location, name, interface, dependency, service boundary, architectural role, and client/server boundary against that skill before writing code and again before completion. Do not introduce an exception without explicit user approval. Existing repository inconsistencies do not override the skill.
 
 Before making a framework-specific decision:
 
@@ -39,9 +39,8 @@ The complete architecture and naming standard lives only in `.agents/skills/next
 - Keep a private helper in the same file when it has one consumer and does not obscure the main flow.
 - Extract code when it represents a separate responsibility, is reused, needs independent tests, or materially clarifies its caller.
 - Do not create `manager`, `factory`, `handler`, `service`, `helper`, `utils`, `common`, or `base` abstractions without a precise responsibility communicated by the name.
-- Do not introduce interfaces for concrete classes or functions unless a real alternate implementation or justified testing seam exists.
 - Prefer small functions and composition. Do not add a dependency-injection container.
-- Function-parameter dependency injection is allowed at side-effect boundaries when it materially improves deterministic tests.
+- Use the architecture skill's constructor-injection standard for backend services, repositories, and providers. Use function-parameter injection only for functional seams where a class boundary is not required.
 - Do not add patterns merely because they appear in SOLID, Clean Architecture, DDD, or enterprise examples.
 - Remove dead code, stale comments, obsolete wrappers, duplicate implementations, and unused dependencies in the same change that replaces them.
 - Do not commit temporary `console.log` debugging. Make operational logs intentional, contextual, and safe.
