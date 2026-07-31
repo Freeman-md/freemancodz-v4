@@ -9,7 +9,7 @@ import { ProjectCard } from "@/features/portfolio/components/ProjectCard";
 import { QuoteBlock } from "@/shared/components/ui/QuoteBlock";
 import { SectionHeader } from "@/shared/components/ui/SectionHeader";
 import { ServiceIcon } from "@/shared/components/ui/ServiceIcons";
-import { getHomePageData } from "@/server/modules/portfolio/public";
+import { portfolioService } from "@/server/composition-root";
 import { siteAssetLinks } from "@/shared/config/links";
 
 export default async function Home() {
@@ -21,7 +21,7 @@ export default async function Home() {
     principles,
     featuredProjects,
     experiences,
-  } = await getHomePageData();
+  } = await portfolioService.getHomePageData();
   return (
     <>
       <Container className="grid grid-cols-1 items-center gap-8 py-16 md:py-[120px] lg:grid-cols-12">

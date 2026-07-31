@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { CTASection } from "@/features/portfolio/components/CTASection";
 import { Container } from "@/shared/components/layout/Container";
 import { ImagePlaceholder } from "@/shared/components/ui/ImagePlaceholder";
-import { getAboutPageData } from "@/server/modules/portfolio/public";
+import { portfolioService } from "@/server/composition-root";
 import { siteAssetLinks } from "@/shared/config/links";
 import { siteConfig } from "@/shared/config/site-metadata";
 
@@ -27,7 +27,7 @@ export const metadata: Metadata = {
 };
 
 export default async function AboutPage() {
-  const { header, education, intro, workProcess, outsideEngineering, principles } = await getAboutPageData();
+  const { header, education, intro, workProcess, outsideEngineering, principles } = await portfolioService.getAboutPageData();
   return (
     <>
       <Container className="space-y-20 py-20 md:space-y-[120px] md:py-[120px]">

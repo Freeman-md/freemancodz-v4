@@ -1,14 +1,6 @@
 import "server-only";
 
-export { indexSourceRecord } from "./services/index-source-record.service";
-export { removeIndexedSource } from "./services/remove-indexed-source.service";
-export { indexWorker } from "./services/run-index-worker.service";
-export { searchSiteIndex } from "./services/search-site-index.service";
-export { previewSearchIndex } from "./services/preview-search-index.service";
-export { rebuildSearchIndex } from "./services/rebuild-search-index.service";
-export { getSearchIndexJobStatus } from "./services/get-search-index-job-status.service";
 export { parseIndexSourceInput } from "./schemas/index-source-input.schema";
-export { createAuthenticatedIndexWorker, resolveSearchIndexBatchLimit, runAuthenticatedIndexWorker } from "./services/run-authenticated-index-worker.service";
-export type { IndexWorkerBatchResult } from "./services/run-index-worker.service";
-export type { SearchIndexWorkerRequestDependencies, SearchIndexWorkerRequestResult } from "./services/run-authenticated-index-worker.service";
-export type { MatchSiteChunksRow } from "./models/search-index";
+export type { ISearchIndexService } from "./interfaces/search-index.service.interface";
+export type { ISearchIndexWorkerService } from "./interfaces/search-index-worker.service.interface";
+export type { MatchSiteChunksRow, IndexWorkerBatchResult, IndexSourceResult, SearchIndexJobStatusSummary } from "./models/search-index";

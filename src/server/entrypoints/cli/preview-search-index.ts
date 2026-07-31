@@ -1,9 +1,10 @@
-import { parseIndexSourceInput, previewSearchIndex } from "@/server/modules/search-index/public";
+import { parseIndexSourceInput } from "@/server/modules/search-index/public";
+import { searchIndexService } from "@/server/composition-root";
 
 async function main() {
   const input = parseIndexSourceInput(process.argv[2], process.argv[3]);
 
-  const preview = await previewSearchIndex(input);
+  const preview = await searchIndexService.preview(input);
 
   console.log("\nSource");
   console.log({

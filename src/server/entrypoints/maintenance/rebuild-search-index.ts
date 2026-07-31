@@ -7,8 +7,8 @@ async function main() {
     requireProductionConfirmation();
   }
 
-  const { rebuildSearchIndex } = await import("@/server/modules/search-index/public");
-  const { results, totals } = await rebuildSearchIndex();
+  const { searchIndexService } = await import("@/server/composition-root");
+  const { results, totals } = await searchIndexService.rebuild();
   for (const item of results) console.log(`${item.sourceType}:${item.sourceId}`, item.result);
 
   console.log("\nRebuild complete");

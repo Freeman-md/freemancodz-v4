@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { assistantRequestSchema } from "@/contracts/assistant.contract";
-import { createAssistantResponse } from "@/server/modules/assistant/public";
-import { checkAssistantRateLimit } from "@/server/modules/assistant/public";
+import { assistantService } from "@/server/composition-root";
 
 export async function POST(request: Request) {
   let payload: unknown;
@@ -17,7 +16,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: parsed.error.issues[0]?.message || "Invalid request." }, { status: 400 });
   }
 
-  const rateLimit = checkAssistantRateLimit(
+  const rateLimit = assistantService.checkRateLimit(
     request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || request.headers.get("x-real-ip")?.trim() || request.headers.get("cf-connecting-ip")?.trim() || "anonymous",
   );
   if (!rateLimit.allowed) {
@@ -32,7 +31,7 @@ export async function POST(request: Request) {
     });
   }
 
-  return new Response(createAssistantResponse({
+  return new Response(assistantService.createResponse({
     message: parsed.data.message,
     previousResponseId: parsed.data.previousResponseId ?? null,
     signal: request.signal,

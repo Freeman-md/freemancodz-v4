@@ -1,4 +1,5 @@
 import type { IndexWorkerBatchResult } from "@/server/modules/search-index/public";
+import { searchIndexWorkerService } from "@/server/composition-root";
 
 const POLLING_DELAY_MS = 2_000;
 
@@ -23,10 +24,7 @@ export async function runIndexWorkerLoop({
 }
 
 async function main() {
-  const [{ indexWorker }, { prisma }] = await Promise.all([
-    import("@/server/modules/search-index/public"),
-    import("@/server/infrastructure/database/prisma"),
-  ]);
+  const { prisma } = await import("@/server/infrastructure/database/prisma");
   let stopping = false;
 
   const stop = () => {
@@ -39,7 +37,7 @@ async function main() {
 
   try {
     await runIndexWorkerLoop({
-      runBatch: () => indexWorker.runBatch(),
+      runBatch: () => searchIndexWorkerService.runBatch(),
       isStopping: () => stopping,
     });
   } finally {

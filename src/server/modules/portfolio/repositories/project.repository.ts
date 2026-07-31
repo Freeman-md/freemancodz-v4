@@ -1,10 +1,5 @@
 import "server-only";
-import { prisma } from "@/server/infrastructure/database/prisma";
+import type { PrismaClient } from "@/generated/prisma/client";
+import type { IProjectRepository } from "../interfaces/project.repository.interface";
 
-export function findProjects() {
-  return prisma.project.findMany({ orderBy: { position: "asc" } });
-}
-
-export function findFeaturedProjects() {
-  return prisma.project.findMany({ where: { featured: true }, orderBy: { position: "asc" } });
-}
+export class ProjectRepository implements IProjectRepository { constructor(private readonly database: PrismaClient) {} findAll() { return this.database.project.findMany({ orderBy: { position: "asc" } }); } findFeatured() { return this.database.project.findMany({ where: { featured: true }, orderBy: { position: "asc" } }); } }

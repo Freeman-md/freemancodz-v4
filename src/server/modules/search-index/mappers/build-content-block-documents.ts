@@ -1,11 +1,5 @@
 import type { ContentBlock } from "@/generated/prisma/client";
-import { aboutHeaderContentSchema } from "@/server/modules/portfolio/public";
-import { currentDirectionContentSchema } from "@/server/modules/portfolio/public";
-import { educationContentSchema } from "@/server/modules/portfolio/public";
-import { heroContentSchema } from "@/server/modules/portfolio/public";
-import { outsideEngineeringContentSchema } from "@/server/modules/portfolio/public";
-import { philosophyContentSchema } from "@/server/modules/portfolio/public";
-import { textBlockContentSchema } from "@/server/modules/portfolio/public";
+import { aboutHeaderContentSchema, currentDirectionContentSchema, educationContentSchema, heroContentSchema, outsideEngineeringContentSchema, philosophyContentSchema, textBlockContentSchema } from "@/server/modules/portfolio/schemas/content-block.schema";
 import type { SearchDocument } from "@/server/modules/search-index/models/search-index";
 
 function document(

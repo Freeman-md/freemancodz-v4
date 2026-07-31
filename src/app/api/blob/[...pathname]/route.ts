@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { portfolioAssetPathSchema } from "@/contracts/portfolio-asset.contract";
-import { getPortfolioAsset } from "@/server/modules/portfolio/public";
+import { portfolioService } from "@/server/composition-root";
 
 export async function GET(
   request: NextRequest,
@@ -10,7 +10,7 @@ export async function GET(
   const parsedPathname = portfolioAssetPathSchema.safeParse(pathnameSegments.join("/"));
   if (!parsedPathname.success) return new NextResponse("Not found", { status: 404 });
 
-  const result = await getPortfolioAsset(parsedPathname.data);
+  const result = await portfolioService.getAsset(parsedPathname.data);
 
   if (result.kind === "missing") {
     return new NextResponse("Not found", { status: 404 });

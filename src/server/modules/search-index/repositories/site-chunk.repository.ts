@@ -2,7 +2,8 @@ import "server-only";
 
 
 
-import { prisma } from "@/server/infrastructure/database/prisma";
+import type { PrismaClient } from "@/generated/prisma/client";
+import type { ISiteChunkRepository } from "../interfaces/site-chunk.repository.interface";
 import type {
   EmbeddedSiteChunk,
   ExistingSiteChunk,
@@ -14,11 +15,13 @@ function toVectorLiteral(embedding: number[]): string {
   return `[${embedding.join(",")}]`;
 }
 
-export function findIndexedChunksBySource(
+export class SiteChunkRepository implements ISiteChunkRepository {
+  constructor(private readonly database: PrismaClient) {}
+findBySource(
   sourceType: IndexableSourceType,
   sourceId: string,
 ): Promise<ExistingSiteChunk[]> {
-  return prisma.siteChunk.findMany({
+  return this.database.siteChunk.findMany({
     where: {
       sourceType,
       sourceId,
@@ -37,13 +40,13 @@ export function findIndexedChunksBySource(
   });
 }
 
-export async function replaceIndexedSource({
+async replaceSource({
   sourceType,
   sourceId,
   upserts,
   obsoleteIds,
 }: ReplaceIndexedSourceInput): Promise<void> {
-  await prisma.$transaction(async (transaction) => {
+  await this.database.$transaction(async (transaction) => {
     for (const chunk of upserts) {
       await transaction.$executeRaw`
         INSERT INTO site_chunks (
@@ -106,11 +109,11 @@ export async function replaceIndexedSource({
   });
 }
 
-export async function deleteIndexedSource(
+async deleteSource(
   sourceType: IndexableSourceType,
   sourceId: string,
 ): Promise<number> {
-  const result = await prisma.siteChunk.deleteMany({
+  const result = await this.database.siteChunk.deleteMany({
     where: {
       sourceType,
       sourceId,
@@ -118,4 +121,11 @@ export async function deleteIndexedSource(
   });
 
   return result.count;
+}
+
+async match(queryEmbedding: number[], matchCount = 6, matchThreshold = 0.25) {
+  if (queryEmbedding.length !== 1536) throw new Error(`matchSiteChunks expected a 1536-length embedding, received ${queryEmbedding.length}.`);
+  const vector = `[${queryEmbedding.join(",")}]`;
+  return this.database.$queryRaw<import("../models/search-index").MatchSiteChunksRow[]>`SELECT * FROM match_site_chunks(${vector}::vector, ${matchCount}, ${matchThreshold});`;
+}
 }

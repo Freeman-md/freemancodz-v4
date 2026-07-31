@@ -1,6 +1,7 @@
 import "server-only";
 
-import { prisma } from "@/server/infrastructure/database/prisma";
+import type { PrismaClient } from "@/generated/prisma/client";
+import type { ISearchIndexJobRepository } from "../interfaces/search-index-job.repository.interface";
 import type {
   EnqueueIndexJobInput,
   FailIndexJobOptions,
@@ -20,10 +21,12 @@ function truncateError(error: unknown): string {
   return message.slice(0, MAX_ERROR_LENGTH);
 }
 
-export async function enqueueIndexJob(
+export class SearchIndexJobRepository implements ISearchIndexJobRepository {
+  constructor(private readonly database: PrismaClient) {}
+async enqueue(
   input: EnqueueIndexJobInput,
 ): Promise<SearchIndexJob> {
-  const [job] = await prisma.$queryRaw<SearchIndexJobRow[]>`
+  const [job] = await this.database.$queryRaw<SearchIndexJobRow[]>`
     INSERT INTO search_index_jobs (
       operation,
       source_type,
@@ -68,12 +71,12 @@ export async function enqueueIndexJob(
   return job;
 }
 
-export async function claimIndexJobs(limit: number): Promise<SearchIndexJob[]> {
+async claim(limit: number): Promise<SearchIndexJob[]> {
   if (!Number.isInteger(limit) || limit < 1) {
     throw new Error("Search index job claim limit must be a positive integer.");
   }
 
-  return prisma.$transaction(async (transaction) => {
+  return this.database.$transaction(async (transaction) => {
     await transaction.$executeRaw`
       UPDATE search_index_jobs
       SET
@@ -119,8 +122,8 @@ export async function claimIndexJobs(limit: number): Promise<SearchIndexJob[]> {
   });
 }
 
-export async function completeIndexJob(id: string): Promise<SearchIndexJob | null> {
-  const [job] = await prisma.$queryRaw<SearchIndexJobRow[]>`
+async complete(id: string): Promise<SearchIndexJob | null> {
+  const [job] = await this.database.$queryRaw<SearchIndexJobRow[]>`
     UPDATE search_index_jobs
     SET
       status = 'completed',
@@ -146,7 +149,7 @@ export async function completeIndexJob(id: string): Promise<SearchIndexJob | nul
   return job ?? null;
 }
 
-export async function failIndexJob(
+async fail(
   id: string,
   error: unknown,
   options: FailIndexJobOptions = {},
@@ -158,7 +161,7 @@ export async function failIndexJob(
   }
 
   const lastError = truncateError(error);
-  const [job] = await prisma.$queryRaw<SearchIndexJobRow[]>`
+  const [job] = await this.database.$queryRaw<SearchIndexJobRow[]>`
     UPDATE search_index_jobs
     SET
       status = CASE WHEN attempts < ${maxAttempts} THEN 'pending' ELSE 'failed' END,
@@ -189,18 +192,18 @@ export async function failIndexJob(
   return job ?? null;
 }
 
-export async function getSearchIndexJobStatus(): Promise<SearchIndexJobStatusSummary> {
+async getStatus(): Promise<SearchIndexJobStatusSummary> {
   const [pending, processing, completed, failed, oldestPending, staleProcessing, recentFailed] =
     await Promise.all([
-      prisma.searchIndexJob.count({ where: { status: "pending" } }),
-      prisma.searchIndexJob.count({ where: { status: "processing" } }),
-      prisma.searchIndexJob.count({ where: { status: "completed" } }),
-      prisma.searchIndexJob.count({ where: { status: "failed" } }),
-      prisma.searchIndexJob.findFirst({
+      this.database.searchIndexJob.count({ where: { status: "pending" } }),
+      this.database.searchIndexJob.count({ where: { status: "processing" } }),
+      this.database.searchIndexJob.count({ where: { status: "completed" } }),
+      this.database.searchIndexJob.count({ where: { status: "failed" } }),
+      this.database.searchIndexJob.findFirst({
         where: { status: "pending" },
         orderBy: [{ availableAt: "asc" }, { createdAt: "asc" }],
       }),
-      prisma.searchIndexJob.count({
+      this.database.searchIndexJob.count({
         where: {
           status: "processing",
           claimedAt: {
@@ -208,7 +211,7 @@ export async function getSearchIndexJobStatus(): Promise<SearchIndexJobStatusSum
           },
         },
       }),
-      prisma.searchIndexJob.findMany({
+      this.database.searchIndexJob.findMany({
         where: { status: "failed" },
         orderBy: { processedAt: "desc" },
         take: 5,
@@ -224,4 +227,5 @@ export async function getSearchIndexJobStatus(): Promise<SearchIndexJobStatusSum
     staleProcessing,
     recentFailed: recentFailed as SearchIndexJob[],
   };
+}
 }

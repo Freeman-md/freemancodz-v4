@@ -126,3 +126,5 @@ export type IndexSourceResult = {
   unchanged: number;
   deleted: number;
 };
+
+export type IndexWorkerBatchResult = { claimed: number; completed: number; retried: number; failed: number };

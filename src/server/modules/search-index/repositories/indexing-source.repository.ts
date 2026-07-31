@@ -1,18 +1,21 @@
 import "server-only";
 
-import { prisma } from "@/server/infrastructure/database/prisma";
+import type { PrismaClient } from "@/generated/prisma/client";
+import type { IIndexingSourceRepository } from "../interfaces/indexing-source.repository.interface";
 import type {
   IndexableSource,
   IndexableSourceType,
 } from "@/server/modules/search-index/models/search-index";
 
-export async function findIndexableSource(
+export class IndexingSourceRepository implements IIndexingSourceRepository {
+  constructor(private readonly database: PrismaClient) {}
+async findById(
   sourceType: IndexableSourceType,
   sourceId: string,
 ): Promise<IndexableSource | null> {
   switch (sourceType) {
     case "content_blocks": {
-      const record = await prisma.contentBlock.findUnique({
+      const record = await this.database.contentBlock.findUnique({
         where: { id: sourceId },
       });
 
@@ -25,7 +28,7 @@ export async function findIndexableSource(
     }
 
     case "projects": {
-      const record = await prisma.project.findUnique({
+      const record = await this.database.project.findUnique({
         where: { id: sourceId },
       });
 
@@ -38,7 +41,7 @@ export async function findIndexableSource(
     }
 
     case "services": {
-      const record = await prisma.service.findUnique({
+      const record = await this.database.service.findUnique({
         where: { id: sourceId },
       });
 
@@ -51,7 +54,7 @@ export async function findIndexableSource(
     }
 
     case "principles": {
-      const record = await prisma.principle.findUnique({
+      const record = await this.database.principle.findUnique({
         where: { id: sourceId },
       });
 
@@ -64,7 +67,7 @@ export async function findIndexableSource(
     }
 
     case "experiences": {
-      const record = await prisma.experience.findUnique({
+      const record = await this.database.experience.findUnique({
         where: { id: sourceId },
       });
 
@@ -78,7 +81,7 @@ export async function findIndexableSource(
   }
 }
 
-export async function findAllIndexableSources(): Promise<IndexableSource[]> {
+async findAll(): Promise<IndexableSource[]> {
   const [
     contentBlocks,
     projects,
@@ -86,19 +89,19 @@ export async function findAllIndexableSources(): Promise<IndexableSource[]> {
     principles,
     experiences,
   ] = await Promise.all([
-    prisma.contentBlock.findMany({
+    this.database.contentBlock.findMany({
       orderBy: { position: "asc" },
     }),
-    prisma.project.findMany({
+    this.database.project.findMany({
       orderBy: { position: "asc" },
     }),
-    prisma.service.findMany({
+    this.database.service.findMany({
       orderBy: { position: "asc" },
     }),
-    prisma.principle.findMany({
+    this.database.principle.findMany({
       orderBy: { position: "asc" },
     }),
-    prisma.experience.findMany({
+    this.database.experience.findMany({
       orderBy: { position: "asc" },
     }),
   ]);
@@ -135,4 +138,5 @@ export async function findAllIndexableSources(): Promise<IndexableSource[]> {
       }),
     ),
   ];
+}
 }
