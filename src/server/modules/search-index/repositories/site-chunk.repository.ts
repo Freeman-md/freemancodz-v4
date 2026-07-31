@@ -16,39 +16,39 @@ function toVectorLiteral(embedding: number[]): string {
 }
 
 export class SiteChunkRepository implements ISiteChunkRepository {
-  constructor(private readonly database: PrismaClient) {}
-findBySource(
-  sourceType: IndexableSourceType,
-  sourceId: string,
-): Promise<ExistingSiteChunk[]> {
-  return this.database.siteChunk.findMany({
-    where: {
-      sourceType,
-      sourceId,
-    },
-    select: {
-      id: true,
-      sourceType: true,
-      sourceId: true,
-      chunkIndex: true,
-      contentHash: true,
-      embeddingModel: true,
-    },
-    orderBy: {
-      chunkIndex: "asc",
-    },
-  });
-}
+  constructor(private readonly database: PrismaClient) { }
+  findBySource(
+    sourceType: IndexableSourceType,
+    sourceId: string,
+  ): Promise<ExistingSiteChunk[]> {
+    return this.database.siteChunk.findMany({
+      where: {
+        sourceType,
+        sourceId,
+      },
+      select: {
+        id: true,
+        sourceType: true,
+        sourceId: true,
+        chunkIndex: true,
+        contentHash: true,
+        embeddingModel: true,
+      },
+      orderBy: {
+        chunkIndex: "asc",
+      },
+    });
+  }
 
-async replaceSource({
-  sourceType,
-  sourceId,
-  upserts,
-  obsoleteIds,
-}: ReplaceIndexedSourceInput): Promise<void> {
-  await this.database.$transaction(async (transaction) => {
-    for (const chunk of upserts) {
-      await transaction.$executeRaw`
+  async replaceSource({
+    sourceType,
+    sourceId,
+    upserts,
+    obsoleteIds,
+  }: ReplaceIndexedSourceInput): Promise<void> {
+    await this.database.$transaction(async (transaction) => {
+      for (const chunk of upserts) {
+        await transaction.$executeRaw`
         INSERT INTO site_chunks (
           id,
           source_type,
@@ -93,39 +93,39 @@ async replaceSource({
           embedded_at = EXCLUDED.embedded_at,
           updated_at = NOW()
       `;
-    }
+      }
 
-    if (obsoleteIds.length > 0) {
-      await transaction.siteChunk.deleteMany({
-        where: {
-          sourceType,
-          sourceId,
-          id: {
-            in: obsoleteIds,
+      if (obsoleteIds.length > 0) {
+        await transaction.siteChunk.deleteMany({
+          where: {
+            sourceType,
+            sourceId,
+            id: {
+              in: obsoleteIds,
+            },
           },
-        },
-      });
-    }
-  });
-}
+        });
+      }
+    });
+  }
 
-async deleteSource(
-  sourceType: IndexableSourceType,
-  sourceId: string,
-): Promise<number> {
-  const result = await this.database.siteChunk.deleteMany({
-    where: {
-      sourceType,
-      sourceId,
-    },
-  });
+  async deleteSource(
+    sourceType: IndexableSourceType,
+    sourceId: string,
+  ): Promise<number> {
+    const result = await this.database.siteChunk.deleteMany({
+      where: {
+        sourceType,
+        sourceId,
+      },
+    });
 
-  return result.count;
-}
+    return result.count;
+  }
 
-async match(queryEmbedding: number[], matchCount = 6, matchThreshold = 0.25) {
-  if (queryEmbedding.length !== 1536) throw new Error(`matchSiteChunks expected a 1536-length embedding, received ${queryEmbedding.length}.`);
-  const vector = `[${queryEmbedding.join(",")}]`;
-  return this.database.$queryRaw<import("../models/search-index").MatchSiteChunksRow[]>`SELECT * FROM match_site_chunks(${vector}::vector, ${matchCount}, ${matchThreshold});`;
-}
+  async match(queryEmbedding: number[], matchCount = 6, matchThreshold = 0.25) {
+    if (queryEmbedding.length !== 1536) throw new Error(`matchSiteChunks expected a 1536-length embedding, received ${queryEmbedding.length}.`);
+    const vector = `[${queryEmbedding.join(",")}]`;
+    return this.database.$queryRaw<import("../models/search-index").MatchSiteChunksRow[]>`SELECT * FROM match_site_chunks(${vector}::vector, ${matchCount}, ${matchThreshold});`;
+  }
 }

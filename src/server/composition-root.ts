@@ -1,5 +1,6 @@
 import "server-only";
-import { getEmbeddingModel, getResponseModel, createOpenAIClient } from "./infrastructure/openai/openai-client";
+import { get } from "@vercel/blob";
+import { getEmbeddingModel, getResponseModel, createOpenAIClient } from "./infrastructure/openai/openai.client";
 import { OpenAIProvider } from "./infrastructure/openai/openai.provider";
 import { prisma } from "./infrastructure/database/prisma";
 import { AssistantService } from "./modules/assistant/services/assistant.service";
@@ -29,5 +30,5 @@ const sources = new IndexingSourceRepository(prisma); const chunks = new SiteChu
 export const searchIndexService: ISearchIndexService = new SearchIndexService(sources, chunks, jobs, openai);
 export const searchIndexWorkerService: ISearchIndexWorkerService = new SearchIndexWorkerService(jobs, searchIndexService, console);
 export const assistantService: IAssistantService = new AssistantService(openai, searchIndexService);
-export const portfolioService: IPortfolioService = new PortfolioService(contentBlocks, experiences, principles, projects, portfolioServices, new VercelBlobProvider());
+export const portfolioService: IPortfolioService = new PortfolioService(contentBlocks, experiences, principles, projects, portfolioServices, new VercelBlobProvider({ get }));
 export const portfolioSeedService: IPortfolioSeedService = new PortfolioSeedService(seedRepository);
