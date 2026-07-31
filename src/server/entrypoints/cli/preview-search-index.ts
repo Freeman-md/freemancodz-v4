@@ -1,8 +1,8 @@
-import { z } from "zod";
+import { SearchIndexSourceInputSchema } from "@/contracts/search-index-source.contract";
 import { searchIndexService } from "@/server/composition-root";
 
 async function main() {
-  const input = z.object({ sourceType: z.enum(["content_blocks", "projects", "services", "principles", "experiences"]), sourceId: z.string().trim().min(1, "Source ID is required.") }).parse({ sourceType: process.argv[2], sourceId: process.argv[3] });
+  const input = SearchIndexSourceInputSchema.parse({ sourceType: process.argv[2], sourceId: process.argv[3] });
 
   const preview = await searchIndexService.preview(input);
 
