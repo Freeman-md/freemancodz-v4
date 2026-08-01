@@ -14,9 +14,15 @@ export const assistantRequestSchema = z.object({
 });
 
 function normalizePreviousResponseId(value: string | null | undefined) {
-  if (!value) return null;
+  if (!value) {
+    return null;
+  }
+
   const responseId = value.trim();
-  return responseId.length > 0 && responseId.length <= 200 && responseId.startsWith("resp_") ? responseId : null;
+
+  return responseId.length > 0 && responseId.length <= 200 && responseId.startsWith("resp_")
+    ? responseId
+    : null;
 }
 
 export const assistantStreamEventSchema = z.discriminatedUnion("type", [

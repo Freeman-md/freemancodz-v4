@@ -1,20 +1,12 @@
 import { externalLinks } from "@/shared/config/links";
 
-export function CTASection({
-  title,
-  copy,
-}: {
-  title?: string;
-  copy: string;
-}) {
+export function CTASection({ title, copy }: { title?: string; copy: string }) {
   return (
     <section className="rounded-lg bg-black px-8 py-10 text-white md:px-12 md:py-12">
       <div className="flex flex-col gap-8">
         <div className="max-w-3xl">
           {title ? (
-            <p className="mb-3 font-mono text-[12px] tracking-[0.02em] text-white/65">
-              {title}
-            </p>
+            <p className="mb-3 font-mono text-[12px] tracking-[0.02em] text-white/65">{title}</p>
           ) : null}
           <h2 className="text-3xl font-semibold tracking-[-0.04em] text-white md:text-5xl">
             {copy}

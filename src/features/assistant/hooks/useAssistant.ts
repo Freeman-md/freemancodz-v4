@@ -1,39 +1,41 @@
 "use client";
 
-import {
-  useEffect,
-  useEffectEvent,
-  useMemo,
-  useRef,
-  useState,
-  type KeyboardEvent,
-} from "react";
+import { useEffect, useEffectEvent, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { useReducedMotion, type Transition } from "framer-motion";
 import { streamChatResponse } from "../api/stream-assistant-response";
-import { appendAssistantDelta, attachAssistantSources, replaceAssistantWithError, stageWhenOpening } from "../state/assistant-conversation";
-import { MAX_MESSAGE_LENGTH } from "../constants";
 import {
-  OPEN_PORTFOLIO_CHAT_EVENT,
-  type OpenPortfolioChatDetail,
-} from "../assistant.events";
+  appendAssistantDelta,
+  attachAssistantSources,
+  replaceAssistantWithError,
+  stageWhenOpening,
+} from "../state/assistant-conversation";
+import { MAX_MESSAGE_LENGTH } from "../constants";
+import { OPEN_PORTFOLIO_CHAT_EVENT, type OpenPortfolioChatDetail } from "../assistant.events";
 import type { ChatMessage, ChatStage } from "../models/chat-message";
 
 export function useAssistant() {
   const [stage, setStage] = useState<ChatStage>("launcher");
+
   const [input, setInput] = useState("");
+
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+
   const [isLoading, setIsLoading] = useState(false);
+
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [previousResponseId, setPreviousResponseId] = useState<string | null>(
-    null,
-  );
+
+  const [previousResponseId, setPreviousResponseId] = useState<string | null>(null);
 
   const shouldReduceMotion = useReducedMotion();
+
   const shellRef = useRef<HTMLDivElement | null>(null);
+
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
   const isOpen = stage !== "launcher";
+
   const isConversation = stage === "conversation";
 
   async function submitMessage(rawMessage: string) {
@@ -43,7 +45,12 @@ export function useAssistant() {
       return;
     }
 
-    const assistantMessage: ChatMessage = { id: `assistant-${Date.now()}`, role: "assistant", content: "", sources: [] };
+    const assistantMessage: ChatMessage = {
+      id: `assistant-${Date.now()}`,
+      role: "assistant",
+      content: "",
+      sources: [],
+    };
 
     setStage("conversation");
     setMessages((current) => [
@@ -69,13 +76,19 @@ export function useAssistant() {
       });
     } catch (error) {
       const messageText =
-        error instanceof Error
-          ? error.message
-          : "Something went wrong while fetching a response.";
-      const errorResponse: ChatMessage = { id: `assistant-error-${Date.now()}`, role: "assistant", content: messageText, error: true };
+        error instanceof Error ? error.message : "Something went wrong while fetching a response.";
+
+      const errorResponse: ChatMessage = {
+        id: `assistant-error-${Date.now()}`,
+        role: "assistant",
+        content: messageText,
+        error: true,
+      };
 
       setErrorMessage(messageText);
-      setMessages((current) => replaceAssistantWithError(current, assistantMessage.id, errorResponse));
+      setMessages((current) =>
+        replaceAssistantWithError(current, assistantMessage.id, errorResponse),
+      );
     } finally {
       setIsLoading(false);
     }
@@ -122,24 +135,21 @@ export function useAssistant() {
     };
   }, [stage, isLoading]);
 
-  const handleTriggerOpen = useEffectEvent(
-    async (detail?: OpenPortfolioChatDetail) => {
-      setErrorMessage(null);
+  const handleTriggerOpen = useEffectEvent(async (detail?: OpenPortfolioChatDetail) => {
+    setErrorMessage(null);
 
-      if (detail?.message) {
-        await submitMessage(detail.message);
-        return;
-      }
+    if (detail?.message) {
+      await submitMessage(detail.message);
 
-      setStage(stageWhenOpening(messages));
-    },
-  );
+      return;
+    }
+
+    setStage(stageWhenOpening(messages));
+  });
 
   useEffect(() => {
     function handleOpenEvent(event: Event) {
-      void handleTriggerOpen(
-        (event as CustomEvent<OpenPortfolioChatDetail>).detail,
-      );
+      void handleTriggerOpen((event as CustomEvent<OpenPortfolioChatDetail>).detail);
     }
 
     window.addEventListener(OPEN_PORTFOLIO_CHAT_EVENT, handleOpenEvent);
@@ -151,6 +161,7 @@ export function useAssistant() {
 
   const canSubmit = useMemo(() => {
     const trimmed = input.trim();
+
     return trimmed.length > 0 && trimmed.length <= MAX_MESSAGE_LENGTH && !isLoading;
   }, [input, isLoading]);
 

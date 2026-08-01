@@ -19,14 +19,13 @@ export function Navbar() {
         <div className="hidden items-center gap-8 md:flex">
           {navigation.map((item) => {
             const active = pathname === item.href;
+
             return (
               <Link
                 key={item.href}
                 href={item.href}
                 className={`border-b-2 pb-1 font-mono text-[12px] tracking-[0.02em] transition ${
-                  active
-                    ? "border-ink text-ink"
-                    : "border-transparent text-muted hover:text-ink"
+                  active ? "border-ink text-ink" : "border-transparent text-muted hover:text-ink"
                 }`}
               >
                 {item.label}
@@ -47,6 +46,7 @@ export function Navbar() {
       <div className="flex justify-center gap-8 border-t border-line px-5 py-3 md:hidden">
         {navigation.map((item) => {
           const active = pathname === item.href;
+
           return (
             <Link
               key={item.href}

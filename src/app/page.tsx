@@ -22,6 +22,7 @@ export default async function Home() {
     featuredProjects,
     experiences,
   } = await portfolioService.getHomePageData();
+
   return (
     <>
       <Container className="grid grid-cols-1 items-center gap-8 py-16 md:py-[120px] lg:grid-cols-12">
@@ -32,14 +33,10 @@ export default async function Home() {
           <h1 className="max-w-5xl text-5xl font-semibold leading-[0.96] tracking-[-0.06em] text-ink md:text-7xl md:leading-[0.96]">
             {hero.headline}
           </h1>
-          <p className="mt-6 max-w-2xl text-lg leading-8 text-muted">
-            {hero.intro}
-          </p>
+          <p className="mt-6 max-w-2xl text-lg leading-8 text-muted">{hero.intro}</p>
           <div className="mt-10 flex flex-wrap gap-4">
             <Button href="/work">View My Work</Button>
-            <AssistantTriggerButton variant="ghost">
-              Talk to My Assistant
-            </AssistantTriggerButton>
+            <AssistantTriggerButton variant="ghost">Talk to My Assistant</AssistantTriggerButton>
           </div>
         </section>
         <section className="lg:col-span-5">
@@ -73,9 +70,7 @@ export default async function Home() {
                 {service.lead}
               </p>
 
-              <p className="mt-4 max-w-xl text-sm leading-6 text-muted">
-                {service.description}
-              </p>
+              <p className="mt-4 max-w-xl text-sm leading-6 text-muted">{service.description}</p>
               <div className="mt-8">
                 {service.assistantPrompt ? (
                   <AssistantTriggerButton

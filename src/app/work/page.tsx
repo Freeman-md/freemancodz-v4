@@ -28,6 +28,7 @@ export const metadata: Metadata = {
 
 export default async function WorkPage() {
   const { featuredProjects, otherProjects } = await portfolioService.getWorkPageData();
+
   return (
     <>
       <Container className="pb-20 pt-44 md:pb-[120px] md:pt-[120px]">
@@ -39,17 +40,14 @@ export default async function WorkPage() {
             Projects that show how I think and build.
           </h1>
           <p className="mt-6 text-lg leading-8 text-muted">
-            A small set of commercial and personal projects across product engineering, AI automation, and reliable systems.
+            A small set of commercial and personal projects across product engineering, AI
+            automation, and reliable systems.
           </p>
         </section>
 
         <section className="mt-16 space-y-16 md:mt-[120px] md:space-y-32">
           {featuredProjects.map((project, index) => (
-            <ProjectFeature
-              key={project.title}
-              project={project}
-              reverse={index % 2 === 1}
-            />
+            <ProjectFeature key={project.title} project={project} reverse={index % 2 === 1} />
           ))}
         </section>
 

@@ -4,6 +4,7 @@ import type { StreamChatResponseHandlers } from "../models/chat-message";
 async function getErrorMessage(response: Response) {
   try {
     const body: unknown = await response.json();
+
     if (typeof body === "object" && body && "error" in body && typeof body.error === "string") {
       return body.error;
     }
@@ -36,6 +37,7 @@ export async function streamChatResponse(
   }
 
   const reader = response.body.pipeThrough(new TextDecoderStream()).getReader();
+
   let buffer = "";
 
   function handleLine(line: string) {
@@ -44,29 +46,36 @@ export async function streamChatResponse(
     }
 
     let parsed: unknown;
+
     try {
       parsed = JSON.parse(line);
     } catch {
       throw new Error("The assistant returned an invalid response.");
     }
+
     const result = assistantStreamEventSchema.safeParse(parsed);
+
     if (!result.success) {
       throw new Error("The assistant returned an invalid response.");
     }
+
     const event = result.data;
 
     if (event.type === "sources") {
       handlers.onSources(event.sources);
+
       return false;
     }
 
     if (event.type === "delta") {
       handlers.onDelta(event.delta);
+
       return false;
     }
 
     if (event.type === "response_id") {
       handlers.onResponseId(event.responseId);
+
       return false;
     }
 
@@ -87,6 +96,7 @@ export async function streamChatResponse(
 
       buffer += value;
       const lines = buffer.split("\n");
+
       buffer = lines.pop() ?? "";
 
       for (const line of lines) {

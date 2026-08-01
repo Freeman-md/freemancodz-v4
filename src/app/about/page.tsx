@@ -27,7 +27,9 @@ export const metadata: Metadata = {
 };
 
 export default async function AboutPage() {
-  const { header, education, intro, workProcess, outsideEngineering, principles } = await portfolioService.getAboutPageData();
+  const { header, education, intro, workProcess, outsideEngineering, principles } =
+    await portfolioService.getAboutPageData();
+
   return (
     <>
       <Container className="space-y-20 py-20 md:space-y-[120px] md:py-[120px]">
@@ -55,9 +57,7 @@ export default async function AboutPage() {
                 <h3 className="text-2xl font-medium tracking-[-0.03em] text-ink">
                   {principle.title}
                 </h3>
-                <p className="mt-3 text-sm leading-6 text-muted">
-                  {principle.body}
-                </p>
+                <p className="mt-3 text-sm leading-6 text-muted">{principle.body}</p>
               </article>
             ))}
           </div>
@@ -99,12 +99,8 @@ export default async function AboutPage() {
             <h3 className="text-[38px] font-semibold leading-[1.05] tracking-[-0.04em] text-ink md:text-[64px] md:leading-[1.1]">
               Self-healing backend operations agents.
             </h3>
-            <p className="mt-6 max-w-3xl text-lg leading-8 text-muted">
-              {education.research}
-            </p>
-            <p className="mt-4 max-w-3xl text-lg leading-8 text-muted">
-              {education.support}
-            </p>
+            <p className="mt-6 max-w-3xl text-lg leading-8 text-muted">{education.research}</p>
+            <p className="mt-4 max-w-3xl text-lg leading-8 text-muted">{education.support}</p>
           </div>
         </section>
 
@@ -117,15 +113,17 @@ export default async function AboutPage() {
               <article key={item.title}>
                 <ImagePlaceholder
                   label={item.title}
-                  src={siteAssetLinks.outsideImages[item.title as keyof typeof siteAssetLinks.outsideImages]}
+                  src={
+                    siteAssetLinks.outsideImages[
+                      item.title as keyof typeof siteAssetLinks.outsideImages
+                    ]
+                  }
                   className="h-64"
                 />
                 <h3 className="mt-4 text-2xl font-medium tracking-[-0.03em] text-ink">
                   {item.title}
                 </h3>
-                <p className="mt-2 text-sm leading-6 text-muted">
-                  {item.description}
-                </p>
+                <p className="mt-2 text-sm leading-6 text-muted">{item.description}</p>
               </article>
             ))}
           </div>

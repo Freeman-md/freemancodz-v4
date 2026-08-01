@@ -1,6 +1,14 @@
 import { Chip } from "@/shared/components/ui/Chip";
 
-type ProjectFeatureProps = { title: string; category: string; stack: string[]; role: string; detail: string; outcome: string; links: { label: string; href: string }[] };
+type ProjectFeatureProps = {
+  title: string;
+  category: string;
+  stack: string[];
+  role: string;
+  detail: string;
+  outcome: string;
+  links: { label: string; href: string }[];
+};
 
 export function ProjectFeature({
   project,

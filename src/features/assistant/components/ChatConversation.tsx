@@ -45,7 +45,8 @@ export function ChatConversation({
                 className="rounded-2xl border border-dashed border-black/10 bg-black/[0.02] px-4 py-4"
               >
                 <p className="text-sm leading-6 text-muted">
-                  Ask about selected work, systems thinking, AI projects, or what Freeman is focused on now.
+                  Ask about selected work, systems thinking, AI projects, or what Freeman is focused
+                  on now.
                 </p>
               </motion.div>
             ) : null}
@@ -78,11 +79,11 @@ export function ChatConversation({
                   )}
                 >
                   <div className="whitespace-pre-wrap text-sm leading-6">
-                    {message.content
-                      ? <AssistantMarkdown content={message.content} />
-                      : message.role === "assistant" && isLoading && !message.error
-                        ? "Thinking…"
-                        : null}
+                    {message.content ? (
+                      <AssistantMarkdown content={message.content} />
+                    ) : message.role === "assistant" && isLoading && !message.error ? (
+                      "Thinking…"
+                    ) : null}
                   </div>
 
                   {message.sources?.length ? (
