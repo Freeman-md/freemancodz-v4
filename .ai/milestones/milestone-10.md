@@ -1,6 +1,6 @@
 # Milestone 10: Search Index Foundation
 
-**Status:** Draft  
+**Status:** Active  
 **Version:** 1.0.0  
 **Last Updated:** 2026-08-01  
 **Depends On:** Milestone 9  
