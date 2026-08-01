@@ -51,3 +51,7 @@ npm run typecheck
 npm test
 npm run build
 ```
+
+## Testing
+
+Automate critical flows, agreed failures, and regressions that have occurred; use manual checks when they are clearer, and do not pursue a coverage percentage target. `npm run test:unit` runs focused deterministic units, `npm run test:integration` runs deterministic assistant flows using fakes, and `npm test` runs both. `npm run eval:assistant` is an explicit live OpenAI evaluation with the stable fixture and rubric in `tests/evals/assistant`; it is intentionally excluded from normal tests and CI.
