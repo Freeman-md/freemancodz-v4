@@ -16,7 +16,7 @@ import { CHAT_SYSTEM_PROMPT } from "../prompts/portfolio-assistant.prompt";
 import type { IOpenAIProvider } from "@/server/infrastructure/openai/interfaces/openai.provider.interface";
 import type { ISearchIndexService } from "@/server/modules/search-index/public";
 import type { ILogger } from "@/server/infrastructure/logging/logger.interface";
-import type { AssistantStreamEvent } from "@/contracts/assistant.contract";
+import type{ AssistantStreamEvent } from "@/contracts/assistant.contract";
 type WindowCounter = { count: number; resetAt: number };
 
 export class AssistantService implements IAssistantService {
