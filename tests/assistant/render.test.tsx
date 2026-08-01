@@ -218,6 +218,121 @@ test("assistant opens from its global event and reveals a complete stream progre
   }
 });
 
+test("composer submission opens the conversation before an unresolved stream responds", async () => {
+  const dom = new JSDOM("<!doctype html><html><body><div id=root></div></body></html>", {
+    url: "https://example.test",
+  });
+
+  const { window } = dom;
+
+  const originalFetch = globalThis.fetch;
+
+  let controller: ReadableStreamDefaultController<Uint8Array> | undefined;
+
+  Object.assign(globalThis, {
+    window,
+    document: window.document,
+    Node: window.Node,
+    HTMLElement: window.HTMLElement,
+    self: window,
+  });
+  Object.defineProperty(globalThis, "navigator", { configurable: true, value: window.navigator });
+  (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+  Object.defineProperty(window, "matchMedia", {
+    value: () => ({
+      matches: false,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+    }),
+  });
+  Object.defineProperty(window.HTMLElement.prototype, "scrollIntoView", { value: () => undefined });
+  Object.defineProperty(window.HTMLElement.prototype, "attachEvent", {
+    value: function attachEvent(this: HTMLElement, name: string, listener: EventListener) {
+      if (name === "onpropertychange") {
+        this.addEventListener("propertychange", listener);
+      }
+    },
+  });
+  Object.defineProperty(window.HTMLElement.prototype, "detachEvent", {
+    value: function detachEvent(this: HTMLElement, name: string, listener: EventListener) {
+      if (name === "onpropertychange") {
+        this.removeEventListener("propertychange", listener);
+      }
+    },
+  });
+  globalThis.fetch = async () =>
+    new Response(
+      new ReadableStream({
+        start(streamController) {
+          controller = streamController;
+        },
+      }),
+    );
+  const container = window.document.querySelector("#root");
+
+  assert.ok(container);
+  const root = createRoot(container);
+
+  try {
+    await act(async () => {
+      root.render(<FloatingPortfolioChat />);
+    });
+    const launcher = window.document.querySelector<HTMLButtonElement>(
+      '[aria-label="Open portfolio chat"]',
+    );
+
+    assert.ok(launcher);
+    await act(async () => {
+      launcher.click();
+    });
+    const textarea = window.document.querySelector<HTMLTextAreaElement>("#portfolio-chat-input");
+
+    assert.ok(textarea);
+    const valueSetter = Object.getOwnPropertyDescriptor(
+      window.HTMLTextAreaElement.prototype,
+      "value",
+    )?.set;
+
+    assert.ok(valueSetter);
+    await act(async () => {
+      textarea.focus();
+      valueSetter.call(textarea, "Composer question");
+      textarea.dispatchEvent(new window.Event("input", { bubbles: true }));
+      textarea.dispatchEvent(new window.Event("change", { bubbles: true }));
+      const propertyChange = new window.Event("propertychange", { bubbles: true });
+
+      Object.defineProperty(propertyChange, "propertyName", { value: "value" });
+      textarea.dispatchEvent(propertyChange);
+    });
+    assert.equal(
+      window.document.querySelector<HTMLButtonElement>('button[type="submit"]')?.disabled,
+      false,
+    );
+    const form = textarea.closest("form");
+
+    assert.ok(form);
+    await act(async () => {
+      form.dispatchEvent(new window.Event("submit", { bubbles: true, cancelable: true }));
+      await Promise.resolve();
+    });
+
+    assert.ok(controller);
+    assert.match(window.document.body.textContent ?? "", /Portfolio Chat/);
+    const messages = window.document.querySelectorAll("article");
+
+    assert.equal(messages.length, 2);
+    assert.equal(messages[0]?.textContent, "Composer question");
+    assert.equal(messages[1]?.textContent, "Thinking…");
+  } finally {
+    controller?.close();
+    globalThis.fetch = originalFetch;
+    await act(async () => {
+      root.unmount();
+    });
+    dom.window.close();
+  }
+});
+
 test("assistant bypasses pacing when reduced motion is preferred", async () => {
   const dom = new JSDOM("<!doctype html><html><body><div id=root></div></body></html>", {
     url: "https://example.test",
@@ -331,6 +446,188 @@ test("global opening clears a safe assistant error without removing the error re
     await act(async () => {
       root.unmount();
     });
+    dom.window.close();
+  }
+});
+
+test("queued paced content cannot replace a terminal stream failure", async () => {
+  const dom = new JSDOM("<!doctype html><html><body><div id=root></div></body></html>", {
+    url: "https://example.test",
+  });
+
+  const { window } = dom;
+
+  const originalFetch = globalThis.fetch;
+
+  const originalSetTimeout = globalThis.setTimeout;
+
+  const originalClearTimeout = globalThis.clearTimeout;
+
+  const scheduledCallbacks: Array<() => void> = [];
+
+  Object.assign(globalThis, {
+    window,
+    document: window.document,
+    Node: window.Node,
+    HTMLElement: window.HTMLElement,
+    self: window,
+  });
+  Object.defineProperty(globalThis, "navigator", { configurable: true, value: window.navigator });
+  (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+  Object.defineProperty(window, "matchMedia", {
+    value: () => ({
+      matches: false,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+    }),
+  });
+  Object.defineProperty(window.HTMLElement.prototype, "scrollIntoView", { value: () => undefined });
+  Object.defineProperty(window.HTMLElement.prototype, "attachEvent", { value: () => undefined });
+  Object.defineProperty(window.HTMLElement.prototype, "detachEvent", { value: () => undefined });
+  globalThis.fetch = async () =>
+    streamResponse([
+      `${JSON.stringify({ type: "delta", delta: "stale buffered text ".repeat(20) })}\n`,
+      '{"type":"error","error":"The assistant could not respond."}\n',
+    ]);
+  const container = window.document.querySelector("#root");
+
+  assert.ok(container);
+  const root = createRoot(container);
+
+  try {
+    await act(async () => {
+      root.render(<FloatingPortfolioChat />);
+    });
+    globalThis.setTimeout = ((callback: TimerHandler, _delay?: number, ...args: unknown[]) => {
+      if (typeof callback === "function") {
+        scheduledCallbacks.push(() => callback(...args));
+      }
+
+      return scheduledCallbacks.length as never;
+    }) as unknown as typeof setTimeout;
+    globalThis.clearTimeout = (() => undefined) as typeof clearTimeout;
+    await act(async () => {
+      window.dispatchEvent(
+        new window.CustomEvent(OPEN_PORTFOLIO_CHAT_EVENT, { detail: { message: "Hello" } }),
+      );
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    assert.ok(scheduledCallbacks.length > 0);
+    assert.match(window.document.body.textContent ?? "", /The assistant could not respond\./);
+    assert.doesNotMatch(window.document.body.textContent ?? "", /stale buffered text/);
+    await act(async () => {
+      for (const callback of scheduledCallbacks) {
+        callback();
+      }
+    });
+    assert.match(window.document.body.textContent ?? "", /The assistant could not respond\./);
+    assert.doesNotMatch(window.document.body.textContent ?? "", /stale buffered text/);
+  } finally {
+    globalThis.fetch = originalFetch;
+    globalThis.setTimeout = originalSetTimeout;
+    globalThis.clearTimeout = originalClearTimeout;
+    await act(async () => {
+      root.unmount();
+    });
+    dom.window.close();
+  }
+});
+
+test("queued paced content is discarded when the assistant unmounts before reveal", async () => {
+  const dom = new JSDOM("<!doctype html><html><body><div id=root></div></body></html>", {
+    url: "https://example.test",
+  });
+
+  const { window } = dom;
+
+  const originalFetch = globalThis.fetch;
+
+  const originalSetTimeout = globalThis.setTimeout;
+
+  const originalClearTimeout = globalThis.clearTimeout;
+
+  const scheduledCallbacks: Array<() => void> = [];
+
+  Object.assign(globalThis, {
+    window,
+    document: window.document,
+    Node: window.Node,
+    HTMLElement: window.HTMLElement,
+    self: window,
+  });
+  Object.defineProperty(globalThis, "navigator", { configurable: true, value: window.navigator });
+  (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+  Object.defineProperty(window, "matchMedia", {
+    value: () => ({
+      matches: false,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+    }),
+  });
+  Object.defineProperty(window.HTMLElement.prototype, "scrollIntoView", { value: () => undefined });
+  Object.defineProperty(window.HTMLElement.prototype, "attachEvent", { value: () => undefined });
+  Object.defineProperty(window.HTMLElement.prototype, "detachEvent", { value: () => undefined });
+  let controller: ReadableStreamDefaultController<Uint8Array> | undefined;
+
+  globalThis.fetch = async () =>
+    new Response(
+      new ReadableStream({
+        start(streamController) {
+          controller = streamController;
+        },
+      }),
+    );
+  const container = window.document.querySelector("#root");
+
+  assert.ok(container);
+  const root = createRoot(container);
+
+  try {
+    await act(async () => {
+      root.render(<FloatingPortfolioChat />);
+    });
+    globalThis.setTimeout = ((callback: TimerHandler, _delay?: number, ...args: unknown[]) => {
+      if (typeof callback === "function") {
+        scheduledCallbacks.push(() => callback(...args));
+      }
+
+      return scheduledCallbacks.length as never;
+    }) as unknown as typeof setTimeout;
+    globalThis.clearTimeout = (() => undefined) as typeof clearTimeout;
+    await act(async () => {
+      window.dispatchEvent(
+        new window.CustomEvent(OPEN_PORTFOLIO_CHAT_EVENT, { detail: { message: "Hello" } }),
+      );
+      await Promise.resolve();
+    });
+
+    assert.ok(controller);
+    controller.enqueue(
+      new TextEncoder().encode(
+        `${JSON.stringify({ type: "delta", delta: "stale buffered text ".repeat(20) })}\n`,
+      ),
+    );
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    assert.ok(scheduledCallbacks.length > 0);
+    await act(async () => {
+      root.unmount();
+    });
+    await act(async () => {
+      for (const callback of scheduledCallbacks) {
+        callback();
+      }
+    });
+    assert.equal(container.textContent, "");
+  } finally {
+    controller?.close();
+    globalThis.fetch = originalFetch;
+    globalThis.setTimeout = originalSetTimeout;
+    globalThis.clearTimeout = originalClearTimeout;
     dom.window.close();
   }
 });
