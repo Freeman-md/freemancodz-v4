@@ -7,12 +7,18 @@ import { stageWhenOpening } from "../state/assistant-conversation";
 import type { ChatMessage, ChatStage } from "../models/chat-message";
 
 interface UseFloatingPanelOptions {
+  clearError: () => void;
   isLoading: boolean;
   messages: ChatMessage[];
   submitMessage: (message: string) => Promise<void>;
 }
 
-export function useFloatingPanel({ isLoading, messages, submitMessage }: UseFloatingPanelOptions) {
+export function useFloatingPanel({
+  clearError,
+  isLoading,
+  messages,
+  submitMessage,
+}: UseFloatingPanelOptions) {
   const [stage, setStage] = useState<ChatStage>("launcher");
 
   const shouldReduceMotion = useReducedMotion();
@@ -35,9 +41,15 @@ export function useFloatingPanel({ isLoading, messages, submitMessage }: UseFloa
     setStage("launcher");
   }
 
+  function showConversation() {
+    setStage("conversation");
+  }
+
   const handleTriggerOpen = useEffectEvent(async (detail?: OpenPortfolioChatDetail) => {
+    clearError();
+
     if (detail?.message) {
-      setStage("conversation");
+      showConversation();
       await submitMessage(detail.message);
 
       return;
@@ -108,6 +120,7 @@ export function useFloatingPanel({ isLoading, messages, submitMessage }: UseFloa
     messagesEndRef,
     openChat,
     shellRef,
+    showConversation,
     shouldReduceMotion,
     stage,
     surfaceTransition,

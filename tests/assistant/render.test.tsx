@@ -55,6 +55,7 @@ test("floating assistant opens and closes through controls, Escape, and outside 
     document: window.document,
     Node: window.Node,
     HTMLElement: window.HTMLElement,
+    self: window,
   });
   Object.defineProperty(globalThis, "navigator", { configurable: true, value: window.navigator });
   (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -129,6 +130,7 @@ test("assistant opens from its global event and reveals a complete stream progre
     document: window.document,
     Node: window.Node,
     HTMLElement: window.HTMLElement,
+    self: window,
   });
   Object.defineProperty(globalThis, "navigator", { configurable: true, value: window.navigator });
   (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -138,13 +140,25 @@ test("assistant opens from its global event and reveals a complete stream progre
   Object.defineProperty(window.HTMLElement.prototype, "scrollIntoView", { value: () => undefined });
   Object.defineProperty(window.HTMLElement.prototype, "attachEvent", { value: () => undefined });
   Object.defineProperty(window.HTMLElement.prototype, "detachEvent", { value: () => undefined });
-  globalThis.fetch = async () =>
-    streamResponse([
-      '{"type":"delta","delta":"abcdefgh"}\n',
-      '{"type":"delta","delta":"ijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"}\n',
-      '{"type":"response_id","responseId":"resp_1"}\n',
-      '{"type":"done"}\n',
-    ]);
+  const firstResponse = "abcdefgh";
+
+  const requestBodies: unknown[] = [];
+
+  globalThis.fetch = async (_input, init) => {
+    requestBodies.push(JSON.parse(String(init?.body)));
+
+    if (requestBodies.length === 1) {
+      return streamResponse([
+        '{"type":"delta","delta":"abcdefgh"}\n',
+        '{"type":"sources","sources":[{"id":"work","title":"Work","url":"/work"}]}\n',
+        '{"type":"response_id","responseId":"resp_1"}\n',
+        '{"type":"done"}\n',
+      ]);
+    }
+
+    return streamResponse(['{"type":"delta","delta":"follow-up"}\n', '{"type":"done"}\n']);
+  };
+
   const container = window.document.querySelector("#root");
 
   assert.ok(container);
@@ -162,22 +176,24 @@ test("assistant opens from its global event and reveals a complete stream progre
         new window.CustomEvent(OPEN_PORTFOLIO_CHAT_EVENT, { detail: { message: "Hello" } }),
       );
     });
-    await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 24));
-    });
+    for (let tick = 0; tick < 10; tick += 1) {
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 24));
+      });
+    }
+
     assert.match(window.document.body.textContent ?? "", /abcdefgh/);
-    assert.doesNotMatch(
-      window.document.body.textContent ?? "",
-      /abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789/,
-    );
+    const messages = window.document.querySelectorAll("article");
+
+    assert.equal(messages[1]?.firstElementChild?.textContent, firstResponse);
+    assert.equal(window.document.querySelector("a[href='/work']")?.textContent, "Work");
 
     await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 160));
+      window.dispatchEvent(
+        new window.CustomEvent(OPEN_PORTFOLIO_CHAT_EVENT, { detail: { message: "Follow up" } }),
+      );
     });
-    assert.match(
-      window.document.body.textContent ?? "",
-      /abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789/,
-    );
+    assert.deepEqual(requestBodies[1], { message: "Follow up", previousResponseId: "resp_1" });
     assert.equal(
       window.document.querySelector<HTMLTextAreaElement>("#portfolio-chat-input")?.ownerDocument
         .activeElement?.id,
@@ -206,6 +222,7 @@ test("assistant bypasses pacing when reduced motion is preferred", async () => {
     document: window.document,
     Node: window.Node,
     HTMLElement: window.HTMLElement,
+    self: window,
   });
   Object.defineProperty(globalThis, "navigator", { configurable: true, value: window.navigator });
   (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -247,6 +264,142 @@ test("assistant bypasses pacing when reduced motion is preferred", async () => {
     await act(async () => {
       root.unmount();
     });
+    dom.window.close();
+  }
+});
+
+test("global opening clears a safe assistant error without removing the error response", async () => {
+  const dom = new JSDOM("<!doctype html><html><body><div id=root></div></body></html>", {
+    url: "https://example.test",
+  });
+
+  const { window } = dom;
+
+  const originalFetch = globalThis.fetch;
+
+  Object.assign(globalThis, {
+    window,
+    document: window.document,
+    Node: window.Node,
+    HTMLElement: window.HTMLElement,
+    self: window,
+  });
+  Object.defineProperty(globalThis, "navigator", { configurable: true, value: window.navigator });
+  (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+  Object.defineProperty(window, "matchMedia", {
+    value: () => ({ matches: true, addEventListener: () => undefined, removeEventListener: () => undefined }),
+  });
+  Object.defineProperty(window.HTMLElement.prototype, "scrollIntoView", { value: () => undefined });
+  Object.defineProperty(window.HTMLElement.prototype, "attachEvent", { value: () => undefined });
+  Object.defineProperty(window.HTMLElement.prototype, "detachEvent", { value: () => undefined });
+  globalThis.fetch = async () => new Response(JSON.stringify({ error: "Request rejected." }), { status: 429 });
+  const container = window.document.querySelector("#root");
+
+  assert.ok(container);
+  const root = createRoot(container);
+
+  try {
+    await act(async () => {
+      root.render(<FloatingPortfolioChat />);
+    });
+    await act(async () => {
+      window.dispatchEvent(
+        new window.CustomEvent(OPEN_PORTFOLIO_CHAT_EVENT, { detail: { message: "Hello" } }),
+      );
+    });
+    assert.match(window.document.body.textContent ?? "", /Request rejected/);
+
+    await act(async () => {
+      window.dispatchEvent(new window.CustomEvent(OPEN_PORTFOLIO_CHAT_EVENT));
+    });
+    assert.equal(
+      window.document.querySelector<HTMLTextAreaElement>("#portfolio-chat-input")?.placeholder,
+      "Ask me a question",
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+    await act(async () => {
+      root.unmount();
+    });
+    dom.window.close();
+  }
+});
+
+test("unmount cleanup ignores later stream deltas without scheduling reveal work", async () => {
+  const dom = new JSDOM("<!doctype html><html><body><div id=root></div></body></html>", {
+    url: "https://example.test",
+  });
+
+  const { window } = dom;
+
+  const originalFetch = globalThis.fetch;
+
+  const originalSetTimeout = globalThis.setTimeout;
+
+  let controller: ReadableStreamDefaultController<Uint8Array> | undefined;
+
+  let isUnmounted = false;
+
+  let postUnmountTimers = 0;
+
+  Object.assign(globalThis, {
+    window,
+    document: window.document,
+    Node: window.Node,
+    HTMLElement: window.HTMLElement,
+    self: window,
+  });
+  Object.defineProperty(globalThis, "navigator", { configurable: true, value: window.navigator });
+  (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+  Object.defineProperty(window, "matchMedia", {
+    value: () => ({ matches: false, addEventListener: () => undefined, removeEventListener: () => undefined }),
+  });
+  Object.defineProperty(window.HTMLElement.prototype, "scrollIntoView", { value: () => undefined });
+  Object.defineProperty(window.HTMLElement.prototype, "attachEvent", { value: () => undefined });
+  Object.defineProperty(window.HTMLElement.prototype, "detachEvent", { value: () => undefined });
+  globalThis.setTimeout = ((callback: TimerHandler, delay?: number, ...args: unknown[]) => {
+    if (isUnmounted) {
+      postUnmountTimers += 1;
+    }
+
+    return originalSetTimeout(callback, delay, ...args);
+  }) as typeof setTimeout;
+  globalThis.fetch = async () =>
+    new Response(
+      new ReadableStream({
+        start(streamController) {
+          controller = streamController;
+        },
+      }),
+    );
+  const container = window.document.querySelector("#root");
+
+  assert.ok(container);
+  const root = createRoot(container);
+
+  try {
+    await act(async () => {
+      root.render(<FloatingPortfolioChat />);
+    });
+    await act(async () => {
+      window.dispatchEvent(
+        new window.CustomEvent(OPEN_PORTFOLIO_CHAT_EVENT, { detail: { message: "Hello" } }),
+      );
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    assert.ok(controller);
+
+    await act(async () => {
+      root.unmount();
+    });
+    isUnmounted = true;
+    controller.enqueue(new TextEncoder().encode('{"type":"delta","delta":"late"}\n'));
+    controller.close();
+    await new Promise((resolve) => originalSetTimeout(resolve, 0));
+    assert.equal(postUnmountTimers, 0);
+  } finally {
+    globalThis.fetch = originalFetch;
+    globalThis.setTimeout = originalSetTimeout;
     dom.window.close();
   }
 });

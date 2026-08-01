@@ -14,15 +14,15 @@ import type { ChatMessage } from "../models/chat-message";
 const REVEAL_INTERVAL_MS = 16;
 
 function getRevealLength(backlogLength: number) {
-  if (backlogLength > 240) {
+  if (backlogLength > 160) {
+    return 96;
+  }
+
+  if (backlogLength > 48) {
     return 48;
   }
 
-  if (backlogLength > 80) {
-    return 24;
-  }
-
-  return 8;
+  return backlogLength;
 }
 
 export function useAssistant() {
@@ -51,6 +51,8 @@ export function useAssistant() {
 
   const isMountedRef = useRef(true);
 
+  const activeRequestIdRef = useRef(0);
+
   const clearRevealWork = useCallback(() => {
     bufferedTextRef.current = "";
 
@@ -63,14 +65,19 @@ export function useAssistant() {
     revealCompleteRef.current = null;
   }, []);
 
+  const cancelPendingRequest = useCallback(() => {
+    activeRequestIdRef.current += 1;
+    clearRevealWork();
+  }, [clearRevealWork]);
+
   useEffect(() => {
     isMountedRef.current = true;
 
     return () => {
       isMountedRef.current = false;
-      clearRevealWork();
+      cancelPendingRequest();
     };
-  }, [clearRevealWork]);
+  }, [cancelPendingRequest]);
 
   const canSubmit = useMemo(() => {
     const trimmed = input.trim();
@@ -92,6 +99,10 @@ export function useAssistant() {
         content: "",
         sources: [],
       };
+
+      const requestId = activeRequestIdRef.current + 1;
+
+      activeRequestIdRef.current = requestId;
 
       let scheduleReveal: (() => void) | undefined;
 
@@ -146,6 +157,10 @@ export function useAssistant() {
       try {
         await streamChatResponse(message, previousResponseId, {
           onDelta(delta) {
+            if (!isMountedRef.current || activeRequestIdRef.current !== requestId) {
+              return;
+            }
+
             if (reduceMotionImmediately) {
               setMessages((current) => appendAssistantDelta(current, assistantMessage.id, delta));
 
@@ -156,9 +171,17 @@ export function useAssistant() {
             scheduleReveal?.();
           },
           onResponseId(responseId) {
+            if (!isMountedRef.current || activeRequestIdRef.current !== requestId) {
+              return;
+            }
+
             setPreviousResponseId(responseId);
           },
           onSources(sources) {
+            if (!isMountedRef.current || activeRequestIdRef.current !== requestId) {
+              return;
+            }
+
             setMessages((current) => attachAssistantSources(current, assistantMessage.id, sources));
           },
         });
@@ -167,7 +190,7 @@ export function useAssistant() {
           await waitForRevealToFinish();
         }
       } catch (error) {
-        clearRevealWork();
+        cancelPendingRequest();
         const messageText =
           error instanceof Error ? error.message : "Something went wrong while fetching a response.";
 
@@ -190,8 +213,10 @@ export function useAssistant() {
         }
       }
     },
-    [clearRevealWork, isLoading, previousResponseId, reduceMotionImmediately],
+    [cancelPendingRequest, isLoading, previousResponseId, reduceMotionImmediately],
   );
+
+  const clearError = useCallback(() => setErrorMessage(null), []);
 
   function handleInputChange(value: string) {
     setInput(value);
@@ -213,6 +238,7 @@ export function useAssistant() {
 
   return {
     canSubmit,
+    clearError,
     errorMessage,
     handleInputChange,
     handleKeyDown,
