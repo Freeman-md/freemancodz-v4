@@ -122,13 +122,13 @@ Exact formatting may follow the repository, but the model names, responsibilitie
 - Preserve the static property names inside JSON payloads where a structured static object already exists. This keeps later schema validation directly aligned with the current TypeScript content types.
 - Seed the following deterministic blocks and keys:
 
-| Key | Page | Section | Position | JSON payload |
-| --- | --- | --- | ---: | --- |
-| `home.hero` | `HOME` | `HERO` | `0` | `{ name, headline, intro, heroNote }` |
-| `home.philosophy` | `HOME` | `PHILOSOPHY` | `0` | `{ philosophyQuestion }` |
-| `home.current-direction` | `HOME` | `CURRENT_DIRECTION` | `0` | `{ currentDirection, currentDirectionSupport }` |
-| `about.header` | `ABOUT` | `ABOUT_HEADER` | `0` | `{ aboutHeadline }` |
-| `about.education` | `ABOUT` | `EDUCATION` | `0` | `{ current, previous, research, support }` |
+| Key                      | Page    | Section             | Position | JSON payload                                    |
+| ------------------------ | ------- | ------------------- | -------: | ----------------------------------------------- |
+| `home.hero`              | `HOME`  | `HERO`              |      `0` | `{ name, headline, intro, heroNote }`           |
+| `home.philosophy`        | `HOME`  | `PHILOSOPHY`        |      `0` | `{ philosophyQuestion }`                        |
+| `home.current-direction` | `HOME`  | `CURRENT_DIRECTION` |      `0` | `{ currentDirection, currentDirectionSupport }` |
+| `about.header`           | `ABOUT` | `ABOUT_HEADER`      |      `0` | `{ aboutHeadline }`                             |
+| `about.education`        | `ABOUT` | `EDUCATION`         |      `0` | `{ current, previous, research, support }`      |
 
 - Seed each `profile.aboutIntro` string as an ordered block:
 

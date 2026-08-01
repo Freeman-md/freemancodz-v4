@@ -10,7 +10,7 @@ This is a Next.js App Router portfolio. Pages render validated portfolio records
 - `src/server/infrastructure` owns Prisma, environment, OpenAI, and logging configuration; `src/server/entrypoints` owns CLI, worker, and maintenance adapters.
 - `src/shared` contains domain-free layout, UI primitives, configuration, and utilities. `src/contracts` owns runtime-validated HTTP and stream shapes.
 - `prisma/seed-data` is seed input only; runtime content comes from the database.
-New UI belongs in its feature; backend use cases, persistence, and providers belong in the owning server module. Server Components call module `public.ts` directly, while browser code flows through feature API → Route Handler → module `public.ts`. Process entrypoints are thin adapters over the same public services. See `.agents/skills/nextjs-architecture/SKILL.md` for the authoritative standard.
+  New UI belongs in its feature; backend use cases, persistence, and providers belong in the owning server module. Server Components call module `public.ts` directly, while browser code flows through feature API → Route Handler → module `public.ts`. Process entrypoints are thin adapters over the same public services. See `.agents/skills/nextjs-architecture/SKILL.md` for the authoritative standard.
 
 ## Local development
 

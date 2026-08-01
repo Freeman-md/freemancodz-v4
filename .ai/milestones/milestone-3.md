@@ -74,20 +74,20 @@ Milestone 3 must use the current schema and must not reintroduce assumptions bas
 
 The implementation must read and validate the following singleton blocks by key:
 
-| Key | Page | Section |
-| --- | --- | --- |
-| `home.hero` | `HOME` | `HERO` |
-| `home.philosophy` | `HOME` | `PHILOSOPHY` |
-| `home.current-direction` | `HOME` | `CURRENT_DIRECTION` |
-| `about.header` | `ABOUT` | `ABOUT_HEADER` |
-| `about.education` | `ABOUT` | `EDUCATION` |
+| Key                      | Page    | Section             |
+| ------------------------ | ------- | ------------------- |
+| `home.hero`              | `HOME`  | `HERO`              |
+| `home.philosophy`        | `HOME`  | `PHILOSOPHY`        |
+| `home.current-direction` | `HOME`  | `CURRENT_DIRECTION` |
+| `about.header`           | `ABOUT` | `ABOUT_HEADER`      |
+| `about.education`        | `ABOUT` | `EDUCATION`         |
 
 The implementation must read the following repeatable sections by page and section, ordered by `position` ascending:
 
-| Page | Section |
-| --- | --- |
-| `ABOUT` | `ABOUT_INTRO` |
-| `ABOUT` | `WORK_PROCESS` |
+| Page    | Section               |
+| ------- | --------------------- |
+| `ABOUT` | `ABOUT_INTRO`         |
+| `ABOUT` | `WORK_PROCESS`        |
 | `ABOUT` | `OUTSIDE_ENGINEERING` |
 
 ## ContentBlock payload schemas
@@ -172,10 +172,7 @@ export async function findRequiredContentBlockByKey(key: string) {
 A repeatable-section query should preserve page and section boundaries and ordering:
 
 ```ts
-export async function findContentBlocksBySection(
-  page: ContentPage,
-  section: ContentSection,
-) {
+export async function findContentBlocksBySection(page: ContentPage, section: ContentSection) {
   return prisma.contentBlock.findMany({
     where: { page, section },
     orderBy: { position: "asc" },
@@ -357,9 +354,7 @@ export async function getAboutPageData() {
     education: mapEducationBlock(educationBlock),
     aboutIntro: introBlocks.map(mapTextBlock),
     workProcess: workProcessBlocks.map(mapTextBlock),
-    outsideEngineering: outsideEngineeringBlocks.map(
-      mapOutsideEngineeringBlock,
-    ),
+    outsideEngineering: outsideEngineeringBlocks.map(mapOutsideEngineeringBlock),
     principles: principles.map(mapPrinciple),
   };
 }
@@ -371,11 +366,7 @@ The corresponding page should remain presentation-focused:
 export default async function WorkPage() {
   const { featuredProjects, otherProjects } = await getWorkPageData();
 
-  return (
-    <>
-      {/* Existing page structure and components */}
-    </>
-  );
+  return <>{/* Existing page structure and components */}</>;
 }
 ```
 

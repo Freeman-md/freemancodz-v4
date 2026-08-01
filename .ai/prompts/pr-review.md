@@ -78,14 +78,22 @@ Return the review body followed by valid JSON:
   "medium_count": 0,
   "low_count": 0,
   "acceptance_matrix": [
-    {"criterion": "agent-verifiable criterion text", "status": "PASS|FAIL|NOT VERIFIED", "evidence": "short evidence"}
+    {
+      "criterion": "agent-verifiable criterion text",
+      "status": "PASS|FAIL|NOT VERIFIED",
+      "evidence": "short evidence"
+    }
   ],
   "findings": [],
   "manual_tasks": [
-    {"task": "human action", "status": "PENDING|COMPLETE", "notes": "required access or command"}
+    { "task": "human action", "status": "PENDING|COMPLETE", "notes": "required access or command" }
   ],
   "manual_acceptance_criteria": [
-    {"criterion": "human-verifiable outcome", "status": "PENDING|PASS|FAIL", "notes": "what the human must confirm"}
+    {
+      "criterion": "human-verifiable outcome",
+      "status": "PENDING|PASS|FAIL",
+      "notes": "what the human must confirm"
+    }
   ]
 }
 ```

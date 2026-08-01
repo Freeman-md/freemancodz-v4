@@ -64,9 +64,7 @@ Return a concise human summary followed by valid JSON:
   "branch": "branch-name",
   "head_sha": "commit-sha",
   "commits": ["commit-sha"],
-  "validation": [
-    {"command": "command", "status": "passed|failed|not_run"}
-  ],
+  "validation": [{ "command": "command", "status": "passed|failed|not_run" }],
   "manual_verification": ["item"],
   "blockers": [],
   "ready_for_review": true
