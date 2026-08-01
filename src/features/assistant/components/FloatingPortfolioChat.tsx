@@ -7,20 +7,25 @@ import { ChatComposer } from "./ChatComposer";
 import { ChatConversation } from "./ChatConversation";
 import { ChatLauncher } from "./ChatLauncher";
 import { useAssistant } from "../hooks/useAssistant";
+import { useFloatingPanel } from "../hooks/useFloatingPanel";
 
 export function FloatingPortfolioChat() {
   const {
     canSubmit,
-    closeChat,
     errorMessage,
     handleInputChange,
     handleKeyDown,
     handleSubmit,
     input,
-    isConversation,
     isLoading,
-    isOpen,
     messages,
+    submitMessage,
+  } = useAssistant();
+
+  const {
+    closeChat,
+    isConversation,
+    isOpen,
     messagesEndRef,
     openChat,
     shellRef,
@@ -28,7 +33,7 @@ export function FloatingPortfolioChat() {
     stage,
     surfaceTransition,
     textareaRef,
-  } = useAssistant();
+  } = useFloatingPanel({ isLoading, messages, submitMessage });
 
   return (
     <div className="pointer-events-none fixed inset-x-0 bottom-0 z-50 px-3 pb-[max(env(safe-area-inset-bottom),0.75rem)] sm:px-4 sm:pb-[max(env(safe-area-inset-bottom),1.25rem)]">
