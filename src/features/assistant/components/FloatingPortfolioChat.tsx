@@ -39,9 +39,7 @@ export function FloatingPortfolioChat() {
           animate={{
             maxWidth: isOpen ? 640 : 320,
             backgroundColor: isOpen ? "#ffffff" : "#000000",
-            borderColor: isOpen
-              ? "rgba(0,0,0,0.12)"
-              : "rgba(255,255,255,0.1)",
+            borderColor: isOpen ? "rgba(0,0,0,0.12)" : "rgba(255,255,255,0.1)",
             boxShadow: isOpen
               ? "0 28px 80px -38px rgba(0,0,0,0.36)"
               : "0 26px 80px -34px rgba(0,0,0,0.72)",
@@ -50,9 +48,7 @@ export function FloatingPortfolioChat() {
           style={{ transformOrigin: "50% 100%" }}
           className={cn(
             "pointer-events-auto flex w-full flex-col overflow-hidden rounded-[2rem] border",
-            isConversation
-              ? "h-[min(72vh,38rem)] sm:h-[min(52vh,38rem)]"
-              : "h-16",
+            isConversation ? "h-[min(72vh,38rem)] sm:h-[min(52vh,38rem)]" : "h-16",
           )}
         >
           {stage === "launcher" ? (

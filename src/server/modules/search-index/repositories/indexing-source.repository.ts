@@ -1,138 +1,127 @@
 import "server-only";
 
-import { prisma } from "@/server/infrastructure/database/prisma";
+import type { PrismaClient } from "@/generated/prisma/client";
+import type { IIndexingSourceRepository } from "../interfaces/indexing-source.repository.interface";
 import type {
   IndexableSource,
   IndexableSourceType,
 } from "@/server/modules/search-index/models/search-index";
 
-export async function findIndexableSource(
-  sourceType: IndexableSourceType,
-  sourceId: string,
-): Promise<IndexableSource | null> {
-  switch (sourceType) {
-    case "content_blocks": {
-      const record = await prisma.contentBlock.findUnique({
-        where: { id: sourceId },
-      });
+export class IndexingSourceRepository implements IIndexingSourceRepository {
+  constructor(private readonly database: PrismaClient) {}
 
-      return record
-        ? {
-            sourceType,
-            record,
-          }
-        : null;
-    }
+  async findById(
+    sourceType: IndexableSourceType,
+    sourceId: string,
+  ): Promise<IndexableSource | null> {
+    switch (sourceType) {
+      case "content_blocks": {
+        const record = await this.database.contentBlock.findUnique({
+          where: { id: sourceId },
+        });
 
-    case "projects": {
-      const record = await prisma.project.findUnique({
-        where: { id: sourceId },
-      });
+        return record
+          ? {
+              sourceType,
+              record,
+            }
+          : null;
+      }
 
-      return record
-        ? {
-            sourceType,
-            record,
-          }
-        : null;
-    }
+      case "projects": {
+        const record = await this.database.project.findUnique({
+          where: { id: sourceId },
+        });
 
-    case "services": {
-      const record = await prisma.service.findUnique({
-        where: { id: sourceId },
-      });
+        return record
+          ? {
+              sourceType,
+              record,
+            }
+          : null;
+      }
 
-      return record
-        ? {
-            sourceType,
-            record,
-          }
-        : null;
-    }
+      case "services": {
+        const record = await this.database.service.findUnique({
+          where: { id: sourceId },
+        });
 
-    case "principles": {
-      const record = await prisma.principle.findUnique({
-        where: { id: sourceId },
-      });
+        return record
+          ? {
+              sourceType,
+              record,
+            }
+          : null;
+      }
 
-      return record
-        ? {
-            sourceType,
-            record,
-          }
-        : null;
-    }
+      case "principles": {
+        const record = await this.database.principle.findUnique({
+          where: { id: sourceId },
+        });
 
-    case "experiences": {
-      const record = await prisma.experience.findUnique({
-        where: { id: sourceId },
-      });
+        return record
+          ? {
+              sourceType,
+              record,
+            }
+          : null;
+      }
 
-      return record
-        ? {
-            sourceType,
-            record,
-          }
-        : null;
+      case "experiences": {
+        const record = await this.database.experience.findUnique({
+          where: { id: sourceId },
+        });
+
+        return record
+          ? {
+              sourceType,
+              record,
+            }
+          : null;
+      }
     }
   }
-}
 
-export async function findAllIndexableSources(): Promise<IndexableSource[]> {
-  const [
-    contentBlocks,
-    projects,
-    services,
-    principles,
-    experiences,
-  ] = await Promise.all([
-    prisma.contentBlock.findMany({
-      orderBy: { position: "asc" },
-    }),
-    prisma.project.findMany({
-      orderBy: { position: "asc" },
-    }),
-    prisma.service.findMany({
-      orderBy: { position: "asc" },
-    }),
-    prisma.principle.findMany({
-      orderBy: { position: "asc" },
-    }),
-    prisma.experience.findMany({
-      orderBy: { position: "asc" },
-    }),
-  ]);
+  async findAll(): Promise<IndexableSource[]> {
+    const [contentBlocks, projects, services, principles, experiences] = await Promise.all([
+      this.database.contentBlock.findMany({
+        orderBy: { position: "asc" },
+      }),
+      this.database.project.findMany({
+        orderBy: { position: "asc" },
+      }),
+      this.database.service.findMany({
+        orderBy: { position: "asc" },
+      }),
+      this.database.principle.findMany({
+        orderBy: { position: "asc" },
+      }),
+      this.database.experience.findMany({
+        orderBy: { position: "asc" },
+      }),
+    ]);
 
-  return [
-    ...contentBlocks.map(
-      (record): IndexableSource => ({
+    return [
+      ...contentBlocks.map((record): IndexableSource => ({
         sourceType: "content_blocks",
         record,
-      }),
-    ),
-    ...projects.map(
-      (record): IndexableSource => ({
+      })),
+      ...projects.map((record): IndexableSource => ({
         sourceType: "projects",
         record,
-      }),
-    ),
-    ...services.map(
-      (record): IndexableSource => ({
+      })),
+      ...services.map((record): IndexableSource => ({
         sourceType: "services",
         record,
-      }),
-    ),
-    ...principles.map(
-      (record): IndexableSource => ({
+      })),
+      ...principles.map((record): IndexableSource => ({
         sourceType: "principles",
         record,
-      }),
-    ),
-    ...experiences.map(
-      (record): IndexableSource => ({
+      })),
+      ...experiences.map((record): IndexableSource => ({
         sourceType: "experiences",
         record,
-      }),
-    ),
-  ];
+      })),
+    ];
+  }
 }

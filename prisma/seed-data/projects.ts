@@ -8,16 +8,18 @@ export const projects: Project[] = [
     category: "Commercial Work / Frontend Product / Fintech",
     stack: ["Nuxt.js", "Vue.js", "Tailwind CSS", "Laravel"],
     role: "Frontend Developer / Mid-level Frontend Developer.",
-    links: [{ label: "Live", href: "https://pay4me.app" }, {
-      label: "Current brand",
-      href: "https://withradius.com",
-    }, { label: "Provider-specific product", href: "https://pay.pay4me.app" }],
-    outcome:
-      "The Pay4Me-specific payment provider processed over US$500,000 in payment volume.",
+    links: [
+      { label: "Live", href: "https://pay4me.app" },
+      {
+        label: "Current brand",
+        href: "https://withradius.com",
+      },
+      { label: "Provider-specific product", href: "https://pay.pay4me.app" },
+    ],
+    outcome: "The Pay4Me-specific payment provider processed over US$500,000 in payment volume.",
     collaboration:
       "Collaborated with backend engineer, mobile engineer, product designer, project manager, Head of Engineering, and the broader product team. Freeman and the frontend-inclined Head of Engineering handled the customer-facing web application.",
-    positioning:
-      "Radius / Pay4Me supports global education and relocation-related payment flows.",
+    positioning: "Radius / Pay4Me supports global education and relocation-related payment flows.",
     detail:
       "Pay4Me is a cross-border payment platform helping international students and professionals pay tuition, visa, SEVIS, housing, and other relocation-related fees worldwide. Freeman worked on the customer-facing web application using Nuxt.js, Vue.js, Tailwind CSS, while collaborating with the Laravel backend team. The team also built Pay4Me's dedicated payment provider in partnership with a microfinance bank to support payment processing.",
     featured: true,
@@ -41,10 +43,13 @@ export const projects: Project[] = [
       "Vitest",
     ],
     role: "Sole developer / product builder.",
-    links: [{ label: "Live", href: "https://creator-lab.online" }, {
-      label: "GitHub",
-      href: "https://github.com/Freeman-md/creator-lab",
-    }],
+    links: [
+      { label: "Live", href: "https://creator-lab.online" },
+      {
+        label: "GitHub",
+        href: "https://github.com/Freeman-md/creator-lab",
+      },
+    ],
     outcome:
       "Supports the core feedback loop: save a post, attach metrics, run AI analysis, extract lessons and patterns, and generate a next-post brief.",
     future:
@@ -115,10 +120,12 @@ export const projects: Project[] = [
       "GitHub Actions",
     ],
     role: "Sole developer / system builder.",
-    links: [{
-      label: "GitHub",
-      href: "https://github.com/Freeman-md/internal-ops-automation",
-    }],
+    links: [
+      {
+        label: "GitHub",
+        href: "https://github.com/Freeman-md/internal-ops-automation",
+      },
+    ],
     outcome:
       "Runs browser-based operational workflows for triage queue processing, ticket lifecycle management, and session health verification with structured results.",
     detail:

@@ -11,9 +11,15 @@ import { textBlockContentSchema } from "@/server/modules/portfolio/schemas/conte
 const schemas = [
   [heroContentSchema, { name: "Freeman", headline: "Headline", intro: "Intro", heroNote: "Note" }],
   [philosophyContentSchema, { philosophyQuestion: "Question" }],
-  [currentDirectionContentSchema, { currentDirection: "Direction", currentDirectionSupport: "Support" }],
+  [
+    currentDirectionContentSchema,
+    { currentDirection: "Direction", currentDirectionSupport: "Support" },
+  ],
   [aboutHeaderContentSchema, { aboutHeadline: "About" }],
-  [educationContentSchema, { current: "Current", previous: "Previous", research: "Research", support: "Support" }],
+  [
+    educationContentSchema,
+    { current: "Current", previous: "Previous", research: "Research", support: "Support" },
+  ],
   [textBlockContentSchema, { body: "Body" }],
   [outsideEngineeringContentSchema, { title: "Strength", description: "Training" }],
 ] as const;
@@ -33,6 +39,7 @@ test("content block schemas reject missing required fields", () => {
 test("content block schemas reject incorrect field types", () => {
   for (const [schema, payload] of schemas) {
     const [field] = Object.keys(payload);
+
     assert.equal(schema.safeParse({ ...payload, [field]: 1 }).success, false);
   }
 });

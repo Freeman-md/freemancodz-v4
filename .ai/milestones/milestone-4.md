@@ -167,16 +167,16 @@ Not every future `ContentBlock` is automatically searchable. Unknown keys or uns
 
 Every currently supported ContentBlock row produces one document.
 
-| Block identity | URL | Category | Semantic payload fields |
-| --- | --- | --- | --- |
-| `home.hero` | `/` | `Profile` | `name`, `headline`, `intro`, `heroNote` |
-| `home.philosophy` | `/` | `Profile` | `philosophyQuestion` |
-| `home.current-direction` | `/` | `Profile` | `currentDirection`, `currentDirectionSupport` |
-| `about.header` | `/about` | `Profile` | `aboutHeadline` |
-| `about.education` | `/about` | `Education` | `current`, `previous`, `research`, `support` |
-| `ABOUT_INTRO` rows | `/about` | `Profile` | `body` |
-| `WORK_PROCESS` rows | `/about` | `Work Process` | `body` |
-| `OUTSIDE_ENGINEERING` rows | `/about` | `Outside Engineering` | `title`, `description` |
+| Block identity             | URL      | Category              | Semantic payload fields                       |
+| -------------------------- | -------- | --------------------- | --------------------------------------------- |
+| `home.hero`                | `/`      | `Profile`             | `name`, `headline`, `intro`, `heroNote`       |
+| `home.philosophy`          | `/`      | `Profile`             | `philosophyQuestion`                          |
+| `home.current-direction`   | `/`      | `Profile`             | `currentDirection`, `currentDirectionSupport` |
+| `about.header`             | `/about` | `Profile`             | `aboutHeadline`                               |
+| `about.education`          | `/about` | `Education`           | `current`, `previous`, `research`, `support`  |
+| `ABOUT_INTRO` rows         | `/about` | `Profile`             | `body`                                        |
+| `WORK_PROCESS` rows        | `/about` | `Work Process`        | `body`                                        |
+| `OUTSIDE_ENGINEERING` rows | `/about` | `Outside Engineering` | `title`, `description`                        |
 
 ContentBlock builders must reuse the Zod schemas introduced in Milestone 3. The dispatcher must validate the expected key, page and section before formatting a document.
 
@@ -199,11 +199,7 @@ Define a small set of clear types. Exact file names may follow repository conven
 
 ```ts
 type IndexableSourceType =
-  | "content_blocks"
-  | "projects"
-  | "services"
-  | "principles"
-  | "experiences";
+  "content_blocks" | "projects" | "services" | "principles" | "experiences";
 
 type SearchDocument = {
   sourceType: IndexableSourceType;
@@ -360,7 +356,7 @@ An unchanged chunk must not call OpenAI and must not rewrite `embeddedAt`.
 Implement the core use case:
 
 ```ts
-indexSourceRecord({ sourceType, sourceId })
+indexSourceRecord({ sourceType, sourceId });
 ```
 
 It must:
@@ -389,7 +385,7 @@ Because Prisma exposes the vector field as unsupported, isolate raw SQL to the s
 Implement separately:
 
 ```ts
-removeIndexedSource({ sourceType, sourceId })
+removeIndexedSource({ sourceType, sourceId });
 ```
 
 It must delete all chunks for the source identity. Repeating the operation must be harmless.

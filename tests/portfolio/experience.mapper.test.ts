@@ -5,9 +5,20 @@ import { mapExperience } from "@/server/modules/portfolio/mappers/portfolio-view
 
 test("maps a nullable database experience into optional UI location", () => {
   const record = {
-    title: "Role", company: "Company", dates: "2026", location: null, category: "Category", focus: "Focus",
+    title: "Role",
+    company: "Company",
+    dates: "2026",
+    location: null,
+    category: "Category",
+    focus: "Focus",
   } as unknown as ExperienceRecord;
+
   assert.deepEqual(mapExperience(record), {
-    title: "Role", company: "Company", dates: "2026", location: undefined, category: "Category", focus: "Focus",
+    title: "Role",
+    company: "Company",
+    dates: "2026",
+    location: undefined,
+    category: "Category",
+    focus: "Focus",
   });
 });

@@ -51,13 +51,7 @@ test("buildProjectDocuments creates one deliberate search document", () => {
         "Positioning: A practical customer-facing assistant.",
         "Technologies: Next.js, Supabase, TypeScript",
       ].join("\n\n"),
-      keywords: [
-        "AI Engineering",
-        "Full-stack engineer",
-        "Next.js",
-        "Supabase",
-        "TypeScript",
-      ],
+      keywords: ["AI Engineering", "Full-stack engineer", "Next.js", "Supabase", "TypeScript"],
     },
   ]);
 });
@@ -90,10 +84,7 @@ test("project UI-only fields do not change search output", () => {
     updatedAt: new Date("2026-07-20T00:00:00.000Z"),
   } satisfies Project;
 
-  assert.deepEqual(
-    buildProjectDocuments(base),
-    buildProjectDocuments(changedUiFields),
-  );
+  assert.deepEqual(buildProjectDocuments(base), buildProjectDocuments(changedUiFields));
 });
 
 test("buildExperienceDocuments includes a non-null location", () => {
@@ -244,10 +235,7 @@ test("service UI-only fields do not change search output", () => {
     updatedAt: new Date("2026-07-20T00:00:00.000Z"),
   } satisfies Service;
 
-  assert.deepEqual(
-    buildServiceDocuments(base),
-    buildServiceDocuments(changedUiFields),
-  );
+  assert.deepEqual(buildServiceDocuments(base), buildServiceDocuments(changedUiFields));
 });
 
 test("buildPrincipleDocuments maps supported sections to their URLs", () => {
@@ -260,6 +248,7 @@ test("buildPrincipleDocuments maps supported sections to their URLs", () => {
     createdAt: timestamp,
     updatedAt: timestamp,
   } satisfies Principle;
+
   const about = {
     ...home,
     id: "principle-about",
@@ -445,10 +434,9 @@ test("buildContentBlockDocuments creates exact output for every supported format
       title: "Current direction",
       category: "Profile",
       url: "/",
-      content: [
-        "Building search experiences.",
-        "With careful indexing and retrieval.",
-      ].join("\n\n"),
+      content: ["Building search experiences.", "With careful indexing and retrieval."].join(
+        "\n\n",
+      ),
       keywords: ["Current direction", "Profile"],
     },
   ]);
@@ -536,18 +524,9 @@ test("buildContentBlockDocuments rejects unknown, mismatched and malformed block
     updatedAt: timestamp,
   } satisfies ContentBlock;
 
-  assert.deepEqual(
-    buildContentBlockDocuments({ ...base, key: "home.unknown" }),
-    [],
-  );
-  assert.deepEqual(
-    buildContentBlockDocuments({ ...base, page: "ABOUT" }),
-    [],
-  );
-  assert.deepEqual(
-    buildContentBlockDocuments({ ...base, content: { name: "Freeman" } }),
-    [],
-  );
+  assert.deepEqual(buildContentBlockDocuments({ ...base, key: "home.unknown" }), []);
+  assert.deepEqual(buildContentBlockDocuments({ ...base, page: "ABOUT" }), []);
+  assert.deepEqual(buildContentBlockDocuments({ ...base, content: { name: "Freeman" } }), []);
 });
 
 test("content block UI-only fields do not change search output", () => {
@@ -568,8 +547,5 @@ test("content block UI-only fields do not change search output", () => {
     updatedAt: new Date("2026-07-20T00:00:00.000Z"),
   } satisfies ContentBlock;
 
-  assert.deepEqual(
-    buildContentBlockDocuments(base),
-    buildContentBlockDocuments(changedUiFields),
-  );
+  assert.deepEqual(buildContentBlockDocuments(base), buildContentBlockDocuments(changedUiFields));
 });

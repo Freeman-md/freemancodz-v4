@@ -1,8 +1,8 @@
-import { getSearchIndexJobStatus } from "@/server/modules/search-index/public";
+import { searchIndexService } from "@/server/composition-root";
 import { prisma } from "@/server/infrastructure/database/prisma";
 
 async function main() {
-  const status = await getSearchIndexJobStatus();
+  const status = await searchIndexService.getJobStatus();
 
   console.table({
     pending: status.pending,
@@ -16,14 +16,16 @@ async function main() {
   });
 
   console.log("Recent failed jobs");
-  console.table(status.recentFailed.map((job) => ({
-    operation: job.operation,
-    sourceType: job.sourceType,
-    sourceId: job.sourceId,
-    attempts: job.attempts,
-    lastError: job.lastError,
-    processedAt: job.processedAt?.toISOString() ?? null,
-  })));
+  console.table(
+    status.recentFailed.map((job) => ({
+      operation: job.operation,
+      sourceType: job.sourceType,
+      sourceId: job.sourceId,
+      attempts: job.attempts,
+      lastError: job.lastError,
+      processedAt: job.processedAt?.toISOString() ?? null,
+    })),
+  );
 }
 
 main()

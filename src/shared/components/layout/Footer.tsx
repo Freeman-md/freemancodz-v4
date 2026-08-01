@@ -10,10 +10,7 @@ export function Footer({ cvUrl }: { cvUrl?: string }) {
           © 2026 Freeman Madudili. Built with technical precision.
         </p>
         <div className="flex flex-wrap items-center gap-4 font-mono text-[12px] text-muted">
-          <Link
-            href="/work"
-            className="transition hover:text-accent"
-          >
+          <Link href="/work" className="transition hover:text-accent">
             View My Work
           </Link>
           <a

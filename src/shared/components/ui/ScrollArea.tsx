@@ -4,21 +4,14 @@ import * as React from "react";
 import { ScrollArea as ScrollAreaPrimitive } from "@base-ui/react/scroll-area";
 import { cn } from "@/shared/utils/class-names";
 
-function ScrollArea({
-  className,
-  children,
-  ...props
-}: ScrollAreaPrimitive.Root.Props) {
+function ScrollArea({ className, children, ...props }: ScrollAreaPrimitive.Root.Props) {
   return (
     <ScrollAreaPrimitive.Root
       data-slot="scroll-area"
       className={cn("relative overflow-hidden", className)}
       {...props}
     >
-      <ScrollAreaPrimitive.Viewport
-        data-slot="scroll-area-viewport"
-        className="size-full"
-      >
+      <ScrollAreaPrimitive.Viewport data-slot="scroll-area-viewport" className="size-full">
         {children}
       </ScrollAreaPrimitive.Viewport>
       <ScrollAreaPrimitive.Scrollbar

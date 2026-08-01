@@ -1,7 +1,14 @@
 import "server-only";
 
-import { get } from "@vercel/blob";
+import type {
+  IVercelBlobClient,
+  IVercelBlobProvider,
+} from "../interfaces/vercel-blob.provider.interface";
 
-export async function getPrivateBlob(pathname: string) {
-  return get(pathname, { access: "private" });
+export class VercelBlobProvider implements IVercelBlobProvider {
+  constructor(private readonly client: IVercelBlobClient) {}
+
+  getPrivate(pathname: string) {
+    return this.client.get(pathname, { access: "private" });
+  }
 }

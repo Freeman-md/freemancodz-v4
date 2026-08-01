@@ -8,8 +8,7 @@ export const profile = {
     "I build intuitive customer-facing assistants and reliable operational workflows that help people find information, take action and reduce repetitive work. My work combines frontend engineering, backend systems and practical AI to create software that works beyond the demo.",
   heroNote:
     "Building practical AI systems that make engineering workflows faster, clearer, and more reliable.",
-  philosophyQuestion:
-    "What does this system need to stay reliable as it grows?",
+  philosophyQuestion: "What does this system need to stay reliable as it grows?",
   principles: [
     {
       title: "Keep it simple",
@@ -35,8 +34,7 @@ export const profile = {
   services: [
     {
       title: "Customer-Facing Assistants",
-      lead:
-        "Give your customers a faster way to get answers, understand their options and take the next step.",
+      lead: "Give your customers a faster way to get answers, understand their options and take the next step.",
       description:
         "I build assistants that use your knowledge, connect to your tools and handle useful actions such as collecting details, routing enquiries, updating records or booking calls.",
       cta: "Explore an Assistant",
@@ -45,8 +43,7 @@ export const profile = {
     },
     {
       title: "Operational Workflows",
-      lead:
-        "Reduce the repetitive work slowing you or your team down.",
+      lead: "Reduce the repetitive work slowing you or your team down.",
       description:
         "I build reliable workflows that move information between your tools, handle routine decisions and keep processes moving without unnecessary manual effort.",
       cta: "Explore a Workflow",
@@ -59,7 +56,7 @@ export const profile = {
     "I care about building software that is clear, useful and dependable.",
     "My current work focuses on customer-facing assistants and the operational workflows behind them, combining frontend engineering, backend systems and practical AI.",
     "I start by understanding the problem, then design the simplest system that can solve it well. From there, I build in small increments, make failures visible and improve based on real feedback.",
-    "The tools will change. The principles will not: clarity before complexity, reliability before cleverness and engineering judgement over hype."
+    "The tools will change. The principles will not: clarity before complexity, reliability before cleverness and engineering judgement over hype.",
   ],
   aboutPrinciples: [
     {
@@ -95,8 +92,7 @@ export const profile = {
     support:
       "The research explores how AI can improve reliability, observability, and operational resilience without sacrificing engineering judgement.",
   },
-  currentDirection:
-    "Customer-facing assistants and reliable operational workflows.",
+  currentDirection: "Customer-facing assistants and reliable operational workflows.",
   currentDirectionSupport:
     "I’m focused on building assistants that help people find the right information, understand their options and take action. Behind them, I build reliable workflows that connect tools, data and people to reduce repetitive work and keep processes moving.",
   outsideEngineering: [

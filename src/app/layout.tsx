@@ -3,14 +3,16 @@ import { Inter, JetBrains_Mono, Playfair_Display } from "next/font/google";
 import "./globals.css";
 import { SiteLayout } from "@/shared/components/layout/SiteLayout";
 import { FloatingPortfolioChat } from "@/features/assistant/components/FloatingPortfolioChat";
-import { Analytics } from "@vercel/analytics/next"
+import { Analytics } from "@vercel/analytics/next";
 import { siteConfig } from "@/shared/config/site-metadata";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
+
 const jetbrains = JetBrains_Mono({
   subsets: ["latin"],
   variable: "--font-jetbrains",
 });
+
 const playfairDisplay = Playfair_Display({
   subsets: ["latin"],
   variable: "--font-display",
@@ -76,11 +78,7 @@ export const metadata: Metadata = {
   },
   category: "technology",
 };
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html
       lang="en"

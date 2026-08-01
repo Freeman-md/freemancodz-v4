@@ -22,9 +22,8 @@ test("prepareSiteChunk creates the exact deterministic prepared chunk", () => {
     "Keywords: alpha, beta, zeta",
     "Content: A cited assistant for portfolio content.",
   ].join("\n");
-  const contentHash = createHash("sha256")
-    .update(embeddingInput)
-    .digest("hex");
+
+  const contentHash = createHash("sha256").update(embeddingInput).digest("hex");
 
   assert.deepEqual(prepareSiteChunk(baseDocument), {
     ...baseDocument,
@@ -37,10 +36,7 @@ test("prepareSiteChunk creates the exact deterministic prepared chunk", () => {
 });
 
 test("prepareSiteChunk is deterministic for the same document", () => {
-  assert.deepEqual(
-    prepareSiteChunk(baseDocument),
-    prepareSiteChunk(baseDocument),
-  );
+  assert.deepEqual(prepareSiteChunk(baseDocument), prepareSiteChunk(baseDocument));
 });
 
 test("changing only the title changes semantic output but preserves the stable id", () => {
@@ -50,6 +46,7 @@ test("changing only the title changes semantic output but preserves the stable i
   } satisfies SearchDocument;
 
   const preparedBase = prepareSiteChunk(baseDocument);
+
   const preparedRenamed = prepareSiteChunk(renamedDocument);
 
   assert.equal(preparedRenamed.id, preparedBase.id);
@@ -64,6 +61,7 @@ test("keyword ordering does not affect normalized semantic output", () => {
   } satisfies SearchDocument;
 
   const preparedBase = prepareSiteChunk(baseDocument);
+
   const preparedReordered = prepareSiteChunk(reorderedDocument);
 
   assert.deepEqual(preparedReordered.keywords, ["alpha", "beta", "zeta"]);
@@ -76,15 +74,15 @@ test("prepareSiteChunk removes duplicate, blank and padded keywords deterministi
     ...baseDocument,
     keywords: [" zeta ", "", "beta", "  ", "alpha", "beta", "zeta"],
   } satisfies SearchDocument;
+
   const embeddingInput = [
     "Title: Grounded Assistant",
     "Category: AI Engineering",
     "Keywords: alpha, beta, zeta",
     "Content: A cited assistant for portfolio content.",
   ].join("\n");
-  const contentHash = createHash("sha256")
-    .update(embeddingInput)
-    .digest("hex");
+
+  const contentHash = createHash("sha256").update(embeddingInput).digest("hex");
 
   assert.deepEqual(prepareSiteChunk(document), {
     ...document,
@@ -103,6 +101,7 @@ test("changing only the URL preserves semantic output and returns the changed UR
   } satisfies SearchDocument;
 
   const preparedBase = prepareSiteChunk(baseDocument);
+
   const preparedChangedUrl = prepareSiteChunk(changedUrlDocument);
 
   assert.equal(preparedChangedUrl.url, "/work/grounded-assistant");
@@ -117,15 +116,13 @@ test("changing the document index changes id and chunk index but not semantic ou
   } satisfies SearchDocument;
 
   const preparedBase = prepareSiteChunk(baseDocument);
+
   const preparedChangedIndex = prepareSiteChunk(changedIndexDocument);
 
   assert.equal(preparedChangedIndex.id, "projects:project-1:4");
   assert.equal(preparedChangedIndex.chunkIndex, 4);
   assert.notEqual(preparedChangedIndex.id, preparedBase.id);
   assert.notEqual(preparedChangedIndex.chunkIndex, preparedBase.chunkIndex);
-  assert.equal(
-    preparedChangedIndex.embeddingInput,
-    preparedBase.embeddingInput,
-  );
+  assert.equal(preparedChangedIndex.embeddingInput, preparedBase.embeddingInput);
   assert.equal(preparedChangedIndex.contentHash, preparedBase.contentHash);
 });

@@ -34,17 +34,17 @@ src/
 
 Create only folders that own real code. Never generate empty role folders mechanically.
 
-| Location | Owns | Must not own |
-|---|---|---|
-| `src/app` | Next.js routes, pages, layouts, metadata, boundaries, Route Handlers, appropriate Server Actions, and framework files | Persistence, provider construction, reusable business rules, or workflows |
-| `src/features` | Browser-facing product features | Backend logic, Prisma, server infrastructure, secrets, or provider SDKs |
-| `src/server/modules` | Backend business capabilities and their behavioural interfaces | React UI, HTTP parsing/responses, composition, or generic technical configuration |
-| `src/server/infrastructure` | Configured server clients and reusable technical setup | Product business policy |
-| `src/server/entrypoints` | Thin non-HTTP process adapters | Reusable business logic or dependency construction |
-| `src/server/composition-root.ts` | Manual dependency assembly and configured service instances | Business rules |
-| `src/contracts` | Runtime-validated trust/runtime-boundary data | Business logic, persistence, or private models |
-| `src/shared` | Stable, domain-free frontend-safe code shared by unrelated features | Feature logic or backend infrastructure |
-| `src/generated` | Generated code only | Hand-authored or manually edited code |
+| Location                         | Owns                                                                                                                  | Must not own                                                                      |
+| -------------------------------- | --------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| `src/app`                        | Next.js routes, pages, layouts, metadata, boundaries, Route Handlers, appropriate Server Actions, and framework files | Persistence, provider construction, reusable business rules, or workflows         |
+| `src/features`                   | Browser-facing product features                                                                                       | Backend logic, Prisma, server infrastructure, secrets, or provider SDKs           |
+| `src/server/modules`             | Backend business capabilities and their behavioural interfaces                                                        | React UI, HTTP parsing/responses, composition, or generic technical configuration |
+| `src/server/infrastructure`      | Configured server clients and reusable technical setup                                                                | Product business policy                                                           |
+| `src/server/entrypoints`         | Thin non-HTTP process adapters                                                                                        | Reusable business logic or dependency construction                                |
+| `src/server/composition-root.ts` | Manual dependency assembly and configured service instances                                                           | Business rules                                                                    |
+| `src/contracts`                  | Runtime-validated trust/runtime-boundary data                                                                         | Business logic, persistence, or private models                                    |
+| `src/shared`                     | Stable, domain-free frontend-safe code shared by unrelated features                                                   | Feature logic or backend infrastructure                                           |
+| `src/generated`                  | Generated code only                                                                                                   | Hand-authored or manually edited code                                             |
 
 ## `src/app`: framework adapters
 
@@ -70,14 +70,14 @@ features/<feature>/
 └── <feature>.constants.ts
 ```
 
-| Role | Responsibility |
-|---|---|
-| `components` | Render and compose feature UI |
-| `hooks` | Coordinate React state, effects, and browser behavior |
-| `api` | Perform browser-side HTTP or streaming communication |
-| `state` | Define pure frontend transitions or stores |
-| `models` | Describe browser-owned state, derived presentation data, or UI-only concepts |
-| constants | Define frontend constants owned by the feature |
+| Role         | Responsibility                                                               |
+| ------------ | ---------------------------------------------------------------------------- |
+| `components` | Render and compose feature UI                                                |
+| `hooks`      | Coordinate React state, effects, and browser behavior                        |
+| `api`        | Perform browser-side HTTP or streaming communication                         |
+| `state`      | Define pure frontend transitions or stores                                   |
+| `models`     | Describe browser-owned state, derived presentation data, or UI-only concepts |
+| constants    | Define frontend constants owned by the feature                               |
 
 Frontend features must not import `server`, Prisma, secrets, Node-only dependencies, or provider SDKs. A capability may have both `features/<capability>` and `server/modules/<capability>`; never merge the runtimes into one folder.
 
@@ -102,19 +102,19 @@ server/modules/<module>/
 
 ### Role rules
 
-| Role | Default form | Responsibility |
-|---|---|---|
-| Services | Cohesive class implementing a service interface | Business rules, use cases, workflows, fallbacks, retry/outcome decisions, and coordination |
-| Repositories | Class implementing a repository interface | Persistence for one entity, aggregate, or persistence boundary |
-| Providers | Cohesive class implementing a provider interface | External provider/SDK operations and normalization |
-| Interfaces | TypeScript interfaces | Meaningful behavioural contracts for services, repositories, providers, and replaceable technical dependencies |
-| Mappers | Pure functions | Representation conversion without I/O or decisions |
-| Factories | Pure functions by default | Deterministic construction of non-trivial objects/aggregates |
-| Models | Types, interfaces, or classes as appropriate | Data structures and invariants owned by the backend module |
-| Schemas | Runtime schemas | Validation of external or untrusted data owned only by the module |
-| Prompts | Version-controlled values/functions | Purpose-named AI application behavior |
-| Constants | Values | Related backend constants owned by the module |
-| `public.ts` | Type/export surface | Deliberate cross-module service API |
+| Role         | Default form                                     | Responsibility                                                                                                 |
+| ------------ | ------------------------------------------------ | -------------------------------------------------------------------------------------------------------------- |
+| Services     | Cohesive class implementing a service interface  | Business rules, use cases, workflows, fallbacks, retry/outcome decisions, and coordination                     |
+| Repositories | Class implementing a repository interface        | Persistence for one entity, aggregate, or persistence boundary                                                 |
+| Providers    | Cohesive class implementing a provider interface | External provider/SDK operations and normalization                                                             |
+| Interfaces   | TypeScript interfaces                            | Meaningful behavioural contracts for services, repositories, providers, and replaceable technical dependencies |
+| Mappers      | Pure functions                                   | Representation conversion without I/O or decisions                                                             |
+| Factories    | Pure functions by default                        | Deterministic construction of non-trivial objects/aggregates                                                   |
+| Models       | Types, interfaces, or classes as appropriate     | Data structures and invariants owned by the backend module                                                     |
+| Schemas      | Runtime schemas                                  | Validation of external or untrusted data owned only by the module                                              |
+| Prompts      | Version-controlled values/functions              | Purpose-named AI application behavior                                                                          |
+| Constants    | Values                                           | Related backend constants owned by the module                                                                  |
+| `public.ts`  | Type/export surface                              | Deliberate cross-module service API                                                                            |
 
 ### Cohesive service classes
 
@@ -142,9 +142,7 @@ export interface IPortfolioService {
 }
 
 export class PortfolioService implements IPortfolioService {
-  constructor(
-    private readonly contentRepository: IContentRepository,
-  ) {}
+  constructor(private readonly contentRepository: IContentRepository) {}
 
   getHomePageData() {}
   getWorkPageData() {}
@@ -294,10 +292,7 @@ Give every backend module a `public.ts` that exposes only capabilities intention
 
 ```ts
 export type { IAssistantService } from "./interfaces/assistant.service.interface";
-export type {
-  AssistantResponse,
-  CreateAssistantResponseInput,
-} from "./models/assistant-response";
+export type { AssistantResponse, CreateAssistantResponseInput } from "./models/assistant-response";
 ```
 
 `public.ts` may export public service interfaces, public input/output models, public errors, and intentionally shared business types.
@@ -317,17 +312,20 @@ Repository classes receive configured database clients through constructors. Pro
 Assemble backend dependencies in `src/server/composition-root.ts`:
 
 ```ts
-const openAIProvider: IOpenAIProvider =
-  new OpenAIProvider(openAIClient);
+const openAIProvider: IOpenAIProvider = new OpenAIProvider(openAIClient);
 
-const siteChunkRepository: ISiteChunkRepository =
-  new SiteChunkRepository(prisma);
+const siteChunkRepository: ISiteChunkRepository = new SiteChunkRepository(prisma);
 
-export const searchIndexService: ISearchIndexService =
-  new SearchIndexService(openAIProvider, siteChunkRepository);
+export const searchIndexService: ISearchIndexService = new SearchIndexService(
+  openAIProvider,
+  siteChunkRepository,
+);
 
-export const assistantService: IAssistantService =
-  new AssistantService(openAIProvider, searchIndexService, logger);
+export const assistantService: IAssistantService = new AssistantService(
+  openAIProvider,
+  searchIndexService,
+  logger,
+);
 ```
 
 The composition root may obtain infrastructure clients, instantiate repositories/providers/services, inject dependencies, and export configured service instances for outer adapters. It must contain no business rules.
@@ -409,18 +407,18 @@ Keep `src/generated` generated-only and never edit generated files manually.
 
 Official React requires capitalized component symbols and Hook names beginning with `use` followed by a capital letter. Official Next.js reserves framework filenames/route syntax but does not prescribe ordinary project filenames. Adopt:
 
-| Item | Convention | Examples |
-|---|---|---|
-| Project-authored folders | kebab-case | `search-index/`, `customer-profile/` |
-| React component files | PascalCase matching primary export | `ChatComposer.tsx` |
-| Custom Hook files | `useSomething.ts` matching primary export | `useAssistant.ts` |
-| Models/state files | kebab-case without redundant role suffix | `models/chat-message.ts`, `state/assistant-conversation.ts` |
-| Architectural role files | `<subject>.<role>.ts` | `assistant.service.ts`, `site-chunk.repository.ts` |
-| Behavioural interface files | `<subject>.<role>.interface.ts` | `assistant.service.interface.ts`, `openai.provider.interface.ts` |
-| Components, types, classes, schema values | PascalCase symbols | `AssistantService`, `AssistantRequestSchema` |
-| Behavioural interface symbols | `I` + PascalCase | `IAssistantService`, `IOpenAIProvider` |
-| Functions, variables, properties | camelCase | `createAssistantResponse` |
-| Genuine immutable constants | SCREAMING_SNAKE_CASE | `MAX_STREAM_BYTES` |
+| Item                                      | Convention                                | Examples                                                         |
+| ----------------------------------------- | ----------------------------------------- | ---------------------------------------------------------------- |
+| Project-authored folders                  | kebab-case                                | `search-index/`, `customer-profile/`                             |
+| React component files                     | PascalCase matching primary export        | `ChatComposer.tsx`                                               |
+| Custom Hook files                         | `useSomething.ts` matching primary export | `useAssistant.ts`                                                |
+| Models/state files                        | kebab-case without redundant role suffix  | `models/chat-message.ts`, `state/assistant-conversation.ts`      |
+| Architectural role files                  | `<subject>.<role>.ts`                     | `assistant.service.ts`, `site-chunk.repository.ts`               |
+| Behavioural interface files               | `<subject>.<role>.interface.ts`           | `assistant.service.interface.ts`, `openai.provider.interface.ts` |
+| Components, types, classes, schema values | PascalCase symbols                        | `AssistantService`, `AssistantRequestSchema`                     |
+| Behavioural interface symbols             | `I` + PascalCase                          | `IAssistantService`, `IOpenAIProvider`                           |
+| Functions, variables, properties          | camelCase                                 | `createAssistantResponse`                                        |
+| Genuine immutable constants               | SCREAMING_SNAKE_CASE                      | `MAX_STREAM_BYTES`                                               |
 
 Use kebab-case for multi-word subjects, then append the role with a dot:
 
@@ -521,22 +519,22 @@ Before creating or moving a file, determine:
 10. Whether its dot-based name follows this standard.
 11. Whether placement creates a forbidden dependency or God service.
 
-| Classification | Placement |
-|---|---|
-| Browser UI/Hook/API/state/model | Matching `features/<feature>` role |
-| Cohesive backend capability | `<module>/services/<capability>.service.ts` |
-| Separate backend lifecycle/responsibility | A justified second cohesive service class |
-| Persistence subject/aggregate | `<module>/repositories/<subject>.repository.ts` |
-| External provider integration | `<module>/providers/<provider>.provider.ts` |
-| Behavioural class contract | `<module>/interfaces/<subject>.<role>.interface.ts` |
-| Pure conversion/construction | Module mapper/factory function |
-| Server business structure/result | Module `models` |
-| Shared runtime/trust boundary | `contracts` |
-| Shared technical client/config | `server/infrastructure` |
-| Dependency assembly | `server/composition-root.ts` or composition helper |
-| Non-HTTP adapter | `server/entrypoints` |
-| HTTP/framework concern | `app` |
-| Generic frontend utility | `shared` only when domain-free and genuinely shared |
+| Classification                            | Placement                                           |
+| ----------------------------------------- | --------------------------------------------------- |
+| Browser UI/Hook/API/state/model           | Matching `features/<feature>` role                  |
+| Cohesive backend capability               | `<module>/services/<capability>.service.ts`         |
+| Separate backend lifecycle/responsibility | A justified second cohesive service class           |
+| Persistence subject/aggregate             | `<module>/repositories/<subject>.repository.ts`     |
+| External provider integration             | `<module>/providers/<provider>.provider.ts`         |
+| Behavioural class contract                | `<module>/interfaces/<subject>.<role>.interface.ts` |
+| Pure conversion/construction              | Module mapper/factory function                      |
+| Server business structure/result          | Module `models`                                     |
+| Shared runtime/trust boundary             | `contracts`                                         |
+| Shared technical client/config            | `server/infrastructure`                             |
+| Dependency assembly                       | `server/composition-root.ts` or composition helper  |
+| Non-HTTP adapter                          | `server/entrypoints`                                |
+| HTTP/framework concern                    | `app`                                               |
+| Generic frontend utility                  | `shared` only when domain-free and genuinely shared |
 
 If no outcome fits, stop; do not invent a vague folder.
 

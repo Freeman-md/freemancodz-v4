@@ -1,6 +1,7 @@
 import "server-only";
 
-import { prisma } from "@/server/infrastructure/database/prisma";
+import type { PrismaClient } from "@/generated/prisma/client";
+import type { ISearchIndexJobRepository } from "../interfaces/search-index-job.repository.interface";
 import type {
   EnqueueIndexJobInput,
   FailIndexJobOptions,
@@ -9,7 +10,9 @@ import type {
 } from "@/server/modules/search-index/models/search-index";
 
 const DEFAULT_MAX_ATTEMPTS = 5;
+
 const STALE_PROCESSING_TIMEOUT_MINUTES = 10;
+
 const MAX_ERROR_LENGTH = 4_000;
 
 type SearchIndexJobRow = SearchIndexJob;
@@ -20,10 +23,11 @@ function truncateError(error: unknown): string {
   return message.slice(0, MAX_ERROR_LENGTH);
 }
 
-export async function enqueueIndexJob(
-  input: EnqueueIndexJobInput,
-): Promise<SearchIndexJob> {
-  const [job] = await prisma.$queryRaw<SearchIndexJobRow[]>`
+export class SearchIndexJobRepository implements ISearchIndexJobRepository {
+  constructor(private readonly database: PrismaClient) {}
+
+  async enqueue(input: EnqueueIndexJobInput): Promise<SearchIndexJob> {
+    const [job] = await this.database.$queryRaw<SearchIndexJobRow[]>`
     INSERT INTO search_index_jobs (
       operation,
       source_type,
@@ -61,20 +65,20 @@ export async function enqueueIndexJob(
       processed_at AS "processedAt";
   `;
 
-  if (!job) {
-    throw new Error("Search index job enqueue did not return a job.");
+    if (!job) {
+      throw new Error("Search index job enqueue did not return a job.");
+    }
+
+    return job;
   }
 
-  return job;
-}
+  async claim(limit: number): Promise<SearchIndexJob[]> {
+    if (!Number.isInteger(limit) || limit < 1) {
+      throw new Error("Search index job claim limit must be a positive integer.");
+    }
 
-export async function claimIndexJobs(limit: number): Promise<SearchIndexJob[]> {
-  if (!Number.isInteger(limit) || limit < 1) {
-    throw new Error("Search index job claim limit must be a positive integer.");
-  }
-
-  return prisma.$transaction(async (transaction) => {
-    await transaction.$executeRaw`
+    return this.database.$transaction(async (transaction) => {
+      await transaction.$executeRaw`
       UPDATE search_index_jobs
       SET
         status = 'pending',
@@ -85,7 +89,7 @@ export async function claimIndexJobs(limit: number): Promise<SearchIndexJob[]> {
         AND claimed_at < NOW() - (${STALE_PROCESSING_TIMEOUT_MINUTES} * INTERVAL '1 minute');
     `;
 
-    return transaction.$queryRaw<SearchIndexJobRow[]>`
+      return transaction.$queryRaw<SearchIndexJobRow[]>`
       WITH jobs_to_claim AS (
         SELECT id
         FROM search_index_jobs
@@ -116,11 +120,11 @@ export async function claimIndexJobs(limit: number): Promise<SearchIndexJob[]> {
         jobs.created_at AS "createdAt",
         jobs.processed_at AS "processedAt";
     `;
-  });
-}
+    });
+  }
 
-export async function completeIndexJob(id: string): Promise<SearchIndexJob | null> {
-  const [job] = await prisma.$queryRaw<SearchIndexJobRow[]>`
+  async complete(id: string): Promise<SearchIndexJob | null> {
+    const [job] = await this.database.$queryRaw<SearchIndexJobRow[]>`
     UPDATE search_index_jobs
     SET
       status = 'completed',
@@ -143,22 +147,23 @@ export async function completeIndexJob(id: string): Promise<SearchIndexJob | nul
       processed_at AS "processedAt";
   `;
 
-  return job ?? null;
-}
-
-export async function failIndexJob(
-  id: string,
-  error: unknown,
-  options: FailIndexJobOptions = {},
-): Promise<SearchIndexJob | null> {
-  const maxAttempts = options.maxAttempts ?? DEFAULT_MAX_ATTEMPTS;
-
-  if (!Number.isInteger(maxAttempts) || maxAttempts < 1) {
-    throw new Error("Search index job maximum attempts must be a positive integer.");
+    return job ?? null;
   }
 
-  const lastError = truncateError(error);
-  const [job] = await prisma.$queryRaw<SearchIndexJobRow[]>`
+  async fail(
+    id: string,
+    error: unknown,
+    options: FailIndexJobOptions = {},
+  ): Promise<SearchIndexJob | null> {
+    const maxAttempts = options.maxAttempts ?? DEFAULT_MAX_ATTEMPTS;
+
+    if (!Number.isInteger(maxAttempts) || maxAttempts < 1) {
+      throw new Error("Search index job maximum attempts must be a positive integer.");
+    }
+
+    const lastError = truncateError(error);
+
+    const [job] = await this.database.$queryRaw<SearchIndexJobRow[]>`
     UPDATE search_index_jobs
     SET
       status = CASE WHEN attempts < ${maxAttempts} THEN 'pending' ELSE 'failed' END,
@@ -186,42 +191,43 @@ export async function failIndexJob(
       processed_at AS "processedAt";
   `;
 
-  return job ?? null;
-}
+    return job ?? null;
+  }
 
-export async function getSearchIndexJobStatus(): Promise<SearchIndexJobStatusSummary> {
-  const [pending, processing, completed, failed, oldestPending, staleProcessing, recentFailed] =
-    await Promise.all([
-      prisma.searchIndexJob.count({ where: { status: "pending" } }),
-      prisma.searchIndexJob.count({ where: { status: "processing" } }),
-      prisma.searchIndexJob.count({ where: { status: "completed" } }),
-      prisma.searchIndexJob.count({ where: { status: "failed" } }),
-      prisma.searchIndexJob.findFirst({
-        where: { status: "pending" },
-        orderBy: [{ availableAt: "asc" }, { createdAt: "asc" }],
-      }),
-      prisma.searchIndexJob.count({
-        where: {
-          status: "processing",
-          claimedAt: {
-            lt: new Date(Date.now() - STALE_PROCESSING_TIMEOUT_MINUTES * 60_000),
+  async getStatus(): Promise<SearchIndexJobStatusSummary> {
+    const [pending, processing, completed, failed, oldestPending, staleProcessing, recentFailed] =
+      await Promise.all([
+        this.database.searchIndexJob.count({ where: { status: "pending" } }),
+        this.database.searchIndexJob.count({ where: { status: "processing" } }),
+        this.database.searchIndexJob.count({ where: { status: "completed" } }),
+        this.database.searchIndexJob.count({ where: { status: "failed" } }),
+        this.database.searchIndexJob.findFirst({
+          where: { status: "pending" },
+          orderBy: [{ availableAt: "asc" }, { createdAt: "asc" }],
+        }),
+        this.database.searchIndexJob.count({
+          where: {
+            status: "processing",
+            claimedAt: {
+              lt: new Date(Date.now() - STALE_PROCESSING_TIMEOUT_MINUTES * 60_000),
+            },
           },
-        },
-      }),
-      prisma.searchIndexJob.findMany({
-        where: { status: "failed" },
-        orderBy: { processedAt: "desc" },
-        take: 5,
-      }),
-    ]);
+        }),
+        this.database.searchIndexJob.findMany({
+          where: { status: "failed" },
+          orderBy: { processedAt: "desc" },
+          take: 5,
+        }),
+      ]);
 
-  return {
-    pending,
-    processing,
-    completed,
-    failed,
-    oldestPending: oldestPending as SearchIndexJob | null,
-    staleProcessing,
-    recentFailed: recentFailed as SearchIndexJob[],
-  };
+    return {
+      pending,
+      processing,
+      completed,
+      failed,
+      oldestPending: oldestPending as SearchIndexJob | null,
+      staleProcessing,
+      recentFailed: recentFailed as SearchIndexJob[],
+    };
+  }
 }

@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 
 import { assistantRequestSchema } from "@/contracts/assistant.contract";
-import { createAssistantResponse } from "@/server/modules/assistant/public";
-import { checkAssistantRateLimit } from "@/server/modules/assistant/public";
+import { assistantService } from "@/server/composition-root";
 
 export async function POST(request: Request) {
   let payload: unknown;
+
   try {
     payload = await request.json();
   } catch {
@@ -13,34 +13,48 @@ export async function POST(request: Request) {
   }
 
   const parsed = assistantRequestSchema.safeParse(payload);
+
   if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.issues[0]?.message || "Invalid request." }, { status: 400 });
+    return NextResponse.json(
+      { error: parsed.error.issues[0]?.message || "Invalid request." },
+      { status: 400 },
+    );
   }
 
-  const rateLimit = checkAssistantRateLimit(
-    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || request.headers.get("x-real-ip")?.trim() || request.headers.get("cf-connecting-ip")?.trim() || "anonymous",
+  const rateLimit = assistantService.checkRateLimit(
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      request.headers.get("x-real-ip")?.trim() ||
+      request.headers.get("cf-connecting-ip")?.trim() ||
+      "anonymous",
   );
+
   if (!rateLimit.allowed) {
-    return NextResponse.json({ error: rateLimit.error }, {
-      status: 429,
-      headers: {
-        "Retry-After": String(Math.max(1, Math.ceil((rateLimit.resetAt - Date.now()) / 1000))),
-        "X-RateLimit-Limit": String(rateLimit.limit),
-        "X-RateLimit-Remaining": String(rateLimit.remaining),
-        "X-RateLimit-Reset": String(Math.ceil(rateLimit.resetAt / 1000)),
+    return NextResponse.json(
+      { error: rateLimit.error },
+      {
+        status: 429,
+        headers: {
+          "Retry-After": String(Math.max(1, Math.ceil((rateLimit.resetAt - Date.now()) / 1000))),
+          "X-RateLimit-Limit": String(rateLimit.limit),
+          "X-RateLimit-Remaining": String(rateLimit.remaining),
+          "X-RateLimit-Reset": String(Math.ceil(rateLimit.resetAt / 1000)),
+        },
       },
-    });
+    );
   }
 
-  return new Response(createAssistantResponse({
-    message: parsed.data.message,
-    previousResponseId: parsed.data.previousResponseId ?? null,
-    signal: request.signal,
-  }), {
-    headers: {
-      "Cache-Control": "no-cache, no-transform",
-      "Content-Type": "application/x-ndjson; charset=utf-8",
-      "X-Content-Type-Options": "nosniff",
+  return new Response(
+    assistantService.createResponse({
+      message: parsed.data.message,
+      previousResponseId: parsed.data.previousResponseId ?? null,
+      signal: request.signal,
+    }),
+    {
+      headers: {
+        "Cache-Control": "no-cache, no-transform",
+        "Content-Type": "application/x-ndjson; charset=utf-8",
+        "X-Content-Type-Options": "nosniff",
+      },
     },
-  });
+  );
 }

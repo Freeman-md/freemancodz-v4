@@ -1,35 +1,34 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { ContentBlockRepository } from "@/server/modules/portfolio/repositories/content-block.repository";
 
-process.env.DATABASE_URL ??= "postgresql://postgres:postgres@127.0.0.1:5432/postgres";
+test("content-block repository reports missing required content by stable key", async () => {
+  const repository = new ContentBlockRepository({
+    contentBlock: { findUnique: async () => null },
+  } as never);
 
-test("reports a missing required content block by stable key", async () => {
-  const { prisma } = await import("@/server/infrastructure/database/prisma");
-  const query = await import("@/server/modules/portfolio/repositories/content-block.repository");
-  const original = prisma.contentBlock.findUnique;
-  prisma.contentBlock.findUnique = (async () => null) as typeof prisma.contentBlock.findUnique;
-
-  try {
-    await assert.rejects(query.findRequiredContentBlockByKey("home.hero"), /Required content block not found: home\.hero/);
-  } finally {
-    prisma.contentBlock.findUnique = original;
-  }
+  await assert.rejects(
+    repository.findRequiredByKey("home.hero"),
+    /Required content block not found: home\.hero/,
+  );
 });
 
-test("requests repeatable content blocks in stored position order", async () => {
-  const { prisma } = await import("@/server/infrastructure/database/prisma");
-  const query = await import("@/server/modules/portfolio/repositories/content-block.repository");
-  const original = prisma.contentBlock.findMany;
+test("content-block repository preserves stored position ordering", async () => {
   let args: unknown;
-  prisma.contentBlock.findMany = (async (value) => {
-    args = value;
-    return [];
-  }) as typeof prisma.contentBlock.findMany;
 
-  try {
-    await query.findContentBlocksBySection("ABOUT", "ABOUT_INTRO");
-    assert.deepEqual(args, { where: { page: "ABOUT", section: "ABOUT_INTRO" }, orderBy: { position: "asc" } });
-  } finally {
-    prisma.contentBlock.findMany = original;
-  }
+  const repository = new ContentBlockRepository({
+    contentBlock: {
+      findMany: async (value: unknown) => {
+        args = value;
+
+        return [];
+      },
+    },
+  } as never);
+
+  await repository.findBySection("ABOUT", "ABOUT_INTRO");
+  assert.deepEqual(args, {
+    where: { page: "ABOUT", section: "ABOUT_INTRO" },
+    orderBy: { position: "asc" },
+  });
 });

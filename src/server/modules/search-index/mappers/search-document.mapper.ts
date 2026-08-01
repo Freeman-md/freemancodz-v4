@@ -8,9 +8,7 @@ import type {
   SearchDocument,
 } from "@/server/modules/search-index/models/search-index";
 
-export function buildSearchDocuments(
-  source: IndexableSource,
-): SearchDocument[] {
+export function buildSearchDocuments(source: IndexableSource): SearchDocument[] {
   switch (source.sourceType) {
     case "content_blocks":
       return buildContentBlockDocuments(source.record);

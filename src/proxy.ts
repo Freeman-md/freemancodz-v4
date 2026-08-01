@@ -1,11 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server";
 
 const allowedPageRoutes = new Set(["/", "/work", "/about"]);
-const allowedGeneratedRoutes = new Set([
-  "/opengraph-image",
-  "/robots.txt",
-  "/sitemap.xml",
-]);
+
+const allowedGeneratedRoutes = new Set(["/opengraph-image", "/robots.txt", "/sitemap.xml"]);
 
 function hasFileExtension(path: string) {
   return /\.[a-zA-Z0-9]+$/.test(path);
@@ -17,6 +14,7 @@ function normalizePagePath(path: string) {
 
 export function proxy(req: NextRequest) {
   const path = req.nextUrl.pathname;
+
   const normalizedPath = normalizePagePath(path);
 
   const isAsset =
@@ -27,8 +25,8 @@ export function proxy(req: NextRequest) {
     hasFileExtension(path);
 
   const isApiRoute = path.startsWith("/api");
-  const isAllowedRoute =
-    allowedPageRoutes.has(normalizedPath) || allowedGeneratedRoutes.has(path);
+
+  const isAllowedRoute = allowedPageRoutes.has(normalizedPath) || allowedGeneratedRoutes.has(path);
 
   if (isAsset || isApiRoute || isAllowedRoute) {
     return NextResponse.next();

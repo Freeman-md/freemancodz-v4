@@ -52,11 +52,13 @@ Return a concise summary followed by valid JSON:
   "previous_head_sha": "sha",
   "head_sha": "new-sha",
   "findings": [
-    {"id": "finding-id", "disposition": "fixed|not_applicable|blocked", "evidence": "short evidence"}
+    {
+      "id": "finding-id",
+      "disposition": "fixed|not_applicable|blocked",
+      "evidence": "short evidence"
+    }
   ],
-  "validation": [
-    {"command": "command", "status": "passed|failed|not_run"}
-  ],
+  "validation": [{ "command": "command", "status": "passed|failed|not_run" }],
   "blockers": [],
   "ready_for_review": true
 }

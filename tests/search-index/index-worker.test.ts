@@ -1,181 +1,238 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createIndexWorker } from "@/server/modules/search-index/services/run-index-worker.service";
-import { runIndexWorkerLoop } from "@/server/entrypoints/jobs/run-search-index-worker";
+import type { ILogger } from "@/server/infrastructure/logging/logger.interface";
+import type { ISearchIndexJobRepository } from "@/server/modules/search-index/interfaces/search-index-job.repository.interface";
+import type { ISearchIndexService } from "@/server/modules/search-index/interfaces/search-index.service.interface";
 import type { SearchIndexJob } from "@/server/modules/search-index/models/search-index";
+import { SearchIndexWorkerService } from "@/server/modules/search-index/services/search-index-worker.service";
 
-function makeJob(overrides: Partial<SearchIndexJob> = {}): SearchIndexJob {
+const job = {
+  id: "job-1",
+  operation: "upsert",
+  sourceType: "projects",
+  sourceId: "project-1",
+  status: "processing",
+  attempts: 1,
+  availableAt: new Date("2026-01-01T00:00:00.000Z"),
+  claimedAt: new Date("2026-01-01T00:00:00.000Z"),
+  lastError: null,
+  createdAt: new Date("2026-01-01T00:00:00.000Z"),
+  processedAt: null,
+} satisfies SearchIndexJob;
+
+const emptyResult = { created: 0, changed: 0, unchanged: 0, deleted: 0 };
+
+function createWorker({
+  claimed = [job],
+  complete = async (id: string) => ({ ...job, id, status: "completed" }) as SearchIndexJob,
+  fail = async (id: string) => ({ ...job, id, status: "pending" }) as SearchIndexJob,
+  indexSource = async () => emptyResult,
+  removeSource = async () => emptyResult,
+}: {
+  claimed?: SearchIndexJob[];
+  complete?: ISearchIndexJobRepository["complete"];
+  fail?: ISearchIndexJobRepository["fail"];
+  indexSource?: ISearchIndexService["indexSource"];
+  removeSource?: ISearchIndexService["removeSource"];
+} = {}) {
+  const claimLimits: number[] = [];
+
+  const completedIds: string[] = [];
+
+  const failed: Array<{ id: string; error: unknown }> = [];
+
+  const infos: Array<{ message: string; context: unknown }> = [];
+
+  const errors: Array<{ message: string; context: unknown }> = [];
+
+  const jobs: ISearchIndexJobRepository = {
+    claim: async (limit) => {
+      claimLimits.push(limit);
+
+      return claimed;
+    },
+    complete: async (id) => {
+      completedIds.push(id);
+
+      return complete(id);
+    },
+    fail: async (id, error) => {
+      failed.push({ id, error });
+
+      return fail(id, error);
+    },
+    enqueue: async () => job,
+    getStatus: async () => ({}) as never,
+  };
+
+  const searchIndex: ISearchIndexService = {
+    indexSource,
+    removeSource,
+    search: async () => [],
+    preview: async () => ({ input: {} as never, chunks: [], obsoleteIds: [] }),
+    rebuild: async () => ({ totals: emptyResult, results: [] }),
+    getJobStatus: async () => ({}) as never,
+  };
+
+  const logger: ILogger = {
+    info: (message, context) => {
+      infos.push({ message, context });
+    },
+    error: (message, context) => {
+      errors.push({ message, context });
+    },
+  };
+
   return {
-    id: "job-1",
-    operation: "upsert",
-    sourceType: "projects",
-    sourceId: "project-1",
-    status: "processing",
-    attempts: 1,
-    availableAt: new Date("2026-07-20T10:00:00.000Z"),
-    claimedAt: new Date("2026-07-20T10:00:00.000Z"),
-    lastError: null,
-    createdAt: new Date("2026-07-20T10:00:00.000Z"),
-    processedAt: null,
-    ...overrides,
+    claimLimits,
+    completedIds,
+    errors,
+    failed,
+    infos,
+    service: new SearchIndexWorkerService(jobs, searchIndex, logger),
   };
 }
 
-test("worker indexes upsert jobs, completes them, and logs result counts", async () => {
-  const job = makeJob();
-  const indexed: unknown[] = [];
-  const completed: string[] = [];
-  const logs: unknown[][] = [];
-  const worker = createIndexWorker({
-    claimIndexJobs: async () => [job],
-    completeIndexJob: async (id) => {
-      completed.push(id);
-      return { ...job, status: "completed" };
-    },
-    failIndexJob: async () => null,
-    indexSourceRecord: async (input) => {
-      indexed.push(input);
-      return { created: 1, changed: 2, unchanged: 3, deleted: 0 };
-    },
-    removeIndexedSource: async () => {
-      throw new Error("delete should not be called");
-    },
-    logger: {
-      log: (...args: unknown[]) => logs.push(args),
-      error: () => undefined,
-    },
-  });
+test("worker completes an upsert job and records the completed outcome", async () => {
+  const { completedIds, infos, service } = createWorker();
 
-  assert.deepEqual(await worker.runBatch(), {
-    claimed: 1,
-    completed: 1,
-    retried: 0,
-    failed: 0,
+  assert.deepEqual(await service.runBatch(), { claimed: 1, completed: 1, retried: 0, failed: 0 });
+  assert.deepEqual(completedIds, [job.id]);
+  assert.equal(infos[0]?.message, "Search index job completed");
+  assert.deepEqual(infos[0]?.context, {
+    jobId: job.id,
+    operation: "upsert",
+    sourceType: "projects",
+    sourceId: job.sourceId,
+    result: emptyResult,
   });
-  assert.deepEqual(indexed, [{ sourceType: "projects", sourceId: "project-1" }]);
-  assert.deepEqual(completed, ["job-1"]);
-  assert.deepEqual(logs, [[
-    "Search index job completed",
-    {
-      jobId: "job-1",
-      operation: "upsert",
-      sourceType: "projects",
-      sourceId: "project-1",
-      result: { created: 1, changed: 2, unchanged: 3, deleted: 0 },
-    },
-  ]]);
 });
 
-test("worker removes indexed chunks for delete jobs", async () => {
-  const job = makeJob({ operation: "delete", sourceType: "services" });
-  const removed: unknown[] = [];
-  const worker = createIndexWorker({
-    claimIndexJobs: async () => [job],
-    completeIndexJob: async () => ({ ...job, status: "completed" }),
-    failIndexJob: async () => null,
-    indexSourceRecord: async () => {
-      throw new Error("upsert should not be called");
+test("worker completes a delete job through the removal capability", async () => {
+  const deleteJob = {
+    ...job,
+    operation: "delete",
+    sourceType: "services",
+    sourceId: "service-1",
+  } as SearchIndexJob;
+
+  const removed: Array<{ sourceType: string; sourceId: string }> = [];
+
+  const { service } = createWorker({
+    claimed: [deleteJob],
+    indexSource: async () => {
+      throw new Error("upsert should not run");
     },
-    removeIndexedSource: async (input) => {
+    removeSource: async (input) => {
       removed.push(input);
-      return { created: 0, changed: 0, unchanged: 0, deleted: 2 };
+
+      return { created: 0, changed: 0, unchanged: 0, deleted: 1 };
     },
-    logger: { log: () => undefined, error: () => undefined },
   });
 
-  assert.deepEqual(await worker.runBatch(), {
-    claimed: 1,
-    completed: 1,
-    retried: 0,
-    failed: 0,
-  });
-  assert.deepEqual(removed, [{ sourceType: "services", sourceId: "project-1" }]);
+  assert.deepEqual(await service.runBatch(), { claimed: 1, completed: 1, retried: 0, failed: 0 });
+  assert.deepEqual(removed, [{ sourceType: "services", sourceId: "service-1" }]);
 });
 
-test("worker sends indexing failures to retry handling and logs the retry outcome", async () => {
-  const job = makeJob();
-  const retryCalls: unknown[][] = [];
-  const errors: unknown[][] = [];
-  const worker = createIndexWorker({
-    claimIndexJobs: async () => [job],
-    completeIndexJob: async () => null,
-    failIndexJob: async (...args) => {
-      retryCalls.push(args);
-      return { ...job, status: "pending", attempts: 1 };
+test("worker records retryable failures and their operational log", async () => {
+  const failure = new Error("embedding unavailable");
+
+  const { errors, failed, service } = createWorker({
+    indexSource: async () => {
+      throw failure;
     },
-    indexSourceRecord: async () => {
-      throw new Error("embedding unavailable");
-    },
-    removeIndexedSource: async () => ({
-      created: 0,
-      changed: 0,
-      unchanged: 0,
-      deleted: 0,
-    }),
-    logger: { log: () => undefined, error: (...args: unknown[]) => errors.push(args) },
   });
 
-  assert.deepEqual(await worker.runBatch(), {
-    claimed: 1,
-    completed: 0,
-    retried: 1,
-    failed: 0,
+  assert.deepEqual(await service.runBatch(), { claimed: 1, completed: 0, retried: 1, failed: 0 });
+  assert.deepEqual(failed, [{ id: job.id, error: failure }]);
+  assert.equal(errors[0]?.message, "Search index job failed");
+  assert.deepEqual(errors[0]?.context, {
+    jobId: job.id,
+    operation: "upsert",
+    sourceType: "projects",
+    sourceId: "project-1",
+    error: "embedding unavailable",
+    outcome: "pending",
+    attempts: 1,
   });
-  assert.equal(retryCalls.length, 1);
-  assert.equal(retryCalls[0][0], "job-1");
-  assert.ok(retryCalls[0][1] instanceof Error);
-  assert.deepEqual(errors, [[
-    "Search index job failed",
-    {
-      jobId: "job-1",
-      operation: "upsert",
-      sourceType: "projects",
-      sourceId: "project-1",
-      error: "embedding unavailable",
-      outcome: "pending",
-      attempts: 1,
-    },
-  ]]);
 });
 
-test("worker reports terminal failures separately from retryable failures", async () => {
-  const job = makeJob({ attempts: 5 });
-  const worker = createIndexWorker({
-    claimIndexJobs: async () => [job],
-    completeIndexJob: async () => null,
-    failIndexJob: async () => ({ ...job, status: "failed", processedAt: new Date() }),
-    indexSourceRecord: async () => {
-      throw new Error("embedding unavailable");
+test("worker records terminal failures and their terminal outcome", async () => {
+  const failure = new Error("source cannot be indexed");
+
+  const { errors, failed, service } = createWorker({
+    fail: async (id) => ({ ...job, id, status: "failed", attempts: 3 }),
+    indexSource: async () => {
+      throw failure;
     },
-    removeIndexedSource: async () => ({
-      created: 0,
-      changed: 0,
-      unchanged: 0,
-      deleted: 0,
-    }),
-    logger: { log: () => undefined, error: () => undefined },
   });
 
-  assert.deepEqual(await worker.runBatch(), {
+  assert.deepEqual(await service.runBatch(), { claimed: 1, completed: 0, retried: 0, failed: 1 });
+  assert.deepEqual(failed, [{ id: job.id, error: failure }]);
+  assert.deepEqual(errors[0]?.context, {
+    jobId: job.id,
+    operation: "upsert",
+    sourceType: "projects",
+    sourceId: "project-1",
+    error: "source cannot be indexed",
+    outcome: "failed",
+    attempts: 3,
+  });
+});
+
+test("worker leaves jobs unsettled when a completion or failure transition is not applied", async () => {
+  const completion = createWorker({ complete: async () => null });
+
+  const failure = createWorker({
+    fail: async () => null,
+    indexSource: async () => {
+      throw new Error("transient failure");
+    },
+  });
+
+  assert.deepEqual(await completion.service.runBatch(), {
     claimed: 1,
     completed: 0,
     retried: 0,
-    failed: 1,
+    failed: 0,
   });
+  assert.equal(completion.errors[0]?.message, "Search index job could not be completed");
+  assert.deepEqual(await failure.service.runBatch(), {
+    claimed: 1,
+    completed: 0,
+    retried: 0,
+    failed: 0,
+  });
+  assert.equal(failure.errors[0]?.message, "Search index job failed");
+  assert.equal(
+    (failure.errors[0]?.context as { outcome: string } | undefined)?.outcome,
+    "transition_not_applied",
+  );
 });
 
-test("local CLI loop delegates batch processing to the shared worker operation", async () => {
+test("worker passes an explicit batch limit to the job claim boundary", async () => {
+  const { claimLimits, service } = createWorker({ claimed: [] });
+
+  assert.deepEqual(await service.runBatch(7), { claimed: 0, completed: 0, retried: 0, failed: 0 });
+  assert.deepEqual(claimLimits, [7]);
+});
+
+test("CLI loop delegates bounded worker batches", async () => {
+  process.env.OPENAI_API_KEY ??= "test";
+  const { runIndexWorkerLoop } = await import("@/server/entrypoints/jobs/run-search-index-worker");
+
+  let stop = false;
+
   let calls = 0;
-  let stopping = false;
 
   await runIndexWorkerLoop({
     runBatch: async () => {
       calls += 1;
-      stopping = true;
+      stop = true;
+
       return { claimed: 1, completed: 1, retried: 0, failed: 0 };
     },
-    isStopping: () => stopping,
+    isStopping: () => stop,
   });
-
   assert.equal(calls, 1);
 });

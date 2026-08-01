@@ -1,88 +1,147 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import {
-  createAuthenticatedIndexWorker,
-  resolveSearchIndexBatchLimit,
-} from "@/server/modules/search-index/public";
-import { getSearchIndexWorkerSecret } from "@/server/infrastructure/config/env";
+import { createSearchIndexWorkerGetHandler } from "@/app/api/internal/search-index-worker/route";
+import type { ILogger } from "@/server/infrastructure/logging/logger.interface";
+import type { ISearchIndexWorkerService } from "@/server/modules/search-index/public";
 
-const batchResult = {
-  claimed: 2,
-  completed: 1,
-  retried: 1,
-  failed: 0,
-};
+function createLogger() {
+  const errors: Array<{ message: string; context: unknown }> = [];
 
-function createWorker(overrides: Partial<Parameters<typeof createAuthenticatedIndexWorker>[0]> = {}) {
-  const calls: number[] = [];
-  const worker = createAuthenticatedIndexWorker({
-    getSecret: () => "expected-secret",
-    runBatch: async (limit) => {
-      calls.push(limit);
-      return batchResult;
+  const infos: Array<{ message: string; context: unknown }> = [];
+
+  const logger: ILogger = {
+    error: (message, context) => {
+      errors.push({ message, context });
     },
-    logger: { info: () => undefined, error: () => undefined },
-    getBatchLimit: () => undefined,
-    now: () => 100,
-    ...overrides,
-  });
+    info: (message, context) => {
+      infos.push({ message, context });
+    },
+  };
 
-  return { calls, worker };
+  return { errors, infos, logger };
 }
 
-test("worker route fails closed when CRON_SECRET is missing", async () => {
-  const { calls, worker } = createWorker({ getSecret: () => undefined });
-  const response = await worker(null);
+function createWorker(runBatch: ISearchIndexWorkerService["runBatch"]) {
+  return { runBatch } satisfies ISearchIndexWorkerService;
+}
+
+test("worker route returns a safe configuration error when no secret is available", async () => {
+  const { errors, logger } = createLogger();
+
+  let called = false;
+
+  const GET = createSearchIndexWorkerGetHandler({
+    getBatchLimit: () => "5",
+    getSecret: () => undefined,
+    logger,
+    workerService: createWorker(async () => {
+      called = true;
+
+      return { claimed: 0, completed: 0, retried: 0, failed: 0 };
+    }),
+  });
+
+  const response = await GET(new Request("http://localhost/api/internal/search-index-worker"));
 
   assert.equal(response.status, 500);
-  assert.deepEqual(response, {
-    status: 500,
-    error: "Search index worker is not configured.",
+  assert.deepEqual(await response.json(), { error: "Search index worker is not configured." });
+  assert.equal(called, false);
+  assert.deepEqual(errors, [
+    {
+      message: "Search index worker route is not configured",
+      context: { event: "search_index_worker.configuration_error" },
+    },
+  ]);
+});
+
+test("worker route rejects missing or incorrect authorization before running work", async () => {
+  const { logger } = createLogger();
+
+  let calls = 0;
+
+  const GET = createSearchIndexWorkerGetHandler({
+    getBatchLimit: () => "5",
+    getSecret: () => "expected-secret",
+    logger,
+    workerService: createWorker(async () => {
+      calls += 1;
+
+      return { claimed: 0, completed: 0, retried: 0, failed: 0 };
+    }),
   });
-  assert.deepEqual(calls, []);
+
+  for (const request of [
+    new Request("http://localhost/api/internal/search-index-worker"),
+    new Request("http://localhost/api/internal/search-index-worker", {
+      headers: { authorization: "Bearer wrong-secret" },
+    }),
+  ]) {
+    const response = await GET(request);
+
+    assert.equal(response.status, 401);
+    assert.deepEqual(await response.json(), { error: "Unauthorized." });
+  }
+
+  assert.equal(calls, 0);
 });
 
-test("worker route rejects missing and invalid bearer tokens", async () => {
-  const { calls, worker } = createWorker();
+test("worker route sanitizes worker failures while retaining operational logging", async () => {
+  const { errors, logger } = createLogger();
 
-  assert.equal((await worker(null)).status, 401);
-  assert.equal((await worker("Bearer wrong-secret")).status, 401);
-  assert.deepEqual(calls, []);
+  const GET = createSearchIndexWorkerGetHandler({
+    getBatchLimit: () => "5",
+    getSecret: () => "expected-secret",
+    logger,
+    workerService: createWorker(async () => {
+      throw new Error("database password leaked");
+    }),
+  });
+
+  const response = await GET(
+    new Request("http://localhost/api/internal/search-index-worker", {
+      headers: { authorization: "Bearer expected-secret" },
+    }),
+  );
+
+  assert.equal(response.status, 500);
+  assert.deepEqual(await response.json(), { error: "Search index worker failed." });
+  assert.equal(errors[0]?.message, "Search index worker batch failed");
+  assert.deepEqual(errors[0]?.context, {
+    event: "search_index_worker.error",
+    batchLimit: 5,
+    duration:
+      errors[0]?.context && typeof errors[0].context === "object"
+        ? (errors[0].context as { duration: number }).duration
+        : undefined,
+    error: "database password leaked",
+  });
 });
 
-test("worker route processes one default bounded batch for a valid bearer token", async () => {
-  const { calls, worker } = createWorker();
-  const response = await worker("Bearer expected-secret");
+test("worker route clamps a successful batch to its maximum limit and returns the result contract", async () => {
+  const { infos, logger } = createLogger();
+
+  const limits: number[] = [];
+
+  const GET = createSearchIndexWorkerGetHandler({
+    getBatchLimit: () => "999",
+    getSecret: () => "expected-secret",
+    logger,
+    workerService: createWorker(async (limit) => {
+      limits.push(limit ?? 0);
+
+      return { claimed: 3, completed: 2, retried: 1, failed: 0 };
+    }),
+  });
+
+  const response = await GET(
+    new Request("http://localhost/api/internal/search-index-worker", {
+      headers: { authorization: "Bearer expected-secret" },
+    }),
+  );
 
   assert.equal(response.status, 200);
-  assert.deepEqual(response, { status: 200, result: batchResult });
-  assert.deepEqual(calls, [5]);
-});
-
-test("worker route respects valid configured limits and caps them at twenty", async () => {
-  const configured = createWorker({ getBatchLimit: () => "12" });
-  const capped = createWorker({ getBatchLimit: () => "100" });
-
-  await configured.worker("Bearer expected-secret");
-  await capped.worker("Bearer expected-secret");
-
-  assert.deepEqual(configured.calls, [12]);
-  assert.deepEqual(capped.calls, [20]);
-  assert.equal(resolveSearchIndexBatchLimit("0"), 5);
-  assert.equal(resolveSearchIndexBatchLimit("invalid"), 5);
-});
-
-test("worker secret keeps the existing cron configuration as a fallback", () => {
-  const originalWorkerSecret = process.env.SEARCH_INDEX_WORKER_SECRET;
-  const originalCronSecret = process.env.CRON_SECRET;
-  delete process.env.SEARCH_INDEX_WORKER_SECRET;
-  process.env.CRON_SECRET = "existing-cron-secret";
-  try {
-    assert.equal(getSearchIndexWorkerSecret(), "existing-cron-secret");
-  } finally {
-    if (originalWorkerSecret === undefined) delete process.env.SEARCH_INDEX_WORKER_SECRET;
-    else process.env.SEARCH_INDEX_WORKER_SECRET = originalWorkerSecret;
-    if (originalCronSecret === undefined) delete process.env.CRON_SECRET;
-    else process.env.CRON_SECRET = originalCronSecret;
-  }
+  assert.deepEqual(await response.json(), { claimed: 3, completed: 2, retried: 1, failed: 0 });
+  assert.deepEqual(limits, [20]);
+  assert.equal(infos[0]?.message, "Search index worker batch started");
+  assert.equal(infos[1]?.message, "Search index worker batch completed");
 });

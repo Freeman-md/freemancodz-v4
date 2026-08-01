@@ -1,6 +1,14 @@
 import { Chip } from "@/shared/components/ui/Chip";
 
-type ProjectCardProps = { title: string; summary: string; category: string; stack: string[]; role: string; outcome: string; links: { label: string; href: string }[] };
+type ProjectCardProps = {
+  title: string;
+  summary: string;
+  category: string;
+  stack: string[];
+  role: string;
+  outcome: string;
+  links: { label: string; href: string }[];
+};
 
 export function ProjectCard({
   project,
@@ -17,16 +25,12 @@ export function ProjectCard({
           <Chip>{project.role}</Chip>
         </div>
       </div>
-      <h3 className="mt-6 text-2xl font-medium tracking-[-0.03em] text-ink">
-        {project.title}
-      </h3>
+      <h3 className="mt-6 text-2xl font-medium tracking-[-0.03em] text-ink">{project.title}</h3>
       <p className="mt-3 text-sm leading-6 text-muted">{project.summary}</p>
       <div className="mt-5 flex flex-wrap gap-2">
-        {project.stack
-          .slice(0, compact ? 3 : 5)
-          .map((item) => (
-            <Chip key={item}>{item}</Chip>
-          ))}
+        {project.stack.slice(0, compact ? 3 : 5).map((item) => (
+          <Chip key={item}>{item}</Chip>
+        ))}
       </div>
       <p className="mt-6 border-l-4 border-black pl-4 text-sm leading-6 text-ink">
         {project.outcome}

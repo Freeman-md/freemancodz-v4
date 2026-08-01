@@ -2,7 +2,10 @@
 
 import type { ReactNode } from "react";
 import type { AssistantTriggerDetail } from "@/contracts/assistant.contract";
-import { dispatchOpenPortfolioChat, type OpenPortfolioChatDetail } from "@/features/assistant/assistant.events";
+import {
+  dispatchOpenPortfolioChat,
+  type OpenPortfolioChatDetail,
+} from "@/features/assistant/assistant.events";
 
 type AssistantTriggerButtonProps = {
   children: ReactNode;
@@ -19,8 +22,7 @@ export function AssistantTriggerButton({
 }: AssistantTriggerButtonProps) {
   const styles = {
     primary: "border border-black bg-black text-white hover:opacity-90",
-    accent:
-      "border border-accent bg-accent text-white hover:bg-indigo-500 hover:border-indigo-500",
+    accent: "border border-accent bg-accent text-white hover:bg-indigo-500 hover:border-indigo-500",
     ghost: "border border-line bg-transparent text-ink hover:bg-surface",
     text: "text-ink hover:text-accent",
   }[variant];

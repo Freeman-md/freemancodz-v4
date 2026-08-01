@@ -90,11 +90,7 @@ Schemas define valid shapes. Small parsing functions may exist outside the schem
 For example:
 
 ```ts
-export function parseContentBlock<T>(
-  schema: ZodType<T>,
-  value: unknown,
-  key: string,
-): T {
+export function parseContentBlock<T>(schema: ZodType<T>, value: unknown, key: string): T {
   const result = schema.safeParse(value);
 
   if (!result.success) {

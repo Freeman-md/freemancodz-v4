@@ -14,6 +14,7 @@ test("loading states provide meaningful route-specific placeholders", () => {
 
 test("error boundary provides a safe recovery interface", () => {
   const markup = renderToStaticMarkup(<GlobalError reset={() => undefined} />);
+
   assert.match(markup, /Something went wrong/);
   assert.match(markup, /Try again/);
   assert.doesNotMatch(markup, /DATABASE_URL|stack trace|secret/i);

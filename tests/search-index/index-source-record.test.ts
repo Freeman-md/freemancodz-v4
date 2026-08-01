@@ -1,386 +1,279 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import type { ContentBlock, Project } from "@/generated/prisma/client";
-import {
-  createIndexSourceRecord,
-} from "@/server/modules/search-index/services/index-source-record.service";
+import type { Principle, Project } from "@/generated/prisma/client";
+import type { IOpenAIProvider } from "@/server/infrastructure/openai/interfaces/openai.provider.interface";
 import { prepareSiteChunk } from "@/server/modules/search-index/factories/site-chunk.factory";
+import type { IIndexingSourceRepository } from "@/server/modules/search-index/interfaces/indexing-source.repository.interface";
+import type { ISearchIndexJobRepository } from "@/server/modules/search-index/interfaces/search-index-job.repository.interface";
+import type { ISiteChunkRepository } from "@/server/modules/search-index/interfaces/site-chunk.repository.interface";
+import { buildProjectDocuments } from "@/server/modules/search-index/mappers/build-project-documents";
 import type {
   ExistingSiteChunk,
-  SearchDocument,
+  IndexableSource,
+  ReplaceIndexedSourceInput,
 } from "@/server/modules/search-index/models/search-index";
-
-const timestamp = new Date("2026-07-19T00:00:00.000Z");
-const embeddingModel = "text-embedding-3-small";
+import { SearchIndexService } from "@/server/modules/search-index/services/search-index.service";
 
 const project = {
   id: "project-1",
   title: "Grounded Assistant",
-  summary: "A customer-facing assistant grounded in trusted sources.",
-  category: "AI Engineering",
-  role: "Full-stack engineer",
-  outcome: "Produced cited answers from portfolio content.",
-  detail: "Implemented retrieval, context injection and answer generation.",
+  summary: "Summary",
+  category: "AI",
+  role: "Engineer",
+  outcome: "Outcome",
+  detail: "Detail",
   future: null,
   collaboration: null,
-  positioning: "A practical customer-facing assistant.",
+  positioning: null,
   featured: true,
   position: 1,
-  stacks: ["TypeScript", "Next.js", "Supabase"],
+  stacks: ["TypeScript"],
   links: [],
-  createdAt: timestamp,
-  updatedAt: timestamp,
+  createdAt: new Date("2026-01-01T00:00:00.000Z"),
+  updatedAt: new Date("2026-01-01T00:00:00.000Z"),
 } satisfies Project;
 
-const projectDocument = {
-  sourceType: "projects",
-  sourceId: "project-1",
-  documentIndex: 0,
-  title: "Grounded Assistant",
-  category: "AI Engineering",
-  url: "/work",
-  content: [
-    "Summary: A customer-facing assistant grounded in trusted sources.",
-    "Role: Full-stack engineer",
-    "Outcome: Produced cited answers from portfolio content.",
-    "Details: Implemented retrieval, context injection and answer generation.",
-    "Positioning: A practical customer-facing assistant.",
-    "Technologies: Next.js, Supabase, TypeScript",
-  ].join("\n\n"),
-  keywords: [
-    "AI Engineering",
-    "Full-stack engineer",
-    "Next.js",
-    "Supabase",
-    "TypeScript",
-  ],
-} satisfies SearchDocument;
+const unsupportedPrinciple = {
+  id: "principle-contact",
+  section: "contact",
+  title: "Contact",
+  body: "Get in touch.",
+  position: 1,
+  createdAt: new Date("2026-01-01T00:00:00.000Z"),
+  updatedAt: new Date("2026-01-01T00:00:00.000Z"),
+} satisfies Principle;
 
-const preparedProject = prepareSiteChunk(projectDocument);
-const existingProjectChunk = {
-  id: preparedProject.id,
-  sourceType: "projects",
-  sourceId: "project-1",
-  chunkIndex: 0,
-  contentHash: preparedProject.contentHash,
-  embeddingModel,
-} satisfies ExistingSiteChunk;
+const preparedProjectChunk = prepareSiteChunk(buildProjectDocuments(project)[0]!);
 
-test("indexSourceRecord creates and embeds a new chunk", async () => {
+function existingChunk(overrides: Partial<ExistingSiteChunk> = {}): ExistingSiteChunk {
+  return {
+    id: preparedProjectChunk.id,
+    sourceType: "projects",
+    sourceId: project.id,
+    chunkIndex: preparedProjectChunk.chunkIndex,
+    contentHash: preparedProjectChunk.contentHash,
+    embeddingModel: "model",
+    ...overrides,
+  };
+}
+
+function createService({
+  source = { sourceType: "projects", record: project } satisfies IndexableSource,
+  existing = [],
+  embeddingModel = "model",
+  createEmbeddings,
+  findSource,
+  replaceSource,
+}: {
+  source?: IndexableSource | null;
+  existing?: ExistingSiteChunk[];
+  embeddingModel?: string;
+  createEmbeddings?: IOpenAIProvider["createEmbeddings"];
+  findSource?: IIndexingSourceRepository["findById"];
+  replaceSource?: ISiteChunkRepository["replaceSource"];
+} = {}) {
   const embeddingInputs: string[][] = [];
-  const replaceInputs: { upserts: { embeddedAt: Date }[] }[] = [];
-  const operation = createIndexSourceRecord({
-    findIndexableSource: async (sourceType, sourceId) => {
-      assert.deepEqual([sourceType, sourceId], ["projects", "project-1"]);
-      return { sourceType: "projects", record: project };
+
+  const replacements: ReplaceIndexedSourceInput[] = [];
+
+  const sources: IIndexingSourceRepository = {
+    findById: findSource ?? (async () => source),
+    findAll: async () => (source ? [source] : []),
+  };
+
+  const chunks: ISiteChunkRepository = {
+    findBySource: async () => existing,
+    replaceSource: async (input) => {
+      replacements.push(input);
+      await replaceSource?.(input);
     },
-    findIndexedChunksBySource: async (sourceType, sourceId) => {
-      assert.deepEqual([sourceType, sourceId], ["projects", "project-1"]);
-      return [];
-    },
+    deleteSource: async () => 0,
+    match: async () => [],
+  };
+
+  const jobs: ISearchIndexJobRepository = {
+    enqueue: async () => ({}) as never,
+    claim: async () => [],
+    complete: async () => null,
+    fail: async () => null,
+    getStatus: async () => ({}) as never,
+  };
+
+  const openai: IOpenAIProvider = {
+    getEmbeddingModel: () => embeddingModel,
+    createEmbedding: async () => [],
     createEmbeddings: async (inputs) => {
       embeddingInputs.push(inputs);
-      return [{ embedding: [0.1, 0.2], embeddingModel }];
-    },
-    replaceIndexedSource: async (input) => {
-      replaceInputs.push(input);
-    },
-    getEmbeddingModel: () => embeddingModel,
-  });
 
-  const result = await operation({
-    sourceType: "projects",
-    sourceId: "project-1",
-  });
+      return createEmbeddings
+        ? createEmbeddings(inputs)
+        : inputs.map(() => ({ embedding: [0.25, 0.75], embeddingModel }));
+    },
+    streamResponse: async () => ({}) as never,
+  };
 
-  assert.deepEqual(result, {
-    created: 1,
-    changed: 0,
-    unchanged: 0,
-    deleted: 0,
-  });
-  assert.deepEqual(embeddingInputs, [[preparedProject.embeddingInput]]);
-  assert.equal(replaceInputs.length, 1);
-  assert.deepEqual(replaceInputs[0], {
+  return {
+    embeddingInputs,
+    replacements,
+    service: new SearchIndexService(sources, chunks, jobs, openai),
+  };
+}
+
+test("search-index service creates a new source with an embedded replacement payload", async () => {
+  const { embeddingInputs, replacements, service } = createService();
+
+  const result = await service.indexSource({ sourceType: "projects", sourceId: project.id });
+
+  assert.deepEqual(result, { created: 1, changed: 0, unchanged: 0, deleted: 0 });
+  assert.deepEqual(embeddingInputs, [[preparedProjectChunk.embeddingInput]]);
+  assert.equal(replacements.length, 1);
+  assert.deepEqual(replacements[0], {
     sourceType: "projects",
-    sourceId: "project-1",
+    sourceId: project.id,
+    obsoleteIds: [],
     upserts: [
       {
-        ...preparedProject,
-        embedding: [0.1, 0.2],
-        embeddingModel,
-        embeddedAt: replaceInputs[0].upserts[0].embeddedAt,
+        ...preparedProjectChunk,
+        embedding: [0.25, 0.75],
+        embeddingModel: "model",
+        embeddedAt: replacements[0]?.upserts[0]?.embeddedAt,
       },
     ],
-    obsoleteIds: [],
   });
+  assert.ok(replacements[0]?.upserts[0]?.embeddedAt instanceof Date);
 });
 
-test("indexSourceRecord leaves an identical chunk unchanged without embedding or upsert", async () => {
-  let embeddingCalls = 0;
-  const replaceInputs: { upserts: { embeddedAt: Date }[] }[] = [];
-  const operation = createIndexSourceRecord({
-    findIndexableSource: async () => ({
-      sourceType: "projects",
-      record: project,
-    }),
-    findIndexedChunksBySource: async () => [existingProjectChunk],
-    createEmbeddings: async () => {
-      embeddingCalls += 1;
-      return [];
-    },
-    replaceIndexedSource: async (input) => {
-      replaceInputs.push(input);
-    },
-    getEmbeddingModel: () => embeddingModel,
+test("search-index service updates an existing chunk when its embedding model changes", async () => {
+  const { embeddingInputs, replacements, service } = createService({
+    existing: [existingChunk({ embeddingModel: "old-model" })],
+    embeddingModel: "new-model",
   });
 
-  const result = await operation({
-    sourceType: "projects",
-    sourceId: "project-1",
+  const result = await service.indexSource({ sourceType: "projects", sourceId: project.id });
+
+  assert.deepEqual(result, { created: 0, changed: 1, unchanged: 0, deleted: 0 });
+  assert.deepEqual(embeddingInputs, [[preparedProjectChunk.embeddingInput]]);
+  assert.equal(replacements[0]?.upserts.length, 1);
+  assert.equal(replacements[0]?.upserts[0]?.id, preparedProjectChunk.id);
+  assert.equal(replacements[0]?.upserts[0]?.embeddingModel, "new-model");
+  assert.deepEqual(replacements[0]?.upserts[0]?.embedding, [0.25, 0.75]);
+  assert.deepEqual(replacements[0]?.obsoleteIds, []);
+});
+
+test("search-index service atomically removes obsolete chunks without embedding unchanged content", async () => {
+  const stale = existingChunk({ id: "projects:project-1:stale", chunkIndex: 99 });
+
+  const { embeddingInputs, replacements, service } = createService({
+    existing: [existingChunk(), stale],
   });
 
-  assert.deepEqual(result, {
-    created: 0,
-    changed: 0,
-    unchanged: 1,
-    deleted: 0,
-  });
-  assert.equal(embeddingCalls, 0);
-  assert.deepEqual(replaceInputs, [
+  const result = await service.indexSource({ sourceType: "projects", sourceId: project.id });
+
+  assert.deepEqual(result, { created: 0, changed: 0, unchanged: 1, deleted: 1 });
+  assert.deepEqual(embeddingInputs, []);
+  assert.deepEqual(replacements, [
     {
       sourceType: "projects",
-      sourceId: "project-1",
+      sourceId: project.id,
       upserts: [],
-      obsoleteIds: [],
+      obsoleteIds: [stale.id],
     },
   ]);
 });
 
-test("indexSourceRecord embeds and updates a changed chunk", async () => {
-  let embeddingCalls = 0;
-  let replaceInput: unknown;
-  const operation = createIndexSourceRecord({
-    findIndexableSource: async () => ({
-      sourceType: "projects",
-      record: project,
-    }),
-    findIndexedChunksBySource: async () => [
-      { ...existingProjectChunk, contentHash: "old-hash" },
-    ],
-    createEmbeddings: async (inputs) => {
-      embeddingCalls += 1;
-      assert.deepEqual(inputs, [preparedProject.embeddingInput]);
-      return [{ embedding: [0.3, 0.4], embeddingModel }];
-    },
-    replaceIndexedSource: async (input) => {
-      replaceInput = input;
-    },
-    getEmbeddingModel: () => embeddingModel,
+test("search-index service handles an unsupported principle without generating embeddings", async () => {
+  const obsolete = existingChunk({
+    id: "principles:principle-contact:0",
+    sourceType: "principles",
+    sourceId: unsupportedPrinciple.id,
   });
 
-  const result = await operation({
-    sourceType: "projects",
-    sourceId: "project-1",
+  const { embeddingInputs, replacements, service } = createService({
+    source: { sourceType: "principles", record: unsupportedPrinciple },
+    existing: [obsolete],
   });
 
-  assert.deepEqual(result, {
-    created: 0,
-    changed: 1,
-    unchanged: 0,
-    deleted: 0,
-  });
-  assert.equal(embeddingCalls, 1);
-  assert.deepEqual(replaceInput, {
-    sourceType: "projects",
-    sourceId: "project-1",
-    upserts: [
-      {
-        ...preparedProject,
-        embedding: [0.3, 0.4],
-        embeddingModel,
-        embeddedAt: (replaceInput as { upserts: [{ embeddedAt: Date }] })
-          .upserts[0].embeddedAt,
-      },
-    ],
-    obsoleteIds: [],
-  });
-});
-
-test("indexSourceRecord re-embeds a chunk when the embedding model changes", async () => {
-  let embeddingCalls = 0;
-  const replaceInputs: { upserts: { embeddedAt: Date }[] }[] = [];
-  const operation = createIndexSourceRecord({
-    findIndexableSource: async () => ({
-      sourceType: "projects",
-      record: project,
-    }),
-    findIndexedChunksBySource: async () => [
-      { ...existingProjectChunk, embeddingModel: "old-embedding-model" },
-    ],
-    createEmbeddings: async () => {
-      embeddingCalls += 1;
-      return [{ embedding: [0.5], embeddingModel }];
-    },
-    replaceIndexedSource: async (input) => {
-      replaceInputs.push(input);
-    },
-    getEmbeddingModel: () => embeddingModel,
+  const result = await service.indexSource({
+    sourceType: "principles",
+    sourceId: unsupportedPrinciple.id,
   });
 
-  const result = await operation({
-    sourceType: "projects",
-    sourceId: "project-1",
-  });
-
-  assert.deepEqual(result, {
-    created: 0,
-    changed: 1,
-    unchanged: 0,
-    deleted: 0,
-  });
-  assert.equal(embeddingCalls, 1);
-  assert.equal(replaceInputs.length, 1);
-  assert.deepEqual(replaceInputs[0], {
-    sourceType: "projects",
-    sourceId: "project-1",
-    upserts: [
-      {
-        ...preparedProject,
-        embedding: [0.5],
-        embeddingModel,
-        embeddedAt: replaceInputs[0].upserts[0].embeddedAt,
-      },
-    ],
-    obsoleteIds: [],
-  });
-});
-
-test("indexSourceRecord deletes an unsupported ContentBlock without embeddings", async () => {
-  const contentBlock = {
-    id: "block-1",
-    key: "home.unknown",
-    page: "HOME",
-    section: "HERO",
-    position: 0,
-    content: { unsupported: true },
-    createdAt: timestamp,
-    updatedAt: timestamp,
-  } satisfies ContentBlock;
-  let embeddingCalls = 0;
-  const replaceInputs: unknown[] = [];
-  const operation = createIndexSourceRecord({
-    findIndexableSource: async () => ({
-      sourceType: "content_blocks",
-      record: contentBlock,
-    }),
-    findIndexedChunksBySource: async () => [
-      {
-        ...existingProjectChunk,
-        id: "content_blocks:block-1:0",
-        sourceType: "content_blocks",
-        sourceId: "block-1",
-      },
-    ],
-    createEmbeddings: async () => {
-      embeddingCalls += 1;
-      return [];
-    },
-    replaceIndexedSource: async (input) => {
-      replaceInputs.push(input);
-    },
-    getEmbeddingModel: () => embeddingModel,
-  });
-
-  const result = await operation({
-    sourceType: "content_blocks",
-    sourceId: "block-1",
-  });
-
-  assert.deepEqual(result, {
-    created: 0,
-    changed: 0,
-    unchanged: 0,
-    deleted: 1,
-  });
-  assert.equal(embeddingCalls, 0);
-  assert.deepEqual(replaceInputs, [
-    {
-      sourceType: "content_blocks",
-      sourceId: "block-1",
-      upserts: [],
-      obsoleteIds: ["content_blocks:block-1:0"],
-    },
-  ]);
-});
-
-test("indexSourceRecord passes obsolete document IDs to replacement", async () => {
-  const obsoleteId = "projects:project-1:9";
-  let replaceInput: unknown;
-  const operation = createIndexSourceRecord({
-    findIndexableSource: async () => ({
-      sourceType: "projects",
-      record: project,
-    }),
-    findIndexedChunksBySource: async () => [
-      existingProjectChunk,
-      { ...existingProjectChunk, id: obsoleteId, chunkIndex: 9 },
-    ],
-    createEmbeddings: async () => [],
-    replaceIndexedSource: async (input) => {
-      replaceInput = input;
-    },
-    getEmbeddingModel: () => embeddingModel,
-  });
-
-  const result = await operation({
-    sourceType: "projects",
-    sourceId: "project-1",
-  });
-
-  assert.deepEqual(result, {
-    created: 0,
-    changed: 0,
-    unchanged: 1,
-    deleted: 1,
-  });
-  assert.deepEqual(replaceInput, {
-    sourceType: "projects",
-    sourceId: "project-1",
+  assert.deepEqual(result, { created: 0, changed: 0, unchanged: 0, deleted: 1 });
+  assert.deepEqual(embeddingInputs, []);
+  assert.deepEqual(replacements[0], {
+    sourceType: "principles",
+    sourceId: unsupportedPrinciple.id,
     upserts: [],
-    obsoleteIds: [obsoleteId],
+    obsoleteIds: [obsolete.id],
   });
 });
 
-test("indexSourceRecord wraps embedding failures and does not replace the source", async () => {
-  const embeddingError = new Error("embedding unavailable");
-  let replaceCalls = 0;
-  const operation = createIndexSourceRecord({
-    findIndexableSource: async () => ({
-      sourceType: "projects",
-      record: project,
-    }),
-    findIndexedChunksBySource: async () => [],
-    createEmbeddings: async () => {
-      throw embeddingError;
-    },
-    replaceIndexedSource: async () => {
-      replaceCalls += 1;
-    },
-    getEmbeddingModel: () => embeddingModel,
-  });
+test("search-index service wraps a missing source without persistence or provider work", async () => {
+  const { embeddingInputs, replacements, service } = createService({ source: null });
 
   await assert.rejects(
-    operation({ sourceType: "projects", sourceId: "project-1" }),
-    (error: unknown) => {
-      assert.ok(error instanceof Error);
-      assert.equal(
-        error.message,
-        "Failed to index projects:project-1: embedding unavailable",
-      );
-      assert.equal(error.cause, embeddingError);
-      return true;
-    },
+    service.indexSource({ sourceType: "projects", sourceId: "missing" }),
+    /Failed to index projects:missing: Source record was not found\./,
   );
-  assert.equal(replaceCalls, 0);
+  assert.deepEqual(embeddingInputs, []);
+  assert.deepEqual(replacements, []);
+});
+
+test("search-index service wraps provider and persistence failures with their causes", async () => {
+  const providerFailure = new Error("embedding provider unavailable");
+
+  const repositoryFailure = new Error("replacement transaction unavailable");
+
+  const providerService = createService({
+    createEmbeddings: async () => {
+      throw providerFailure;
+    },
+  }).service;
+
+  const repositoryService = createService({
+    replaceSource: async () => {
+      throw repositoryFailure;
+    },
+  }).service;
+
+  for (const [service, failure] of [
+    [providerService, providerFailure],
+    [repositoryService, repositoryFailure],
+  ] as const) {
+    await assert.rejects(
+      service.indexSource({ sourceType: "projects", sourceId: project.id }),
+      (error: unknown) => {
+        assert.ok(error instanceof Error);
+        assert.match(error.message, /Failed to index projects:project-1:/);
+        assert.equal(error.cause, failure);
+
+        return true;
+      },
+    );
+  }
+});
+
+test("search-index preview reports create, update, unchanged, and obsolete actions", async () => {
+  const stale = existingChunk({ id: "projects:project-1:stale", chunkIndex: 99 });
+
+  const createPreview = await createService().service.preview({
+    sourceType: "projects",
+    sourceId: project.id,
+  });
+
+  const updatePreview = await createService({
+    existing: [existingChunk({ embeddingModel: "old-model" })],
+  }).service.preview({ sourceType: "projects", sourceId: project.id });
+
+  const unchangedPreview = await createService({
+    existing: [existingChunk(), stale],
+  }).service.preview({
+    sourceType: "projects",
+    sourceId: project.id,
+  });
+
+  assert.equal(createPreview.chunks[0]?.expectedAction, "create");
+  assert.equal(updatePreview.chunks[0]?.expectedAction, "update");
+  assert.equal(unchangedPreview.chunks[0]?.expectedAction, "unchanged");
+  assert.deepEqual(unchangedPreview.obsoleteIds, [stale.id]);
 });

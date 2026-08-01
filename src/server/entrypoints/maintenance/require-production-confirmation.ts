@@ -14,11 +14,10 @@ export function requireProductionConfirmation(): void {
   }
 
   const databaseName = target.pathname.replace(/^\//, "") || "(default)";
+
   console.log(`Production database target: ${target.hostname}/${databaseName}`);
 
   if (!process.argv.includes("--confirm-production")) {
-    throw new Error(
-      "Production administration requires the --confirm-production flag.",
-    );
+    throw new Error("Production administration requires the --confirm-production flag.");
   }
 }

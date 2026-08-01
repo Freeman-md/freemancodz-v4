@@ -14,9 +14,7 @@ export function buildProjectDocuments(project: Project): SearchDocument[] {
     `Outcome: ${project.outcome}`,
     `Details: ${project.detail}`,
     ...optionalSections,
-    project.stacks.length > 0
-      ? `Technologies: ${[...project.stacks].sort().join(", ")}`
-      : null,
+    project.stacks.length > 0 ? `Technologies: ${[...project.stacks].sort().join(", ")}` : null,
   ]
     .filter((section): section is string => section !== null)
     .join("\n\n");
