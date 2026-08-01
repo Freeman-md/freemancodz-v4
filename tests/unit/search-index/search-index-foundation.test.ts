@@ -1,9 +1,23 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import type { ContentBlock, Project } from "@/generated/prisma/client";
+import type {
+  ContentBlock,
+  Experience,
+  Principle,
+  Project,
+  Service,
+} from "@/generated/prisma/client";
+import type { ILogger } from "@/server/infrastructure/logging/logger.interface";
+import type { IOpenAIProvider } from "@/server/infrastructure/openai/interfaces/openai.provider.interface";
 import { chunkText, prepareSiteChunks } from "@/server/modules/search-index/chunking/text-chunker";
-import type { ISearchIndexJobRepository } from "@/server/modules/search-index/interfaces/search-index-job.repository.interface";
-import type { ISourceRecordRepository } from "@/server/modules/search-index/interfaces/source-record.repository.interface";
+import type {
+  ISearchIndexJobRepository,
+  SearchIndexJob,
+} from "@/server/modules/search-index/interfaces/search-index-job.repository.interface";
+import type {
+  ISourceRecordRepository,
+  SourceRecord,
+} from "@/server/modules/search-index/interfaces/source-record.repository.interface";
 import type { ISiteChunkRepository } from "@/server/modules/search-index/interfaces/site-chunk.repository.interface";
 import { mapContentBlockDocument } from "@/server/modules/search-index/mappers/content-block-document.mapper";
 import { mapSourceDocument } from "@/server/modules/search-index/mappers/source-document.mapper";
@@ -28,6 +42,41 @@ const project = {
   updatedAt: new Date(),
 } satisfies Project;
 
+const service = {
+  id: "service-1",
+  title: "Product strategy",
+  lead: "Find the practical next step.",
+  description: "Freeman helps teams shape product systems.",
+  cta: "Talk to Freeman",
+  assistantPrompt: null,
+  position: 1,
+  createdAt: new Date(),
+  updatedAt: new Date(),
+} satisfies Service;
+
+const experience = {
+  id: "experience-1",
+  title: "Platform engineer",
+  company: "Northstar",
+  dates: "2024-2026",
+  location: "London",
+  category: "Engineering",
+  focus: "Reliable systems",
+  position: 1,
+  createdAt: new Date(),
+  updatedAt: new Date(),
+} satisfies Experience;
+
+const principle = {
+  id: "principle-1",
+  section: "home",
+  title: "Useful software",
+  body: "Software should make a practical difference.",
+  position: 1,
+  createdAt: new Date(),
+  updatedAt: new Date(),
+} satisfies Principle;
+
 test("project mapping explicitly identifies Freeman's project", () => {
   const document = mapSourceDocument({ sourceType: "projects", record: project });
 
@@ -51,6 +100,17 @@ test("content blocks use descriptive titles and invalid blocks fail visibly", ()
     () => mapContentBlockDocument({ ...block, key: "unknown" }),
     /Unsupported or invalid/,
   );
+});
+test("all supported source records map to meaningful source-specific text", () => {
+  const documents = [
+    mapSourceDocument({ sourceType: "services", record: service }),
+    mapSourceDocument({ sourceType: "experiences", record: experience }),
+    mapSourceDocument({ sourceType: "principles", record: principle }),
+  ];
+
+  assert.match(documents[0]?.paragraphs.join(" ") ?? "", /Service: Freeman offers/);
+  assert.match(documents[1]?.paragraphs.join(" ") ?? "", /Experience: Freeman worked as/);
+  assert.match(documents[2]?.paragraphs.join(" ") ?? "", /Principle: Freeman values/);
 });
 test("paragraph-first chunking is deterministic and splits oversized paragraphs", () => {
   const short = ["One paragraph.", "Two paragraphs."];
@@ -159,5 +219,203 @@ test("deleted sources remove their chunks", async () => {
   assert.equal(
     (await service.indexSource({ sourceType: "projects", sourceId: project.id })).deleted,
     2,
+  );
+});
+
+const failedJob = {
+  id: "job-1",
+  operation: "upsert",
+  sourceType: "projects",
+  sourceId: project.id,
+  status: "processing",
+  attempts: 1,
+  availableAt: new Date(),
+  claimedAt: new Date(),
+  lastError: null,
+  createdAt: new Date(),
+  processedAt: null,
+} satisfies SearchIndexJob;
+
+function createServiceForFailure({
+  source = { sourceType: "projects", record: project } as SourceRecord,
+  embeddings = async () => [{ embedding: Array(1536).fill(0), embeddingModel: "model" }],
+  replaceSource = async () => undefined,
+}: {
+  source?: SourceRecord;
+  embeddings?: IOpenAIProvider["createEmbeddings"];
+  replaceSource?: ISiteChunkRepository["replaceSource"];
+}) {
+  const errors: unknown[] = [];
+
+  const jobs: ISearchIndexJobRepository = {
+    claim: async () => [failedJob],
+    complete: async () => null,
+    fail: async (_id, error) => {
+      errors.push(error);
+
+      return { ...failedJob, status: "failed" };
+    },
+    getStatus: async () => ({}) as never,
+    clear: async () => undefined,
+  };
+
+  const sourceRepository: ISourceRecordRepository = {
+    findById: async () => source,
+    findAll: async () => [source],
+  };
+
+  const chunkRepository: ISiteChunkRepository = {
+    findBySource: async () => [],
+    replaceSource,
+    deleteSource: async () => 0,
+    match: async () => [],
+    clear: async () => undefined,
+  };
+
+  const openai: IOpenAIProvider = {
+    getEmbeddingModel: () => "model",
+    createEmbedding: async () => [],
+    createEmbeddings: embeddings,
+    streamResponse: async () => ({}) as never,
+  };
+
+  const logger: ILogger = { info: () => undefined, error: () => undefined };
+
+  return {
+    service: new SearchIndexService(sourceRepository, chunkRepository, jobs, openai, logger),
+    errors,
+  };
+}
+
+test("pending jobs safely fail for mapping, embedding, and persistence errors", async () => {
+  const invalidBlock = {
+    id: "broken-block",
+    key: "unknown",
+    page: "ABOUT",
+    section: "ABOUT_HEADER",
+    position: 1,
+    content: {},
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  } as ContentBlock;
+
+  const cases = [
+    createServiceForFailure({ source: { sourceType: "content_blocks", record: invalidBlock } }),
+    createServiceForFailure({
+      embeddings: async () => {
+        throw new Error("embedding unavailable");
+      },
+    }),
+    createServiceForFailure({
+      replaceSource: async () => {
+        throw new Error("transaction failed");
+      },
+    }),
+  ];
+
+  for (const current of cases) {
+    assert.deepEqual(await current.service.processPendingJobs(), {
+      claimed: 1,
+      completed: 0,
+      retried: 0,
+      failed: 1,
+    });
+    assert.equal(current.errors.length, 1);
+  }
+});
+
+test("clean rebuild clears stale state, uses indexing, and reports success and failure summaries", async () => {
+  const events: string[] = [];
+
+  const sources: SourceRecord[] = [
+    { sourceType: "projects", record: project },
+    { sourceType: "services", record: service },
+  ];
+
+  const sourceRepository: ISourceRecordRepository = {
+    findById: async (sourceType, sourceId) =>
+      sources.find((source) => source.sourceType === sourceType && source.record.id === sourceId) ??
+      null,
+    findAll: async () => sources,
+  };
+
+  const chunks: ISiteChunkRepository = {
+    findBySource: async () => [],
+    replaceSource: async () => {
+      events.push("replace");
+    },
+    deleteSource: async () => 0,
+    match: async () => [],
+    clear: async () => {
+      events.push("clear-chunks");
+    },
+  };
+
+  const jobs: ISearchIndexJobRepository = {
+    claim: async () => [],
+    complete: async () => null,
+    fail: async () => null,
+    getStatus: async () => ({}) as never,
+    clear: async () => {
+      events.push("clear-jobs");
+    },
+  };
+
+  const openai: IOpenAIProvider = {
+    getEmbeddingModel: () => "model",
+    createEmbedding: async () => [],
+    createEmbeddings: async (inputs) =>
+      inputs.map(() => ({ embedding: Array(1536).fill(0), embeddingModel: "model" })),
+    streamResponse: async () => ({}) as never,
+  };
+
+  const rebuilt = new SearchIndexService(sourceRepository, chunks, jobs, openai, {
+    info: () => undefined,
+    error: () => undefined,
+  });
+
+  const result = await rebuilt.rebuild({ clean: true });
+
+  assert.deepEqual(events.slice(0, 2), ["clear-chunks", "clear-jobs"]);
+  assert.deepEqual(result.summary, {
+    sourceRecords: 2,
+    sourcesIndexed: 2,
+    sourcesSkipped: 0,
+    chunksCreated: 2,
+    embeddingsGenerated: 2,
+    sourcesFailed: 0,
+  });
+
+  const invalidSource = {
+    sourceType: "content_blocks" as const,
+    record: {
+      id: "bad",
+      key: "unknown",
+      page: "ABOUT",
+      section: "ABOUT_HEADER",
+      position: 1,
+      content: {},
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as ContentBlock,
+  };
+
+  const failingSources: ISourceRecordRepository = {
+    findById: async () => invalidSource,
+    findAll: async () => [invalidSource],
+  };
+
+  const failing = new SearchIndexService(failingSources, chunks, jobs, openai, {
+    info: () => undefined,
+    error: () => undefined,
+  });
+
+  await assert.rejects(failing.rebuild({ clean: true }), (error: unknown) =>
+    Boolean(
+      error &&
+      typeof error === "object" &&
+      "summary" in error &&
+      (error as { summary: { sourcesFailed: number } }).summary.sourcesFailed === 1,
+    ),
   );
 });
