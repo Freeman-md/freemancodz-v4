@@ -15,17 +15,16 @@ async function main() {
     sourceId: input.sourceId,
   });
 
-  if (preview.chunks.length === 0) {
-    console.log("\nGenerated documents: none");
-  }
+  console.log("\nMapped document");
+  console.dir(preview.document, { depth: null });
 
   for (const chunk of preview.chunks) {
-    console.log("\nGenerated document");
+    console.log("\nPrepared chunk");
     console.dir(
       {
         sourceType: chunk.sourceType,
         sourceId: chunk.sourceId,
-        documentIndex: chunk.documentIndex,
+        chunkIndex: chunk.chunkIndex,
         title: chunk.title,
         category: chunk.category,
         url: chunk.url,
@@ -35,23 +34,14 @@ async function main() {
       { depth: null },
     );
 
-    console.log("\nPrepared chunk");
     console.log({
       id: chunk.id,
-      chunkIndex: chunk.chunkIndex,
       embeddingInput: chunk.embeddingInput,
       contentHash: chunk.contentHash,
-      expectedAction: chunk.expectedAction,
     });
   }
 
-  for (const id of preview.obsoleteIds) {
-    console.log("\nObsolete chunk");
-    console.log({
-      id,
-      expectedAction: "delete",
-    });
-  }
+  console.log("\nExpected source action:", preview.expectedAction);
 }
 
 main().catch((error) => {

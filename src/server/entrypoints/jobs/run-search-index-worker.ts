@@ -1,5 +1,5 @@
-import type { IndexWorkerBatchResult } from "@/server/modules/search-index/public";
-import { searchIndexWorkerService } from "@/server/composition-root";
+import type { IndexWorkerBatchResult } from "@/server/modules/search-index/interfaces/search-index-job.repository.interface";
+import { searchIndexService } from "@/server/composition-root";
 
 const POLLING_DELAY_MS = 2_000;
 
@@ -38,7 +38,7 @@ async function main() {
 
   try {
     await runIndexWorkerLoop({
-      runBatch: () => searchIndexWorkerService.runBatch(),
+      runBatch: () => searchIndexService.processPendingJobs(),
       isStopping: () => stopping,
     });
   } finally {

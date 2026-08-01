@@ -1,181 +1,264 @@
 import "server-only";
+import type { ILogger } from "@/server/infrastructure/logging/logger.interface";
 import type { IOpenAIProvider } from "@/server/infrastructure/openai/interfaces/openai.provider.interface";
-import { prepareSiteChunk } from "../factories/site-chunk.factory";
-import type { IIndexingSourceRepository } from "../interfaces/indexing-source.repository.interface";
-import type { ISearchIndexJobRepository } from "../interfaces/search-index-job.repository.interface";
-import type { ISearchIndexService } from "../interfaces/search-index.service.interface";
-import type { ISiteChunkRepository } from "../interfaces/site-chunk.repository.interface";
-import { buildSearchDocuments } from "../mappers/search-document.mapper";
+import { prepareSiteChunks } from "../chunking/text-chunker";
 import type {
-  EmbeddedSiteChunk,
+  ISearchIndexJobRepository,
+  SearchIndexJob,
+} from "../interfaces/search-index-job.repository.interface";
+import type { ISourceRecordRepository } from "../interfaces/source-record.repository.interface";
+import type {
+  ISearchIndexService,
   IndexSourceResult,
-  PreparedSiteChunk,
-} from "../models/search-index";
+  RebuildSummary,
+} from "../interfaces/search-index.service.interface";
+import type { ISiteChunkRepository } from "../interfaces/site-chunk.repository.interface";
+import { mapSourceDocument } from "../mappers/source-document.mapper";
 import type { IndexSourceInput } from "../schemas/index-source-input.schema";
+
+function sameChunks(
+  existing: Awaited<ReturnType<ISiteChunkRepository["findBySource"]>>,
+  prepared: ReturnType<typeof prepareSiteChunks>,
+  model: string,
+) {
+  return (
+    existing.length === prepared.length &&
+    existing.every(
+      (chunk, index) =>
+        chunk.chunkIndex === prepared[index]?.chunkIndex &&
+        chunk.contentHash === prepared[index]?.contentHash &&
+        chunk.embeddingModel === model,
+    )
+  );
+}
 
 export class SearchIndexService implements ISearchIndexService {
   constructor(
-    private readonly sources: IIndexingSourceRepository,
+    private readonly sources: ISourceRecordRepository,
     private readonly chunks: ISiteChunkRepository,
     private readonly jobs: ISearchIndexJobRepository,
     private readonly openai: IOpenAIProvider,
+    private readonly logger: ILogger,
   ) {}
 
-  async search(queryEmbedding: number[]) {
-    return await this.chunks.match(queryEmbedding, 6, 0.25);
-  }
-
   async indexSource(input: IndexSourceInput): Promise<IndexSourceResult> {
-    try {
-      const source = await this.sources.findById(input.sourceType, input.sourceId);
+    const source = await this.sources.findById(input.sourceType, input.sourceId);
 
-      if (!source) {
-        throw new Error("Source record was not found.");
-      }
+    if (!source) {
+      return this.removeSource(input);
+    }
 
-      const prepared = buildSearchDocuments(source).map(prepareSiteChunk);
+    const document = mapSourceDocument(source);
 
-      const existing = await this.chunks.findBySource(input.sourceType, input.sourceId);
+    const prepared = prepareSiteChunks(document);
 
-      const byId = new Map(existing.map((chunk) => [chunk.id, chunk]));
+    if (!prepared.length) {
+      throw new Error(`Indexing produced no chunks for ${input.sourceType}:${input.sourceId}.`);
+    }
 
-      const model = this.openai.getEmbeddingModel();
+    const existing = await this.chunks.findBySource(input.sourceType, input.sourceId);
 
-      const created: PreparedSiteChunk[] = [];
+    const model = this.openai.getEmbeddingModel();
 
-      const changed: PreparedSiteChunk[] = [];
+    if (sameChunks(existing, prepared, model)) {
+      return { created: 0, changed: 0, unchanged: prepared.length, deleted: 0 };
+    }
 
-      const unchanged: PreparedSiteChunk[] = [];
+    const embeddings = await this.openai.createEmbeddings(
+      prepared.map((chunk) => chunk.embeddingInput),
+    );
 
-      for (const chunk of prepared) {
-        const previous = byId.get(chunk.id);
-
-        if (!previous) {
-          created.push(chunk);
-        } else if (
-          previous.contentHash === chunk.contentHash &&
-          previous.embeddingModel === model
-        ) {
-          unchanged.push(chunk);
-        } else {
-          changed.push(chunk);
-        }
-      }
-
-      const ids = new Set(prepared.map((chunk) => chunk.id));
-
-      const obsoleteIds = existing.filter((chunk) => !ids.has(chunk.id)).map((chunk) => chunk.id);
-
-      const chunksToEmbed = [...created, ...changed];
-
-      const embeds =
-        chunksToEmbed.length > 0
-          ? await this.openai.createEmbeddings(chunksToEmbed.map((chunk) => chunk.embeddingInput))
-          : [];
-
-      const embeddedAt = new Date();
-
-      const upserts: EmbeddedSiteChunk[] = chunksToEmbed.map((chunk, index) => ({
-        ...chunk,
-        embedding: embeds[index]!.embedding,
-        embeddingModel: embeds[index]!.embeddingModel,
-        embeddedAt,
-      }));
-
-      await this.chunks.replaceSource({ ...input, upserts, obsoleteIds });
-
-      return {
-        created: created.length,
-        changed: changed.length,
-        unchanged: unchanged.length,
-        deleted: obsoleteIds.length,
-      };
-    } catch (error) {
+    if (embeddings.length !== prepared.length) {
       throw new Error(
-        `Failed to index ${input.sourceType}:${input.sourceId}: ${error instanceof Error ? error.message : String(error)}`,
-        { cause: error },
+        `Embedding provider returned ${embeddings.length} embeddings for ${prepared.length} chunks.`,
       );
     }
+
+    const embeddedAt = new Date();
+
+    const embedded = prepared.map((chunk, index) => {
+      const embedding = embeddings[index];
+
+      if (!embedding || embedding.embedding.length !== 1536) {
+        throw new Error(`Invalid embedding for ${chunk.id}.`);
+      }
+
+      return {
+        ...chunk,
+        embedding: embedding.embedding,
+        embeddingModel: embedding.embeddingModel,
+        embeddedAt,
+      };
+    });
+
+    await this.chunks.replaceSource(input.sourceType, input.sourceId, embedded);
+
+    return {
+      created: existing.length ? 0 : prepared.length,
+      changed: existing.length ? prepared.length : 0,
+      unchanged: 0,
+      deleted: 0,
+    };
   }
 
   async removeSource(input: IndexSourceInput): Promise<IndexSourceResult> {
-    try {
-      return {
-        created: 0,
-        changed: 0,
-        unchanged: 0,
-        deleted: await this.chunks.deleteSource(input.sourceType, input.sourceId),
-      };
-    } catch (error) {
-      throw new Error(
-        `Failed to remove indexed source ${input.sourceType}:${input.sourceId}: ${error instanceof Error ? error.message : String(error)}`,
-        { cause: error },
-      );
-    }
+    return {
+      created: 0,
+      changed: 0,
+      unchanged: 0,
+      deleted: await this.chunks.deleteSource(input.sourceType, input.sourceId),
+    };
   }
 
-  async preview(input: IndexSourceInput) {
+  async preview(
+    input: IndexSourceInput,
+  ): Promise<Awaited<ReturnType<ISearchIndexService["preview"]>>> {
     const source = await this.sources.findById(input.sourceType, input.sourceId);
 
     if (!source) {
       throw new Error(`Source not found: ${input.sourceType}:${input.sourceId}`);
     }
 
-    const chunks = buildSearchDocuments(source).map(prepareSiteChunk);
+    const document = mapSourceDocument(source);
+
+    const chunks = prepareSiteChunks(document);
 
     const existing = await this.chunks.findBySource(input.sourceType, input.sourceId);
 
-    const byId = new Map(existing.map((chunk) => [chunk.id, chunk]));
-
     const model = this.openai.getEmbeddingModel();
-
-    const ids = new Set(chunks.map((chunk) => chunk.id));
 
     return {
       input,
-      chunks: chunks.map((chunk) => ({
-        ...chunk,
-        expectedAction: !byId.has(chunk.id)
-          ? "create"
-          : byId.get(chunk.id)?.contentHash !== chunk.contentHash ||
-              byId.get(chunk.id)?.embeddingModel !== model
-            ? "update"
-            : "unchanged",
-      })),
-      obsoleteIds: existing.filter((chunk) => !ids.has(chunk.id)).map((chunk) => chunk.id),
+      document,
+      chunks,
+      expectedAction: sameChunks(existing, chunks, model) ? "unchanged" : "replace",
     };
   }
 
-  async rebuild() {
-    const totals = { created: 0, changed: 0, unchanged: 0, deleted: 0 };
+  async rebuild(options: { clean?: boolean } = {}) {
+    const sources = await this.sources.findAll();
 
-    const results: Array<{
-      sourceType: string;
-      sourceId: string;
-      result: IndexSourceResult;
-    }> = [];
-
-    for (const source of await this.sources.findAll()) {
-      const result = await this.indexSource({
-        sourceType: source.sourceType,
-        sourceId: source.record.id,
-      });
-
-      totals.created += result.created;
-      totals.changed += result.changed;
-      totals.unchanged += result.unchanged;
-      totals.deleted += result.deleted;
-      results.push({
-        sourceType: source.sourceType,
-        sourceId: source.record.id,
-        result,
-      });
+    if (options.clean) {
+      this.logger.info("Clean search index rebuild started", { sourceRecords: sources.length });
+      await this.chunks.clear();
+      await this.jobs.clear();
     }
 
-    return { totals, results };
+    const summary: RebuildSummary = {
+      sourceRecords: sources.length,
+      sourcesIndexed: 0,
+      sourcesSkipped: 0,
+      chunksCreated: 0,
+      embeddingsGenerated: 0,
+      sourcesFailed: 0,
+    };
+
+    const results: Array<{ sourceType: string; sourceId: string; result: IndexSourceResult }> = [];
+
+    for (const source of sources) {
+      try {
+        const result = await this.indexSource({
+          sourceType: source.sourceType,
+          sourceId: source.record.id,
+        });
+
+        results.push({ sourceType: source.sourceType, sourceId: source.record.id, result });
+        if (result.unchanged) {
+          summary.sourcesSkipped += 1;
+        } else {
+          summary.sourcesIndexed += 1;
+        }
+
+        summary.chunksCreated += result.created + result.changed;
+        summary.embeddingsGenerated += result.created + result.changed;
+      } catch (error) {
+        summary.sourcesFailed += 1;
+        this.logger.error("Search index rebuild source failed", {
+          sourceType: source.sourceType,
+          sourceId: source.record.id,
+          error: error instanceof Error ? error.message : "Unknown error",
+        });
+      }
+    }
+
+    if (summary.sourcesFailed) {
+      throw Object.assign(
+        new Error(`Search index rebuild failed for ${summary.sourcesFailed} source(s).`),
+        { summary, results },
+      );
+    }
+
+    return { summary, results };
   }
 
   getJobStatus() {
     return this.jobs.getStatus();
+  }
+
+  async processPendingJobs(limit = 5) {
+    const jobs = await this.jobs.claim(limit);
+
+    const result = { claimed: jobs.length, completed: 0, retried: 0, failed: 0 };
+
+    for (const job of jobs) {
+      const outcome = await this.processJob(job);
+
+      if (outcome === "completed") {
+        result.completed += 1;
+      }
+
+      if (outcome === "retried") {
+        result.retried += 1;
+      }
+
+      if (outcome === "failed") {
+        result.failed += 1;
+      }
+    }
+
+    return result;
+  }
+
+  private async processJob(
+    job: SearchIndexJob,
+  ): Promise<"completed" | "retried" | "failed" | "unsettled"> {
+    const details = {
+      jobId: job.id,
+      operation: job.operation,
+      sourceType: job.sourceType,
+      sourceId: job.sourceId,
+    };
+
+    try {
+      const result =
+        job.operation === "upsert"
+          ? await this.indexSource({ sourceType: job.sourceType, sourceId: job.sourceId })
+          : await this.removeSource({ sourceType: job.sourceType, sourceId: job.sourceId });
+
+      if (!(await this.jobs.complete(job.id))) {
+        return "unsettled";
+      }
+
+      this.logger.info("Search index job completed", { ...details, result });
+
+      return "completed";
+    } catch (error) {
+      const failed = await this.jobs.fail(job.id, error);
+
+      const outcome =
+        failed?.status === "pending"
+          ? "retried"
+          : failed?.status === "failed"
+            ? "failed"
+            : "unsettled";
+
+      this.logger.error("Search index job failed", {
+        ...details,
+        error: error instanceof Error ? error.message : "Unknown error",
+        outcome,
+      });
+
+      return outcome;
+    }
   }
 }

@@ -1,10 +1,5 @@
 import "server-only";
 
 export type { ISearchIndexService } from "./interfaces/search-index.service.interface";
-export type { ISearchIndexWorkerService } from "./interfaces/search-index-worker.service.interface";
-export type {
-  MatchSiteChunksRow,
-  IndexWorkerBatchResult,
-  IndexSourceResult,
-  SearchIndexJobStatusSummary,
-} from "./models/search-index";
+export type { ISiteSearchService } from "./interfaces/site-search.service.interface";
+export type { MatchSiteChunksRow } from "./interfaces/site-chunk.repository.interface";
