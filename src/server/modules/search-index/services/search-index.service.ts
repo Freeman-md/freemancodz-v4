@@ -22,7 +22,7 @@ export class SearchIndexService implements ISearchIndexService {
   ) {}
 
   async search(queryEmbedding: number[]) {
-    return this.diversify(await this.chunks.match(queryEmbedding, 20, 0.25), 6);
+    return await this.chunks.match(queryEmbedding, 6, 0.25);
   }
 
   async indexSource(input: IndexSourceInput): Promise<IndexSourceResult> {
@@ -177,23 +177,5 @@ export class SearchIndexService implements ISearchIndexService {
 
   getJobStatus() {
     return this.jobs.getStatus();
-  }
-
-  private diversify(chunks: import("../models/search-index").MatchSiteChunksRow[], limit: number) {
-    const seen = new Set<string>();
-
-    return chunks
-      .filter((chunk) => {
-        const key = `${chunk.title.trim().toLowerCase()}|${chunk.url}`;
-
-        if (seen.has(key)) {
-          return false;
-        }
-
-        seen.add(key);
-
-        return true;
-      })
-      .slice(0, limit);
   }
 }

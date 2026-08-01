@@ -177,15 +177,15 @@ export class AssistantService implements IAssistantService {
   }
 
   private async retrieveContext(message: string) {
-    const embedding = await this.openai.createEmbedding(
-      `\nUser question:\n${message}\n\nRetrieve information about:\n- Freeman's projects and engineering work\n- technical experience and skills\n- systems, architectures and technologies built\n- professional background and achievements\n`,
-    );
+    const embedding = await this.openai.createEmbedding(message);
 
     if (!embedding) {
       throw new Error("Failed to create query embedding.");
     }
 
     const chunks = await this.searchIndex.search(embedding);
+
+    console.log(chunks)
 
     return {
       chunks,
