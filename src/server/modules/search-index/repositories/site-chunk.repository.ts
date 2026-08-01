@@ -3,9 +3,9 @@ import "server-only";
 import type { PrismaClient } from "@/generated/prisma/client";
 import type { ISiteChunkRepository } from "../interfaces/site-chunk.repository.interface";
 import type {
-  EmbeddedSiteChunk,
   ExistingSiteChunk,
   IndexableSourceType,
+  MatchSiteChunksRow,
   ReplaceIndexedSourceInput,
 } from "@/server/modules/search-index/models/search-index";
 
@@ -126,7 +126,7 @@ export class SiteChunkRepository implements ISiteChunkRepository {
     const vector = `[${queryEmbedding.join(",")}]`;
 
     return this.database.$queryRaw<
-      import("../models/search-index").MatchSiteChunksRow[]
+      MatchSiteChunksRow[]
     >`SELECT * FROM match_site_chunks(${vector}::vector, ${matchCount}, ${matchThreshold});`;
   }
 }
