@@ -4,8 +4,7 @@ import test from "node:test";
 import { createChatPostHandler } from "@/app/api/chat/route";
 import type { ILogger } from "@/server/infrastructure/logging/logger.interface";
 import type { IOpenAIProvider } from "@/server/infrastructure/openai/interfaces/openai.provider.interface";
-import type { ISearchIndexService } from "@/server/modules/search-index/interfaces/search-index.service.interface";
-import type { MatchSiteChunksRow } from "@/server/modules/search-index/models/search-index";
+import type { ISiteSearchService, MatchSiteChunksRow } from "@/server/modules/search-index/public";
 import { AssistantService } from "@/server/modules/assistant/services/assistant.service";
 
 const source = {
@@ -71,19 +70,11 @@ function createAssistant({
     },
   };
 
-  const searchIndex: ISearchIndexService = {
+  const siteSearch: ISiteSearchService = {
     search: async () => chunks,
-    indexSource: async () => ({ created: 0, changed: 0, unchanged: 0, deleted: 0 }),
-    removeSource: async () => ({ created: 0, changed: 0, unchanged: 0, deleted: 0 }),
-    preview: async () => ({ input: {} as never, chunks: [], obsoleteIds: [] }),
-    rebuild: async () => ({
-      totals: { created: 0, changed: 0, unchanged: 0, deleted: 0 },
-      results: [],
-    }),
-    getJobStatus: async () => ({}) as never,
   };
 
-  const assistantService = new AssistantService(openai, searchIndex, logger);
+  const assistantService = new AssistantService(openai, siteSearch, logger);
 
   return { inputs, post: createChatPostHandler({ assistantService }) };
 }
@@ -111,8 +102,8 @@ test("direct portfolio question streams its answer, source, and response id", as
   const output = await readChatResponse(
     await post(
       chatRequest({
-      message: "What assistant did Freeman build?",
-      previousResponseId: null,
+        message: "What assistant did Freeman build?",
+        previousResponseId: null,
       }),
     ),
   );
@@ -130,8 +121,8 @@ test("follow-up question preserves the previous response id and streams the new 
   const output = await readChatResponse(
     await post(
       chatRequest({
-      message: "What technologies did it use?",
-      previousResponseId: "resp_previous",
+        message: "What technologies did it use?",
+        previousResponseId: "resp_previous",
       }),
     ),
   );
@@ -152,8 +143,8 @@ test("multiple relevant sources are returned with one streamed answer", async ()
   const output = await readChatResponse(
     await post(
       chatRequest({
-      message: "Tell me about Freeman's work.",
-      previousResponseId: null,
+        message: "Tell me about Freeman's work.",
+        previousResponseId: null,
       }),
     ),
   );
@@ -178,8 +169,8 @@ test("no relevant sources returns the existing safe fallback without calling the
   const output = await readChatResponse(
     await post(
       chatRequest({
-      message: "What is Freeman's favourite planet?",
-      previousResponseId: null,
+        message: "What is Freeman's favourite planet?",
+        previousResponseId: null,
       }),
     ),
   );
@@ -198,8 +189,8 @@ test("retrieval failure returns the existing safe stream error", async () => {
   const output = await readChatResponse(
     await post(
       chatRequest({
-      message: "What has Freeman built?",
-      previousResponseId: null,
+        message: "What has Freeman built?",
+        previousResponseId: null,
       }),
     ),
   );
@@ -216,8 +207,8 @@ test("OpenAI streaming failure returns the existing safe stream error", async ()
   const output = await readChatResponse(
     await post(
       chatRequest({
-      message: "What has Freeman built?",
-      previousResponseId: null,
+        message: "What has Freeman built?",
+        previousResponseId: null,
       }),
     ),
   );
@@ -234,8 +225,8 @@ test("aborted request stops without emitting a response", async () => {
   const response = await post(
     chatRequest(
       {
-      message: "Stop this request.",
-      previousResponseId: null,
+        message: "Stop this request.",
+        previousResponseId: null,
       },
       controller.signal,
     ),

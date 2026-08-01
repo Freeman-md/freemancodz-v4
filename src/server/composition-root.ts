@@ -22,13 +22,13 @@ import { PortfolioService } from "./modules/portfolio/services/portfolio.service
 import { PortfolioSeedService } from "./modules/portfolio/services/portfolio-seed.service";
 import type { IPortfolioService } from "./modules/portfolio/interfaces/portfolio.service.interface";
 import type { IPortfolioSeedService } from "./modules/portfolio/interfaces/portfolio-seed.service.interface";
-import { IndexingSourceRepository } from "./modules/search-index/repositories/indexing-source.repository";
+import { SourceRecordRepository } from "./modules/search-index/repositories/source-record.repository";
 import { SearchIndexJobRepository } from "./modules/search-index/repositories/search-index-job.repository";
 import { SiteChunkRepository } from "./modules/search-index/repositories/site-chunk.repository";
 import { SearchIndexService } from "./modules/search-index/services/search-index.service";
-import { SearchIndexWorkerService } from "./modules/search-index/services/search-index-worker.service";
+import { SiteSearchService } from "./modules/search-index/services/site-search.service";
 import type { ISearchIndexService } from "./modules/search-index/interfaces/search-index.service.interface";
-import type { ISearchIndexWorkerService } from "./modules/search-index/interfaces/search-index-worker.service.interface";
+import type { ISiteSearchService } from "./modules/search-index/interfaces/site-search.service.interface";
 
 const openai = new OpenAIProvider(createOpenAIClient(), getEmbeddingModel(), getResponseModel());
 
@@ -44,7 +44,7 @@ const portfolioServices = new PortfolioServiceRepository(prisma);
 
 const seedRepository = new PortfolioSeedRepository(prisma);
 
-const sources = new IndexingSourceRepository(prisma);
+const sources = new SourceRecordRepository(prisma);
 
 const chunks = new SiteChunkRepository(prisma);
 
@@ -57,15 +57,12 @@ export const searchIndexService: ISearchIndexService = new SearchIndexService(
   chunks,
   jobs,
   openai,
-);
-export const searchIndexWorkerService: ISearchIndexWorkerService = new SearchIndexWorkerService(
-  jobs,
-  searchIndexService,
   logger,
 );
+export const siteSearchService: ISiteSearchService = new SiteSearchService(chunks);
 export const assistantService: IAssistantService = new AssistantService(
   openai,
-  searchIndexService,
+  siteSearchService,
   logger,
 );
 export const portfolioService: IPortfolioService = new PortfolioService(

@@ -3,11 +3,9 @@ import "server-only";
 import type { PrismaClient } from "@/generated/prisma/client";
 import type { ISearchIndexJobRepository } from "../interfaces/search-index-job.repository.interface";
 import type {
-  EnqueueIndexJobInput,
-  FailIndexJobOptions,
   SearchIndexJob,
   SearchIndexJobStatusSummary,
-} from "@/server/modules/search-index/models/search-index";
+} from "../interfaces/search-index-job.repository.interface";
 
 const DEFAULT_MAX_ATTEMPTS = 5;
 
@@ -25,52 +23,6 @@ function truncateError(error: unknown): string {
 
 export class SearchIndexJobRepository implements ISearchIndexJobRepository {
   constructor(private readonly database: PrismaClient) {}
-
-  async enqueue(input: EnqueueIndexJobInput): Promise<SearchIndexJob> {
-    const [job] = await this.database.$queryRaw<SearchIndexJobRow[]>`
-    INSERT INTO search_index_jobs (
-      operation,
-      source_type,
-      source_id,
-      status,
-      attempts,
-      available_at,
-      last_error
-    )
-    VALUES (
-      ${input.operation},
-      ${input.sourceType},
-      ${input.sourceId},
-      'pending',
-      0,
-      NOW(),
-      NULL
-    )
-    ON CONFLICT (source_type, source_id) WHERE status = 'pending'
-    DO UPDATE SET
-      operation = EXCLUDED.operation,
-      available_at = NOW(),
-      last_error = NULL
-    RETURNING
-      id,
-      operation,
-      source_type AS "sourceType",
-      source_id AS "sourceId",
-      status,
-      attempts,
-      available_at AS "availableAt",
-      claimed_at AS "claimedAt",
-      last_error AS "lastError",
-      created_at AS "createdAt",
-      processed_at AS "processedAt";
-  `;
-
-    if (!job) {
-      throw new Error("Search index job enqueue did not return a job.");
-    }
-
-    return job;
-  }
 
   async claim(limit: number): Promise<SearchIndexJob[]> {
     if (!Number.isInteger(limit) || limit < 1) {
@@ -153,7 +105,7 @@ export class SearchIndexJobRepository implements ISearchIndexJobRepository {
   async fail(
     id: string,
     error: unknown,
-    options: FailIndexJobOptions = {},
+    options: { maxAttempts?: number } = {},
   ): Promise<SearchIndexJob | null> {
     const maxAttempts = options.maxAttempts ?? DEFAULT_MAX_ATTEMPTS;
 
@@ -229,5 +181,9 @@ export class SearchIndexJobRepository implements ISearchIndexJobRepository {
       staleProcessing,
       recentFailed: recentFailed as SearchIndexJob[],
     };
+  }
+
+  async clear(): Promise<void> {
+    await this.database.searchIndexJob.deleteMany();
   }
 }

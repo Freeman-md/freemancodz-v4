@@ -8,7 +8,7 @@ import {
   getSearchIndexWorkerSecret,
 } from "@/server/infrastructure/config/env";
 import type { ILogger } from "@/server/infrastructure/logging/logger.interface";
-import type { ISearchIndexWorkerService } from "@/server/modules/search-index/public";
+import type { ISearchIndexService } from "@/server/modules/search-index/public";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -32,7 +32,7 @@ type SearchIndexWorkerRouteDependencies = {
   getBatchLimit: () => string | undefined;
   getSecret: () => string | undefined;
   logger: ILogger;
-  workerService: ISearchIndexWorkerService;
+  workerService: Pick<ISearchIndexService, "processPendingJobs">;
 };
 
 export function createSearchIndexWorkerGetHandler({
@@ -70,7 +70,7 @@ export function createSearchIndexWorkerGetHandler({
       batchLimit,
     });
     try {
-      const result = await workerService.runBatch(batchLimit);
+      const result = await workerService.processPendingJobs(batchLimit);
 
       routeLogger.info("Search index worker batch completed", {
         event: "search_index_worker.completed",
@@ -97,12 +97,12 @@ export function createSearchIndexWorkerGetHandler({
 }
 
 export async function GET(request: Request) {
-  const { logger, searchIndexWorkerService } = await import("@/server/composition-root");
+  const { logger, searchIndexService } = await import("@/server/composition-root");
 
   return createSearchIndexWorkerGetHandler({
     getBatchLimit: getSearchIndexWorkerBatchLimit,
     getSecret: getSearchIndexWorkerSecret,
     logger,
-    workerService: searchIndexWorkerService,
+    workerService: searchIndexService,
   })(request);
 }

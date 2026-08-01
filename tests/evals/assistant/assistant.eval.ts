@@ -1,5 +1,7 @@
 import { CHAT_SYSTEM_PROMPT } from "@/server/modules/assistant/prompts/portfolio-assistant.prompt";
 import { createOpenAIClient, getResponseModel } from "@/server/infrastructure/openai/openai.client";
+import { getEmbeddingModel } from "@/server/infrastructure/openai/openai.client";
+import { siteSearchService } from "@/server/composition-root";
 import { assistantEvalFixture, type AssistantEvalSource } from "./assistant-eval.fixture";
 
 function formatPortfolioContent(portfolioContent: readonly AssistantEvalSource[]) {
@@ -29,6 +31,26 @@ async function ask(
 }
 
 async function run() {
+  const embeddingResponse = await createOpenAIClient().embeddings.create({
+    model: getEmbeddingModel(),
+    input: "What projects has Freeman worked on?",
+  });
+
+  const retrieved = await siteSearchService.search(embeddingResponse.data[0]?.embedding ?? []);
+
+  if (retrieved[0]?.category !== "Project" && !retrieved[0]?.content.includes("Project:")) {
+    throw new Error("Direct project retrieval did not return a project as its first source.");
+  }
+
+  if (retrieved.filter((chunk) => chunk.content.includes("Project:")).length < 4) {
+    throw new Error("Direct project retrieval returned fewer than four project chunks.");
+  }
+
+  console.info("Direct project retrieval before response generation:");
+  console.table(
+    retrieved.map(({ title, category, similarity }) => ({ title, category, similarity })),
+  );
+
   const direct = await ask(assistantEvalFixture.directQuestion, null);
 
   const followUp = await ask(assistantEvalFixture.followUpQuestion, direct.id);

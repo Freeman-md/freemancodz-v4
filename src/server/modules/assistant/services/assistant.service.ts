@@ -14,9 +14,9 @@ import type {
 import { encodeStreamEvent, formatContext } from "../mappers/assistant-stream.mapper";
 import { CHAT_SYSTEM_PROMPT } from "../prompts/portfolio-assistant.prompt";
 import type { IOpenAIProvider } from "@/server/infrastructure/openai/interfaces/openai.provider.interface";
-import type { ISearchIndexService } from "@/server/modules/search-index/public";
+import type { ISiteSearchService } from "@/server/modules/search-index/public";
 import type { ILogger } from "@/server/infrastructure/logging/logger.interface";
-import type{ AssistantStreamEvent } from "@/contracts/assistant.contract";
+import type { AssistantStreamEvent } from "@/contracts/assistant.contract";
 type WindowCounter = { count: number; resetAt: number };
 
 export class AssistantService implements IAssistantService {
@@ -26,7 +26,7 @@ export class AssistantService implements IAssistantService {
 
   constructor(
     private readonly openai: IOpenAIProvider,
-    private readonly searchIndex: ISearchIndexService,
+    private readonly siteSearch: ISiteSearchService,
     private readonly logger: ILogger,
   ) {}
 
@@ -183,9 +183,7 @@ export class AssistantService implements IAssistantService {
       throw new Error("Failed to create query embedding.");
     }
 
-    const chunks = await this.searchIndex.search(embedding);
-
-    console.log(chunks)
+    const chunks = await this.siteSearch.search(embedding);
 
     return {
       chunks,

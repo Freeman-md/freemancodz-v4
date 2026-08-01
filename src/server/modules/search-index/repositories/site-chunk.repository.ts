@@ -3,11 +3,11 @@ import "server-only";
 import type { PrismaClient } from "@/generated/prisma/client";
 import type { ISiteChunkRepository } from "../interfaces/site-chunk.repository.interface";
 import type {
+  EmbeddedSiteChunk,
   ExistingSiteChunk,
-  IndexableSourceType,
   MatchSiteChunksRow,
-  ReplaceIndexedSourceInput,
-} from "@/server/modules/search-index/models/search-index";
+} from "../interfaces/site-chunk.repository.interface";
+import type { IndexableSourceType } from "../mappers/source-document.mapper";
 
 function toVectorLiteral(embedding: number[]): string {
   return `[${embedding.join(",")}]`;
@@ -23,9 +23,6 @@ export class SiteChunkRepository implements ISiteChunkRepository {
         sourceId,
       },
       select: {
-        id: true,
-        sourceType: true,
-        sourceId: true,
         chunkIndex: true,
         contentHash: true,
         embeddingModel: true,
@@ -36,14 +33,14 @@ export class SiteChunkRepository implements ISiteChunkRepository {
     });
   }
 
-  async replaceSource({
-    sourceType,
-    sourceId,
-    upserts,
-    obsoleteIds,
-  }: ReplaceIndexedSourceInput): Promise<void> {
+  async replaceSource(
+    sourceType: IndexableSourceType,
+    sourceId: string,
+    chunks: EmbeddedSiteChunk[],
+  ): Promise<void> {
     await this.database.$transaction(async (transaction) => {
-      for (const chunk of upserts) {
+      await transaction.siteChunk.deleteMany({ where: { sourceType, sourceId } });
+      for (const chunk of chunks) {
         await transaction.$executeRaw`
         INSERT INTO site_chunks (
           id,
@@ -90,19 +87,11 @@ export class SiteChunkRepository implements ISiteChunkRepository {
           updated_at = NOW()
       `;
       }
-
-      if (obsoleteIds.length > 0) {
-        await transaction.siteChunk.deleteMany({
-          where: {
-            sourceType,
-            sourceId,
-            id: {
-              in: obsoleteIds,
-            },
-          },
-        });
-      }
     });
+  }
+
+  async clear(): Promise<void> {
+    await this.database.siteChunk.deleteMany();
   }
 
   async deleteSource(sourceType: IndexableSourceType, sourceId: string): Promise<number> {
