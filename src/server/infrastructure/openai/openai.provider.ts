@@ -10,21 +10,52 @@ export class OpenAIProvider implements IOpenAIProvider {
     private readonly responseModel: string,
   ) {}
 
-  streamResponse(input: string, instructions: string, previousResponseId: string | null, signal: AbortSignal) {
-    return this.client.responses.create({ model: this.responseModel, instructions, input, previous_response_id: previousResponseId, store: true, stream: true }, { signal });
+  streamResponse(
+    input: string,
+    instructions: string,
+    previousResponseId: string | null,
+    signal: AbortSignal,
+  ) {
+    return this.client.responses.create(
+      {
+        model: this.responseModel,
+        instructions,
+        input,
+        previous_response_id: previousResponseId,
+        store: true,
+        stream: true,
+      },
+      { signal },
+    );
   }
 
   async createEmbedding(input: string) {
     const response = await this.client.embeddings.create({ model: this.embeddingModel, input });
+
     return response.data[0]?.embedding;
   }
 
   async createEmbeddings(inputs: string[]): Promise<GeneratedEmbedding[]> {
-    if (inputs.length === 0) return [];
-    const response = await this.client.embeddings.create({ model: this.embeddingModel, input: inputs });
-    if (response.data.length !== inputs.length) throw new Error(`Expected ${inputs.length} embeddings but received ${response.data.length}.`);
-    return response.data.map((item) => ({ embedding: item.embedding, embeddingModel: this.embeddingModel }));
+    if (inputs.length === 0) {
+      return [];
+    }
+
+    const response = await this.client.embeddings.create({
+      model: this.embeddingModel,
+      input: inputs,
+    });
+
+    if (response.data.length !== inputs.length) {
+      throw new Error(`Expected ${inputs.length} embeddings but received ${response.data.length}.`);
+    }
+
+    return response.data.map((item) => ({
+      embedding: item.embedding,
+      embeddingModel: this.embeddingModel,
+    }));
   }
 
-  getEmbeddingModel() { return this.embeddingModel; }
+  getEmbeddingModel() {
+    return this.embeddingModel;
+  }
 }

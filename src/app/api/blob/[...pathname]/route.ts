@@ -7,8 +7,12 @@ export async function GET(
   { params }: { params: Promise<{ pathname: string[] }> },
 ) {
   const { pathname: pathnameSegments } = await params;
+
   const parsedPathname = portfolioAssetPathSchema.safeParse(pathnameSegments.join("/"));
-  if (!parsedPathname.success) return new NextResponse("Not found", { status: 404 });
+
+  if (!parsedPathname.success) {
+    return new NextResponse("Not found", { status: 404 });
+  }
 
   const result = await portfolioService.getAsset(parsedPathname.data);
 

@@ -25,6 +25,7 @@ export async function runIndexWorkerLoop({
 
 async function main() {
   const { prisma } = await import("@/server/infrastructure/database/prisma");
+
   let stopping = false;
 
   const stop = () => {

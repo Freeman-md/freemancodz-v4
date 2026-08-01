@@ -18,19 +18,11 @@ export type MatchSiteChunksRow = {
 };
 
 export type IndexableSourceType =
-  | "content_blocks"
-  | "projects"
-  | "services"
-  | "principles"
-  | "experiences";
+  "content_blocks" | "projects" | "services" | "principles" | "experiences";
 
 export type SearchIndexJobOperation = "upsert" | "delete";
 
-export type SearchIndexJobStatus =
-  | "pending"
-  | "processing"
-  | "completed"
-  | "failed";
+export type SearchIndexJobStatus = "pending" | "processing" | "completed" | "failed";
 
 export type SearchIndexJob = {
   id: string;
@@ -46,10 +38,7 @@ export type SearchIndexJob = {
   processedAt: Date | null;
 };
 
-export type EnqueueIndexJobInput = Pick<
-  SearchIndexJob,
-  "operation" | "sourceType" | "sourceId"
->;
+export type EnqueueIndexJobInput = Pick<SearchIndexJob, "operation" | "sourceType" | "sourceId">;
 
 export type FailIndexJobOptions = {
   maxAttempts?: number;
@@ -67,30 +56,27 @@ export type SearchIndexJobStatusSummary = {
 
 export type IndexableSource =
   | {
-    sourceType: "content_blocks";
-    record: ContentBlock;
-  }
+      sourceType: "content_blocks";
+      record: ContentBlock;
+    }
   | {
-    sourceType: "projects";
-    record: Project;
-  }
+      sourceType: "projects";
+      record: Project;
+    }
   | {
-    sourceType: "services";
-    record: Service;
-  }
+      sourceType: "services";
+      record: Service;
+    }
   | {
-    sourceType: "principles";
-    record: Principle;
-  }
+      sourceType: "principles";
+      record: Principle;
+    }
   | {
-    sourceType: "experiences";
-    record: Experience;
-  };
+      sourceType: "experiences";
+      record: Experience;
+    };
 
-type SearchDocumentContent = Pick<
-  SiteChunk,
-  "title" | "category" | "url" | "content" | "keywords"
->;
+type SearchDocumentContent = Pick<SiteChunk, "title" | "category" | "url" | "content" | "keywords">;
 
 export type SearchDocument = SearchDocumentContent & {
   sourceType: IndexableSourceType;
@@ -105,7 +91,10 @@ export type PreparedSiteChunk = SearchDocument & {
   contentHash: string;
 };
 
-export type ExistingSiteChunk =  Pick<SiteChunk, "id" | "sourceType" | "sourceId" | "chunkIndex" | "contentHash" | "embeddingModel">;
+export type ExistingSiteChunk = Pick<
+  SiteChunk,
+  "id" | "sourceType" | "sourceId" | "chunkIndex" | "contentHash" | "embeddingModel"
+>;
 
 export type EmbeddedSiteChunk = PreparedSiteChunk & {
   embedding: number[];
@@ -127,4 +116,9 @@ export type IndexSourceResult = {
   deleted: number;
 };
 
-export type IndexWorkerBatchResult = { claimed: number; completed: number; retried: number; failed: number };
+export type IndexWorkerBatchResult = {
+  claimed: number;
+  completed: number;
+  retried: number;
+  failed: number;
+};

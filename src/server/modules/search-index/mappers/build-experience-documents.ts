@@ -1,9 +1,7 @@
 import type { Experience } from "@/generated/prisma/client";
 import type { SearchDocument } from "@/server/modules/search-index/models/search-index";
 
-export function buildExperienceDocuments(
-  experience: Experience,
-): SearchDocument[] {
+export function buildExperienceDocuments(experience: Experience): SearchDocument[] {
   const content = [
     `Role: ${experience.title}`,
     `Company: ${experience.company}`,
@@ -23,11 +21,7 @@ export function buildExperienceDocuments(
       category: experience.category,
       url: "/about",
       content,
-      keywords: [...new Set([
-        experience.category,
-        experience.title,
-        experience.company,
-      ])].sort(),
+      keywords: [...new Set([experience.category, experience.title, experience.company])].sort(),
     },
   ];
 }

@@ -5,9 +5,7 @@ export function buildServiceDocuments(service: Service): SearchDocument[] {
   const content = [
     `Overview: ${service.lead}`,
     `Description: ${service.description}`,
-    service.assistantPrompt
-      ? `Example request: ${service.assistantPrompt}`
-      : null,
+    service.assistantPrompt ? `Example request: ${service.assistantPrompt}` : null,
   ]
     .filter((section): section is string => section !== null)
     .join("\n\n");

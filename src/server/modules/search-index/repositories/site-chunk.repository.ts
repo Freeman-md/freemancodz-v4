@@ -1,7 +1,5 @@
 import "server-only";
 
-
-
 import type { PrismaClient } from "@/generated/prisma/client";
 import type { ISiteChunkRepository } from "../interfaces/site-chunk.repository.interface";
 import type {
@@ -16,11 +14,9 @@ function toVectorLiteral(embedding: number[]): string {
 }
 
 export class SiteChunkRepository implements ISiteChunkRepository {
-  constructor(private readonly database: PrismaClient) { }
-  findBySource(
-    sourceType: IndexableSourceType,
-    sourceId: string,
-  ): Promise<ExistingSiteChunk[]> {
+  constructor(private readonly database: PrismaClient) {}
+
+  findBySource(sourceType: IndexableSourceType, sourceId: string): Promise<ExistingSiteChunk[]> {
     return this.database.siteChunk.findMany({
       where: {
         sourceType,
@@ -109,10 +105,7 @@ export class SiteChunkRepository implements ISiteChunkRepository {
     });
   }
 
-  async deleteSource(
-    sourceType: IndexableSourceType,
-    sourceId: string,
-  ): Promise<number> {
+  async deleteSource(sourceType: IndexableSourceType, sourceId: string): Promise<number> {
     const result = await this.database.siteChunk.deleteMany({
       where: {
         sourceType,
@@ -124,8 +117,16 @@ export class SiteChunkRepository implements ISiteChunkRepository {
   }
 
   async match(queryEmbedding: number[], matchCount = 6, matchThreshold = 0.25) {
-    if (queryEmbedding.length !== 1536) throw new Error(`matchSiteChunks expected a 1536-length embedding, received ${queryEmbedding.length}.`);
+    if (queryEmbedding.length !== 1536) {
+      throw new Error(
+        `matchSiteChunks expected a 1536-length embedding, received ${queryEmbedding.length}.`,
+      );
+    }
+
     const vector = `[${queryEmbedding.join(",")}]`;
-    return this.database.$queryRaw<import("../models/search-index").MatchSiteChunksRow[]>`SELECT * FROM match_site_chunks(${vector}::vector, ${matchCount}, ${matchThreshold});`;
+
+    return this.database.$queryRaw<
+      import("../models/search-index").MatchSiteChunksRow[]
+    >`SELECT * FROM match_site_chunks(${vector}::vector, ${matchCount}, ${matchThreshold});`;
   }
 }

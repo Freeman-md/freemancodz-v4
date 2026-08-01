@@ -8,8 +8,12 @@ async function main() {
   }
 
   const { searchIndexService } = await import("@/server/composition-root");
+
   const { results, totals } = await searchIndexService.rebuild();
-  for (const item of results) console.log(`${item.sourceType}:${item.sourceId}`, item.result);
+
+  for (const item of results) {
+    console.log(`${item.sourceType}:${item.sourceId}`, item.result);
+  }
 
   console.log("\nRebuild complete");
   console.table(totals);

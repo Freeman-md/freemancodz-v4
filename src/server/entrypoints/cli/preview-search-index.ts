@@ -2,7 +2,10 @@ import { SearchIndexSourceInputSchema } from "@/contracts/search-index-source.co
 import { searchIndexService } from "@/server/composition-root";
 
 async function main() {
-  const input = SearchIndexSourceInputSchema.parse({ sourceType: process.argv[2], sourceId: process.argv[3] });
+  const input = SearchIndexSourceInputSchema.parse({
+    sourceType: process.argv[2],
+    sourceId: process.argv[3],
+  });
 
   const preview = await searchIndexService.preview(input);
 
@@ -17,7 +20,6 @@ async function main() {
   }
 
   for (const chunk of preview.chunks) {
-
     console.log("\nGenerated document");
     console.dir(
       {

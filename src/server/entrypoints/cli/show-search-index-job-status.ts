@@ -16,14 +16,16 @@ async function main() {
   });
 
   console.log("Recent failed jobs");
-  console.table(status.recentFailed.map((job) => ({
-    operation: job.operation,
-    sourceType: job.sourceType,
-    sourceId: job.sourceId,
-    attempts: job.attempts,
-    lastError: job.lastError,
-    processedAt: job.processedAt?.toISOString() ?? null,
-  })));
+  console.table(
+    status.recentFailed.map((job) => ({
+      operation: job.operation,
+      sourceType: job.sourceType,
+      sourceId: job.sourceId,
+      attempts: job.attempts,
+      lastError: job.lastError,
+      processedAt: job.processedAt?.toISOString() ?? null,
+    })),
+  );
 }
 
 main()

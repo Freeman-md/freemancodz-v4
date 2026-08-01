@@ -8,7 +8,8 @@ import type {
 } from "@/server/modules/search-index/models/search-index";
 
 export class IndexingSourceRepository implements IIndexingSourceRepository {
-  constructor(private readonly database: PrismaClient) { }
+  constructor(private readonly database: PrismaClient) {}
+
   async findById(
     sourceType: IndexableSourceType,
     sourceId: string,
@@ -21,9 +22,9 @@ export class IndexingSourceRepository implements IIndexingSourceRepository {
 
         return record
           ? {
-            sourceType,
-            record,
-          }
+              sourceType,
+              record,
+            }
           : null;
       }
 
@@ -34,9 +35,9 @@ export class IndexingSourceRepository implements IIndexingSourceRepository {
 
         return record
           ? {
-            sourceType,
-            record,
-          }
+              sourceType,
+              record,
+            }
           : null;
       }
 
@@ -47,9 +48,9 @@ export class IndexingSourceRepository implements IIndexingSourceRepository {
 
         return record
           ? {
-            sourceType,
-            record,
-          }
+              sourceType,
+              record,
+            }
           : null;
       }
 
@@ -60,9 +61,9 @@ export class IndexingSourceRepository implements IIndexingSourceRepository {
 
         return record
           ? {
-            sourceType,
-            record,
-          }
+              sourceType,
+              record,
+            }
           : null;
       }
 
@@ -73,22 +74,16 @@ export class IndexingSourceRepository implements IIndexingSourceRepository {
 
         return record
           ? {
-            sourceType,
-            record,
-          }
+              sourceType,
+              record,
+            }
           : null;
       }
     }
   }
 
   async findAll(): Promise<IndexableSource[]> {
-    const [
-      contentBlocks,
-      projects,
-      services,
-      principles,
-      experiences,
-    ] = await Promise.all([
+    const [contentBlocks, projects, services, principles, experiences] = await Promise.all([
       this.database.contentBlock.findMany({
         orderBy: { position: "asc" },
       }),
@@ -107,36 +102,26 @@ export class IndexingSourceRepository implements IIndexingSourceRepository {
     ]);
 
     return [
-      ...contentBlocks.map(
-        (record): IndexableSource => ({
-          sourceType: "content_blocks",
-          record,
-        }),
-      ),
-      ...projects.map(
-        (record): IndexableSource => ({
-          sourceType: "projects",
-          record,
-        }),
-      ),
-      ...services.map(
-        (record): IndexableSource => ({
-          sourceType: "services",
-          record,
-        }),
-      ),
-      ...principles.map(
-        (record): IndexableSource => ({
-          sourceType: "principles",
-          record,
-        }),
-      ),
-      ...experiences.map(
-        (record): IndexableSource => ({
-          sourceType: "experiences",
-          record,
-        }),
-      ),
+      ...contentBlocks.map((record): IndexableSource => ({
+        sourceType: "content_blocks",
+        record,
+      })),
+      ...projects.map((record): IndexableSource => ({
+        sourceType: "projects",
+        record,
+      })),
+      ...services.map((record): IndexableSource => ({
+        sourceType: "services",
+        record,
+      })),
+      ...principles.map((record): IndexableSource => ({
+        sourceType: "principles",
+        record,
+      })),
+      ...experiences.map((record): IndexableSource => ({
+        sourceType: "experiences",
+        record,
+      })),
     ];
   }
 }

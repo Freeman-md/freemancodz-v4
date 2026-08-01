@@ -1,4 +1,7 @@
-import { SearchIndexSourceInputSchema, type SearchIndexSourceInput } from "@/contracts/search-index-source.contract";
+import {
+  SearchIndexSourceInputSchema,
+  type SearchIndexSourceInput,
+} from "@/contracts/search-index-source.contract";
 export const indexSourceInputSchema = SearchIndexSourceInputSchema;
 export type IndexSourceInput = SearchIndexSourceInput;
 

@@ -1,4 +1,3 @@
-
 import { getPortfolioSeedData } from "../../../../prisma/seed-data/portfolio-seed";
 import { portfolioSeedService } from "@/server/composition-root";
 import { requireProductionConfirmation } from "./require-production-confirmation";
@@ -11,6 +10,7 @@ async function main() {
   }
 
   const { prisma } = await import("@/server/infrastructure/database/prisma");
+
   try {
     const data = await portfolioSeedService.seed(getPortfolioSeedData());
 

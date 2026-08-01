@@ -6,16 +6,12 @@ import type {
 } from "@/server/modules/search-index/models/search-index";
 
 function normalizeKeywords(keywords: string[]): string[] {
-  return [...new Set(
-    keywords
-      .map((keyword) => keyword.trim())
-      .filter(Boolean),
-  )].sort((left, right) => left.localeCompare(right));
+  return [...new Set(keywords.map((keyword) => keyword.trim()).filter(Boolean))].sort(
+    (left, right) => left.localeCompare(right),
+  );
 }
 
-export function prepareSiteChunk(
-  document: SearchDocument,
-): PreparedSiteChunk {
+export function prepareSiteChunk(document: SearchDocument): PreparedSiteChunk {
   const keywords = normalizeKeywords(document.keywords);
 
   const embeddingInput = [
@@ -25,9 +21,7 @@ export function prepareSiteChunk(
     `Content: ${document.content}`,
   ].join("\n");
 
-  const contentHash = createHash("sha256")
-    .update(embeddingInput)
-    .digest("hex");
+  const contentHash = createHash("sha256").update(embeddingInput).digest("hex");
 
   return {
     ...document,
