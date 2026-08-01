@@ -140,7 +140,7 @@ test("assistant opens from its global event and reveals a complete stream progre
   Object.defineProperty(window.HTMLElement.prototype, "scrollIntoView", { value: () => undefined });
   Object.defineProperty(window.HTMLElement.prototype, "attachEvent", { value: () => undefined });
   Object.defineProperty(window.HTMLElement.prototype, "detachEvent", { value: () => undefined });
-  const firstResponse = "abcdefgh";
+  const firstResponse = "0123456789".repeat(24);
 
   const requestBodies: unknown[] = [];
 
@@ -149,7 +149,7 @@ test("assistant opens from its global event and reveals a complete stream progre
 
     if (requestBodies.length === 1) {
       return streamResponse([
-        '{"type":"delta","delta":"abcdefgh"}\n',
+        `${JSON.stringify({ type: "delta", delta: firstResponse })}\n`,
         '{"type":"sources","sources":[{"id":"work","title":"Work","url":"/work"}]}\n',
         '{"type":"response_id","responseId":"resp_1"}\n',
         '{"type":"done"}\n',
@@ -176,13 +176,23 @@ test("assistant opens from its global event and reveals a complete stream progre
         new window.CustomEvent(OPEN_PORTFOLIO_CHAT_EVENT, { detail: { message: "Hello" } }),
       );
     });
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 24));
+    });
+    const partialResponse = window.document.querySelectorAll("article")[1]?.firstElementChild
+      ?.textContent;
+
+    assert.ok(partialResponse);
+    assert.ok(partialResponse.length < firstResponse.length);
+    assert.equal(firstResponse.startsWith(partialResponse), true);
+
     for (let tick = 0; tick < 10; tick += 1) {
       await act(async () => {
         await new Promise((resolve) => setTimeout(resolve, 24));
       });
     }
 
-    assert.match(window.document.body.textContent ?? "", /abcdefgh/);
+    assert.match(window.document.body.textContent ?? "", /0123456789/);
     const messages = window.document.querySelectorAll("article");
 
     assert.equal(messages[1]?.firstElementChild?.textContent, firstResponse);
