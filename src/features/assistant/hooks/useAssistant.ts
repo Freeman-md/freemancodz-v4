@@ -1,21 +1,31 @@
 "use client";
 
-import { useEffect, useEffectEvent, useMemo, useRef, useState, type KeyboardEvent } from "react";
-import { useReducedMotion, type Transition } from "framer-motion";
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
+import { useReducedMotion } from "framer-motion";
 import { streamChatResponse } from "../api/stream-assistant-response";
 import {
   appendAssistantDelta,
   attachAssistantSources,
   replaceAssistantWithError,
-  stageWhenOpening,
 } from "../state/assistant-conversation";
 import { MAX_MESSAGE_LENGTH } from "../constants";
-import { OPEN_PORTFOLIO_CHAT_EVENT, type OpenPortfolioChatDetail } from "../assistant.events";
-import type { ChatMessage, ChatStage } from "../models/chat-message";
+import type { ChatMessage } from "../models/chat-message";
+
+const REVEAL_INTERVAL_MS = 16;
+
+function getRevealLength(backlogLength: number) {
+  if (backlogLength > 160) {
+    return 96;
+  }
+
+  if (backlogLength > 48) {
+    return 48;
+  }
+
+  return backlogLength;
+}
 
 export function useAssistant() {
-  const [stage, setStage] = useState<ChatStage>("launcher");
-
   const [input, setInput] = useState("");
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -28,136 +38,46 @@ export function useAssistant() {
 
   const shouldReduceMotion = useReducedMotion();
 
-  const shellRef = useRef<HTMLDivElement | null>(null);
+  const reduceMotionImmediately =
+    shouldReduceMotion ||
+    (typeof window !== "undefined" &&
+      window.matchMedia?.("(prefers-reduced-motion: reduce)").matches);
 
-  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const bufferedTextRef = useRef("");
 
-  const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const revealTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const isOpen = stage !== "launcher";
+  const revealCompleteRef = useRef<(() => void) | null>(null);
 
-  const isConversation = stage === "conversation";
+  const isMountedRef = useRef(true);
 
-  async function submitMessage(rawMessage: string) {
-    const message = rawMessage.trim();
+  const activeRequestIdRef = useRef(0);
 
-    if (!message || message.length > MAX_MESSAGE_LENGTH || isLoading) {
-      return;
+  const clearRevealWork = useCallback(() => {
+    bufferedTextRef.current = "";
+
+    if (revealTimerRef.current) {
+      clearTimeout(revealTimerRef.current);
+      revealTimerRef.current = null;
     }
 
-    const assistantMessage: ChatMessage = {
-      id: `assistant-${Date.now()}`,
-      role: "assistant",
-      content: "",
-      sources: [],
-    };
-
-    setStage("conversation");
-    setMessages((current) => [
-      ...current,
-      { id: `user-${Date.now()}`, role: "user", content: message },
-      assistantMessage,
-    ]);
-    setInput("");
-    setIsLoading(true);
-    setErrorMessage(null);
-
-    try {
-      await streamChatResponse(message, previousResponseId, {
-        onDelta(delta) {
-          setMessages((current) => appendAssistantDelta(current, assistantMessage.id, delta));
-        },
-        onResponseId(responseId) {
-          setPreviousResponseId(responseId);
-        },
-        onSources(sources) {
-          setMessages((current) => attachAssistantSources(current, assistantMessage.id, sources));
-        },
-      });
-    } catch (error) {
-      const messageText =
-        error instanceof Error ? error.message : "Something went wrong while fetching a response.";
-
-      const errorResponse: ChatMessage = {
-        id: `assistant-error-${Date.now()}`,
-        role: "assistant",
-        content: messageText,
-        error: true,
-      };
-
-      setErrorMessage(messageText);
-      setMessages((current) =>
-        replaceAssistantWithError(current, assistantMessage.id, errorResponse),
-      );
-    } finally {
-      setIsLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({
-      block: "end",
-      behavior: shouldReduceMotion ? "auto" : "smooth",
-    });
-  }, [messages, isLoading, stage, shouldReduceMotion]);
-
-  useEffect(() => {
-    if (stage !== "launcher") {
-      textareaRef.current?.focus();
-    }
-  }, [stage]);
-
-  useEffect(() => {
-    if (stage === "launcher" || isLoading) {
-      return;
-    }
-
-    function handlePointerDown(event: PointerEvent) {
-      const target = event.target;
-
-      if (target instanceof Node && !shellRef.current?.contains(target)) {
-        setStage("launcher");
-      }
-    }
-
-    function handleEscape(event: globalThis.KeyboardEvent) {
-      if (event.key === "Escape") {
-        setStage("launcher");
-      }
-    }
-
-    document.addEventListener("pointerdown", handlePointerDown);
-    document.addEventListener("keydown", handleEscape);
-
-    return () => {
-      document.removeEventListener("pointerdown", handlePointerDown);
-      document.removeEventListener("keydown", handleEscape);
-    };
-  }, [stage, isLoading]);
-
-  const handleTriggerOpen = useEffectEvent(async (detail?: OpenPortfolioChatDetail) => {
-    setErrorMessage(null);
-
-    if (detail?.message) {
-      await submitMessage(detail.message);
-
-      return;
-    }
-
-    setStage(stageWhenOpening(messages));
-  });
-
-  useEffect(() => {
-    function handleOpenEvent(event: Event) {
-      void handleTriggerOpen((event as CustomEvent<OpenPortfolioChatDetail>).detail);
-    }
-
-    window.addEventListener(OPEN_PORTFOLIO_CHAT_EVENT, handleOpenEvent);
-
-    return () => {
-      window.removeEventListener(OPEN_PORTFOLIO_CHAT_EVENT, handleOpenEvent);
-    };
+    revealCompleteRef.current?.();
+    revealCompleteRef.current = null;
   }, []);
+
+  const cancelPendingRequest = useCallback(() => {
+    activeRequestIdRef.current += 1;
+    clearRevealWork();
+  }, [clearRevealWork]);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+
+    return () => {
+      isMountedRef.current = false;
+      cancelPendingRequest();
+    };
+  }, [cancelPendingRequest]);
 
   const canSubmit = useMemo(() => {
     const trimmed = input.trim();
@@ -165,13 +85,138 @@ export function useAssistant() {
     return trimmed.length > 0 && trimmed.length <= MAX_MESSAGE_LENGTH && !isLoading;
   }, [input, isLoading]);
 
-  function openChat() {
-    setStage(stageWhenOpening(messages));
-  }
+  const submitMessage = useCallback(
+    async (rawMessage: string) => {
+      const message = rawMessage.trim();
 
-  function closeChat() {
-    setStage("launcher");
-  }
+      if (!message || message.length > MAX_MESSAGE_LENGTH || isLoading) {
+        return;
+      }
+
+      const assistantMessage: ChatMessage = {
+        id: `assistant-${Date.now()}`,
+        role: "assistant",
+        content: "",
+        sources: [],
+      };
+
+      const requestId = activeRequestIdRef.current + 1;
+
+      activeRequestIdRef.current = requestId;
+
+      let scheduleReveal: (() => void) | undefined;
+
+      function waitForRevealToFinish() {
+        if (!bufferedTextRef.current && !revealTimerRef.current) {
+          return Promise.resolve();
+        }
+
+        return new Promise<void>((resolve) => {
+          revealCompleteRef.current = resolve;
+        });
+      }
+
+      function revealNextChunk() {
+        revealTimerRef.current = null;
+
+        const chunkLength = getRevealLength(bufferedTextRef.current.length);
+
+        const chunk = bufferedTextRef.current.slice(0, chunkLength);
+
+        bufferedTextRef.current = bufferedTextRef.current.slice(chunkLength);
+
+        if (chunk && isMountedRef.current) {
+          setMessages((current) => appendAssistantDelta(current, assistantMessage.id, chunk));
+        }
+
+        if (bufferedTextRef.current) {
+          scheduleReveal?.();
+
+          return;
+        }
+
+        revealCompleteRef.current?.();
+        revealCompleteRef.current = null;
+      }
+
+      scheduleReveal = () => {
+        if (!revealTimerRef.current) {
+          revealTimerRef.current = setTimeout(revealNextChunk, REVEAL_INTERVAL_MS);
+        }
+      };
+
+      setMessages((current) => [
+        ...current,
+        { id: `user-${Date.now()}`, role: "user", content: message },
+        assistantMessage,
+      ]);
+      setInput("");
+      setIsLoading(true);
+      setErrorMessage(null);
+
+      try {
+        await streamChatResponse(message, previousResponseId, {
+          onDelta(delta) {
+            if (!isMountedRef.current || activeRequestIdRef.current !== requestId) {
+              return;
+            }
+
+            if (reduceMotionImmediately) {
+              setMessages((current) => appendAssistantDelta(current, assistantMessage.id, delta));
+
+              return;
+            }
+
+            bufferedTextRef.current += delta;
+            scheduleReveal?.();
+          },
+          onResponseId(responseId) {
+            if (!isMountedRef.current || activeRequestIdRef.current !== requestId) {
+              return;
+            }
+
+            setPreviousResponseId(responseId);
+          },
+          onSources(sources) {
+            if (!isMountedRef.current || activeRequestIdRef.current !== requestId) {
+              return;
+            }
+
+            setMessages((current) => attachAssistantSources(current, assistantMessage.id, sources));
+          },
+        });
+
+        if (!reduceMotionImmediately) {
+          await waitForRevealToFinish();
+        }
+      } catch (error) {
+        cancelPendingRequest();
+        const messageText =
+          error instanceof Error ? error.message : "Something went wrong while fetching a response.";
+
+        const errorResponse: ChatMessage = {
+          id: `assistant-error-${Date.now()}`,
+          role: "assistant",
+          content: messageText,
+          error: true,
+        };
+
+        if (isMountedRef.current) {
+          setErrorMessage(messageText);
+          setMessages((current) =>
+            replaceAssistantWithError(current, assistantMessage.id, errorResponse),
+          );
+        }
+      } finally {
+        if (isMountedRef.current) {
+          setIsLoading(false);
+        }
+      }
+    },
+    [cancelPendingRequest, isLoading, previousResponseId, reduceMotionImmediately],
+  );
+
+  const clearError = useCallback(() => setErrorMessage(null), []);
 
   function handleInputChange(value: string) {
     setInput(value);
@@ -191,28 +236,17 @@ export function useAssistant() {
     }
   }
 
-  const surfaceTransition: Transition = shouldReduceMotion
-    ? { duration: 0 }
-    : { type: "spring", stiffness: 420, damping: 38, mass: 0.9 };
-
   return {
     canSubmit,
-    closeChat,
+    clearError,
     errorMessage,
     handleInputChange,
     handleKeyDown,
     handleSubmit,
     input,
-    isConversation,
     isLoading,
-    isOpen,
     messages,
-    messagesEndRef,
-    openChat,
-    shellRef,
     shouldReduceMotion,
-    stage,
-    surfaceTransition,
-    textareaRef,
+    submitMessage,
   };
 }

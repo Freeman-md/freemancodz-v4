@@ -1,34 +1,57 @@
 "use client";
 
 import { motion } from "framer-motion";
+import type { KeyboardEvent } from "react";
 import { CardContent } from "@/shared/components/ui/Card";
 import { cn } from "@/shared/utils/class-names";
 import { ChatComposer } from "./ChatComposer";
 import { ChatConversation } from "./ChatConversation";
 import { ChatLauncher } from "./ChatLauncher";
 import { useAssistant } from "../hooks/useAssistant";
+import { useFloatingPanel } from "../hooks/useFloatingPanel";
 
 export function FloatingPortfolioChat() {
   const {
     canSubmit,
-    closeChat,
+    clearError,
     errorMessage,
     handleInputChange,
-    handleKeyDown,
-    handleSubmit,
+    handleSubmit: submitInput,
     input,
-    isConversation,
     isLoading,
-    isOpen,
     messages,
+    submitMessage,
+  } = useAssistant();
+
+  const {
+    closeChat,
+    isConversation,
+    isOpen,
     messagesEndRef,
     openChat,
     shellRef,
+    showConversation,
     shouldReduceMotion,
     stage,
     surfaceTransition,
     textareaRef,
-  } = useAssistant();
+  } = useFloatingPanel({ clearError, isLoading, messages, submitMessage });
+
+  async function handleSubmit() {
+    if (!canSubmit) {
+      return;
+    }
+
+    showConversation();
+    await submitInput();
+  }
+
+  function handleKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      void handleSubmit();
+    }
+  }
 
   return (
     <div className="pointer-events-none fixed inset-x-0 bottom-0 z-50 px-3 pb-[max(env(safe-area-inset-bottom),0.75rem)] sm:px-4 sm:pb-[max(env(safe-area-inset-bottom),1.25rem)]">
