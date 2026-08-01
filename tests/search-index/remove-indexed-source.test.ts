@@ -1,6 +1,42 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { SearchIndexService } from "@/server/modules/search-index/services/search-index.service";
-function service(deleteSource: (type: never, id: string) => Promise<number>) { return new SearchIndexService({ findById: async () => null, findAll: async () => [] }, { findBySource: async () => [], replaceSource: async () => undefined, deleteSource, match: async () => [] }, { getStatus: async () => ({}) as never, enqueue: async () => ({}) as never, claim: async () => [], complete: async () => null, fail: async () => null }, { getEmbeddingModel: () => "model", createEmbedding: async () => [], createEmbeddings: async () => [], streamResponse: async () => ({}) as never }); }
-test("search-index service maps successful source removal", async () => { assert.deepEqual(await service(async () => 3).removeSource({ sourceType: "projects", sourceId: "project-1" }), { created: 0, changed: 0, unchanged: 0, deleted: 3 }); });
-test("search-index service wraps removal failures", async () => { await assert.rejects(service(async () => { throw new Error("repository unavailable"); }).removeSource({ sourceType: "experiences", sourceId: "experience-1" }), /Failed to remove indexed source experiences:experience-1: repository unavailable/); });
+function service(deleteSource: (type: never, id: string) => Promise<number>) {
+  return new SearchIndexService(
+    { findById: async () => null, findAll: async () => [] },
+    {
+      findBySource: async () => [],
+      replaceSource: async () => undefined,
+      deleteSource,
+      match: async () => [],
+    },
+    {
+      getStatus: async () => ({}) as never,
+      enqueue: async () => ({}) as never,
+      claim: async () => [],
+      complete: async () => null,
+      fail: async () => null,
+    },
+    {
+      getEmbeddingModel: () => "model",
+      createEmbedding: async () => [],
+      createEmbeddings: async () => [],
+      streamResponse: async () => ({}) as never,
+    },
+  );
+}
+
+test("search-index service maps successful source removal", async () => {
+  assert.deepEqual(
+    await service(async () => 3).removeSource({ sourceType: "projects", sourceId: "project-1" }),
+    { created: 0, changed: 0, unchanged: 0, deleted: 3 },
+  );
+});
+test("search-index service wraps removal failures", async () => {
+  await assert.rejects(
+    service(async () => {
+      throw new Error("repository unavailable");
+    }).removeSource({ sourceType: "experiences", sourceId: "experience-1" }),
+    /Failed to remove indexed source experiences:experience-1: repository unavailable/,
+  );
+});

@@ -2,8 +2,128 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { AssistantService } from "@/server/modules/assistant/services/assistant.service";
 
-async function read(stream: ReadableStream<Uint8Array>) { const reader = stream.getReader(); const decoder = new TextDecoder(); let value = ""; for (;;) { const next = await reader.read(); if (next.done) return value; value += decoder.decode(next.value); } }
-function service(overrides: { embedding?: () => Promise<number[] | undefined>; search?: () => Promise<never[]>; stream?: () => Promise<AsyncIterable<never>> } = {}) { return new AssistantService({ getEmbeddingModel: () => "model", createEmbedding: overrides.embedding ?? (async () => Array(1536).fill(0)), createEmbeddings: async () => [], streamResponse: overrides.stream ?? (async () => (async function* () { yield { type: "response.output_text.delta", delta: "Answer" }; yield { type: "response.completed", response: { id: "resp_1" } }; })() as never) }, { search: overrides.search ?? (async () => [{ id: "source", title: "Work", url: "/work", content: "content", category: "work", keywords: [], similarity: 1 }] as never), indexSource: async () => ({ created: 0, changed: 0, unchanged: 0, deleted: 0 }), removeSource: async () => ({ created: 0, changed: 0, unchanged: 0, deleted: 0 }), preview: async () => ({ input: {} as never, chunks: [], obsoleteIds: [] }), rebuild: async () => ({ totals: { created: 0, changed: 0, unchanged: 0, deleted: 0 }, results: [] }), getJobStatus: async () => ({}) as never }, { info: () => undefined, error: () => undefined }); }
-test("assistant service streams direct answers, sources, and follow-up response ids", async () => { const text = await read(service().createResponse({ message: "What did Freeman build?", previousResponseId: "resp_old", signal: new AbortController().signal })); assert.match(text, /Answer/); assert.match(text, /sources/); assert.match(text, /resp_1/); });
-test("assistant service falls back for empty direct retrieval and safely reports retrieval/provider failures", async () => { const signal = new AbortController().signal; assert.match(await read(service({ search: async () => [] }).createResponse({ message: "Unknown", previousResponseId: null, signal })), /I don.t have enough information/); assert.match(await read(service({ embedding: async () => { throw new Error("provider"); } }).createResponse({ message: "Fail", previousResponseId: null, signal })), /assistant could not respond/); });
-test("assistant service honors aborts and applies its best-effort rate limit", async () => { const controller = new AbortController(); controller.abort(); assert.equal(await read(service().createResponse({ message: "Abort", previousResponseId: null, signal: controller.signal })), ""); const instance = service(); for (let index = 0; index < 10; index += 1) assert.equal(instance.checkRateLimit("client").allowed, true); assert.equal(instance.checkRateLimit("client").allowed, false); });
+async function read(stream: ReadableStream<Uint8Array>) {
+  const reader = stream.getReader();
+
+  const decoder = new TextDecoder();
+
+  let value = "";
+
+  for (;;) {
+    const next = await reader.read();
+
+    if (next.done) {
+      return value;
+    }
+
+    value += decoder.decode(next.value);
+  }
+}
+
+function service(
+  overrides: {
+    embedding?: () => Promise<number[] | undefined>;
+    search?: () => Promise<never[]>;
+    stream?: () => Promise<AsyncIterable<never>>;
+  } = {},
+) {
+  return new AssistantService(
+    {
+      getEmbeddingModel: () => "model",
+      createEmbedding: overrides.embedding ?? (async () => Array(1536).fill(0)),
+      createEmbeddings: async () => [],
+      streamResponse:
+        overrides.stream ??
+        (async () =>
+          (async function* () {
+            yield { type: "response.output_text.delta", delta: "Answer" };
+            yield { type: "response.completed", response: { id: "resp_1" } };
+          })() as never),
+    },
+    {
+      search:
+        overrides.search ??
+        (async () =>
+          [
+            {
+              id: "source",
+              title: "Work",
+              url: "/work",
+              content: "content",
+              category: "work",
+              keywords: [],
+              similarity: 1,
+            },
+          ] as never),
+      indexSource: async () => ({ created: 0, changed: 0, unchanged: 0, deleted: 0 }),
+      removeSource: async () => ({ created: 0, changed: 0, unchanged: 0, deleted: 0 }),
+      preview: async () => ({ input: {} as never, chunks: [], obsoleteIds: [] }),
+      rebuild: async () => ({
+        totals: { created: 0, changed: 0, unchanged: 0, deleted: 0 },
+        results: [],
+      }),
+      getJobStatus: async () => ({}) as never,
+    },
+    { info: () => undefined, error: () => undefined },
+  );
+}
+
+test("assistant service streams direct answers, sources, and follow-up response ids", async () => {
+  const text = await read(
+    service().createResponse({
+      message: "What did Freeman build?",
+      previousResponseId: "resp_old",
+      signal: new AbortController().signal,
+    }),
+  );
+
+  assert.match(text, /Answer/);
+  assert.match(text, /sources/);
+  assert.match(text, /resp_1/);
+});
+test("assistant service falls back for empty direct retrieval and safely reports retrieval/provider failures", async () => {
+  const signal = new AbortController().signal;
+
+  assert.match(
+    await read(
+      service({ search: async () => [] }).createResponse({
+        message: "Unknown",
+        previousResponseId: null,
+        signal,
+      }),
+    ),
+    /I don.t have enough information/,
+  );
+  assert.match(
+    await read(
+      service({
+        embedding: async () => {
+          throw new Error("provider");
+        },
+      }).createResponse({ message: "Fail", previousResponseId: null, signal }),
+    ),
+    /assistant could not respond/,
+  );
+});
+test("assistant service honors aborts and applies its best-effort rate limit", async () => {
+  const controller = new AbortController();
+
+  controller.abort();
+  assert.equal(
+    await read(
+      service().createResponse({
+        message: "Abort",
+        previousResponseId: null,
+        signal: controller.signal,
+      }),
+    ),
+    "",
+  );
+  const instance = service();
+
+  for (let index = 0; index < 10; index += 1) {
+    assert.equal(instance.checkRateLimit("client").allowed, true);
+  }
+
+  assert.equal(instance.checkRateLimit("client").allowed, false);
+});

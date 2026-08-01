@@ -1,7 +1,83 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { PortfolioService } from "@/server/modules/portfolio/services/portfolio.service";
-const required = async (key: string) => ({ "home.hero": { content: { name: "Freeman", headline: "Headline", intro: "Intro", heroNote: "Note" } }, "home.philosophy": { content: { philosophyQuestion: "Question" } }, "home.current-direction": { content: { currentDirection: "Direction", currentDirectionSupport: "Support" } } }[key] as never);
-function service() { return new PortfolioService({ findRequiredByKey: required, findBySection: async () => [] }, { findAll: async () => [] }, { findBySection: async () => [] }, { findAll: async () => [{ title: "Project", summary: "Summary", category: "Category", role: "Role", outcome: "Outcome", detail: "Detail", future: null, collaboration: null, positioning: null, featured: true, stacks: [], links: [] }] as never[], findFeatured: async () => [] }, { findAll: async () => [] }, { getPrivate: async () => null }); }
-test("portfolio service preserves required page failures and work grouping", async () => { const instance = service(); const work = await instance.getWorkPageData(); assert.deepEqual(work.featuredProjects.map((project) => project.title), ["Project"]); await assert.rejects(new PortfolioService({ findRequiredByKey: required, findBySection: async () => [] }, { findAll: async () => [] }, { findBySection: async () => [] }, { findAll: async () => [], findFeatured: async () => [] }, { findAll: async () => [] }, { getPrivate: async () => null }).getWorkPageData(), /Required portfolio projects not found/); });
-test("portfolio service maps missing and streamed assets", async () => { assert.deepEqual(await service().getAsset("missing"), { kind: "missing" }); const result = await new PortfolioService({ findRequiredByKey: required, findBySection: async () => [] }, { findAll: async () => [] }, { findBySection: async () => [] }, { findAll: async () => [], findFeatured: async () => [] }, { findAll: async () => [] }, { getPrivate: async () => ({ stream: new ReadableStream(), blob: { contentType: "image/png" } }) }).getAsset("asset"); assert.equal(result.kind, "stream"); });
+const required = async (key: string) =>
+  ({
+    "home.hero": {
+      content: { name: "Freeman", headline: "Headline", intro: "Intro", heroNote: "Note" },
+    },
+    "home.philosophy": { content: { philosophyQuestion: "Question" } },
+    "home.current-direction": {
+      content: { currentDirection: "Direction", currentDirectionSupport: "Support" },
+    },
+  })[key] as never;
+
+function service() {
+  return new PortfolioService(
+    { findRequiredByKey: required, findBySection: async () => [] },
+    { findAll: async () => [] },
+    { findBySection: async () => [] },
+    {
+      findAll: async () =>
+        [
+          {
+            title: "Project",
+            summary: "Summary",
+            category: "Category",
+            role: "Role",
+            outcome: "Outcome",
+            detail: "Detail",
+            future: null,
+            collaboration: null,
+            positioning: null,
+            featured: true,
+            stacks: [],
+            links: [],
+          },
+        ] as never[],
+      findFeatured: async () => [],
+    },
+    { findAll: async () => [] },
+    { getPrivate: async () => null },
+  );
+}
+
+test("portfolio service preserves required page failures and work grouping", async () => {
+  const instance = service();
+
+  const work = await instance.getWorkPageData();
+
+  assert.deepEqual(
+    work.featuredProjects.map((project) => project.title),
+    ["Project"],
+  );
+  await assert.rejects(
+    new PortfolioService(
+      { findRequiredByKey: required, findBySection: async () => [] },
+      { findAll: async () => [] },
+      { findBySection: async () => [] },
+      { findAll: async () => [], findFeatured: async () => [] },
+      { findAll: async () => [] },
+      { getPrivate: async () => null },
+    ).getWorkPageData(),
+    /Required portfolio projects not found/,
+  );
+});
+test("portfolio service maps missing and streamed assets", async () => {
+  assert.deepEqual(await service().getAsset("missing"), { kind: "missing" });
+  const result = await new PortfolioService(
+    { findRequiredByKey: required, findBySection: async () => [] },
+    { findAll: async () => [] },
+    { findBySection: async () => [] },
+    { findAll: async () => [], findFeatured: async () => [] },
+    { findAll: async () => [] },
+    {
+      getPrivate: async () => ({
+        stream: new ReadableStream(),
+        blob: { contentType: "image/png" },
+      }),
+    },
+  ).getAsset("asset");
+
+  assert.equal(result.kind, "stream");
+});

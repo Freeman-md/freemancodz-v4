@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { ContentBlock } from "@/generated/prisma/client";
-import { assertContentBlockIdentity, mapHeroBlock } from "@/server/modules/portfolio/mappers/content-block.mapper";
+import {
+  assertContentBlockIdentity,
+  mapHeroBlock,
+} from "@/server/modules/portfolio/mappers/content-block.mapper";
 import { heroContentSchema } from "@/server/modules/portfolio/schemas/content-block.schema";
 import { parseStoredContent } from "@/server/modules/portfolio/schemas/content-block.schema";
 import { textBlockContentSchema } from "@/server/modules/portfolio/schemas/content-block.schema";
@@ -19,7 +22,11 @@ test("maps a valid required hero block", () => {
 
 test("rejects mismatched required content block identity", () => {
   assert.throws(
-    () => assertContentBlockIdentity({ ...hero, section: "PHILOSOPHY" }, { key: "home.hero", page: "HOME", section: "HERO" }),
+    () =>
+      assertContentBlockIdentity(
+        { ...hero, section: "PHILOSOPHY" },
+        { key: "home.hero", page: "HOME", section: "HERO" },
+      ),
     /Unexpected content block identity: home\.hero/,
   );
 });
@@ -33,7 +40,12 @@ test("rejects malformed repeatable content", () => {
 
 test("rejects malformed hero content at the JSON boundary", () => {
   assert.throws(
-    () => parseStoredContent(heroContentSchema, { name: "Freeman", headline: "Headline", intro: "Intro" }, "home.hero"),
+    () =>
+      parseStoredContent(
+        heroContentSchema,
+        { name: "Freeman", headline: "Headline", intro: "Intro" },
+        "home.hero",
+      ),
     /Invalid content stored for block: home\.hero/,
   );
 });
