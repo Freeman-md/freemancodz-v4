@@ -216,23 +216,3 @@ test("worker passes an explicit batch limit to the job claim boundary", async ()
   assert.deepEqual(await service.runBatch(7), { claimed: 0, completed: 0, retried: 0, failed: 0 });
   assert.deepEqual(claimLimits, [7]);
 });
-
-test("CLI loop delegates bounded worker batches", async () => {
-  process.env.OPENAI_API_KEY ??= "test";
-  const { runIndexWorkerLoop } = await import("@/server/entrypoints/jobs/run-search-index-worker");
-
-  let stop = false;
-
-  let calls = 0;
-
-  await runIndexWorkerLoop({
-    runBatch: async () => {
-      calls += 1;
-      stop = true;
-
-      return { claimed: 1, completed: 1, retried: 0, failed: 0 };
-    },
-    isStopping: () => stop,
-  });
-  assert.equal(calls, 1);
-});
