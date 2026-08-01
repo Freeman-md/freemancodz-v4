@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { assistantRequestSchema } from "@/contracts/assistant.contract";
+import { createChatPostHandler } from "@/app/api/chat/route";
 import type { ILogger } from "@/server/infrastructure/logging/logger.interface";
 import type { IOpenAIProvider } from "@/server/infrastructure/openai/interfaces/openai.provider.interface";
 import type { ISearchIndexService } from "@/server/modules/search-index/interfaces/search-index.service.interface";
@@ -83,18 +83,38 @@ function createAssistant({
     getJobStatus: async () => ({}) as never,
   };
 
-  return { inputs, service: new AssistantService(openai, searchIndex, logger) };
+  const assistantService = new AssistantService(openai, searchIndex, logger);
+
+  return { inputs, post: createChatPostHandler({ assistantService }) };
+}
+
+function chatRequest(body: unknown, signal?: AbortSignal) {
+  return new Request("http://localhost/api/chat", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "x-forwarded-for": "test-client" },
+    body: JSON.stringify(body),
+    signal,
+  });
+}
+
+async function readChatResponse(response: Response) {
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get("Content-Type"), "application/x-ndjson; charset=utf-8");
+  assert.ok(response.body);
+
+  return read(response.body);
 }
 
 test("direct portfolio question streams its answer, source, and response id", async () => {
-  const { inputs, service } = createAssistant();
+  const { inputs, post } = createAssistant();
 
-  const output = await read(
-    service.createResponse({
+  const output = await readChatResponse(
+    await post(
+      chatRequest({
       message: "What assistant did Freeman build?",
       previousResponseId: null,
-      signal: new AbortController().signal,
-    }),
+      }),
+    ),
   );
 
   assert.match(inputs[0]?.input ?? "", /What assistant did Freeman build\?/);
@@ -105,14 +125,15 @@ test("direct portfolio question streams its answer, source, and response id", as
 });
 
 test("follow-up question preserves the previous response id and streams the new response", async () => {
-  const { inputs, service } = createAssistant();
+  const { inputs, post } = createAssistant();
 
-  const output = await read(
-    service.createResponse({
+  const output = await readChatResponse(
+    await post(
+      chatRequest({
       message: "What technologies did it use?",
       previousResponseId: "resp_previous",
-      signal: new AbortController().signal,
-    }),
+      }),
+    ),
   );
 
   assert.equal(inputs[0]?.previousResponseId, "resp_previous");
@@ -121,19 +142,20 @@ test("follow-up question preserves the previous response id and streams the new 
 });
 
 test("multiple relevant sources are returned with one streamed answer", async () => {
-  const { service } = createAssistant({
+  const { post } = createAssistant({
     chunks: [
       source,
       { ...source, id: "experience-1", title: "Platform engineering", url: "/about" },
     ],
   });
 
-  const output = await read(
-    service.createResponse({
+  const output = await readChatResponse(
+    await post(
+      chatRequest({
       message: "Tell me about Freeman's work.",
       previousResponseId: null,
-      signal: new AbortController().signal,
-    }),
+      }),
+    ),
   );
 
   assert.match(output, /Grounded Assistant/);
@@ -144,7 +166,7 @@ test("multiple relevant sources are returned with one streamed answer", async ()
 test("no relevant sources returns the existing safe fallback without calling the model", async () => {
   let streamed = false;
 
-  const { service } = createAssistant({
+  const { post } = createAssistant({
     chunks: [],
     response: async () => {
       streamed = true;
@@ -153,12 +175,13 @@ test("no relevant sources returns the existing safe fallback without calling the
     },
   });
 
-  const output = await read(
-    service.createResponse({
+  const output = await readChatResponse(
+    await post(
+      chatRequest({
       message: "What is Freeman's favourite planet?",
       previousResponseId: null,
-      signal: new AbortController().signal,
-    }),
+      }),
+    ),
   );
 
   assert.match(output, /I don.t have enough information/);
@@ -166,35 +189,37 @@ test("no relevant sources returns the existing safe fallback without calling the
 });
 
 test("retrieval failure returns the existing safe stream error", async () => {
-  const { service } = createAssistant({
+  const { post } = createAssistant({
     embedding: async () => {
       throw new Error("embedding unavailable");
     },
   });
 
-  const output = await read(
-    service.createResponse({
+  const output = await readChatResponse(
+    await post(
+      chatRequest({
       message: "What has Freeman built?",
       previousResponseId: null,
-      signal: new AbortController().signal,
-    }),
+      }),
+    ),
   );
 
   assert.match(output, /The assistant could not respond\. Please try again\./);
 });
 
 test("OpenAI streaming failure returns the existing safe stream error", async () => {
-  const { service } = createAssistant({
+  const { post } = createAssistant({
     response: async () =>
       events({ type: "response.failed", response: { error: { message: "provider unavailable" } } }),
   });
 
-  const output = await read(
-    service.createResponse({
+  const output = await readChatResponse(
+    await post(
+      chatRequest({
       message: "What has Freeman built?",
       previousResponseId: null,
-      signal: new AbortController().signal,
-    }),
+      }),
+    ),
   );
 
   assert.match(output, /The assistant could not respond\. Please try again\./);
@@ -204,35 +229,48 @@ test("aborted request stops without emitting a response", async () => {
   const controller = new AbortController();
 
   controller.abort();
-  const { service } = createAssistant();
+  const { post } = createAssistant();
 
-  const output = await read(
-    service.createResponse({
+  const response = await post(
+    chatRequest(
+      {
       message: "Stop this request.",
       previousResponseId: null,
-      signal: controller.signal,
-    }),
+      },
+      controller.signal,
+    ),
   );
+
+  const output = await readChatResponse(response);
 
   assert.equal(output, "");
 });
 
-test("invalid public request is rejected by the public request contract", () => {
-  assert.equal(assistantRequestSchema.safeParse({ message: " ".repeat(501) }).success, false);
+test("invalid public request returns the current safe validation response", async () => {
+  const { post } = createAssistant();
+
+  const response = await post(chatRequest({ message: " ".repeat(501) }));
+
+  assert.equal(response.status, 400);
+  assert.deepEqual(await response.json(), { error: "Message is required." });
 });
 
-test("rate-limited request receives the current limit response", () => {
-  const { service } = createAssistant();
+test("rate-limited request receives the current limit response", async () => {
+  const { post } = createAssistant();
 
   for (let attempt = 0; attempt < 10; attempt += 1) {
-    assert.equal(service.checkRateLimit("integration-client").allowed, true);
+    const response = await post(chatRequest({ message: "What has Freeman built?" }));
+
+    assert.equal(response.status, 200);
   }
 
-  const result = service.checkRateLimit("integration-client");
+  const response = await post(chatRequest({ message: "What has Freeman built?" }));
 
-  assert.equal(result.allowed, false);
-  assert.equal(result.error, "Too many messages. Please try again in a few minutes.");
-  assert.equal(result.limit, 10);
-  assert.equal(result.remaining, 0);
-  assert.ok(result.resetAt > Date.now());
+  assert.equal(response.status, 429);
+  assert.deepEqual(await response.json(), {
+    error: "Too many messages. Please try again in a few minutes.",
+  });
+  assert.equal(response.headers.get("X-RateLimit-Limit"), "10");
+  assert.equal(response.headers.get("X-RateLimit-Remaining"), "0");
+  assert.ok(Number(response.headers.get("Retry-After")) >= 1);
 });
