@@ -31,6 +31,19 @@ function splitOversizedParagraph(paragraph: string): string[] {
       const words = sentence.trim().split(/\s+/);
 
       for (const word of words) {
+        if (word.length > MAX_CHUNK_CHARACTERS) {
+          if (current) {
+            pieces.push(current);
+            current = "";
+          }
+
+          for (let start = 0; start < word.length; start += MAX_CHUNK_CHARACTERS) {
+            pieces.push(word.slice(start, start + MAX_CHUNK_CHARACTERS));
+          }
+
+          continue;
+        }
+
         if (current && current.length + word.length + 1 > MAX_CHUNK_CHARACTERS) {
           pieces.push(current);
           current = "";

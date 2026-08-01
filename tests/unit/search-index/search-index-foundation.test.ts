@@ -100,6 +100,17 @@ test("content blocks use descriptive titles and invalid blocks fail visibly", ()
     () => mapContentBlockDocument({ ...block, key: "unknown" }),
     /Unsupported or invalid/,
   );
+
+  const numericIntro = mapContentBlockDocument({
+    ...block,
+    key: "about.intro.0",
+    section: "ABOUT_INTRO",
+    content: { body: "Freeman builds reliable product systems for teams." },
+  });
+
+  assert.match(numericIntro.title, /reliable product systems/i);
+  assert.doesNotMatch(numericIntro.title, /: 0$/);
+  assert.ok(numericIntro.keywords.some((keyword) => /reliable product systems/i.test(keyword)));
 });
 test("all supported source records map to meaningful source-specific text", () => {
   const documents = [
@@ -120,6 +131,7 @@ test("paragraph-first chunking is deterministic and splits oversized paragraphs"
 
   assert.ok(chunkText([oversized]).every((chunk) => chunk.length <= 1200));
   assert.deepEqual(chunkText([oversized]), chunkText([oversized]));
+  assert.ok(chunkText(["x".repeat(1_201)]).every((chunk) => chunk.length <= 1200));
 });
 
 function makeService({
@@ -336,7 +348,11 @@ test("clean rebuild clears stale state, uses indexing, and reports success and f
     findById: async (sourceType, sourceId) =>
       sources.find((source) => source.sourceType === sourceType && source.record.id === sourceId) ??
       null,
-    findAll: async () => sources,
+    findAll: async () => {
+      events.push("find-sources");
+
+      return sources;
+    },
   };
 
   const chunks: ISiteChunkRepository = {
@@ -376,7 +392,14 @@ test("clean rebuild clears stale state, uses indexing, and reports success and f
 
   const result = await rebuilt.rebuild({ clean: true });
 
-  assert.deepEqual(events.slice(0, 2), ["clear-chunks", "clear-jobs"]);
+  assert.deepEqual(events, [
+    "find-sources",
+    "clear-chunks",
+    "clear-jobs",
+    "find-sources",
+    "replace",
+    "replace",
+  ]);
   assert.deepEqual(result.summary, {
     sourceRecords: 2,
     sourcesIndexed: 2,

@@ -136,16 +136,21 @@ export class SearchIndexService implements ISearchIndexService {
   }
 
   async rebuild(options: { clean?: boolean } = {}) {
-    const sources = await this.sources.findAll();
+    let sourceRecordsForReporting: number | null = null;
 
     if (options.clean) {
-      this.logger.info("Clean search index rebuild started", { sourceRecords: sources.length });
+      sourceRecordsForReporting = (await this.sources.findAll()).length;
+      this.logger.info("Clean search index rebuild started", {
+        sourceRecords: sourceRecordsForReporting,
+      });
       await this.chunks.clear();
       await this.jobs.clear();
     }
 
+    const sources = await this.sources.findAll();
+
     const summary: RebuildSummary = {
-      sourceRecords: sources.length,
+      sourceRecords: sourceRecordsForReporting ?? sources.length,
       sourcesIndexed: 0,
       sourcesSkipped: 0,
       chunksCreated: 0,

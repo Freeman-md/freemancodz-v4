@@ -16,6 +16,20 @@ function document(block: ContentBlock, value: ContentBlockDocument): IndexDocume
   return { sourceType: "content_blocks", sourceId: block.id, ...value };
 }
 
+function textBlockSubject(body: string): string {
+  const firstSentence = body.trim().split(/[.!?]/, 1)[0]?.trim() || "Freeman's story";
+
+  return firstSentence.length > 80 ? `${firstSentence.slice(0, 77).trim()}…` : firstSentence;
+}
+
+function textBlockTitle(prefix: string, key: string, body: string): string {
+  const suffix = key.slice(key.lastIndexOf(".") + 1);
+
+  return /^\d+$/.test(suffix)
+    ? `${prefix}: ${textBlockSubject(body)}`
+    : `${prefix}: ${suffix.replaceAll("-", " ")}`;
+}
+
 export function mapContentBlockDocument(block: ContentBlock): IndexDocument {
   if (block.key === "home.hero" && block.page === "HOME" && block.section === "HERO") {
     const parsed = heroContentSchema.safeParse(block.content);
@@ -114,10 +128,10 @@ export function mapContentBlockDocument(block: ContentBlock): IndexDocument {
 
     if (parsed.success) {
       return document(block, {
-        title: `Freeman's background: ${block.key.slice("about.intro.".length).replaceAll("-", " ")}`,
+        title: textBlockTitle("Freeman's background", block.key, parsed.data.body),
         category: "Profile",
         url: "/about",
-        keywords: ["About", "Freeman", "Profile"],
+        keywords: ["About", "Freeman", "Profile", textBlockSubject(parsed.data.body)],
         paragraphs: [`Profile: Freeman's background includes ${parsed.data.body}`],
       });
     }
@@ -132,10 +146,15 @@ export function mapContentBlockDocument(block: ContentBlock): IndexDocument {
 
     if (parsed.success) {
       return document(block, {
-        title: `Freeman's work process: ${block.key.slice("about.work-process.".length).replaceAll("-", " ")}`,
+        title: textBlockTitle("Freeman's work process", block.key, parsed.data.body),
         category: "Work process",
         url: "/about",
-        keywords: ["Engineering process", "Freeman", "Work process"],
+        keywords: [
+          "Engineering process",
+          "Freeman",
+          "Work process",
+          textBlockSubject(parsed.data.body),
+        ],
         paragraphs: [`Work process: Freeman ${parsed.data.body}`],
       });
     }
