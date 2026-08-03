@@ -20,9 +20,25 @@ export async function findMeetingSlots(
 
   const end = new Date(`${input.endDate}T00:00:00Z`);
 
+  const today = new Intl.DateTimeFormat("en-CA", {
+    timeZone: MEETING_CONFIG.timezone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  })
+    .formatToParts(new Date())
+    .reduce<Record<string, string>>((parts, part) => {
+      parts[part.type] = part.value;
+
+      return parts;
+    }, {});
+
+  const todayInAvailabilityTimezone = `${today.year}-${today.month}-${today.day}`;
+
   if (
     start > end ||
-    end.getTime() - start.getTime() > MEETING_CONFIG.maximumRangeDays * 86_400_000
+    end.getTime() - start.getTime() > MEETING_CONFIG.maximumRangeDays * 86_400_000 ||
+    input.endDate < todayInAvailabilityTimezone
   ) {
     return {
       output: {
