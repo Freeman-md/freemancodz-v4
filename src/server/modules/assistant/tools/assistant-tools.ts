@@ -4,7 +4,8 @@ export const ASSISTANT_TOOLS: OpenAIResponseTool[] = [
   {
     type: "function",
     name: "search_website",
-    description: "Search Freeman's portfolio for factual information needed to answer a portfolio question.",
+    description:
+      "Search Freeman's portfolio for factual information needed to answer a portfolio question.",
     strict: true,
     parameters: {
       type: "object",
@@ -16,15 +17,16 @@ export const ASSISTANT_TOOLS: OpenAIResponseTool[] = [
   {
     type: "function",
     name: "find_meeting_slots",
-    description: "Find deterministic dummy meeting slots when a visitor wants to schedule a meeting.",
+    description:
+      "Find genuine available meeting slots for a visitor's requested future date range.",
     strict: true,
     parameters: {
       type: "object",
       additionalProperties: false,
-      required: ["dateRange", "durationMinutes", "timezone"],
+      required: ["startDate", "endDate", "timezone"],
       properties: {
-        dateRange: { type: "string" },
-        durationMinutes: { type: "integer" },
+        startDate: { type: "string", description: "The first requested date, YYYY-MM-DD." },
+        endDate: { type: "string", description: "The final requested date, YYYY-MM-DD." },
         timezone: { type: "string" },
       },
     },
@@ -32,34 +34,42 @@ export const ASSISTANT_TOOLS: OpenAIResponseTool[] = [
   {
     type: "function",
     name: "prepare_meeting",
-    description: "Prepare a deterministic dummy meeting summary before requesting booking confirmation.",
+    description:
+      "Prepare the complete real booking summary for one of the latest returned slots. This never books a meeting.",
     strict: true,
     parameters: {
       type: "object",
       additionalProperties: false,
-      required: ["title", "slotId", "attendeeName"],
+      required: ["name", "email", "timezone", "reason", "selectedSlot"],
       properties: {
-        title: { type: "string" },
-        slotId: { type: "string" },
-        attendeeName: { type: "string" },
+        name: { type: "string" },
+        email: { type: "string" },
+        timezone: { type: "string" },
+        reason: { type: "string" },
+        selectedSlot: {
+          type: "object",
+          additionalProperties: false,
+          required: ["start", "end", "timezone"],
+          properties: {
+            start: { type: "string" },
+            end: { type: "string" },
+            timezone: { type: "string" },
+          },
+        },
       },
     },
   },
   {
     type: "function",
     name: "book_meeting",
-    description: "Return a deterministic dummy booking result only after the visitor has confirmed the prepared meeting.",
+    description:
+      "Book the currently prepared meeting only after the visitor explicitly confirmed it. Never call this before a clear confirmation message.",
     strict: true,
     parameters: {
       type: "object",
       additionalProperties: false,
-      required: ["title", "slotId", "attendeeName", "confirmed"],
-      properties: {
-        title: { type: "string" },
-        slotId: { type: "string" },
-        attendeeName: { type: "string" },
-        confirmed: { type: "boolean", const: true },
-      },
+      required: [],
+      properties: {},
     },
   },
 ];

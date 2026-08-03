@@ -36,7 +36,7 @@ test("assistant client handles a buffered final event and associates stream valu
     ]);
 
   try {
-    await streamChatResponse("Hello", null, {
+    await streamChatResponse("Hello", null, null, {
       onDelta: (delta) => deltas.push(delta),
       onResponseId: (id) => {
         responseId = id;
@@ -44,6 +44,7 @@ test("assistant client handles a buffered final event and associates stream valu
       onSources: (sources) => {
         sourceTitle = sources[0]?.title || "";
       },
+      onWorkflow: () => undefined,
     });
   } finally {
     globalThis.fetch = originalFetch;
@@ -61,10 +62,11 @@ test("assistant client rejects malformed stream events with a safe error", async
   try {
     await assert.rejects(
       () =>
-        streamChatResponse("Hello", null, {
+        streamChatResponse("Hello", null, null, {
           onDelta: () => undefined,
           onResponseId: () => undefined,
           onSources: () => undefined,
+          onWorkflow: () => undefined,
         }),
       /invalid response/,
     );
@@ -81,10 +83,11 @@ test("assistant client reports non-2xx and provider errors safely", async () => 
   try {
     await assert.rejects(
       () =>
-        streamChatResponse("Hello", null, {
+        streamChatResponse("Hello", null, null, {
           onDelta: () => undefined,
           onResponseId: () => undefined,
           onSources: () => undefined,
+          onWorkflow: () => undefined,
         }),
       /Request rejected/,
     );
@@ -93,10 +96,11 @@ test("assistant client reports non-2xx and provider errors safely", async () => 
       streamResponse(['{"type":"error","error":"The assistant could not respond."}\n']);
     await assert.rejects(
       () =>
-        streamChatResponse("Hello", null, {
+        streamChatResponse("Hello", null, null, {
           onDelta: () => undefined,
           onResponseId: () => undefined,
           onSources: () => undefined,
+          onWorkflow: () => undefined,
         }),
       /could not respond/,
     );

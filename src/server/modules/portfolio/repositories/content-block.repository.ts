@@ -9,7 +9,9 @@ export class ContentBlockRepository implements IContentBlockRepository {
   async findRequiredByKey(key: string) {
     const block = await this.database.contentBlock.findUnique({ where: { key } });
 
-    if (!block) {throw new Error(`Required content block not found: ${key}`);}
+    if (!block) {
+      throw new Error(`Required content block not found: ${key}`);
+    }
 
     return block;
   }

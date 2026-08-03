@@ -23,17 +23,13 @@ export type RebuildSummary = {
 export interface ISearchIndexService {
   indexSource(input: IndexSourceInput): Promise<IndexSourceResult>;
   removeSource(input: IndexSourceInput): Promise<IndexSourceResult>;
-  preview(
-    input: IndexSourceInput,
-  ): Promise<{
+  preview(input: IndexSourceInput): Promise<{
     input: IndexSourceInput;
     document: IndexDocument;
     chunks: PreparedSiteChunk[];
     expectedAction: "unchanged" | "replace";
   }>;
-  rebuild(options?: {
-    clean?: boolean;
-  }): Promise<{
+  rebuild(options?: { clean?: boolean }): Promise<{
     summary: RebuildSummary;
     results: Array<{ sourceType: string; sourceId: string; result: IndexSourceResult }>;
   }>;

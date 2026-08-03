@@ -2,10 +2,7 @@ import "server-only";
 
 import type OpenAI from "openai";
 import type { FunctionTool, ResponseInput } from "openai/resources/responses/responses";
-import type {
-  IOpenAIProvider,
-  GeneratedEmbedding,
-} from "./interfaces/openai.provider.interface";
+import type { IOpenAIProvider, GeneratedEmbedding } from "./interfaces/openai.provider.interface";
 import type {
   OpenAIResponseInputItem,
   OpenAIResponseRequest,

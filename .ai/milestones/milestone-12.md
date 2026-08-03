@@ -1,6 +1,6 @@
 # Milestone 12: Real Meeting Booking
 
-**Status:** Active  
+**Status:** Frozen
 **Version:** 1.0.0  
 **Last Updated:** 2026-08-03  
 **Depends On:** Milestone 11  
@@ -156,9 +156,9 @@ Create only folders and files required by the final implementation. Keep local t
 `MeetingService` owns the meeting business rules and coordinates the calendar provider and meeting repository. It should expose focused operations equivalent to:
 
 ```ts
-findAvailableSlots(input)
-isSlotAvailable(slot)
-bookMeeting(input)
+findAvailableSlots(input);
+isSlotAvailable(slot);
+bookMeeting(input);
 ```
 
 Responsibilities:
@@ -322,9 +322,9 @@ Follow existing Prisma conventions:
 It should expose only persistence operations required by this milestone, equivalent to:
 
 ```ts
-createMeeting(input)
-findMeetingByGoogleEventId(googleEventId)
-updateMeeting(input)
+createMeeting(input);
+findMeetingByGoogleEventId(googleEventId);
+updateMeeting(input);
 ```
 
 Do not add unused generic CRUD methods.

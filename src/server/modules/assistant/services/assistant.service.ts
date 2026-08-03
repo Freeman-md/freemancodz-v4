@@ -21,6 +21,8 @@ import type { OpenAIResponseInputItem } from "@/server/infrastructure/openai/mod
 import type { ISiteSearchService } from "@/server/modules/search-index/public";
 import type { ILogger } from "@/server/infrastructure/logging/logger.interface";
 import type { AssistantSource, AssistantStreamEvent } from "@/contracts/assistant.contract";
+import type { IMeetingService } from "@/server/modules/meeting/public";
+import type { IMeetingWorkflowService } from "../interfaces/meeting-workflow.service.interface";
 type WindowCounter = { count: number; resetAt: number };
 
 export class AssistantService implements IAssistantService {
@@ -32,6 +34,8 @@ export class AssistantService implements IAssistantService {
     private readonly openai: IOpenAIProvider,
     private readonly siteSearch: ISiteSearchService,
     private readonly logger: ILogger,
+    private readonly meetingService: IMeetingService,
+    private readonly workflow: IMeetingWorkflowService,
   ) {}
 
   checkRateLimit(clientIdentifier: string): AssistantRateLimitResult {
@@ -79,7 +83,7 @@ export class AssistantService implements IAssistantService {
     return { allowed: true };
   }
 
-  createResponse({ message, previousResponseId, signal }: AssistantResponseInput) {
+  createResponse({ message, previousResponseId, workflowToken, signal }: AssistantResponseInput) {
     const encoder = new TextEncoder();
 
     return new ReadableStream<Uint8Array>({
@@ -90,6 +94,11 @@ export class AssistantService implements IAssistantService {
         let didStreamText = false;
 
         let responseId = previousResponseId;
+
+        let workflowState = this.workflow.recordConfirmation(
+          this.workflow.decode(workflowToken),
+          message,
+        );
 
         const sources = new Map<string, AssistantSource>();
 
@@ -108,7 +117,9 @@ export class AssistantService implements IAssistantService {
             });
 
             for await (const event of response) {
-              if (signal.aborted) {return;}
+              if (signal.aborted) {
+                return;
+              }
 
               if (event.type === "response.created" || event.type === "response.completed") {
                 responseId = event.response.id;
@@ -119,7 +130,10 @@ export class AssistantService implements IAssistantService {
                 write({ type: "delta", delta: event.delta });
               }
 
-              if (event.type === "response.output_item.done" && event.item.type === "function_call") {
+              if (
+                event.type === "response.output_item.done" &&
+                event.item.type === "function_call"
+              ) {
                 toolCalls.push({
                   callId: event.item.call_id,
                   name: event.item.name,
@@ -127,20 +141,32 @@ export class AssistantService implements IAssistantService {
                 });
               }
 
-              if (event.type === "error") {throw new Error(event.message);}
+              if (event.type === "error") {
+                throw new Error(event.message);
+              }
 
               if (event.type === "response.failed") {
                 throw new Error(event.response.error?.message || "OpenAI response failed.");
               }
             }
 
-            if (toolCalls.length === 0) {break;}
+            if (toolCalls.length === 0) {
+              break;
+            }
 
             if (iteration === MAX_TOOL_CALL_ITERATIONS - 1) {
               throw new Error("Assistant tool call limit exceeded.");
             }
 
-            input = await this.executeToolCalls(toolCalls, sources, signal);
+            const toolResult = await this.executeToolCalls(
+              toolCalls,
+              sources,
+              signal,
+              workflowState,
+            );
+
+            workflowState = toolResult.workflowState;
+            input = toolResult.output;
           }
 
           write({ type: "sources", sources: [...sources.values()] });
@@ -151,6 +177,12 @@ export class AssistantService implements IAssistantService {
           if (responseId) {
             write({ type: "response_id", responseId });
           }
+
+          write({
+            type: "meeting_workflow",
+            token: this.workflow.encode(workflowState),
+            state: this.workflow.publicState(workflowState),
+          });
 
           write({ type: "done" });
         } catch (error) {
@@ -196,18 +228,33 @@ export class AssistantService implements IAssistantService {
     toolCalls: Array<{ callId: string; name: string; arguments: string }>,
     sources: Map<string, AssistantSource>,
     signal: AbortSignal,
-  ): Promise<OpenAIResponseInputItem[]> {
+    state: import("../workflow/meeting-workflow.state").MeetingWorkflowState,
+  ): Promise<{
+    output: OpenAIResponseInputItem[];
+    workflowState: import("../workflow/meeting-workflow.state").MeetingWorkflowState;
+  }> {
     const outputs: OpenAIResponseInputItem[] = [];
 
+    let workflowState = state;
+
     for (const toolCall of toolCalls) {
-      if (signal.aborted) {return [];}
+      if (signal.aborted) {
+        return { output: [], workflowState };
+      }
 
       const result = await executeAssistantTool(toolCall.name, toolCall.arguments, {
         openai: this.openai,
         siteSearch: this.siteSearch,
+        meetingService: this.meetingService,
+        workflow: this.workflow,
+        state: workflowState,
       });
 
-      for (const source of result.sources) {sources.set(source.id, source);}
+      workflowState = result.state;
+
+      for (const source of result.sources) {
+        sources.set(source.id, source);
+      }
 
       outputs.push({
         type: "function_call_output",
@@ -216,6 +263,6 @@ export class AssistantService implements IAssistantService {
       });
     }
 
-    return outputs;
+    return { output: outputs, workflowState };
   }
 }

@@ -36,6 +36,8 @@ export function useAssistant() {
 
   const [previousResponseId, setPreviousResponseId] = useState<string | null>(null);
 
+  const [workflowToken, setWorkflowToken] = useState<string | null>(null);
+
   const shouldReduceMotion = useReducedMotion();
 
   const reduceMotionImmediately =
@@ -155,7 +157,7 @@ export function useAssistant() {
       setErrorMessage(null);
 
       try {
-        await streamChatResponse(message, previousResponseId, {
+        await streamChatResponse(message, previousResponseId, workflowToken, {
           onDelta(delta) {
             if (!isMountedRef.current || activeRequestIdRef.current !== requestId) {
               return;
@@ -177,6 +179,11 @@ export function useAssistant() {
 
             setPreviousResponseId(responseId);
           },
+          onWorkflow(token) {
+            if (isMountedRef.current && activeRequestIdRef.current === requestId) {
+              setWorkflowToken(token);
+            }
+          },
           onSources(sources) {
             if (!isMountedRef.current || activeRequestIdRef.current !== requestId) {
               return;
@@ -192,7 +199,9 @@ export function useAssistant() {
       } catch (error) {
         cancelPendingRequest();
         const messageText =
-          error instanceof Error ? error.message : "Something went wrong while fetching a response.";
+          error instanceof Error
+            ? error.message
+            : "Something went wrong while fetching a response.";
 
         const errorResponse: ChatMessage = {
           id: `assistant-error-${Date.now()}`,
@@ -213,7 +222,7 @@ export function useAssistant() {
         }
       }
     },
-    [cancelPendingRequest, isLoading, previousResponseId, reduceMotionImmediately],
+    [cancelPendingRequest, isLoading, previousResponseId, reduceMotionImmediately, workflowToken],
   );
 
   const clearError = useCallback(() => setErrorMessage(null), []);
