@@ -1,14 +1,18 @@
 import type { BookMeetingInput } from "../schemas/tools/book-meeting.schema";
-import type { IMeetingWorkflowService } from "../interfaces/meeting-workflow.service.interface";
-import type { MeetingWorkflowState } from "../workflow/meeting-workflow.state";
-import { MeetingPersistenceError, type IMeetingService } from "@/server/modules/meeting/public";
+import type { IWorkflowService } from "../interfaces/workflow.service.interface";
+import type { WorkflowState } from "../workflow.state";
+import {
+  MEETING_CONFIG,
+  MeetingPersistenceError,
+  type IMeetingService,
+} from "@/server/modules/meeting/public";
 
 export async function bookMeeting(
   _input: BookMeetingInput,
   dependencies: {
-    workflow: IMeetingWorkflowService;
+    workflow: IWorkflowService;
     meetingService: IMeetingService;
-    state: MeetingWorkflowState;
+    state: WorkflowState;
   },
 ) {
   const { state } = dependencies;
@@ -17,7 +21,6 @@ export async function bookMeeting(
     !state.confirmed ||
     !state.name ||
     !state.email ||
-    !state.timezone ||
     !state.reason ||
     !state.selectedSlot
   ) {
@@ -32,12 +35,12 @@ export async function bookMeeting(
 
   if (state.pendingBooking) {
     try {
-      const booking = await dependencies.meetingService.reconcileMeeting({ name: state.pendingBooking.name, email: state.pendingBooking.email, timezone: state.pendingBooking.timezone, reason: state.pendingBooking.reason, slot: state.pendingBooking.selectedSlot, pendingEvent: state.pendingBooking });
+      const booking = await dependencies.meetingService.reconcileMeeting({ name: state.pendingBooking.name, email: state.pendingBooking.email, reason: state.pendingBooking.reason, slot: state.pendingBooking.selectedSlot, pendingEvent: state.pendingBooking });
 
       return { output: { kind: "meeting_booking", status: "confirmed", ...booking }, state: dependencies.workflow.reset() };
     } catch (error) {
       if (error instanceof MeetingPersistenceError) {
-        return { output: { error: "booking_recovery_required", message: "Your calendar event was created, but we could not finish recording it yet. Please try again shortly." }, state: dependencies.workflow.recordPendingBooking(state, { ...error.pendingEvent, name: state.name, email: state.email, timezone: state.timezone, reason: state.reason, selectedSlot: state.selectedSlot }) };
+        return { output: { error: "booking_recovery_required", message: "Your calendar event was created, but we could not finish recording it yet. Please try again shortly." }, state: dependencies.workflow.recordPendingBooking(state, { ...error.pendingEvent, name: state.name, email: state.email, timezone: MEETING_CONFIG.timezone, reason: state.reason, selectedSlot: state.selectedSlot }) };
       }
 
       throw error;
@@ -58,10 +61,10 @@ export async function bookMeeting(
   let booking;
 
   try {
-    booking = await dependencies.meetingService.bookMeeting({ name: state.name, email: state.email, timezone: state.timezone, reason: state.reason, slot: state.selectedSlot });
+    booking = await dependencies.meetingService.bookMeeting({ name: state.name, email: state.email, reason: state.reason, slot: state.selectedSlot });
   } catch (error) {
     if (error instanceof MeetingPersistenceError) {
-      return { output: { error: "booking_recovery_required", message: "Your calendar event was created, but we could not finish recording it yet. Please try again shortly." }, state: dependencies.workflow.recordPendingBooking(state, { ...error.pendingEvent, name: state.name, email: state.email, timezone: state.timezone, reason: state.reason, selectedSlot: state.selectedSlot }) };
+      return { output: { error: "booking_recovery_required", message: "Your calendar event was created, but we could not finish recording it yet. Please try again shortly." }, state: dependencies.workflow.recordPendingBooking(state, { ...error.pendingEvent, name: state.name, email: state.email, timezone: MEETING_CONFIG.timezone, reason: state.reason, selectedSlot: state.selectedSlot }) };
     }
 
     throw error;

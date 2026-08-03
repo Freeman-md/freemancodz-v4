@@ -9,20 +9,20 @@ import { searchWebsite } from "./search-website.tool";
 import type { IOpenAIProvider } from "@/server/infrastructure/openai/interfaces/openai.provider.interface";
 import type { ISiteSearchService } from "@/server/modules/search-index/public";
 import type { IMeetingService } from "@/server/modules/meeting/public";
-import type { IMeetingWorkflowService } from "../interfaces/meeting-workflow.service.interface";
-import type { MeetingWorkflowState } from "../workflow/meeting-workflow.state";
+import type { IWorkflowService } from "../interfaces/workflow.service.interface";
+import type { WorkflowState } from "../workflow.state";
 
 type AssistantToolDependencies = {
   openai: IOpenAIProvider;
   siteSearch: ISiteSearchService;
   meetingService: IMeetingService;
-  workflow: IMeetingWorkflowService;
-  state: MeetingWorkflowState;
+  workflow: IWorkflowService;
+  state: WorkflowState;
 };
 export type AssistantToolResult = {
   output: Record<string, unknown>;
   sources: Array<{ id: string; title: string; url: string }>;
-  state: MeetingWorkflowState;
+  state: WorkflowState;
 };
 
 export async function executeAssistantTool(
@@ -97,7 +97,7 @@ export async function executeAssistantTool(
   };
 }
 
-function invalidArguments(state: MeetingWorkflowState): AssistantToolResult {
+function invalidArguments(state: WorkflowState): AssistantToolResult {
   return {
     output: {
       error: "invalid_arguments",

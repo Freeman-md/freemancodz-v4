@@ -7,9 +7,14 @@ export interface IMeetingService {
   bookMeeting(input: {
     name: string;
     email: string;
-    timezone: string;
     reason: string;
     slot: MeetingSlot;
   }): Promise<{ googleEventId: string; googleEventUrl: string | null }>;
-  reconcileMeeting(input: { name: string; email: string; timezone: string; reason: string; slot: MeetingSlot; pendingEvent: PendingCalendarEvent }): Promise<{ googleEventId: string; googleEventUrl: string | null }>;
+  reconcileMeeting(input: {
+    name: string;
+    email: string;
+    reason: string;
+    slot: MeetingSlot;
+    pendingEvent: PendingCalendarEvent;
+  }): Promise<{ googleEventId: string; googleEventUrl: string | null }>;
 }

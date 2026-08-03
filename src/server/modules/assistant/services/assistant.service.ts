@@ -22,7 +22,8 @@ import type { ISiteSearchService } from "@/server/modules/search-index/public";
 import type { ILogger } from "@/server/infrastructure/logging/logger.interface";
 import type { AssistantSource, AssistantStreamEvent } from "@/contracts/assistant.contract";
 import type { IMeetingService } from "@/server/modules/meeting/public";
-import type { IMeetingWorkflowService } from "../interfaces/meeting-workflow.service.interface";
+import type { IWorkflowService } from "../interfaces/workflow.service.interface";
+import type { WorkflowState } from "../workflow.state";
 type WindowCounter = { count: number; resetAt: number };
 
 export class AssistantService implements IAssistantService {
@@ -35,7 +36,7 @@ export class AssistantService implements IAssistantService {
     private readonly siteSearch: ISiteSearchService,
     private readonly logger: ILogger,
     private readonly meetingService: IMeetingService,
-    private readonly workflow: IMeetingWorkflowService,
+    private readonly workflow: IWorkflowService,
   ) {}
 
   checkRateLimit(clientIdentifier: string): AssistantRateLimitResult {
@@ -228,10 +229,10 @@ export class AssistantService implements IAssistantService {
     toolCalls: Array<{ callId: string; name: string; arguments: string }>,
     sources: Map<string, AssistantSource>,
     signal: AbortSignal,
-    state: import("../workflow/meeting-workflow.state").MeetingWorkflowState,
+    state: WorkflowState,
   ): Promise<{
     output: OpenAIResponseInputItem[];
-    workflowState: import("../workflow/meeting-workflow.state").MeetingWorkflowState;
+    workflowState: WorkflowState;
   }> {
     const outputs: OpenAIResponseInputItem[] = [];
 

@@ -14,7 +14,7 @@ const meetingSlotSchema = z.object({
   timezone: z.string().min(1).max(100),
 });
 
-const meetingWorkflowPublicStateSchema = z.object({
+const workflowPublicStateSchema = z.object({
   name: z.string().nullable(),
   email: z.string().nullable(),
   timezone: z.string().nullable(),
@@ -50,7 +50,7 @@ export const assistantStreamEventSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("meeting_workflow"),
     token: z.string(),
-    state: meetingWorkflowPublicStateSchema,
+    state: workflowPublicStateSchema,
   }),
   z.object({ type: z.literal("done") }),
   z.object({ type: z.literal("error"), error: z.string() }),
@@ -65,4 +65,4 @@ export type AssistantStreamEvent = z.infer<typeof assistantStreamEventSchema>;
 export type AssistantSource = z.infer<typeof sourceSchema>;
 export type AssistantTriggerDetail = z.infer<typeof assistantTriggerDetailSchema>;
 export type MeetingSlot = z.infer<typeof meetingSlotSchema>;
-export type MeetingWorkflowPublicState = z.infer<typeof meetingWorkflowPublicStateSchema>;
+export type WorkflowPublicState = z.infer<typeof workflowPublicStateSchema>;

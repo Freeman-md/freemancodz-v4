@@ -32,7 +32,7 @@ export function getSearchIndexWorkerBatchLimit() {
   return process.env.SEARCH_INDEX_BATCH_LIMIT;
 }
 
-export function getMeetingWorkflowSecret() {
+export function getWorkflowSecret() {
   return requireEnv("MEETING_WORKFLOW_SECRET");
 }
 

@@ -34,7 +34,10 @@ export class MeetingService implements IMeetingService {
   }
 
   async isSlotAvailable(slot: MeetingSlot) {
-    if (new Date(slot.start).getTime() <= Date.now()) {
+    if (
+      slot.timezone !== MEETING_CONFIG.timezone ||
+      new Date(slot.start).getTime() <= Date.now()
+    ) {
       return false;
     }
 
@@ -51,7 +54,6 @@ export class MeetingService implements IMeetingService {
   async bookMeeting(input: {
     name: string;
     email: string;
-    timezone: string;
     reason: string;
     slot: MeetingSlot;
   }) {
@@ -61,7 +63,7 @@ export class MeetingService implements IMeetingService {
       attendeeEmail: input.email,
       start: new Date(input.slot.start),
       end: new Date(input.slot.end),
-      timezone: input.timezone,
+      timezone: MEETING_CONFIG.timezone,
     });
 
     const pendingEvent = { googleEventId: event.id, googleEventUrl: event.htmlLink, rawProviderPayload: event.payload };
@@ -69,12 +71,18 @@ export class MeetingService implements IMeetingService {
     return this.reconcileMeeting({ ...input, pendingEvent });
   }
 
-  async reconcileMeeting(input: { name: string; email: string; timezone: string; reason: string; slot: MeetingSlot; pendingEvent: PendingCalendarEvent }) {
+  async reconcileMeeting(input: {
+    name: string;
+    email: string;
+    reason: string;
+    slot: MeetingSlot;
+    pendingEvent: PendingCalendarEvent;
+  }) {
     const record = {
       googleEventId: input.pendingEvent.googleEventId,
       name: input.name,
       email: input.email,
-      timezone: input.timezone,
+      timezone: MEETING_CONFIG.timezone,
       reason: input.reason,
       startsAt: new Date(input.slot.start),
       endsAt: new Date(input.slot.end),

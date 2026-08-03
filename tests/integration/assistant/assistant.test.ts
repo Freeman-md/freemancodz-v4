@@ -7,7 +7,7 @@ import type { IOpenAIProvider } from "@/server/infrastructure/openai/interfaces/
 import type { OpenAIResponseRequest } from "@/server/infrastructure/openai/models/openai-response-request";
 import type { ISiteSearchService, MatchSiteChunksRow } from "@/server/modules/search-index/public";
 import { AssistantService } from "@/server/modules/assistant/services/assistant.service";
-import { MeetingWorkflowService } from "@/server/modules/assistant/workflow/meeting-workflow.service";
+import { WorkflowService } from "@/server/modules/assistant/services/workflow.service";
 
 const source = {
   id: "project-1",
@@ -88,7 +88,7 @@ function createAssistant({
     siteSearch,
     logger,
     meetingService,
-    new MeetingWorkflowService(() => "test-secret"),
+    new WorkflowService(() => "test-secret"),
   );
 
   return { inputs, post: createChatPostHandler({ assistantService }) };

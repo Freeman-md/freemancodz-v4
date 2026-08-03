@@ -1,10 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { findMeetingSlots } from "@/server/modules/assistant/tools/find-meeting-slots.tool";
-import { MeetingWorkflowService } from "@/server/modules/assistant/workflow/meeting-workflow.service";
+import { findMeetingSlotsSchema } from "@/server/modules/assistant/schemas/tools/find-meeting-slots.schema";
+import { prepareMeetingSchema } from "@/server/modules/assistant/schemas/tools/prepare-meeting.schema";
+import { WorkflowService } from "@/server/modules/assistant/services/workflow.service";
 
 test("availability replaces a previous selected slot and invalidates confirmation", async () => {
-  const workflow = new MeetingWorkflowService(() => "test-secret");
+  const workflow = new WorkflowService(() => "test-secret");
 
   const state = {
     ...workflow.reset(),
@@ -30,7 +32,7 @@ test("availability replaces a previous selected slot and invalidates confirmatio
   };
 
   const result = await findMeetingSlots(
-    { startDate: "2026-09-14", endDate: "2026-09-15", timezone: "Europe/London" },
+    { startDate: "2026-09-14", endDate: "2026-09-15" },
     { meetingService, workflow, state },
   );
 
@@ -40,7 +42,7 @@ test("availability replaces a previous selected slot and invalidates confirmatio
 });
 
 test("workflow tokens reject tampered confirmation state", () => {
-  const workflow = new MeetingWorkflowService(() => "test-secret");
+  const workflow = new WorkflowService(() => "test-secret");
 
   const token = workflow.encode({
     ...workflow.reset(),
@@ -67,4 +69,28 @@ test("workflow tokens reject tampered confirmation state", () => {
   const tampered = `${iv}.${ciphertext!.slice(0, -1)}A.${tag}`;
 
   assert.equal(workflow.decode(tampered).confirmed, false);
+});
+
+test("meeting tool schemas reject model-supplied timezones", () => {
+  assert.equal(
+    findMeetingSlotsSchema.safeParse({
+      startDate: "2026-09-14",
+      endDate: "2026-09-15",
+      timezone: "America/New_York",
+    }).success,
+    false,
+  );
+  assert.equal(
+    prepareMeetingSchema.safeParse({
+      name: "Visitor",
+      email: "visitor@example.com",
+      reason: "Discuss a project",
+      timezone: "America/New_York",
+      selectedSlot: {
+        start: "2026-09-15T11:00:00.000Z",
+        end: "2026-09-15T11:30:00.000Z",
+      },
+    }).success,
+    false,
+  );
 });

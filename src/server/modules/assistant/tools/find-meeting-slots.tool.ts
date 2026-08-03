@@ -1,15 +1,15 @@
 import type { FindMeetingSlotsInput } from "../schemas/tools/find-meeting-slots.schema";
-import type { IMeetingWorkflowService } from "../interfaces/meeting-workflow.service.interface";
-import type { MeetingWorkflowState } from "../workflow/meeting-workflow.state";
-import type { IMeetingService } from "@/server/modules/meeting/public";
-import { MEETING_CONFIG } from "@/server/modules/meeting/meeting.config";
+import type { IWorkflowService } from "../interfaces/workflow.service.interface";
+import { formatMeetingSlot } from "../mappers/meeting-slot.mapper";
+import type { WorkflowState } from "../workflow.state";
+import { MEETING_CONFIG, type IMeetingService } from "@/server/modules/meeting/public";
 
 export async function findMeetingSlots(
   input: FindMeetingSlotsInput,
   dependencies: {
     meetingService: IMeetingService;
-    workflow: IMeetingWorkflowService;
-    state: MeetingWorkflowState;
+    workflow: IWorkflowService;
+    state: WorkflowState;
   },
 ) {
   if (dependencies.state.pendingBooking) {
@@ -60,5 +60,12 @@ export async function findMeetingSlots(
     new Date().toISOString(),
   );
 
-  return { output: { kind: "meeting_slots", timezone: input.timezone, slots }, state };
+  return {
+    output: {
+      kind: "meeting_slots",
+      timezone: MEETING_CONFIG.timezone,
+      slots: slots.map((slot) => ({ ...slot, label: formatMeetingSlot(slot) })),
+    },
+    state,
+  };
 }

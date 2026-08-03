@@ -30,12 +30,12 @@ import { SiteSearchService } from "./modules/search-index/services/site-search.s
 import type { ISearchIndexService } from "./modules/search-index/interfaces/search-index.service.interface";
 import type { ISiteSearchService } from "./modules/search-index/interfaces/site-search.service.interface";
 import { GoogleCalendarProvider } from "./infrastructure/google-calendar/google-calendar.provider";
-import { getGoogleCalendarConfig, getMeetingWorkflowSecret } from "./infrastructure/config/env";
+import { getGoogleCalendarConfig, getWorkflowSecret } from "./infrastructure/config/env";
 import { MeetingRepository } from "./modules/meeting/repositories/meeting.repository";
 import { MeetingService } from "./modules/meeting/services/meeting.service";
 import type { IMeetingService } from "./modules/meeting/interfaces/meeting.service.interface";
-import { MeetingWorkflowService } from "./modules/assistant/workflow/meeting-workflow.service";
-import type { IMeetingWorkflowService } from "./modules/assistant/interfaces/meeting-workflow.service.interface";
+import { WorkflowService } from "./modules/assistant/services/workflow.service";
+import type { IWorkflowService } from "./modules/assistant/interfaces/workflow.service.interface";
 
 const openai = new OpenAIProvider(createOpenAIClient(), getEmbeddingModel(), getResponseModel());
 
@@ -61,7 +61,7 @@ const meetingRepository = new MeetingRepository(prisma);
 
 const googleCalendar = new GoogleCalendarProvider(getGoogleCalendarConfig);
 
-const meetingWorkflow: IMeetingWorkflowService = new MeetingWorkflowService(getMeetingWorkflowSecret);
+const workflow: IWorkflowService = new WorkflowService(getWorkflowSecret);
 
 export const logger: ILogger = new ConsoleLogger();
 
@@ -83,7 +83,7 @@ export const assistantService: IAssistantService = new AssistantService(
   siteSearchService,
   logger,
   meetingService,
-  meetingWorkflow,
+  workflow,
 );
 export const portfolioService: IPortfolioService = new PortfolioService(
   contentBlocks,

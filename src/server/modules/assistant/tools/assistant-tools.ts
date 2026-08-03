@@ -23,11 +23,10 @@ export const ASSISTANT_TOOLS: OpenAIResponseTool[] = [
     parameters: {
       type: "object",
       additionalProperties: false,
-      required: ["startDate", "endDate", "timezone"],
+      required: ["startDate", "endDate"],
       properties: {
         startDate: { type: "string", description: "The first requested date, YYYY-MM-DD." },
         endDate: { type: "string", description: "The final requested date, YYYY-MM-DD." },
-        timezone: { type: "string" },
       },
     },
   },
@@ -40,20 +39,18 @@ export const ASSISTANT_TOOLS: OpenAIResponseTool[] = [
     parameters: {
       type: "object",
       additionalProperties: false,
-      required: ["name", "email", "timezone", "reason", "selectedSlot"],
+      required: ["name", "email", "reason", "selectedSlot"],
       properties: {
         name: { type: "string" },
         email: { type: "string" },
-        timezone: { type: "string" },
         reason: { type: "string" },
         selectedSlot: {
           type: "object",
           additionalProperties: false,
-          required: ["start", "end", "timezone"],
+          required: ["start", "end"],
           properties: {
             start: { type: "string" },
             end: { type: "string" },
-            timezone: { type: "string" },
           },
         },
       },

@@ -1,10 +1,11 @@
 import type { PrepareMeetingInput } from "../schemas/tools/prepare-meeting.schema";
-import type { IMeetingWorkflowService } from "../interfaces/meeting-workflow.service.interface";
-import type { MeetingWorkflowState } from "../workflow/meeting-workflow.state";
+import type { IWorkflowService } from "../interfaces/workflow.service.interface";
+import { formatMeetingSlot } from "../mappers/meeting-slot.mapper";
+import type { WorkflowState } from "../workflow.state";
 
 export function prepareMeeting(
   input: PrepareMeetingInput,
-  dependencies: { workflow: IMeetingWorkflowService; state: MeetingWorkflowState },
+  dependencies: { workflow: IWorkflowService; state: WorkflowState },
 ) {
   if (dependencies.state.pendingBooking) {
     return { output: { error: "booking_recovery_required", message: "Your calendar event is awaiting confirmation in our records. Please retry booking shortly." }, state: dependencies.state };
@@ -31,8 +32,7 @@ export function prepareMeeting(
         email: state.email,
         timezone: state.timezone,
         reason: state.reason,
-        start: state.selectedSlot?.start,
-        end: state.selectedSlot?.end,
+        slot: state.selectedSlot ? formatMeetingSlot(state.selectedSlot) : null,
       },
       requires_confirmation: true,
     },
