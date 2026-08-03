@@ -3,6 +3,7 @@ import {
   DAILY_RATE_LIMIT_MAX,
   DAILY_RATE_LIMIT_WINDOW_MS,
   FALLBACK_ANSWER,
+  MAX_TOOL_CALL_ITERATIONS,
   SHORT_RATE_LIMIT_MAX,
   SHORT_RATE_LIMIT_WINDOW_MS,
 } from "../assistant.constants";
@@ -11,12 +12,15 @@ import type {
   AssistantResponseInput,
   IAssistantService,
 } from "../interfaces/assistant.service.interface";
-import { encodeStreamEvent, formatContext } from "../mappers/assistant-stream.mapper";
+import { encodeStreamEvent } from "../mappers/assistant-stream.mapper";
 import { CHAT_SYSTEM_PROMPT } from "../prompts/portfolio-assistant.prompt";
+import { ASSISTANT_TOOLS } from "../tools/assistant-tools";
+import { executeAssistantTool } from "../tools/execute-assistant-tool";
 import type { IOpenAIProvider } from "@/server/infrastructure/openai/interfaces/openai.provider.interface";
+import type { OpenAIResponseInputItem } from "@/server/infrastructure/openai/models/openai-response-request";
 import type { ISiteSearchService } from "@/server/modules/search-index/public";
 import type { ILogger } from "@/server/infrastructure/logging/logger.interface";
-import type { AssistantStreamEvent } from "@/contracts/assistant.contract";
+import type { AssistantSource, AssistantStreamEvent } from "@/contracts/assistant.contract";
 type WindowCounter = { count: number; resetAt: number };
 
 export class AssistantService implements IAssistantService {
@@ -85,49 +89,61 @@ export class AssistantService implements IAssistantService {
 
         let didStreamText = false;
 
-        let responseId: string | null = null;
+        let responseId = previousResponseId;
+
+        const sources = new Map<string, AssistantSource>();
+
+        let input: OpenAIResponseInputItem[] = [{ type: "user_message", content: message }];
 
         try {
-          const { chunks, sources } = await this.retrieveContext(message);
+          for (let iteration = 0; iteration < MAX_TOOL_CALL_ITERATIONS; iteration += 1) {
+            const toolCalls: Array<{ callId: string; name: string; arguments: string }> = [];
 
-          if (!chunks.length && !previousResponseId) {
-            write({ type: "delta", delta: FALLBACK_ANSWER });
-            write({ type: "done" });
+            const response = await this.openai.streamResponse({
+              input,
+              instructions: CHAT_SYSTEM_PROMPT,
+              tools: ASSISTANT_TOOLS,
+              previousResponseId: responseId,
+              signal,
+            });
 
-            return;
+            for await (const event of response) {
+              if (signal.aborted) {return;}
+
+              if (event.type === "response.created" || event.type === "response.completed") {
+                responseId = event.response.id;
+              }
+
+              if (event.type === "response.output_text.delta" && event.delta) {
+                didStreamText = true;
+                write({ type: "delta", delta: event.delta });
+              }
+
+              if (event.type === "response.output_item.done" && event.item.type === "function_call") {
+                toolCalls.push({
+                  callId: event.item.call_id,
+                  name: event.item.name,
+                  arguments: event.item.arguments,
+                });
+              }
+
+              if (event.type === "error") {throw new Error(event.message);}
+
+              if (event.type === "response.failed") {
+                throw new Error(event.response.error?.message || "OpenAI response failed.");
+              }
+            }
+
+            if (toolCalls.length === 0) {break;}
+
+            if (iteration === MAX_TOOL_CALL_ITERATIONS - 1) {
+              throw new Error("Assistant tool call limit exceeded.");
+            }
+
+            input = await this.executeToolCalls(toolCalls, sources, signal);
           }
 
-          const response = await this.openai.streamResponse(
-            `Portfolio information:\n\n${chunks.length ? formatContext(chunks) : "No additional portfolio information is available for this message. Use prior conversation only if it contains enough relevant portfolio information."}\n\nCurrent user question:\n${message}`,
-            CHAT_SYSTEM_PROMPT,
-            previousResponseId,
-            signal,
-          );
-
-          for await (const event of response) {
-            if (signal.aborted) {
-              return;
-            }
-
-            if (event.type === "response.created" || event.type === "response.completed") {
-              responseId = event.response.id;
-            }
-
-            if (event.type === "response.output_text.delta" && event.delta) {
-              didStreamText = true;
-              write({ type: "delta", delta: event.delta });
-            }
-
-            if (event.type === "error") {
-              throw new Error(event.message);
-            }
-
-            if (event.type === "response.failed") {
-              throw new Error(event.response.error?.message || "OpenAI response failed.");
-            }
-          }
-
-          write({ type: "sources", sources });
+          write({ type: "sources", sources: [...sources.values()] });
           if (!didStreamText) {
             write({ type: "delta", delta: FALLBACK_ANSWER });
           }
@@ -176,18 +192,30 @@ export class AssistantService implements IAssistantService {
     }
   }
 
-  private async retrieveContext(message: string) {
-    const embedding = await this.openai.createEmbedding(message);
+  private async executeToolCalls(
+    toolCalls: Array<{ callId: string; name: string; arguments: string }>,
+    sources: Map<string, AssistantSource>,
+    signal: AbortSignal,
+  ): Promise<OpenAIResponseInputItem[]> {
+    const outputs: OpenAIResponseInputItem[] = [];
 
-    if (!embedding) {
-      throw new Error("Failed to create query embedding.");
+    for (const toolCall of toolCalls) {
+      if (signal.aborted) {return [];}
+
+      const result = await executeAssistantTool(toolCall.name, toolCall.arguments, {
+        openai: this.openai,
+        siteSearch: this.siteSearch,
+      });
+
+      for (const source of result.sources) {sources.set(source.id, source);}
+
+      outputs.push({
+        type: "function_call_output",
+        callId: toolCall.callId,
+        output: JSON.stringify(result.output),
+      });
     }
 
-    const chunks = await this.siteSearch.search(embedding);
-
-    return {
-      chunks,
-      sources: chunks.map((chunk) => ({ id: chunk.id, title: chunk.title, url: chunk.url })),
-    };
+    return outputs;
   }
 }

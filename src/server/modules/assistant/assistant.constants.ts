@@ -4,3 +4,4 @@ export const SHORT_RATE_LIMIT_MAX = 10;
 export const SHORT_RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
 export const DAILY_RATE_LIMIT_MAX = 30;
 export const DAILY_RATE_LIMIT_WINDOW_MS = 24 * 60 * 60 * 1000;
+export const MAX_TOOL_CALL_ITERATIONS = 4;

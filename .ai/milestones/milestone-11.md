@@ -1,6 +1,6 @@
 # Milestone 11: Tool-Calling Assistant Foundation
 
-**Status:** Active  
+**Status:** Frozen
 **Version:** 1.0.1  
 **Last Updated:** 2026-08-03  
 **Depends On:** Milestone 10  
