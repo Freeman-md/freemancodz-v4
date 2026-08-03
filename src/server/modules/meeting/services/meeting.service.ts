@@ -4,7 +4,11 @@ import type { IGoogleCalendarProvider } from "@/server/infrastructure/google-cal
 import type { ILogger } from "@/server/infrastructure/logging/logger.interface";
 import { MEETING_CONFIG } from "../meeting.config";
 import type { IMeetingRepository } from "../interfaces/meeting.repository.interface";
-import { MeetingPersistenceError, type IMeetingService, type PendingCalendarEvent } from "../interfaces/meeting.service.interface";
+import {
+  MeetingPersistenceError,
+  type IMeetingService,
+  type PendingCalendarEvent,
+} from "../interfaces/meeting.service.interface";
 
 export class MeetingService implements IMeetingService {
   constructor(
@@ -34,10 +38,7 @@ export class MeetingService implements IMeetingService {
   }
 
   async isSlotAvailable(slot: MeetingSlot) {
-    if (
-      slot.timezone !== MEETING_CONFIG.timezone ||
-      new Date(slot.start).getTime() <= Date.now()
-    ) {
+    if (slot.timezone !== MEETING_CONFIG.timezone || new Date(slot.start).getTime() <= Date.now()) {
       return false;
     }
 
@@ -51,12 +52,7 @@ export class MeetingService implements IMeetingService {
     );
   }
 
-  async bookMeeting(input: {
-    name: string;
-    email: string;
-    reason: string;
-    slot: MeetingSlot;
-  }) {
+  async bookMeeting(input: { name: string; email: string; reason: string; slot: MeetingSlot }) {
     const event = await this.calendar.createEvent({
       summary: `Meeting with ${input.name}`,
       description: input.reason,
@@ -66,7 +62,11 @@ export class MeetingService implements IMeetingService {
       timezone: MEETING_CONFIG.timezone,
     });
 
-    const pendingEvent = { googleEventId: event.id, googleEventUrl: event.htmlLink, rawProviderPayload: event.payload };
+    const pendingEvent = {
+      googleEventId: event.id,
+      googleEventUrl: event.htmlLink,
+      rawProviderPayload: event.payload,
+    };
 
     return this.reconcileMeeting({ ...input, pendingEvent });
   }
@@ -88,13 +88,17 @@ export class MeetingService implements IMeetingService {
       endsAt: new Date(input.slot.end),
       status: "confirmed",
       googleEventUrl: input.pendingEvent.googleEventUrl,
-      rawProviderPayload: JSON.parse(JSON.stringify(input.pendingEvent.rawProviderPayload)) as import("@/generated/prisma/client").Prisma.InputJsonObject,
+      rawProviderPayload: JSON.parse(
+        JSON.stringify(input.pendingEvent.rawProviderPayload),
+      ) as import("@/generated/prisma/client").Prisma.InputJsonObject,
     };
 
     try {
       await this.repository.createMeeting(record);
     } catch (error) {
-      const existing = await this.repository.findMeetingByGoogleEventId(input.pendingEvent.googleEventId);
+      const existing = await this.repository.findMeetingByGoogleEventId(
+        input.pendingEvent.googleEventId,
+      );
 
       if (!existing) {
         this.logger.error("Meeting persistence failed after calendar event creation", {
@@ -106,7 +110,10 @@ export class MeetingService implements IMeetingService {
       }
     }
 
-    return { googleEventId: input.pendingEvent.googleEventId, googleEventUrl: input.pendingEvent.googleEventUrl };
+    return {
+      googleEventId: input.pendingEvent.googleEventId,
+      googleEventUrl: input.pendingEvent.googleEventUrl,
+    };
   }
 
   private createCandidates(startDate: string, endDate: string): MeetingSlot[] {

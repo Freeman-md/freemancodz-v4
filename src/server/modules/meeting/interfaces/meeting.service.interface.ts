@@ -1,6 +1,17 @@
 import type { MeetingSlot } from "@/contracts/assistant.contract";
-export type PendingCalendarEvent = { googleEventId: string; googleEventUrl: string | null; rawProviderPayload: Record<string, unknown> };
-export class MeetingPersistenceError extends Error { constructor(readonly pendingEvent: PendingCalendarEvent, cause: unknown) { super("Calendar event was created but meeting persistence failed.", { cause }); } }
+export type PendingCalendarEvent = {
+  googleEventId: string;
+  googleEventUrl: string | null;
+  rawProviderPayload: Record<string, unknown>;
+};
+export class MeetingPersistenceError extends Error {
+  constructor(
+    readonly pendingEvent: PendingCalendarEvent,
+    cause: unknown,
+  ) {
+    super("Calendar event was created but meeting persistence failed.", { cause });
+  }
+}
 export interface IMeetingService {
   findAvailableSlots(input: { startDate: string; endDate: string }): Promise<MeetingSlot[]>;
   isSlotAvailable(slot: MeetingSlot): Promise<boolean>;

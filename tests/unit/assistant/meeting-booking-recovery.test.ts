@@ -15,6 +15,8 @@ test("a persistence retry reconciles one created calendar event without creating
 
   let persistedTimezone: string | undefined;
 
+  let persistedEventUrl: string | null | undefined;
+
   let persistenceAttempts = 0;
 
   const calendar: IGoogleCalendarProvider = {
@@ -23,7 +25,11 @@ test("a persistence retry reconciles one created calendar event without creating
       createEventCalls += 1;
       calendarTimezone = input.timezone;
 
-      return { id: "event_1", htmlLink: "https://calendar.example/event_1", payload: { id: "event_1" } };
+      return {
+        id: "event_1",
+        htmlLink: "https://calendar.example/event_1",
+        payload: { id: "event_1" },
+      };
     },
   };
 
@@ -31,25 +37,60 @@ test("a persistence retry reconciles one created calendar event without creating
     createMeeting: async (input) => {
       persistenceAttempts += 1;
       persistedTimezone = input.timezone;
-      if (persistenceAttempts === 1) {throw new Error("database unavailable");}
+      persistedEventUrl = input.googleEventUrl;
+      if (persistenceAttempts === 1) {
+        throw new Error("database unavailable");
+      }
 
-      return { ...input, id: "meeting_1", createdAt: new Date(), updatedAt: new Date(), rawProviderPayload: JSON.parse(JSON.stringify(input.rawProviderPayload)) as import("@/generated/prisma/client").Prisma.JsonValue };
+      return {
+        ...input,
+        id: "meeting_1",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        rawProviderPayload: JSON.parse(
+          JSON.stringify(input.rawProviderPayload),
+        ) as import("@/generated/prisma/client").Prisma.JsonValue,
+      };
     },
     findMeetingByGoogleEventId: async () => null,
-    updateMeeting: async (input) => ({ ...input, id: "meeting_1", createdAt: new Date(), updatedAt: new Date(), rawProviderPayload: JSON.parse(JSON.stringify(input.rawProviderPayload)) as import("@/generated/prisma/client").Prisma.JsonValue }),
+    updateMeeting: async (input) => ({
+      ...input,
+      id: "meeting_1",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      rawProviderPayload: JSON.parse(
+        JSON.stringify(input.rawProviderPayload),
+      ) as import("@/generated/prisma/client").Prisma.JsonValue,
+    }),
   };
 
   const workflow = new WorkflowService(() => "test-secret");
 
-  const slot = { start: "2026-09-15T11:00:00.000Z", end: "2026-09-15T11:30:00.000Z", timezone: "Europe/London" };
+  const slot = {
+    start: "2026-09-15T11:00:00.000Z",
+    end: "2026-09-15T11:30:00.000Z",
+    timezone: "Europe/London",
+  };
 
-  const state = { ...workflow.reset(), name: "Visitor", email: "visitor@example.com", timezone: "Europe/London", reason: "Discuss a project", availableSlots: [slot], selectedSlot: slot, confirmed: true };
+  const state = {
+    ...workflow.reset(),
+    name: "Visitor",
+    email: "visitor@example.com",
+    timezone: "Europe/London",
+    reason: "Discuss a project",
+    availableSlots: [slot],
+    selectedSlot: slot,
+    confirmed: true,
+  };
 
-  const service = new MeetingService(calendar, repository, { info: () => undefined, error: () => undefined });
+  const service = new MeetingService(calendar, repository, {
+    info: () => undefined,
+    error: () => undefined,
+  });
 
   const first = await bookMeeting({}, { workflow, meetingService: service, state });
 
-  assert.equal(first.output.error, "booking_recovery_required");
+  assert.equal("error" in first.output && first.output.error, "booking_recovery_required");
   assert.equal(first.state.pendingBooking?.googleEventId, "event_1");
 
   const guardedAvailability = await findMeetingSlots(
@@ -70,9 +111,73 @@ test("a persistence retry reconciles one created calendar event without creating
   const second = await bookMeeting({}, { workflow, meetingService: service, state: first.state });
 
   assert.equal("status" in second.output && second.output.status, "confirmed");
+  assert.equal("googleEventId" in second.output, false);
+  assert.equal("googleEventUrl" in second.output, false);
+  assert.deepEqual(second.output, {
+    kind: "meeting_booking",
+    status: "confirmed",
+    attendeeEmail: "visitor@example.com",
+    start: slot.start,
+    end: slot.end,
+    timezone: "Europe/London",
+  });
   assert.equal(second.state.pendingBooking, null);
   assert.equal(createEventCalls, 1);
   assert.equal(persistenceAttempts, 2);
   assert.equal(calendarTimezone, "Europe/London");
   assert.equal(persistedTimezone, "Europe/London");
+  assert.equal(persistedEventUrl, "https://calendar.example/event_1");
+});
+
+test("a successful booking exposes only a visitor-safe confirmation", async () => {
+  const workflow = new WorkflowService(() => "test-secret");
+
+  const slot = {
+    start: "2026-09-15T11:00:00.000Z",
+    end: "2026-09-15T11:30:00.000Z",
+    timezone: "Europe/London",
+  };
+
+  const meetingService = {
+    isSlotAvailable: async () => true,
+    findAvailableSlots: async () => [],
+    bookMeeting: async () => ({
+      googleEventId: "event_internal",
+      googleEventUrl: "https://calendar.example/event_internal",
+    }),
+    reconcileMeeting: async () => ({
+      googleEventId: "event_internal",
+      googleEventUrl: "https://calendar.example/event_internal",
+    }),
+  };
+
+  const result = await bookMeeting(
+    {},
+    {
+      workflow,
+      meetingService,
+      state: {
+        ...workflow.reset(),
+        name: "Visitor",
+        email: "visitor@example.com",
+        reason: "Discuss a project",
+        availableSlots: [slot],
+        selectedSlot: slot,
+        confirmed: true,
+      },
+    },
+  );
+
+  assert.deepEqual(result.output, {
+    kind: "meeting_booking",
+    status: "confirmed",
+    attendeeEmail: "visitor@example.com",
+    start: slot.start,
+    end: slot.end,
+    timezone: "Europe/London",
+  });
+  assert.equal("googleEventId" in result.output, false);
+  assert.equal("googleEventUrl" in result.output, false);
+  assert.equal(result.state.pendingBooking, null);
+  assert.equal(result.state.selectedSlot, null);
 });

@@ -8,7 +8,14 @@ export function prepareMeeting(
   dependencies: { workflow: IWorkflowService; state: WorkflowState },
 ) {
   if (dependencies.state.pendingBooking) {
-    return { output: { error: "booking_recovery_required", message: "Your calendar event is awaiting confirmation in our records. Please retry booking shortly." }, state: dependencies.state };
+    return {
+      output: {
+        error: "booking_recovery_required",
+        message:
+          "Your calendar event is awaiting confirmation in our records. Please retry booking shortly.",
+      },
+      state: dependencies.state,
+    };
   }
 
   const state = dependencies.workflow.prepare(dependencies.state, input);

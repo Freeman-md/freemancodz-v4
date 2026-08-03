@@ -17,13 +17,7 @@ export async function bookMeeting(
 ) {
   const { state } = dependencies;
 
-  if (
-    !state.confirmed ||
-    !state.name ||
-    !state.email ||
-    !state.reason ||
-    !state.selectedSlot
-  ) {
+  if (!state.confirmed || !state.name || !state.email || !state.reason || !state.selectedSlot) {
     return {
       output: {
         error: "confirmation_required",
@@ -35,12 +29,35 @@ export async function bookMeeting(
 
   if (state.pendingBooking) {
     try {
-      const booking = await dependencies.meetingService.reconcileMeeting({ name: state.pendingBooking.name, email: state.pendingBooking.email, reason: state.pendingBooking.reason, slot: state.pendingBooking.selectedSlot, pendingEvent: state.pendingBooking });
+      await dependencies.meetingService.reconcileMeeting({
+        name: state.pendingBooking.name,
+        email: state.pendingBooking.email,
+        reason: state.pendingBooking.reason,
+        slot: state.pendingBooking.selectedSlot,
+        pendingEvent: state.pendingBooking,
+      });
 
-      return { output: { kind: "meeting_booking", status: "confirmed", ...booking }, state: dependencies.workflow.reset() };
+      return {
+        output: confirmedBookingOutput(state.pendingBooking),
+        state: dependencies.workflow.reset(),
+      };
     } catch (error) {
       if (error instanceof MeetingPersistenceError) {
-        return { output: { error: "booking_recovery_required", message: "Your calendar event was created, but we could not finish recording it yet. Please try again shortly." }, state: dependencies.workflow.recordPendingBooking(state, { ...error.pendingEvent, name: state.name, email: state.email, timezone: MEETING_CONFIG.timezone, reason: state.reason, selectedSlot: state.selectedSlot }) };
+        return {
+          output: {
+            error: "booking_recovery_required",
+            message:
+              "Your calendar event was created, but we could not finish recording it yet. Please try again shortly.",
+          },
+          state: dependencies.workflow.recordPendingBooking(state, {
+            ...error.pendingEvent,
+            name: state.name,
+            email: state.email,
+            timezone: MEETING_CONFIG.timezone,
+            reason: state.reason,
+            selectedSlot: state.selectedSlot,
+          }),
+        };
       }
 
       throw error;
@@ -58,20 +75,48 @@ export async function bookMeeting(
     };
   }
 
-  let booking;
-
   try {
-    booking = await dependencies.meetingService.bookMeeting({ name: state.name, email: state.email, reason: state.reason, slot: state.selectedSlot });
+    await dependencies.meetingService.bookMeeting({
+      name: state.name,
+      email: state.email,
+      reason: state.reason,
+      slot: state.selectedSlot,
+    });
   } catch (error) {
     if (error instanceof MeetingPersistenceError) {
-      return { output: { error: "booking_recovery_required", message: "Your calendar event was created, but we could not finish recording it yet. Please try again shortly." }, state: dependencies.workflow.recordPendingBooking(state, { ...error.pendingEvent, name: state.name, email: state.email, timezone: MEETING_CONFIG.timezone, reason: state.reason, selectedSlot: state.selectedSlot }) };
+      return {
+        output: {
+          error: "booking_recovery_required",
+          message:
+            "Your calendar event was created, but we could not finish recording it yet. Please try again shortly.",
+        },
+        state: dependencies.workflow.recordPendingBooking(state, {
+          ...error.pendingEvent,
+          name: state.name,
+          email: state.email,
+          timezone: MEETING_CONFIG.timezone,
+          reason: state.reason,
+          selectedSlot: state.selectedSlot,
+        }),
+      };
     }
 
     throw error;
   }
 
   return {
-    output: { kind: "meeting_booking", status: "confirmed", ...booking },
+    output: confirmedBookingOutput(state),
     state: dependencies.workflow.reset(),
+  };
+}
+
+function confirmedBookingOutput(state: Pick<WorkflowState, "email" | "selectedSlot">) {
+  return {
+    kind: "meeting_booking",
+    status: "confirmed",
+    attendeeEmail: state.email!,
+    start: state.selectedSlot!.start,
+    end: state.selectedSlot!.end,
+    timezone: MEETING_CONFIG.timezone,
   };
 }

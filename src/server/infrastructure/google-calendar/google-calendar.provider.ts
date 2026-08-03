@@ -10,7 +10,7 @@ export class GoogleCalendarProvider implements IGoogleCalendarProvider {
 
   private calendarId: string | null = null;
 
-  constructor(private readonly getConfig: () => GoogleCalendarConfig) { }
+  constructor(private readonly getConfig: () => GoogleCalendarConfig) {}
 
   async getBusyPeriods(input: { start: Date; end: Date }): Promise<CalendarBusyPeriod[]> {
     const { calendar, calendarId } = this.getCalendar();

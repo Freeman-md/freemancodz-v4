@@ -26,7 +26,9 @@ export class WorkflowService implements IWorkflowService {
     }
 
     try {
-      return this.normalize(workflowStateSchema.parse(JSON.parse(this.decrypt(iv, ciphertext, tag))));
+      return this.normalize(
+        workflowStateSchema.parse(JSON.parse(this.decrypt(iv, ciphertext, tag))),
+      );
     } catch {
       return createEmptyWorkflowState();
     }
@@ -71,7 +73,9 @@ export class WorkflowService implements IWorkflowService {
       selectedSlot: Pick<MeetingSlot, "start" | "end">;
     },
   ): WorkflowState | null {
-    const selectedSlot = state.availableSlots.find((slot) => slotsMatch(slot, details.selectedSlot));
+    const selectedSlot = state.availableSlots.find((slot) =>
+      slotsMatch(slot, details.selectedSlot),
+    );
 
     if (!selectedSlot) {
       return null;
@@ -152,7 +156,10 @@ export class WorkflowService implements IWorkflowService {
 
     decipher.setAuthTag(Buffer.from(tag, "base64url"));
 
-    return Buffer.concat([decipher.update(Buffer.from(ciphertext, "base64url")), decipher.final()]).toString("utf8");
+    return Buffer.concat([
+      decipher.update(Buffer.from(ciphertext, "base64url")),
+      decipher.final(),
+    ]).toString("utf8");
   }
 }
 
