@@ -34,6 +34,10 @@ export class MeetingService implements IMeetingService {
   }
 
   async isSlotAvailable(slot: MeetingSlot) {
+    if (new Date(slot.start).getTime() <= Date.now()) {
+      return false;
+    }
+
     const busy = await this.calendar.getBusyPeriods({
       start: new Date(slot.start),
       end: new Date(slot.end),

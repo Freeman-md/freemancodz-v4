@@ -9,11 +9,21 @@ import { searchWebsite } from "./search-website.tool";
 import type { IOpenAIProvider } from "@/server/infrastructure/openai/interfaces/openai.provider.interface";
 import type { ISiteSearchService } from "@/server/modules/search-index/public";
 import type { IMeetingService } from "@/server/modules/meeting/public";
-import type { MeetingWorkflowService } from "../workflow/meeting-workflow.service";
+import type { IMeetingWorkflowService } from "../interfaces/meeting-workflow.service.interface";
 import type { MeetingWorkflowState } from "../workflow/meeting-workflow.state";
 
-type AssistantToolDependencies = { openai: IOpenAIProvider; siteSearch: ISiteSearchService; meetingService: IMeetingService; workflow: MeetingWorkflowService; state: MeetingWorkflowState };
-export type AssistantToolResult = { output: Record<string, unknown>; sources: Array<{ id: string; title: string; url: string }>; state: MeetingWorkflowState };
+type AssistantToolDependencies = {
+  openai: IOpenAIProvider;
+  siteSearch: ISiteSearchService;
+  meetingService: IMeetingService;
+  workflow: IMeetingWorkflowService;
+  state: MeetingWorkflowState;
+};
+export type AssistantToolResult = {
+  output: Record<string, unknown>;
+  sources: Array<{ id: string; title: string; url: string }>;
+  state: MeetingWorkflowState;
+};
 
 export async function executeAssistantTool(
   name: string,
@@ -25,13 +35,19 @@ export async function executeAssistantTool(
   try {
     args = JSON.parse(rawArguments);
   } catch {
-    return { output: { error: "invalid_json", message: "Tool arguments must be valid JSON." }, sources: [], state: dependencies.state };
+    return {
+      output: { error: "invalid_json", message: "Tool arguments must be valid JSON." },
+      sources: [],
+      state: dependencies.state,
+    };
   }
 
   if (name === "search_website") {
     const parsed = searchWebsiteSchema.safeParse(args);
 
-    if (!parsed.success) {return invalidArguments(dependencies.state);}
+    if (!parsed.success) {
+      return invalidArguments(dependencies.state);
+    }
 
     const result = await searchWebsite(parsed.data, dependencies);
 
@@ -41,7 +57,9 @@ export async function executeAssistantTool(
   if (name === "find_meeting_slots") {
     const parsed = findMeetingSlotsSchema.safeParse(args);
 
-    if (!parsed.success) {return invalidArguments(dependencies.state);}
+    if (!parsed.success) {
+      return invalidArguments(dependencies.state);
+    }
 
     const result = await findMeetingSlots(parsed.data, dependencies);
 
@@ -51,7 +69,9 @@ export async function executeAssistantTool(
   if (name === "prepare_meeting") {
     const parsed = prepareMeetingSchema.safeParse(args);
 
-    if (!parsed.success) {return invalidArguments(dependencies.state);}
+    if (!parsed.success) {
+      return invalidArguments(dependencies.state);
+    }
 
     const result = prepareMeeting(parsed.data, dependencies);
 
@@ -61,16 +81,29 @@ export async function executeAssistantTool(
   if (name === "book_meeting") {
     const parsed = bookMeetingSchema.safeParse(args);
 
-    if (!parsed.success) {return invalidArguments(dependencies.state);}
+    if (!parsed.success) {
+      return invalidArguments(dependencies.state);
+    }
 
     const result = await bookMeeting(parsed.data, dependencies);
 
     return { output: result.output, sources: [], state: result.state };
   }
 
-  return { output: { error: "unknown_tool", message: "The requested tool is not available." }, sources: [], state: dependencies.state };
+  return {
+    output: { error: "unknown_tool", message: "The requested tool is not available." },
+    sources: [],
+    state: dependencies.state,
+  };
 }
 
 function invalidArguments(state: MeetingWorkflowState): AssistantToolResult {
-  return { output: { error: "invalid_arguments", message: "Tool arguments did not match the required schema." }, sources: [], state };
+  return {
+    output: {
+      error: "invalid_arguments",
+      message: "Tool arguments did not match the required schema.",
+    },
+    sources: [],
+    state,
+  };
 }

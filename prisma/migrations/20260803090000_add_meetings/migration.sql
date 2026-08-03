@@ -11,7 +11,7 @@ CREATE TABLE "meetings" (
   "google_event_url" TEXT,
   "raw_provider_payload" JSONB NOT NULL,
   "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  "updated_at" TIMESTAMPTZ(6) NOT NULL,
+  "updated_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT "meetings_pkey" PRIMARY KEY ("id")
 );
 

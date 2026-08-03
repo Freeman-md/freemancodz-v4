@@ -8,8 +8,9 @@ import {
   type MeetingWorkflowState,
 } from "./meeting-workflow.state";
 import { meetingWorkflowStateSchema } from "./meeting-workflow.schema";
+import type { IMeetingWorkflowService } from "../interfaces/meeting-workflow.service.interface";
 
-export class MeetingWorkflowService {
+export class MeetingWorkflowService implements IMeetingWorkflowService {
   constructor(private readonly getSigningSecret: () => string) {}
 
   decode(token: string | null | undefined): MeetingWorkflowState {

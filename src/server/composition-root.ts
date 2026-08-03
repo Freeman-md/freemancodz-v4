@@ -35,6 +35,7 @@ import { MeetingRepository } from "./modules/meeting/repositories/meeting.reposi
 import { MeetingService } from "./modules/meeting/services/meeting.service";
 import type { IMeetingService } from "./modules/meeting/interfaces/meeting.service.interface";
 import { MeetingWorkflowService } from "./modules/assistant/workflow/meeting-workflow.service";
+import type { IMeetingWorkflowService } from "./modules/assistant/interfaces/meeting-workflow.service.interface";
 
 const openai = new OpenAIProvider(createOpenAIClient(), getEmbeddingModel(), getResponseModel());
 
@@ -60,7 +61,7 @@ const meetingRepository = new MeetingRepository(prisma);
 
 const googleCalendar = new GoogleCalendarProvider(getGoogleCalendarConfig);
 
-const meetingWorkflow = new MeetingWorkflowService(getMeetingWorkflowSecret);
+const meetingWorkflow: IMeetingWorkflowService = new MeetingWorkflowService(getMeetingWorkflowSecret);
 
 export const logger: ILogger = new ConsoleLogger();
 

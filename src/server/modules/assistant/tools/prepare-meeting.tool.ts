@@ -1,10 +1,10 @@
 import type { PrepareMeetingInput } from "../schemas/tools/prepare-meeting.schema";
-import type { MeetingWorkflowService } from "../workflow/meeting-workflow.service";
+import type { IMeetingWorkflowService } from "../interfaces/meeting-workflow.service.interface";
 import type { MeetingWorkflowState } from "../workflow/meeting-workflow.state";
 
 export function prepareMeeting(
   input: PrepareMeetingInput,
-  dependencies: { workflow: MeetingWorkflowService; state: MeetingWorkflowState },
+  dependencies: { workflow: IMeetingWorkflowService; state: MeetingWorkflowState },
 ) {
   if (dependencies.state.pendingBooking) {
     return { output: { error: "booking_recovery_required", message: "Your calendar event is awaiting confirmation in our records. Please retry booking shortly." }, state: dependencies.state };

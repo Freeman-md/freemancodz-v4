@@ -1,5 +1,5 @@
 import type { FindMeetingSlotsInput } from "../schemas/tools/find-meeting-slots.schema";
-import type { MeetingWorkflowService } from "../workflow/meeting-workflow.service";
+import type { IMeetingWorkflowService } from "../interfaces/meeting-workflow.service.interface";
 import type { MeetingWorkflowState } from "../workflow/meeting-workflow.state";
 import type { IMeetingService } from "@/server/modules/meeting/public";
 import { MEETING_CONFIG } from "@/server/modules/meeting/meeting.config";
@@ -8,7 +8,7 @@ export async function findMeetingSlots(
   input: FindMeetingSlotsInput,
   dependencies: {
     meetingService: IMeetingService;
-    workflow: MeetingWorkflowService;
+    workflow: IMeetingWorkflowService;
     state: MeetingWorkflowState;
   },
 ) {
@@ -22,8 +22,7 @@ export async function findMeetingSlots(
 
   if (
     start > end ||
-    end.getTime() - start.getTime() > MEETING_CONFIG.maximumRangeDays * 86_400_000 ||
-    end.getTime() < Date.now()
+    end.getTime() - start.getTime() > MEETING_CONFIG.maximumRangeDays * 86_400_000
   ) {
     return {
       output: {

@@ -1,12 +1,12 @@
 import type { BookMeetingInput } from "../schemas/tools/book-meeting.schema";
-import type { MeetingWorkflowService } from "../workflow/meeting-workflow.service";
+import type { IMeetingWorkflowService } from "../interfaces/meeting-workflow.service.interface";
 import type { MeetingWorkflowState } from "../workflow/meeting-workflow.state";
 import { MeetingPersistenceError, type IMeetingService } from "@/server/modules/meeting/public";
 
 export async function bookMeeting(
   _input: BookMeetingInput,
   dependencies: {
-    workflow: MeetingWorkflowService;
+    workflow: IMeetingWorkflowService;
     meetingService: IMeetingService;
     state: MeetingWorkflowState;
   },

@@ -22,7 +22,7 @@ import type { ISiteSearchService } from "@/server/modules/search-index/public";
 import type { ILogger } from "@/server/infrastructure/logging/logger.interface";
 import type { AssistantSource, AssistantStreamEvent } from "@/contracts/assistant.contract";
 import type { IMeetingService } from "@/server/modules/meeting/public";
-import { MeetingWorkflowService } from "../workflow/meeting-workflow.service";
+import type { IMeetingWorkflowService } from "../interfaces/meeting-workflow.service.interface";
 type WindowCounter = { count: number; resetAt: number };
 
 export class AssistantService implements IAssistantService {
@@ -35,7 +35,7 @@ export class AssistantService implements IAssistantService {
     private readonly siteSearch: ISiteSearchService,
     private readonly logger: ILogger,
     private readonly meetingService: IMeetingService,
-    private readonly workflow: MeetingWorkflowService,
+    private readonly workflow: IMeetingWorkflowService,
   ) {}
 
   checkRateLimit(clientIdentifier: string): AssistantRateLimitResult {
@@ -95,7 +95,10 @@ export class AssistantService implements IAssistantService {
 
         let responseId = previousResponseId;
 
-        let workflowState = this.workflow.recordConfirmation(this.workflow.decode(workflowToken), message);
+        let workflowState = this.workflow.recordConfirmation(
+          this.workflow.decode(workflowToken),
+          message,
+        );
 
         const sources = new Map<string, AssistantSource>();
 
@@ -114,7 +117,9 @@ export class AssistantService implements IAssistantService {
             });
 
             for await (const event of response) {
-              if (signal.aborted) {return;}
+              if (signal.aborted) {
+                return;
+              }
 
               if (event.type === "response.created" || event.type === "response.completed") {
                 responseId = event.response.id;
@@ -125,7 +130,10 @@ export class AssistantService implements IAssistantService {
                 write({ type: "delta", delta: event.delta });
               }
 
-              if (event.type === "response.output_item.done" && event.item.type === "function_call") {
+              if (
+                event.type === "response.output_item.done" &&
+                event.item.type === "function_call"
+              ) {
                 toolCalls.push({
                   callId: event.item.call_id,
                   name: event.item.name,
@@ -133,20 +141,29 @@ export class AssistantService implements IAssistantService {
                 });
               }
 
-              if (event.type === "error") {throw new Error(event.message);}
+              if (event.type === "error") {
+                throw new Error(event.message);
+              }
 
               if (event.type === "response.failed") {
                 throw new Error(event.response.error?.message || "OpenAI response failed.");
               }
             }
 
-            if (toolCalls.length === 0) {break;}
+            if (toolCalls.length === 0) {
+              break;
+            }
 
             if (iteration === MAX_TOOL_CALL_ITERATIONS - 1) {
               throw new Error("Assistant tool call limit exceeded.");
             }
 
-            const toolResult = await this.executeToolCalls(toolCalls, sources, signal, workflowState);
+            const toolResult = await this.executeToolCalls(
+              toolCalls,
+              sources,
+              signal,
+              workflowState,
+            );
 
             workflowState = toolResult.workflowState;
             input = toolResult.output;
@@ -161,7 +178,11 @@ export class AssistantService implements IAssistantService {
             write({ type: "response_id", responseId });
           }
 
-          write({ type: "meeting_workflow", token: this.workflow.encode(workflowState), state: this.workflow.publicState(workflowState) });
+          write({
+            type: "meeting_workflow",
+            token: this.workflow.encode(workflowState),
+            state: this.workflow.publicState(workflowState),
+          });
 
           write({ type: "done" });
         } catch (error) {
@@ -208,13 +229,18 @@ export class AssistantService implements IAssistantService {
     sources: Map<string, AssistantSource>,
     signal: AbortSignal,
     state: import("../workflow/meeting-workflow.state").MeetingWorkflowState,
-  ): Promise<{ output: OpenAIResponseInputItem[]; workflowState: import("../workflow/meeting-workflow.state").MeetingWorkflowState }> {
+  ): Promise<{
+    output: OpenAIResponseInputItem[];
+    workflowState: import("../workflow/meeting-workflow.state").MeetingWorkflowState;
+  }> {
     const outputs: OpenAIResponseInputItem[] = [];
 
     let workflowState = state;
 
     for (const toolCall of toolCalls) {
-      if (signal.aborted) {return { output: [], workflowState };}
+      if (signal.aborted) {
+        return { output: [], workflowState };
+      }
 
       const result = await executeAssistantTool(toolCall.name, toolCall.arguments, {
         openai: this.openai,
@@ -226,7 +252,9 @@ export class AssistantService implements IAssistantService {
 
       workflowState = result.state;
 
-      for (const source of result.sources) {sources.set(source.id, source);}
+      for (const source of result.sources) {
+        sources.set(source.id, source);
+      }
 
       outputs.push({
         type: "function_call_output",
