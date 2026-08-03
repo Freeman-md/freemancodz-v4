@@ -1,7 +1,7 @@
 # Milestone 11: Tool-Calling Assistant Foundation
 
 **Status:** Active  
-**Version:** 1.0.0  
+**Version:** 1.0.1  
 **Last Updated:** 2026-08-03  
 **Depends On:** Milestone 10  
 **Target Pull Request:** —  
@@ -181,6 +181,8 @@ This milestone is complete when the assistant can respond naturally without tool
 - Do not redesign the frontend or public stream contract.
 - Do not weaken rate limiting, request validation, error handling or abort handling.
 - Do not expand this milestone into production booking safety or external integrations.
+- Do not create speculative automated tests for behaviour that has not failed or stabilised.
+- Prefer implementation review and manual verification for this milestone. Add automated coverage only when it protects a clear, valuable invariant or a confirmed regression.
 - Avoid unrelated refactoring.
 
 ## Explicitly out of scope
@@ -199,24 +201,39 @@ This milestone is complete when the assistant can respond naturally without tool
 - LLM query expansion before the assistant call
 - Retrieval redesign beyond moving the existing flow into a tool
 - New tools beyond the four named in this contract
+- Broad schema test suites
+- End-to-end test infrastructure for the unfinished booking workflow
+- Speculative edge-case coverage without an observed risk or failure
 - Unrelated refactoring or future work
+
+## Verification strategy
+
+- Build the complete milestone behaviour first.
+- Review the implementation directly against this contract, the repository architecture rules and the existing public stream contract.
+- Use focused manual verification for conversational responses, website retrieval, dummy booking flow and browser streaming.
+- Run the repository’s existing validation commands and existing relevant test suite.
+- Do not add automated tests by default merely because a new file, schema or branch exists.
+- Add a new automated test only when at least one of these is true:
+  1. a real failure or regression was found during implementation or review;
+  2. the behaviour is deterministic, isolated and important enough that manual verification would be repeatedly fragile;
+  3. an existing test must be updated because an intentional contract changed.
+- Regression tests should target the exact failure encountered and remain as small as possible.
+- Do not build an end-to-end test suite for Google Calendar, Supabase or production booking behaviour in this milestone.
 
 ## Required tests
 
-1. A conversational message can complete without executing a tool.
-2. A portfolio question executes `search_website`, returns its result to the model and emits the retrieved sources.
-3. A booking request can execute the dummy meeting tools through more than one model iteration and produce a final streamed response.
-4. Multiple completed tool calls from one model response are all executed and returned with the correct call IDs.
-5. Invalid JSON, invalid arguments and unknown tool names produce controlled tool results rather than uncaught failures.
-6. The maximum tool-iteration limit fails safely.
-7. Text deltas from the initial or subsequent model response are emitted through the existing stream contract.
-8. Raw function arguments and tool outputs are not emitted as visitor-facing deltas.
-9. Abort and provider/tool failure paths preserve safe stream behaviour.
-10. Existing assistant route, client, unit, integration and evaluation tests remain green, with focused updates only where the flow intentionally changed.
+No new broad automated test suite is required by default.
+
+The implementation agent must:
+
+1. Run existing relevant assistant, route, client and repository validation commands.
+2. Update existing tests only where the intentional tool-calling contract makes them stale.
+3. Add the smallest focused regression test when a concrete failure is discovered during implementation or review.
+4. Avoid speculative schema, orchestration permutation or end-to-end tests that do not protect an observed problem.
 
 ## Acceptance criteria
 
-Include only criteria the implementation and review agents can verify from repository evidence, automated tests, CI or accessible runtime behaviour.
+Include only criteria the implementation and review agents can verify from repository evidence, existing automated checks, implementation review or accessible runtime behaviour.
 
 - [ ] Mandatory retrieval has been replaced by a manual model-directed tool-calling loop.
 - [ ] The model can complete a conversational response without calling a tool.
@@ -235,8 +252,10 @@ Include only criteria the implementation and review agents can verify from repos
 - [ ] Raw tool arguments and outputs are not exposed to visitors.
 - [ ] Conversation continuity, cancellation, rate limiting and visitor-safe errors remain intact.
 - [ ] No Google Calendar, OAuth, Supabase meeting storage, Generative UI, MCP or Agents SDK implementation was introduced.
-- [ ] Focused tests pass.
-- [ ] Repository validation commands pass.
+- [ ] The implementation agent reviewed the final code against every required behaviour and constraint in this contract.
+- [ ] Existing relevant tests and repository validation commands pass.
+- [ ] Any newly discovered regression has the smallest useful regression test, or a clear reason is recorded when automated coverage would not provide value.
+- [ ] No speculative broad schema, orchestration or end-to-end test suite was added.
 - [ ] The complete independent review is posted to the pull request.
 - [ ] The pull request is not merged by an agent.
 
@@ -248,6 +267,7 @@ Include only criteria the implementation and review agents can verify from repos
    - `I would like to book a meeting next week.`
 2. Confirm the browser still renders streamed text and website sources correctly.
 3. Confirm the booking conversation is visibly dummy behaviour and creates no external calendar event or database record.
+4. Review the implementation against the required behaviour and acceptance criteria, then record any failures found before approval.
 
 ## Manual acceptance criteria
 
@@ -257,3 +277,4 @@ These are confirmed by the human after the workflow reaches `ready_for_human`. T
 - [ ] A portfolio question produces a grounded answer with relevant visible sources.
 - [ ] A booking request completes the intended dummy tool flow without creating external state.
 - [ ] The existing assistant user experience remains stable enough to proceed to real booking workflow design.
+- [ ] Manual review found no unresolved behaviour that requires a regression fix before the next milestone.
