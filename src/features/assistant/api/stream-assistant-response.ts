@@ -18,6 +18,7 @@ async function getErrorMessage(response: Response) {
 export async function streamChatResponse(
   message: string,
   previousResponseId: string | null,
+  workflowToken: string | null,
   handlers: StreamChatResponseHandlers,
 ) {
   const response = await fetch("/api/chat", {
@@ -25,7 +26,7 @@ export async function streamChatResponse(
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ message, previousResponseId }),
+    body: JSON.stringify({ message, previousResponseId, workflowToken }),
   });
 
   if (!response.ok) {
@@ -78,6 +79,10 @@ export async function streamChatResponse(
 
       return false;
     }
+
+    if (event.type === "meeting_workflow") { handlers.onWorkflow(event.token);
+
+ return false; }
 
     if (event.type === "error") {
       throw new Error(event.error);

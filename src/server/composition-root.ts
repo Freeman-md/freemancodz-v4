@@ -29,6 +29,12 @@ import { SearchIndexService } from "./modules/search-index/services/search-index
 import { SiteSearchService } from "./modules/search-index/services/site-search.service";
 import type { ISearchIndexService } from "./modules/search-index/interfaces/search-index.service.interface";
 import type { ISiteSearchService } from "./modules/search-index/interfaces/site-search.service.interface";
+import { GoogleCalendarProvider } from "./infrastructure/google-calendar/google-calendar.provider";
+import { getGoogleCalendarConfig, getMeetingWorkflowSecret } from "./infrastructure/config/env";
+import { MeetingRepository } from "./modules/meeting/repositories/meeting.repository";
+import { MeetingService } from "./modules/meeting/services/meeting.service";
+import type { IMeetingService } from "./modules/meeting/interfaces/meeting.service.interface";
+import { MeetingWorkflowService } from "./modules/assistant/workflow/meeting-workflow.service";
 
 const openai = new OpenAIProvider(createOpenAIClient(), getEmbeddingModel(), getResponseModel());
 
@@ -50,6 +56,12 @@ const chunks = new SiteChunkRepository(prisma);
 
 const jobs = new SearchIndexJobRepository(prisma);
 
+const meetingRepository = new MeetingRepository(prisma);
+
+const googleCalendar = new GoogleCalendarProvider(getGoogleCalendarConfig);
+
+const meetingWorkflow = new MeetingWorkflowService(getMeetingWorkflowSecret);
+
 export const logger: ILogger = new ConsoleLogger();
 
 export const searchIndexService: ISearchIndexService = new SearchIndexService(
@@ -60,10 +72,13 @@ export const searchIndexService: ISearchIndexService = new SearchIndexService(
   logger,
 );
 export const siteSearchService: ISiteSearchService = new SiteSearchService(chunks);
+export const meetingService: IMeetingService = new MeetingService(googleCalendar, meetingRepository);
 export const assistantService: IAssistantService = new AssistantService(
   openai,
   siteSearchService,
   logger,
+  meetingService,
+  meetingWorkflow,
 );
 export const portfolioService: IPortfolioService = new PortfolioService(
   contentBlocks,

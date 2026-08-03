@@ -1,36 +1,41 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-
 import { findMeetingSlots } from "@/server/modules/assistant/tools/find-meeting-slots.tool";
+import { MeetingWorkflowService } from "@/server/modules/assistant/workflow/meeting-workflow.service";
 
-test("dummy meeting slots remain within an explicit requested range", () => {
-  const result = findMeetingSlots({
-    dateRange: "2026-09-14 to 2026-09-15",
-    durationMinutes: 30,
-    timezone: "Europe/London",
-  });
+test("availability replaces a previous selected slot and invalidates confirmation", async () => {
+  const workflow = new MeetingWorkflowService(() => "test-secret");
 
-  assert.deepEqual(result.slots, [
-    {
-      id: "dummy-slot-2026-09-14",
-      startsAt: "2026-09-14T10:00:00",
-      timezone: "Europe/London",
-    },
-    {
-      id: "dummy-slot-2026-09-15",
-      startsAt: "2026-09-15T14:00:00",
-      timezone: "Europe/London",
-    },
-  ]);
+  const state = { ...workflow.reset(), selectedSlot: { start: "2026-09-14T11:00:00.000Z", end: "2026-09-14T11:30:00.000Z", timezone: "Europe/London" }, confirmed: true };
+
+  const meetingService = { findAvailableSlots: async () => [{ start: "2026-09-15T11:00:00.000Z", end: "2026-09-15T11:30:00.000Z", timezone: "Europe/London" }], isSlotAvailable: async () => true, bookMeeting: async () => ({ googleEventId: "event", googleEventUrl: null }) };
+
+  const result = await findMeetingSlots({ startDate: "2026-09-14", endDate: "2026-09-15", timezone: "Europe/London" }, { meetingService, workflow, state });
+
+  assert.equal(result.state.selectedSlot, null);
+  assert.equal(result.state.confirmed, false);
+  assert.equal(result.state.availableSlots.length, 1);
 });
 
-test("dummy meeting slots return a controlled result for an unparseable range", () => {
-  const result = findMeetingSlots({
-    dateRange: "next week",
-    durationMinutes: 30,
+test("workflow tokens reject tampered confirmation state", () => {
+  const workflow = new MeetingWorkflowService(() => "test-secret");
+
+  const token = workflow.encode({
+    ...workflow.reset(),
+    name: "Visitor",
+    email: "visitor@example.com",
     timezone: "Europe/London",
+    reason: "Discuss a project",
+    availableSlots: [{ start: "2026-09-15T11:00:00.000Z", end: "2026-09-15T11:30:00.000Z", timezone: "Europe/London" }],
+    selectedSlot: { start: "2026-09-15T11:00:00.000Z", end: "2026-09-15T11:30:00.000Z", timezone: "Europe/London" },
   });
 
-  assert.equal(result.status, "unavailable");
-  assert.deepEqual(result.slots, []);
+  const [encoded, signature] = token.split(".");
+
+  const payload = JSON.parse(Buffer.from(encoded!, "base64url").toString("utf8")) as { confirmed: boolean };
+
+  payload.confirmed = true;
+  const tampered = `${Buffer.from(JSON.stringify(payload)).toString("base64url")}.${signature}`;
+
+  assert.equal(workflow.decode(tampered).confirmed, false);
 });

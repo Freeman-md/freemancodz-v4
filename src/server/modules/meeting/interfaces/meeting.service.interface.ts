@@ -1,0 +1,2 @@
+import type { MeetingSlot } from "@/contracts/assistant.contract";
+export interface IMeetingService { findAvailableSlots(input: { startDate: string; endDate: string }): Promise<MeetingSlot[]>; isSlotAvailable(slot: MeetingSlot): Promise<boolean>; bookMeeting(input: { name: string; email: string; timezone: string; reason: string; slot: MeetingSlot }): Promise<{ googleEventId: string; googleEventUrl: string | null }>; }

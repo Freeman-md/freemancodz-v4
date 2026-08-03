@@ -49,6 +49,25 @@ model SearchIndexJob {
   @@map("search_index_jobs")
 }
 
+model Meeting {
+  id                 String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  googleEventId      String   @unique @map("google_event_id")
+  name               String
+  email              String
+  timezone           String
+  reason             String
+  startsAt           DateTime @map("starts_at") @db.Timestamptz(6)
+  endsAt             DateTime @map("ends_at") @db.Timestamptz(6)
+  status             String
+  googleEventUrl     String?  @map("google_event_url")
+  rawProviderPayload Json     @map("raw_provider_payload") @db.JsonB
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([startsAt])
+  @@map("meetings")
+}
+
 enum ContentPage {
   HOME  @map("home")
   ABOUT @map("about")

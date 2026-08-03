@@ -1,64 +1,19 @@
 import type { FindMeetingSlotsInput } from "../schemas/tools/find-meeting-slots.schema";
+import type { MeetingWorkflowService } from "../workflow/meeting-workflow.service";
+import type { MeetingWorkflowState } from "../workflow/meeting-workflow.state";
+import type { IMeetingService } from "@/server/modules/meeting/public";
+import { MEETING_CONFIG } from "@/server/modules/meeting/meeting.config";
 
-export function findMeetingSlots(input: FindMeetingSlotsInput) {
-  const dates = parseDateRange(input.dateRange);
+export async function findMeetingSlots(input: FindMeetingSlotsInput, dependencies: { meetingService: IMeetingService; workflow: MeetingWorkflowService; state: MeetingWorkflowState }) {
+  const start = new Date(`${input.startDate}T00:00:00Z`);
 
-  if (!dates) {
-    return {
-      kind: "dummy_meeting_slots",
-      status: "unavailable",
-      reason: "date_range_unparseable",
-      message: "Provide a date range in YYYY-MM-DD to YYYY-MM-DD format to find dummy slots.",
-      slots: [],
-    };
-  }
+ const end = new Date(`${input.endDate}T00:00:00Z`);
 
-  const [startDate, endDate] = dates;
+  if (start > end || end.getTime() - start.getTime() > MEETING_CONFIG.maximumRangeDays * 86_400_000 || end.getTime() < Date.now()) {return { output: { error: "invalid_date_range", message: "Choose a future date range of up to 14 days." }, state: dependencies.state };}
 
-  return {
-    kind: "dummy_meeting_slots",
-    status: "available",
-    dateRange: input.dateRange,
-    durationMinutes: input.durationMinutes,
-    timezone: input.timezone,
-    slots: createSlots(startDate, endDate, input.timezone),
-  };
-}
+  const slots = await dependencies.meetingService.findAvailableSlots({ startDate: input.startDate, endDate: input.endDate });
 
-function parseDateRange(dateRange: string): [Date, Date] | null {
-  const values = dateRange.match(/\d{4}-\d{2}-\d{2}/g);
+  const state = dependencies.workflow.recordAvailability(dependencies.state, slots, new Date().toISOString());
 
-  if (!values || values.length !== 2) {
-    return null;
-  }
-
-  const startDate = parseDate(values[0]);
-
-  const endDate = parseDate(values[1]);
-
-  return startDate && endDate && startDate <= endDate ? [startDate, endDate] : null;
-}
-
-function parseDate(value: string): Date | null {
-  const date = new Date(`${value}T00:00:00.000Z`);
-
-  return Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== value ? null : date;
-}
-
-function createSlots(startDate: Date, endDate: Date, timezone: string) {
-  const first = startDate.toISOString().slice(0, 10);
-
-  const secondDate = new Date(startDate);
-
-  secondDate.setUTCDate(secondDate.getUTCDate() + 1);
-
-  const slots = [{ id: `dummy-slot-${first}`, startsAt: `${first}T10:00:00`, timezone }];
-
-  if (secondDate <= endDate) {
-    const second = secondDate.toISOString().slice(0, 10);
-
-    slots.push({ id: `dummy-slot-${second}`, startsAt: `${second}T14:00:00`, timezone });
-  }
-
-  return slots;
+  return { output: { kind: "meeting_slots", timezone: input.timezone, slots }, state };
 }

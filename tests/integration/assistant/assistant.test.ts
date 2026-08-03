@@ -9,6 +9,7 @@ import type {
 import type { OpenAIResponseRequest } from "@/server/infrastructure/openai/models/openai-response-request";
 import type { ISiteSearchService, MatchSiteChunksRow } from "@/server/modules/search-index/public";
 import { AssistantService } from "@/server/modules/assistant/services/assistant.service";
+import { MeetingWorkflowService } from "@/server/modules/assistant/workflow/meeting-workflow.service";
 
 const source = {
   id: "project-1",
@@ -77,7 +78,13 @@ function createAssistant({
     search: async () => chunks,
   };
 
-  const assistantService = new AssistantService(openai, siteSearch, logger);
+  const meetingService = {
+    findAvailableSlots: async () => [],
+    isSlotAvailable: async () => true,
+    bookMeeting: async () => ({ googleEventId: "event_test", googleEventUrl: null }),
+  };
+
+  const assistantService = new AssistantService(openai, siteSearch, logger, meetingService, new MeetingWorkflowService(() => "test-secret"));
 
   return { inputs, post: createChatPostHandler({ assistantService }) };
 }

@@ -6,6 +6,7 @@ export type ChatStreamEvent = AssistantStreamEvent;
 export type StreamChatResponseHandlers = {
   onDelta: (delta: string) => void;
   onResponseId: (responseId: string) => void;
+  onWorkflow: (token: string) => void;
   onSources: (sources: ChatSource[]) => void;
 };
 
