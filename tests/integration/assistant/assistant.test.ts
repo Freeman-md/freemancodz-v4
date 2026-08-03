@@ -5,8 +5,8 @@ import { createChatPostHandler } from "@/app/api/chat/route";
 import type { ILogger } from "@/server/infrastructure/logging/logger.interface";
 import type {
   IOpenAIProvider,
-  OpenAIResponseRequest,
 } from "@/server/infrastructure/openai/interfaces/openai.provider.interface";
+import type { OpenAIResponseRequest } from "@/server/infrastructure/openai/models/openai-response-request";
 import type { ISiteSearchService, MatchSiteChunksRow } from "@/server/modules/search-index/public";
 import { AssistantService } from "@/server/modules/assistant/services/assistant.service";
 

@@ -1,6 +1,6 @@
-import type { FunctionTool } from "openai/resources/responses/responses";
+import type { OpenAIResponseTool } from "@/server/infrastructure/openai/models/openai-response-request";
 
-export const ASSISTANT_TOOLS: FunctionTool[] = [
+export const ASSISTANT_TOOLS: OpenAIResponseTool[] = [
   {
     type: "function",
     name: "search_website",

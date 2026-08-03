@@ -1,18 +1,7 @@
-import type {
-  FunctionTool,
-  ResponseInput,
-  ResponseStreamEvent,
-} from "openai/resources/responses/responses";
+import type { ResponseStreamEvent } from "openai/resources/responses/responses";
+import type { OpenAIResponseRequest } from "../models/openai-response-request";
 
 export type GeneratedEmbedding = { embedding: number[]; embeddingModel: string };
-
-export type OpenAIResponseRequest = {
-  input: ResponseInput;
-  instructions: string;
-  tools: FunctionTool[];
-  previousResponseId: string | null;
-  signal: AbortSignal;
-};
 
 export interface IOpenAIProvider {
   streamResponse(request: OpenAIResponseRequest): Promise<AsyncIterable<ResponseStreamEvent>>;

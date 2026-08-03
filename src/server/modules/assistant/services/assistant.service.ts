@@ -17,10 +17,10 @@ import { CHAT_SYSTEM_PROMPT } from "../prompts/portfolio-assistant.prompt";
 import { ASSISTANT_TOOLS } from "../tools/assistant-tools";
 import { executeAssistantTool } from "../tools/execute-assistant-tool";
 import type { IOpenAIProvider } from "@/server/infrastructure/openai/interfaces/openai.provider.interface";
+import type { OpenAIResponseInputItem } from "@/server/infrastructure/openai/models/openai-response-request";
 import type { ISiteSearchService } from "@/server/modules/search-index/public";
 import type { ILogger } from "@/server/infrastructure/logging/logger.interface";
 import type { AssistantSource, AssistantStreamEvent } from "@/contracts/assistant.contract";
-import type { ResponseInput, ResponseInputItem } from "openai/resources/responses/responses";
 type WindowCounter = { count: number; resetAt: number };
 
 export class AssistantService implements IAssistantService {
@@ -93,7 +93,7 @@ export class AssistantService implements IAssistantService {
 
         const sources = new Map<string, AssistantSource>();
 
-        let input: ResponseInput = [{ role: "user", content: message }];
+        let input: OpenAIResponseInputItem[] = [{ type: "user_message", content: message }];
 
         try {
           for (let iteration = 0; iteration < MAX_TOOL_CALL_ITERATIONS; iteration += 1) {
@@ -196,8 +196,8 @@ export class AssistantService implements IAssistantService {
     toolCalls: Array<{ callId: string; name: string; arguments: string }>,
     sources: Map<string, AssistantSource>,
     signal: AbortSignal,
-  ): Promise<ResponseInputItem[]> {
-    const outputs: ResponseInputItem[] = [];
+  ): Promise<OpenAIResponseInputItem[]> {
+    const outputs: OpenAIResponseInputItem[] = [];
 
     for (const toolCall of toolCalls) {
       if (signal.aborted) {return [];}
@@ -209,7 +209,11 @@ export class AssistantService implements IAssistantService {
 
       for (const source of result.sources) {sources.set(source.id, source);}
 
-      outputs.push({ type: "function_call_output", call_id: toolCall.callId, output: JSON.stringify(result.output) });
+      outputs.push({
+        type: "function_call_output",
+        callId: toolCall.callId,
+        output: JSON.stringify(result.output),
+      });
     }
 
     return outputs;
