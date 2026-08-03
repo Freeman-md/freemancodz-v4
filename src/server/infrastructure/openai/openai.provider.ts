@@ -1,7 +1,11 @@
 import "server-only";
 
 import type OpenAI from "openai";
-import type { IOpenAIProvider, GeneratedEmbedding } from "./interfaces/openai.provider.interface";
+import type {
+  IOpenAIProvider,
+  GeneratedEmbedding,
+  OpenAIResponseRequest,
+} from "./interfaces/openai.provider.interface";
 
 export class OpenAIProvider implements IOpenAIProvider {
   constructor(
@@ -10,22 +14,18 @@ export class OpenAIProvider implements IOpenAIProvider {
     private readonly responseModel: string,
   ) {}
 
-  streamResponse(
-    input: string,
-    instructions: string,
-    previousResponseId: string | null,
-    signal: AbortSignal,
-  ) {
+  streamResponse(request: OpenAIResponseRequest) {
     return this.client.responses.create(
       {
         model: this.responseModel,
-        instructions,
-        input,
-        previous_response_id: previousResponseId,
+        instructions: request.instructions,
+        input: request.input,
+        tools: request.tools,
+        previous_response_id: request.previousResponseId,
         store: true,
         stream: true,
       },
-      { signal },
+      { signal: request.signal },
     );
   }
 

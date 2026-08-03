@@ -3,7 +3,10 @@ import test from "node:test";
 
 import { createChatPostHandler } from "@/app/api/chat/route";
 import type { ILogger } from "@/server/infrastructure/logging/logger.interface";
-import type { IOpenAIProvider } from "@/server/infrastructure/openai/interfaces/openai.provider.interface";
+import type {
+  IOpenAIProvider,
+  OpenAIResponseRequest,
+} from "@/server/infrastructure/openai/interfaces/openai.provider.interface";
 import type { ISiteSearchService, MatchSiteChunksRow } from "@/server/modules/search-index/public";
 import { AssistantService } from "@/server/modules/assistant/services/assistant.service";
 
@@ -53,9 +56,9 @@ function createAssistant({
 }: {
   chunks?: MatchSiteChunksRow[];
   embedding?: IOpenAIProvider["createEmbedding"];
-  response?: IOpenAIProvider["streamResponse"];
+  response?: (request: OpenAIResponseRequest) => ReturnType<IOpenAIProvider["streamResponse"]>;
 } = {}) {
-  const inputs: Array<{ input: string; previousResponseId: string | null }> = [];
+  const inputs: OpenAIResponseRequest[] = [];
 
   const logger: ILogger = { info: () => undefined, error: () => undefined };
 
@@ -63,10 +66,10 @@ function createAssistant({
     getEmbeddingModel: () => "test-model",
     createEmbedding: embedding,
     createEmbeddings: async () => [],
-    streamResponse: async (input, _instructions, previousResponseId, signal) => {
-      inputs.push({ input, previousResponseId });
+    streamResponse: async (request) => {
+      inputs.push(request);
 
-      return response(input, _instructions, previousResponseId, signal);
+      return response(request);
     },
   };
 
@@ -96,7 +99,7 @@ async function readChatResponse(response: Response) {
   return read(response.body);
 }
 
-test("direct portfolio question streams its answer, source, and response id", async () => {
+test("conversational response streams without mandatory retrieval", async () => {
   const { inputs, post } = createAssistant();
 
   const output = await readChatResponse(
@@ -108,10 +111,10 @@ test("direct portfolio question streams its answer, source, and response id", as
     ),
   );
 
-  assert.match(inputs[0]?.input ?? "", /What assistant did Freeman build\?/);
+  assert.equal(inputs[0]?.input.length, 1);
   assert.equal(inputs[0]?.previousResponseId, null);
   assert.match(output, /A grounded answer\./);
-  assert.match(output, /Grounded Assistant/);
+  assert.match(output, /"sources":\[\]/);
   assert.match(output, /resp_current/);
 });
 
@@ -132,12 +135,28 @@ test("follow-up question preserves the previous response id and streams the new 
   assert.match(output, /"type":"done"/);
 });
 
-test("multiple relevant sources are returned with one streamed answer", async () => {
-  const { post } = createAssistant({
-    chunks: [
-      source,
-      { ...source, id: "experience-1", title: "Platform engineering", url: "/about" },
-    ],
+test("website tool results are accumulated and supplied to the next response", async () => {
+  const { inputs, post } = createAssistant({
+    response: async (request) =>
+      request.input[0]?.type === "function_call_output"
+        ? events(
+            { type: "response.created", response: { id: "resp_final" } },
+            { type: "response.output_text.delta", delta: "A grounded answer." },
+            { type: "response.completed", response: { id: "resp_final" } },
+          )
+        : events(
+            { type: "response.created", response: { id: "resp_tool" } },
+            {
+              type: "response.output_item.done",
+              item: {
+                type: "function_call",
+                call_id: "call_search",
+                name: "search_website",
+                arguments: '{"query":"Freeman assistant"}',
+              },
+            },
+            { type: "response.completed", response: { id: "resp_tool" } },
+          ),
   });
 
   const output = await readChatResponse(
@@ -149,21 +168,15 @@ test("multiple relevant sources are returned with one streamed answer", async ()
     ),
   );
 
+  assert.equal(inputs.length, 2);
+  assert.equal(inputs[1]?.input[0]?.type, "function_call_output");
   assert.match(output, /Grounded Assistant/);
-  assert.match(output, /Platform engineering/);
   assert.match(output, /A grounded answer\./);
 });
 
-test("no relevant sources returns the existing safe fallback without calling the model", async () => {
-  let streamed = false;
-
+test("a search with no results still lets the model respond", async () => {
   const { post } = createAssistant({
     chunks: [],
-    response: async () => {
-      streamed = true;
-
-      return events();
-    },
   });
 
   const output = await readChatResponse(
@@ -175,8 +188,7 @@ test("no relevant sources returns the existing safe fallback without calling the
     ),
   );
 
-  assert.match(output, /I don.t have enough information/);
-  assert.equal(streamed, false);
+  assert.match(output, /A grounded answer\./);
 });
 
 test("retrieval failure returns the existing safe stream error", async () => {
@@ -184,6 +196,20 @@ test("retrieval failure returns the existing safe stream error", async () => {
     embedding: async () => {
       throw new Error("embedding unavailable");
     },
+    response: async () =>
+      events(
+        { type: "response.created", response: { id: "resp_tool" } },
+        {
+          type: "response.output_item.done",
+          item: {
+            type: "function_call",
+            call_id: "call_search",
+            name: "search_website",
+            arguments: '{"query":"Freeman projects"}',
+          },
+        },
+        { type: "response.completed", response: { id: "resp_tool" } },
+      ),
   });
 
   const output = await readChatResponse(
