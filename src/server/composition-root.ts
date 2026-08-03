@@ -72,7 +72,11 @@ export const searchIndexService: ISearchIndexService = new SearchIndexService(
   logger,
 );
 export const siteSearchService: ISiteSearchService = new SiteSearchService(chunks);
-export const meetingService: IMeetingService = new MeetingService(googleCalendar, meetingRepository);
+export const meetingService: IMeetingService = new MeetingService(
+  googleCalendar,
+  meetingRepository,
+  logger,
+);
 export const assistantService: IAssistantService = new AssistantService(
   openai,
   siteSearchService,

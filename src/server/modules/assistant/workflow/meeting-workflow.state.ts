@@ -1,6 +1,12 @@
 import type { MeetingSlot, MeetingWorkflowPublicState } from "@/contracts/assistant.contract";
 
-export type MeetingWorkflowState = MeetingWorkflowPublicState;
+export type PendingMeetingBooking = {
+  googleEventId: string;
+  googleEventUrl: string | null;
+  rawProviderPayload: Record<string, unknown>;
+};
+
+export type MeetingWorkflowState = MeetingWorkflowPublicState & { pendingBooking: PendingMeetingBooking | null };
 
 export function createEmptyMeetingWorkflowState(): MeetingWorkflowState {
   return {
@@ -12,6 +18,7 @@ export function createEmptyMeetingWorkflowState(): MeetingWorkflowState {
     availabilityCheckedAt: null,
     selectedSlot: null,
     confirmed: false,
+    pendingBooking: null,
   };
 }
 

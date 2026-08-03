@@ -3,9 +3,7 @@ import test from "node:test";
 
 import { createChatPostHandler } from "@/app/api/chat/route";
 import type { ILogger } from "@/server/infrastructure/logging/logger.interface";
-import type {
-  IOpenAIProvider,
-} from "@/server/infrastructure/openai/interfaces/openai.provider.interface";
+import type { IOpenAIProvider } from "@/server/infrastructure/openai/interfaces/openai.provider.interface";
 import type { OpenAIResponseRequest } from "@/server/infrastructure/openai/models/openai-response-request";
 import type { ISiteSearchService, MatchSiteChunksRow } from "@/server/modules/search-index/public";
 import { AssistantService } from "@/server/modules/assistant/services/assistant.service";
@@ -82,9 +80,16 @@ function createAssistant({
     findAvailableSlots: async () => [],
     isSlotAvailable: async () => true,
     bookMeeting: async () => ({ googleEventId: "event_test", googleEventUrl: null }),
+    reconcileMeeting: async () => ({ googleEventId: "event_test", googleEventUrl: null }),
   };
 
-  const assistantService = new AssistantService(openai, siteSearch, logger, meetingService, new MeetingWorkflowService(() => "test-secret"));
+  const assistantService = new AssistantService(
+    openai,
+    siteSearch,
+    logger,
+    meetingService,
+    new MeetingWorkflowService(() => "test-secret"),
+  );
 
   return { inputs, post: createChatPostHandler({ assistantService }) };
 }
