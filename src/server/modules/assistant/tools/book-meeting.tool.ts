@@ -32,12 +32,12 @@ export async function bookMeeting(
 
   if (state.pendingBooking) {
     try {
-      const booking = await dependencies.meetingService.reconcileMeeting({ name: state.name, email: state.email, timezone: state.timezone, reason: state.reason, slot: state.selectedSlot, pendingEvent: state.pendingBooking });
+      const booking = await dependencies.meetingService.reconcileMeeting({ name: state.pendingBooking.name, email: state.pendingBooking.email, timezone: state.pendingBooking.timezone, reason: state.pendingBooking.reason, slot: state.pendingBooking.selectedSlot, pendingEvent: state.pendingBooking });
 
       return { output: { kind: "meeting_booking", status: "confirmed", ...booking }, state: dependencies.workflow.reset() };
     } catch (error) {
       if (error instanceof MeetingPersistenceError) {
-        return { output: { error: "booking_recovery_required", message: "Your calendar event was created, but we could not finish recording it yet. Please try again shortly." }, state: dependencies.workflow.recordPendingBooking(state, error.pendingEvent) };
+        return { output: { error: "booking_recovery_required", message: "Your calendar event was created, but we could not finish recording it yet. Please try again shortly." }, state: dependencies.workflow.recordPendingBooking(state, { ...error.pendingEvent, name: state.name, email: state.email, timezone: state.timezone, reason: state.reason, selectedSlot: state.selectedSlot }) };
       }
 
       throw error;
@@ -61,7 +61,7 @@ export async function bookMeeting(
     booking = await dependencies.meetingService.bookMeeting({ name: state.name, email: state.email, timezone: state.timezone, reason: state.reason, slot: state.selectedSlot });
   } catch (error) {
     if (error instanceof MeetingPersistenceError) {
-      return { output: { error: "booking_recovery_required", message: "Your calendar event was created, but we could not finish recording it yet. Please try again shortly." }, state: dependencies.workflow.recordPendingBooking(state, error.pendingEvent) };
+      return { output: { error: "booking_recovery_required", message: "Your calendar event was created, but we could not finish recording it yet. Please try again shortly." }, state: dependencies.workflow.recordPendingBooking(state, { ...error.pendingEvent, name: state.name, email: state.email, timezone: state.timezone, reason: state.reason, selectedSlot: state.selectedSlot }) };
     }
 
     throw error;

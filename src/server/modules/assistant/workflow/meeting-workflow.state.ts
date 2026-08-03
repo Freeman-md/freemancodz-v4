@@ -4,6 +4,11 @@ export type PendingMeetingBooking = {
   googleEventId: string;
   googleEventUrl: string | null;
   rawProviderPayload: Record<string, unknown>;
+  name: string;
+  email: string;
+  timezone: string;
+  reason: string;
+  selectedSlot: MeetingSlot;
 };
 
 export type MeetingWorkflowState = MeetingWorkflowPublicState & { pendingBooking: PendingMeetingBooking | null };

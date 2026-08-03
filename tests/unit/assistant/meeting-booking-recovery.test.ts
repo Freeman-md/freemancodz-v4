@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { bookMeeting } from "@/server/modules/assistant/tools/book-meeting.tool";
+import { findMeetingSlots } from "@/server/modules/assistant/tools/find-meeting-slots.tool";
+import { prepareMeeting } from "@/server/modules/assistant/tools/prepare-meeting.tool";
 import { MeetingWorkflowService } from "@/server/modules/assistant/workflow/meeting-workflow.service";
 import type { IGoogleCalendarProvider } from "@/server/infrastructure/google-calendar/interfaces/google-calendar.provider.interface";
 import type { IMeetingRepository } from "@/server/modules/meeting/interfaces/meeting.repository.interface";
@@ -43,6 +45,21 @@ test("a persistence retry reconciles one created calendar event without creating
 
   assert.equal(first.output.error, "booking_recovery_required");
   assert.equal(first.state.pendingBooking?.googleEventId, "event_1");
+
+  const guardedAvailability = await findMeetingSlots(
+    { startDate: "2026-09-16", endDate: "2026-09-16", timezone: "Europe/London" },
+    { workflow, meetingService: service, state: first.state },
+  );
+
+  const guardedPreparation = prepareMeeting(
+    { name: "Changed", email: "changed@example.com", timezone: "Europe/London", reason: "Changed reason", selectedSlot: slot },
+    { workflow, state: first.state },
+  );
+
+  assert.equal(guardedAvailability.output.error, "booking_recovery_required");
+  assert.equal(guardedAvailability.state, first.state);
+  assert.equal(guardedPreparation.output.error, "booking_recovery_required");
+  assert.equal(guardedPreparation.state, first.state);
 
   const second = await bookMeeting({}, { workflow, meetingService: service, state: first.state });
 
