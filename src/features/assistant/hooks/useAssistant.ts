@@ -179,7 +179,11 @@ export function useAssistant() {
 
             setPreviousResponseId(responseId);
           },
-          onWorkflow(token) { if (isMountedRef.current && activeRequestIdRef.current === requestId) {setWorkflowToken(token);} },
+          onWorkflow(token) {
+            if (isMountedRef.current && activeRequestIdRef.current === requestId) {
+              setWorkflowToken(token);
+            }
+          },
           onSources(sources) {
             if (!isMountedRef.current || activeRequestIdRef.current !== requestId) {
               return;
@@ -195,7 +199,9 @@ export function useAssistant() {
       } catch (error) {
         cancelPendingRequest();
         const messageText =
-          error instanceof Error ? error.message : "Something went wrong while fetching a response.";
+          error instanceof Error
+            ? error.message
+            : "Something went wrong while fetching a response.";
 
         const errorResponse: ChatMessage = {
           id: `assistant-error-${Date.now()}`,

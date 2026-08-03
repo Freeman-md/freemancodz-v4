@@ -47,7 +47,11 @@ export const assistantStreamEventSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("delta"), delta: z.string() }),
   z.object({ type: z.literal("sources"), sources: z.array(sourceSchema) }),
   z.object({ type: z.literal("response_id"), responseId: z.string() }),
-  z.object({ type: z.literal("meeting_workflow"), token: z.string(), state: meetingWorkflowPublicStateSchema }),
+  z.object({
+    type: z.literal("meeting_workflow"),
+    token: z.string(),
+    state: meetingWorkflowPublicStateSchema,
+  }),
   z.object({ type: z.literal("done") }),
   z.object({ type: z.literal("error"), error: z.string() }),
 ]);

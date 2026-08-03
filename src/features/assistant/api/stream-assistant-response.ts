@@ -80,9 +80,11 @@ export async function streamChatResponse(
       return false;
     }
 
-    if (event.type === "meeting_workflow") { handlers.onWorkflow(event.token);
+    if (event.type === "meeting_workflow") {
+      handlers.onWorkflow(event.token);
 
- return false; }
+      return false;
+    }
 
     if (event.type === "error") {
       throw new Error(event.error);
