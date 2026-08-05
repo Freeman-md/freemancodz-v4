@@ -20,8 +20,11 @@ import { PortfolioSeedRepository } from "./modules/portfolio/repositories/portfo
 import { VercelBlobProvider } from "./modules/portfolio/providers/vercel-blob.provider";
 import { PortfolioService } from "./modules/portfolio/services/portfolio.service";
 import { PortfolioSeedService } from "./modules/portfolio/services/portfolio-seed.service";
+import { PortfolioContentRepository } from "./modules/portfolio/repositories/portfolio-content.repository";
+import { PortfolioContentService } from "./modules/portfolio/services/portfolio-content.service";
 import type { IPortfolioService } from "./modules/portfolio/interfaces/portfolio.service.interface";
 import type { IPortfolioSeedService } from "./modules/portfolio/interfaces/portfolio-seed.service.interface";
+import type { IPortfolioContentService } from "./modules/portfolio/interfaces/portfolio-content.service.interface";
 import { SourceRecordRepository } from "./modules/search-index/repositories/source-record.repository";
 import { SearchIndexJobRepository } from "./modules/search-index/repositories/search-index-job.repository";
 import { SiteChunkRepository } from "./modules/search-index/repositories/site-chunk.repository";
@@ -94,3 +97,6 @@ export const portfolioService: IPortfolioService = new PortfolioService(
   new VercelBlobProvider({ get }),
 );
 export const portfolioSeedService: IPortfolioSeedService = new PortfolioSeedService(seedRepository);
+export const portfolioContentService: IPortfolioContentService = new PortfolioContentService(
+  new PortfolioContentRepository(prisma),
+);

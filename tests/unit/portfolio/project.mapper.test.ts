@@ -6,6 +6,7 @@ import { parseStoredProjectLinks } from "@/server/modules/portfolio/schemas/cont
 import { projectLinksSchema } from "@/server/modules/portfolio/schemas/content-block.schema";
 
 const project = {
+  key: "example",
   title: "Example",
   summary: "Summary",
   category: "Category",
@@ -22,6 +23,7 @@ const project = {
 
 test("maps project nullable fields and stacks for the existing UI", () => {
   assert.deepEqual(mapProject(project), {
+    key: "example",
     title: "Example",
     summary: "Summary",
     category: "Category",

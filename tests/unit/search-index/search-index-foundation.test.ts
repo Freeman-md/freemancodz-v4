@@ -25,6 +25,7 @@ import { SearchIndexService } from "@/server/modules/search-index/services/searc
 
 const project = {
   id: "project-1",
+  key: "project-1",
   title: "Pay4Me",
   summary: "Payments for students.",
   category: "Fintech",
@@ -44,6 +45,7 @@ const project = {
 
 const service = {
   id: "service-1",
+  key: "service-1",
   title: "Product strategy",
   lead: "Find the practical next step.",
   description: "Freeman helps teams shape product systems.",
@@ -56,6 +58,7 @@ const service = {
 
 const experience = {
   id: "experience-1",
+  key: "experience-1",
   title: "Platform engineer",
   company: "Northstar",
   dates: "2024-2026",
@@ -69,6 +72,7 @@ const experience = {
 
 const principle = {
   id: "principle-1",
+  key: "principle-1",
   section: "home",
   title: "Useful software",
   body: "Software should make a practical difference.",

@@ -13,7 +13,7 @@ const hero = {
   key: "home.hero",
   page: "HOME",
   section: "HERO",
-  content: { name: "Freeman", headline: "Headline", intro: "Intro", heroNote: "Note" },
+  content: { name: "Freeman", headline: "Headline", intro: "Intro", heroNote: "Note", primaryLabel: "Audit", primaryHref: "/audit", secondaryLabel: "Work", secondaryHref: "/work" },
 } as unknown as ContentBlock;
 
 test("maps a valid required hero block", () => {

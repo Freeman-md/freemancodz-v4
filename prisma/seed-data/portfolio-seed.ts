@@ -18,8 +18,9 @@ export type PortfolioSeedData = {
     position: number;
     content: Record<string, string>;
   }[];
-  principles: { section: "home" | "about"; title: string; body: string; position: number }[];
+  principles: { key: string; section: "home" | "about"; title: string; body: string; position: number }[];
   services: {
+    key: string;
     title: string;
     lead: string;
     description: string;
@@ -28,6 +29,7 @@ export type PortfolioSeedData = {
     position: number;
   }[];
   experiences: {
+    key: string;
     title: string;
     company: string;
     dates: string;
@@ -37,6 +39,7 @@ export type PortfolioSeedData = {
     position: number;
   }[];
   projects: {
+    key: string;
     title: string;
     summary: string;
     category: string;
@@ -66,6 +69,10 @@ export function getPortfolioSeedData(): PortfolioSeedData {
           headline: profile.headline,
           intro: profile.intro,
           heroNote: profile.heroNote,
+          primaryLabel: "Get a Free Audit",
+          primaryHref: "/audit",
+          secondaryLabel: "View My Work",
+          secondaryHref: "/work",
         },
       },
       {
@@ -124,25 +131,30 @@ export function getPortfolioSeedData(): PortfolioSeedData {
     principles: [
       ...profile.principles.map((principle, position) => ({
         ...principle,
+        key: `home-principle-${position}`,
         section: "home" as const,
         position,
       })),
       ...profile.aboutPrinciples.map((principle, position) => ({
         ...principle,
+        key: `about-principle-${position}`,
         section: "about" as const,
         position,
       })),
     ],
     services: profile.services.map((service, position) => ({
       ...service,
+      key: `service-${position}`,
       position,
     })),
     experiences: experiences.map((experience, position) => ({
       ...experience,
+      key: `experience-${position}`,
       location: experience.location ?? null,
       position,
     })),
     projects: projects.map((project, position) => ({
+      key: project.key ?? `project-${position}`,
       title: project.title,
       summary: project.summary,
       category: project.category,
