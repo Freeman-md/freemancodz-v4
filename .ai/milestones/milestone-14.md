@@ -1,11 +1,11 @@
 # Milestone 14: Visual-First Audit Conversion Page
 
-**Status:** Frozen  
-**Version:** 1.0.0  
-**Last Updated:** 2026-08-05  
-**Depends On:** Milestone 13  
-**Target Pull Request:** —  
-**Target Branch:** `feat/milestone-14-audit-page`  
+**Status:** Frozen
+**Version:** 1.0.0
+**Last Updated:** 2026-08-05
+**Depends On:** Milestone 13
+**Target Pull Request:** —
+**Target Branch:** `feat/milestone-14-audit-page`
 **Superseded By:** —
 
 ## Goal
