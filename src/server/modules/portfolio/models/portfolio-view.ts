@@ -1,3 +1,4 @@
+import type { AuditPageData } from "@/contracts/audit-page.contract";
 import type { ProjectLinks } from "@/server/modules/portfolio/schemas/content-block.schema";
 import type { AboutHeaderContent } from "@/server/modules/portfolio/schemas/content-block.schema";
 import type { CurrentDirectionContent } from "@/server/modules/portfolio/schemas/content-block.schema";
@@ -108,11 +109,4 @@ export type AboutPageData = {
   principles: Principle[];
 };
 
-export type AuditProofProject = { key: string; title: string; outcome: string; label: string };
-export type AuditPageData = {
-  hero: AuditHeroContent;
-  problemSignals: AuditProblemSignalsContent;
-  deliverable: AuditDeliverableContent;
-  proof: Omit<AuditProofContent, "items"> & { items: AuditProofProject[] };
-  finalCta: AuditFinalCtaContent;
-};
+export type { AuditPageData };
