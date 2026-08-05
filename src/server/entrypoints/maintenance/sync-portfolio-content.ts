@@ -1,38 +1,28 @@
-import { portfolioContentScopes, type PortfolioContentScope } from "../../../../content/portfolio";
+import { portfolioContentScopes } from "../../../../content/portfolio";
 import { portfolioContentService } from "@/server/composition-root";
-import { requireProductionConfirmation } from "./require-production-confirmation";
-
-const isProductionRun = process.argv.includes("--production");
-
-const requestedScopes = process.argv.slice(2).filter((argument) => argument !== "--production");
-
-function selectScopes(): PortfolioContentScope[] {
-  if (requestedScopes.length === 0) {return portfolioContentScopes;}
-
-  const unknown = requestedScopes.filter(
-    (scope) => !portfolioContentScopes.includes(scope as PortfolioContentScope),
-  );
-
-  if (unknown.length > 0)
-    {throw new Error(
-      `Unknown content scope: ${unknown.join(", ")}. Allowed scopes: ${portfolioContentScopes.join(", ")}.`,
-    );}
-
-  return requestedScopes as PortfolioContentScope[];
-}
+import { requireProductionConfirmation } from "../helpers/require-production-confirmation";
+import {
+  executePortfolioContentSync,
+  parsePortfolioContentSyncArguments,
+} from "./portfolio-content-sync.arguments";
 
 async function main() {
-  const scopes = selectScopes();
+  const argumentsResult = parsePortfolioContentSyncArguments(
+    process.argv.slice(2),
+    portfolioContentScopes,
+  );
 
-  if (isProductionRun) {
-    console.log(`Production portfolio content sync for: ${scopes.join(", ")}`);
-    requireProductionConfirmation();
+  if (argumentsResult.isProduction) {
+    console.log(`Production portfolio content sync for: ${argumentsResult.scopes.join(", ")}`);
   }
 
   const { prisma } = await import("@/server/infrastructure/database/prisma");
 
   try {
-    const result = await portfolioContentService.sync(scopes);
+    const result = await executePortfolioContentSync(argumentsResult, {
+      confirmProduction: requireProductionConfirmation,
+      sync: (scopes) => portfolioContentService.sync(scopes),
+    });
 
     console.log(
       `Synced ${result.scopes.join(", ")}: inserted ${result.inserted}, updated ${result.updated}, unchanged ${result.unchanged}.`,
