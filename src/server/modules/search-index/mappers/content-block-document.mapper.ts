@@ -1,5 +1,10 @@
 import type { ContentBlock } from "@/generated/prisma/client";
 import {
+  auditDeliverableContentSchema,
+  auditFinalCtaContentSchema,
+  auditHeroContentSchema,
+  auditProblemSignalsContentSchema,
+  auditProofContentSchema,
   aboutHeaderContentSchema,
   currentDirectionContentSchema,
   educationContentSchema,
@@ -35,6 +40,37 @@ function textBlockTitle(prefix: string, key: string, body: string): string {
 }
 
 export function mapContentBlockDocument(block: ContentBlock): IndexDocument {
+  if (block.page === "AUDIT") {
+    const auditSchemas = {
+      "audit.hero": auditHeroContentSchema,
+      "audit.problem-signals": auditProblemSignalsContentSchema,
+      "audit.deliverable": auditDeliverableContentSchema,
+      "audit.proof": auditProofContentSchema,
+      "audit.final-cta": auditFinalCtaContentSchema,
+    } as const;
+
+    const schema = auditSchemas[block.key as keyof typeof auditSchemas];
+
+    const parsed = schema?.safeParse(block.content);
+
+    if (parsed?.success) {
+      const data = parsed.data;
+
+      const paragraphs =
+        "items" in data
+          ? data.items.map((item) =>
+              "projectKey" in item
+                ? `${item.projectKey}: ${item.label}`
+                : `${item.title}: ${item.copy}`,
+            )
+          : "deliverables" in data
+            ? [data.headline, data.copy, data.audience, ...data.deliverables]
+            : [data.headline, data.copy, "microcopy" in data ? data.microcopy : ""];
+
+      return document(block, { title: "headline" in data ? data.headline : "Free audit", category: "Free audit", url: "/audit", keywords: ["Free audit", "Customer journey", "Operational workflow"], paragraphs });
+    }
+  }
+
   if (block.key === "home.hero" && block.page === "HOME" && block.section === "HERO") {
     const parsed = heroContentSchema.safeParse(block.content);
 

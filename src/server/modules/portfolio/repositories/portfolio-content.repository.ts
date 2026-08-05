@@ -38,6 +38,8 @@ export class PortfolioContentRepository implements IPortfolioContentRepository {
           return this.syncContentBlocks(database, portfolioContent.home);
         case "about":
           return this.syncContentBlocks(database, portfolioContent.about);
+        case "audit":
+          return this.syncContentBlocks(database, portfolioContent.audit);
         case "services":
           return this.syncRecords(
             portfolioContent.services,
@@ -95,7 +97,7 @@ export class PortfolioContentRepository implements IPortfolioContentRepository {
 
   private async syncContentBlocks(
     database: Prisma.TransactionClient,
-    records: typeof portfolioContent.home,
+    records: (typeof portfolioContent.home | typeof portfolioContent.about | typeof portfolioContent.audit),
   ) {
     let inserted = 0;
 

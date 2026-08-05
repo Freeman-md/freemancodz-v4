@@ -1,5 +1,10 @@
 import type { ContentBlock, ContentPage, ContentSection } from "@/generated/prisma/client";
 import {
+  auditDeliverableContentSchema,
+  auditFinalCtaContentSchema,
+  auditHeroContentSchema,
+  auditProblemSignalsContentSchema,
+  auditProofContentSchema,
   aboutHeaderContentSchema,
   currentDirectionContentSchema,
   educationContentSchema,
@@ -68,6 +73,26 @@ export function mapHomeFinalCtaBlock(block: ContentBlock) {
 
   return parseStoredContent(homeFinalCtaContentSchema, block.content, block.key);
 }
+
+export function mapAuditHeroBlock(block: ContentBlock) { assertContentBlockIdentity(block, { key: "audit.hero", page: "AUDIT", section: "HERO" });
+
+ return parseStoredContent(auditHeroContentSchema, block.content, block.key); }
+
+export function mapAuditProblemSignalsBlock(block: ContentBlock) { assertContentBlockIdentity(block, { key: "audit.problem-signals", page: "AUDIT", section: "AUDIT_PROBLEM_SIGNALS" });
+
+ return parseStoredContent(auditProblemSignalsContentSchema, block.content, block.key); }
+
+export function mapAuditDeliverableBlock(block: ContentBlock) { assertContentBlockIdentity(block, { key: "audit.deliverable", page: "AUDIT", section: "AUDIT_DELIVERABLE" });
+
+ return parseStoredContent(auditDeliverableContentSchema, block.content, block.key); }
+
+export function mapAuditProofBlock(block: ContentBlock) { assertContentBlockIdentity(block, { key: "audit.proof", page: "AUDIT", section: "AUDIT_PROOF" });
+
+ return parseStoredContent(auditProofContentSchema, block.content, block.key); }
+
+export function mapAuditFinalCtaBlock(block: ContentBlock) { assertContentBlockIdentity(block, { key: "audit.final-cta", page: "AUDIT", section: "FINAL_CTA" });
+
+ return parseStoredContent(auditFinalCtaContentSchema, block.content, block.key); }
 
 export function mapPhilosophyBlock(block: ContentBlock) {
   assertContentBlockIdentity(block, {

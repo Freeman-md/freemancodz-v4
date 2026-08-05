@@ -33,7 +33,7 @@ export function Navbar() {
             );
           })}
         </div>
-        <a
+        {pathname === "/audit" ? null : <a
           href={externalLinks.linkedin}
           target="_blank"
           rel="noreferrer"
@@ -41,7 +41,7 @@ export function Navbar() {
         >
           LinkedIn
           <span aria-hidden="true">↗</span>
-        </a>
+        </a>}
       </nav>
       <div className="flex justify-center gap-8 border-t border-line px-5 py-3 md:hidden">
         {navigation.map((item) => {

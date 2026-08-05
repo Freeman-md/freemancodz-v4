@@ -7,6 +7,11 @@ import type { OutsideEngineeringContent } from "@/server/modules/portfolio/schem
 import type { PhilosophyContent } from "@/server/modules/portfolio/schemas/content-block.schema";
 import type { TextBlockContent } from "@/server/modules/portfolio/schemas/content-block.schema";
 import type {
+  AuditDeliverableContent,
+  AuditFinalCtaContent,
+  AuditHeroContent,
+  AuditProblemSignalsContent,
+  AuditProofContent,
   HomeAuditOfferContent,
   HomeFinalCtaContent,
   HomeProofOfWorkContent,
@@ -101,4 +106,13 @@ export type AboutPageData = {
   workProcess: TextBlockContent[];
   outsideEngineering: OutsideEngineeringContent[];
   principles: Principle[];
+};
+
+export type AuditProofProject = { key: string; title: string; outcome: string; label: string };
+export type AuditPageData = {
+  hero: AuditHeroContent;
+  problemSignals: AuditProblemSignalsContent;
+  deliverable: AuditDeliverableContent;
+  proof: Omit<AuditProofContent, "items"> & { items: AuditProofProject[] };
+  finalCta: AuditFinalCtaContent;
 };

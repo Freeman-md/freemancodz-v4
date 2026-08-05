@@ -20,6 +20,7 @@ export const navigation = [
   { label: "Home", href: "/" },
   { label: "Work", href: "/work" },
   { label: "About", href: "/about" },
+  { label: "Audit", href: "/audit" },
 ];
 
 export const externalLinks = envLinks;

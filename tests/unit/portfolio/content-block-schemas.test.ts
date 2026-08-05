@@ -11,6 +11,8 @@ import { homeServicesIntroContentSchema } from "@/server/modules/portfolio/schem
 import { outsideEngineeringContentSchema } from "@/server/modules/portfolio/schemas/content-block.schema";
 import { philosophyContentSchema } from "@/server/modules/portfolio/schemas/content-block.schema";
 import { textBlockContentSchema } from "@/server/modules/portfolio/schemas/content-block.schema";
+import { auditDeliverableContentSchema, auditFinalCtaContentSchema, auditHeroContentSchema, auditProblemSignalsContentSchema, auditProofContentSchema } from "@/server/modules/portfolio/schemas/content-block.schema";
+import { audit } from "../../../content/portfolio/audit";
 
 const schemas = [
   [
@@ -131,4 +133,29 @@ test("homepage conversion schemas reject malformed required payloads", () => {
     }).success,
     false,
   );
+});
+
+test("audit content schemas enforce the approved bounded page shapes", () => {
+  const [heroRecord, signalsRecord, deliverableRecord, proofRecord, finalCtaRecord] = audit.map((block) => block.content);
+
+  const hero = auditHeroContentSchema.parse(heroRecord);
+
+  const signals = auditProblemSignalsContentSchema.parse(signalsRecord);
+
+  const deliverable = auditDeliverableContentSchema.parse(deliverableRecord);
+
+  const proof = auditProofContentSchema.parse(proofRecord);
+
+  const finalCta = auditFinalCtaContentSchema.parse(finalCtaRecord);
+
+  assert.equal(auditHeroContentSchema.safeParse(hero).success, true);
+  assert.equal(auditProblemSignalsContentSchema.safeParse(signals).success, true);
+  assert.equal(auditDeliverableContentSchema.safeParse(deliverable).success, true);
+  assert.equal(auditProofContentSchema.safeParse(proof).success, true);
+  assert.equal(auditFinalCtaContentSchema.safeParse(finalCta).success, true);
+  assert.equal(auditHeroContentSchema.safeParse({ ...hero, copy: undefined }).success, false);
+  assert.equal(auditHeroContentSchema.safeParse({ ...hero, action: { ...hero.action, prompt: "x".repeat(501) } }).success, false);
+  assert.equal(auditProblemSignalsContentSchema.safeParse({ ...signals, items: signals.items.slice(0, 3) }).success, false);
+  assert.equal(auditDeliverableContentSchema.safeParse({ ...deliverable, process: deliverable.process.slice(0, 2) }).success, false);
+  assert.equal(auditFinalCtaContentSchema.safeParse({ ...finalCta, action: {} }).success, false);
 });

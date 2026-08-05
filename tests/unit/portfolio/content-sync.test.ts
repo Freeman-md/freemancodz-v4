@@ -164,6 +164,10 @@ test("sync argument parsing filters recognised flags and rejects unknown scopes 
   assert.equal(writes, 0);
 });
 
+test("audit is accepted as a content-sync scope", () => {
+  assert.deepEqual(parsePortfolioContentSyncArguments(["audit"], ["home", "audit"]).scopes, ["audit"]);
+});
+
 test("confirmed production sync executes only its selected scope", async () => {
   const calls: string[] = [];
 

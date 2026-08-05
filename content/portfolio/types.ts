@@ -1,6 +1,6 @@
 export type PortfolioContentBlock = {
   key: string;
-  page: "HOME" | "ABOUT";
+  page: "HOME" | "ABOUT" | "AUDIT";
   section: string;
   position: number;
   content: Record<string, unknown>;
