@@ -67,10 +67,10 @@ UPDATE "principles" SET "key" = CASE
 END
 WHERE "key" IS NULL;
 
-UPDATE "principles" SET "key" = CONCAT("principle-", "id") WHERE "key" IS NULL;
-UPDATE "services" SET "key" = CONCAT("service-", "id") WHERE "key" IS NULL;
-UPDATE "experiences" SET "key" = CONCAT("experience-", "id") WHERE "key" IS NULL;
-UPDATE "projects" SET "key" = CONCAT("project-", "id") WHERE "key" IS NULL;
+UPDATE "principles" SET "key" = CONCAT('principle-', "id") WHERE "key" IS NULL;
+UPDATE "services" SET "key" = CONCAT('service-', "id") WHERE "key" IS NULL;
+UPDATE "experiences" SET "key" = CONCAT('experience-', "id") WHERE "key" IS NULL;
+UPDATE "projects" SET "key" = CONCAT('project-', "id") WHERE "key" IS NULL;
 
 ALTER TABLE "principles" ALTER COLUMN "key" SET NOT NULL;
 ALTER TABLE "services" ALTER COLUMN "key" SET NOT NULL;
