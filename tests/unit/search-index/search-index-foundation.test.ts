@@ -193,6 +193,23 @@ test("all audit content blocks map to the Audit search document", () => {
   assert.deepEqual(documents.map((document) => document.url), ["/audit", "/audit", "/audit", "/audit", "/audit"]);
   assert.ok(documents.every((document) => document.paragraphs.length > 0));
 });
+
+test("invalid Audit content blocks fail instead of being indexed", () => {
+  const hero = audit[0];
+
+  const block = {
+    id: "invalid-audit-block",
+    key: hero.key,
+    page: "AUDIT",
+    section: hero.section,
+    position: 0,
+    content: { ...hero.content, headline: undefined },
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  } as ContentBlock;
+
+  assert.throws(() => mapContentBlockDocument(block), /Unsupported or invalid content block: audit.hero/);
+});
 test("all supported source records map to meaningful source-specific text", () => {
   const documents = [
     mapSourceDocument({ sourceType: "services", record: service }),

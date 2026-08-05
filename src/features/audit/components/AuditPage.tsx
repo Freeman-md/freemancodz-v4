@@ -1,5 +1,3 @@
-"use client";
-
 import type { AuditPageData } from "@/contracts/audit-page.contract";
 import { AuditDeliverable } from "./AuditDeliverable";
 import { AuditFinalCta } from "./AuditFinalCta";

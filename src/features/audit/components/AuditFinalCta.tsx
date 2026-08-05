@@ -1,4 +1,3 @@
-"use client";
 import { Sparkles } from "lucide-react";
 import type { AuditPageData } from "@/contracts/audit-page.contract";
 import { Container } from "@/shared/components/layout/Container";

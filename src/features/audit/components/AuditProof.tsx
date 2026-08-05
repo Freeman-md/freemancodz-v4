@@ -1,4 +1,3 @@
-"use client";
 import type { AuditPageData } from "@/contracts/audit-page.contract";
 import { Container } from "@/shared/components/layout/Container";
 export function AuditProof({ proof }: { proof: AuditPageData["proof"] }) { return <Container className="py-20 md:py-28"><p className="font-mono text-xs uppercase tracking-[0.25em] text-accent">{proof.eyebrow}</p><h2 className="mt-4 text-3xl font-semibold tracking-[-0.04em] text-ink md:text-5xl">{proof.headline}</h2><p className="mt-4 max-w-3xl text-lg leading-8 text-muted">{proof.copy}</p><div className="mt-9 grid gap-4 md:grid-cols-3">{proof.items.map((item) => <article key={item.key} className="rounded-sm border border-line bg-white p-6"><p className="font-mono text-xs uppercase tracking-[0.14em] text-accent">{item.label}</p><h3 className="mt-5 text-xl font-medium text-ink">{item.title}</h3><p className="mt-3 text-sm leading-6 text-muted">{item.outcome}</p></article>)}</div></Container>; }

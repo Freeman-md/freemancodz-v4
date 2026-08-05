@@ -1,4 +1,3 @@
-"use client";
 import type { AuditPageData } from "@/contracts/audit-page.contract";
 import { Container } from "@/shared/components/layout/Container";
 import { AuditAction } from "./AuditAction";
