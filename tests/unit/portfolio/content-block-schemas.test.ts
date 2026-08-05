@@ -4,6 +4,10 @@ import { aboutHeaderContentSchema } from "@/server/modules/portfolio/schemas/con
 import { currentDirectionContentSchema } from "@/server/modules/portfolio/schemas/content-block.schema";
 import { educationContentSchema } from "@/server/modules/portfolio/schemas/content-block.schema";
 import { heroContentSchema } from "@/server/modules/portfolio/schemas/content-block.schema";
+import { homeAuditOfferContentSchema } from "@/server/modules/portfolio/schemas/content-block.schema";
+import { homeFinalCtaContentSchema } from "@/server/modules/portfolio/schemas/content-block.schema";
+import { homeProofOfWorkContentSchema } from "@/server/modules/portfolio/schemas/content-block.schema";
+import { homeServicesIntroContentSchema } from "@/server/modules/portfolio/schemas/content-block.schema";
 import { outsideEngineeringContentSchema } from "@/server/modules/portfolio/schemas/content-block.schema";
 import { philosophyContentSchema } from "@/server/modules/portfolio/schemas/content-block.schema";
 import { textBlockContentSchema } from "@/server/modules/portfolio/schemas/content-block.schema";
@@ -54,4 +58,77 @@ test("content block schemas reject incorrect field types", () => {
 
     assert.equal(schema.safeParse({ ...payload, [field]: 1 }).success, false);
   }
+});
+
+test("homepage conversion schemas accept their supported payloads", () => {
+  const payloads = [
+    [homeServicesIntroContentSchema, { title: "What I Help Improve", copy: "Customer journeys." }],
+    [
+      homeProofOfWorkContentSchema,
+      {
+        title: "Proof of Work",
+        copy: "Evidence.",
+        items: [
+          {
+            projectKey: "portfolio-assistant",
+            action: { type: "assistant", label: "Try", prompt: "Help me." },
+          },
+          { projectKey: "email-pa", action: null },
+        ],
+      },
+    ],
+    [
+      homeAuditOfferContentSchema,
+      {
+        label: "Free Audit",
+        title: "Find friction.",
+        copy: "Review it.",
+        actionLabel: "Start",
+        actionHref: "/audit",
+        checklist: ["Customer journey friction"],
+      },
+    ],
+    [
+      homeFinalCtaContentSchema,
+      {
+        title: "Need help?",
+        primaryLabel: "Audit",
+        primaryHref: "/audit",
+        secondaryLabel: "Work",
+        secondaryHref: "/work",
+      },
+    ],
+  ] as const;
+
+  for (const [schema, payload] of payloads) {
+    assert.deepEqual(schema.parse(payload), payload);
+  }
+});
+
+test("homepage conversion schemas reject malformed required payloads", () => {
+  assert.equal(homeServicesIntroContentSchema.safeParse({ title: "Missing copy" }).success, false);
+  assert.equal(
+    homeProofOfWorkContentSchema.safeParse({ title: "Proof", copy: "Copy", items: [{}] }).success,
+    false,
+  );
+  assert.equal(
+    homeAuditOfferContentSchema.safeParse({
+      label: "Audit",
+      title: "Title",
+      copy: "Copy",
+      actionLabel: "Start",
+      actionHref: "/audit",
+      checklist: [],
+    }).success,
+    false,
+  );
+  assert.equal(
+    homeFinalCtaContentSchema.safeParse({
+      title: "Title",
+      primaryLabel: "Audit",
+      primaryHref: "/audit",
+      secondaryLabel: "Work",
+    }).success,
+    false,
+  );
 });
