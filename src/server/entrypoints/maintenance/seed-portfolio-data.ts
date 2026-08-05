@@ -1,6 +1,6 @@
 import { getPortfolioSeedData } from "../../../../prisma/seed-data/portfolio-seed";
 import { portfolioSeedService } from "@/server/composition-root";
-import { requireProductionConfirmation } from "./require-production-confirmation";
+import { requireProductionConfirmation } from "../helpers/require-production-confirmation";
 
 const isProductionRun = process.argv.includes("--production");
 

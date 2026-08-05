@@ -4,6 +4,10 @@ import {
   currentDirectionContentSchema,
   educationContentSchema,
   heroContentSchema,
+  homeAuditOfferContentSchema,
+  homeFinalCtaContentSchema,
+  homeProofOfWorkContentSchema,
+  homeServicesIntroContentSchema,
   outsideEngineeringContentSchema,
   parseStoredContent,
   philosophyContentSchema,
@@ -27,6 +31,42 @@ export function mapHeroBlock(block: ContentBlock) {
   assertContentBlockIdentity(block, { key: "home.hero", page: "HOME", section: "HERO" });
 
   return parseStoredContent(heroContentSchema, block.content, block.key);
+}
+
+export function mapHomeServicesIntroBlock(block: ContentBlock) {
+  assertContentBlockIdentity(block, {
+    key: "home.services-intro",
+    page: "HOME",
+    section: "SERVICES_INTRO",
+  });
+
+  return parseStoredContent(homeServicesIntroContentSchema, block.content, block.key);
+}
+
+export function mapHomeProofOfWorkBlock(block: ContentBlock) {
+  assertContentBlockIdentity(block, {
+    key: "home.proof-of-work",
+    page: "HOME",
+    section: "PROOF_OF_WORK",
+  });
+
+  return parseStoredContent(homeProofOfWorkContentSchema, block.content, block.key);
+}
+
+export function mapHomeAuditOfferBlock(block: ContentBlock) {
+  assertContentBlockIdentity(block, {
+    key: "home.audit-offer",
+    page: "HOME",
+    section: "AUDIT_OFFER",
+  });
+
+  return parseStoredContent(homeAuditOfferContentSchema, block.content, block.key);
+}
+
+export function mapHomeFinalCtaBlock(block: ContentBlock) {
+  assertContentBlockIdentity(block, { key: "home.final-cta", page: "HOME", section: "FINAL_CTA" });
+
+  return parseStoredContent(homeFinalCtaContentSchema, block.content, block.key);
 }
 
 export function mapPhilosophyBlock(block: ContentBlock) {

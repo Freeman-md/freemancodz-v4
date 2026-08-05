@@ -2,6 +2,7 @@ import type { Project } from "@/server/modules/portfolio/models/portfolio-view";
 
 export const projects: Project[] = [
   {
+    key: "pay4me-withradius",
     title: "Pay4Me / WithRadius",
     summary:
       "A cross-border platform helping international students and relocation users handle education and move-abroad payments worldwide.",
@@ -25,6 +26,7 @@ export const projects: Project[] = [
     featured: true,
   },
   {
+    key: "creator-lab",
     title: "Creator Lab",
     summary:
       "An AI feedback engine for LinkedIn creators that turns published posts, metrics, and analysis into practical guidance for the next post.",
@@ -59,6 +61,7 @@ export const projects: Project[] = [
     featured: true,
   },
   {
+    key: "email-pa",
     title: "Email PA",
     summary:
       "A background AI assistant that watches job-application messages, identifies useful updates, tracks state, and sends concise Telegram reports.",
@@ -85,6 +88,7 @@ export const projects: Project[] = [
     featured: true,
   },
   {
+    key: "across-the-horizon",
     title: "AcrossTheHorizon",
     summary:
       "A study-abroad platform helping users access education relocation resources, offers, reviews, and related services.",
@@ -101,6 +105,7 @@ export const projects: Project[] = [
     featured: true,
   },
   {
+    key: "internal-ops-automation",
     title: "Internal Ops Automation System",
     summary:
       "A Playwright-driven internal operations automation system with deterministic workflows, AI intent routing, streaming results, and a React control panel.",

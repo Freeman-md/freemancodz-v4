@@ -25,6 +25,7 @@ import { SearchIndexService } from "@/server/modules/search-index/services/searc
 
 const project = {
   id: "project-1",
+  key: "project-1",
   title: "Pay4Me",
   summary: "Payments for students.",
   category: "Fintech",
@@ -44,6 +45,7 @@ const project = {
 
 const service = {
   id: "service-1",
+  key: "service-1",
   title: "Product strategy",
   lead: "Find the practical next step.",
   description: "Freeman helps teams shape product systems.",
@@ -56,6 +58,7 @@ const service = {
 
 const experience = {
   id: "experience-1",
+  key: "experience-1",
   title: "Platform engineer",
   company: "Northstar",
   dates: "2024-2026",
@@ -69,6 +72,7 @@ const experience = {
 
 const principle = {
   id: "principle-1",
+  key: "principle-1",
   section: "home",
   title: "Useful software",
   body: "Software should make a practical difference.",
@@ -111,6 +115,73 @@ test("content blocks use descriptive titles and invalid blocks fail visibly", ()
   assert.match(numericIntro.title, /reliable product systems/i);
   assert.doesNotMatch(numericIntro.title, /: 0$/);
   assert.ok(numericIntro.keywords.some((keyword) => /reliable product systems/i.test(keyword)));
+});
+test("new homepage content blocks map to meaningful search documents", () => {
+  const base = {
+    id: "homepage-block",
+    page: "HOME",
+    position: 0,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  } as ContentBlock;
+
+  const documents = [
+    mapContentBlockDocument({
+      ...base,
+      key: "home.services-intro",
+      section: "SERVICES_INTRO",
+      content: { title: "What I Help Improve", copy: "Customer journeys and workflows." },
+    }),
+    mapContentBlockDocument({
+      ...base,
+      key: "home.proof-of-work",
+      section: "PROOF_OF_WORK",
+      content: {
+        title: "Proof of Work",
+        copy: "Real products.",
+        items: [
+          { projectKey: "pay4me-withradius", action: { type: "external", label: "View", href: "https://pay4me.app" } },
+        ],
+      },
+    }),
+    mapContentBlockDocument({
+      ...base,
+      key: "home.audit-offer",
+      section: "AUDIT_OFFER",
+      content: {
+        label: "Free Customer Journey & Workflow Audit",
+        title: "Find friction.",
+        copy: "Review opportunities.",
+        actionLabel: "Get a Free Audit",
+        actionHref: "/audit",
+        checklist: ["Customer journey friction", "Manual work"],
+      },
+    }),
+    mapContentBlockDocument({
+      ...base,
+      key: "home.final-cta",
+      section: "FINAL_CTA",
+      content: {
+        title: "Not sure where customers are getting stuck?",
+        primaryLabel: "Get a Free Audit",
+        primaryHref: "/audit",
+        secondaryLabel: "View My Work",
+        secondaryHref: "/work",
+      },
+    }),
+  ];
+
+  assert.deepEqual(
+    documents.map((document) => document.title),
+    [
+      "What I Help Improve",
+      "Proof of Work",
+      "Free Customer Journey & Workflow Audit",
+      "Freeman's next steps",
+    ],
+  );
+  assert.match(documents[1]?.paragraphs.join(" ") ?? "", /pay4me-withradius/);
+  assert.match(documents[2]?.paragraphs.join(" ") ?? "", /Customer journey friction/);
 });
 test("all supported source records map to meaningful source-specific text", () => {
   const documents = [

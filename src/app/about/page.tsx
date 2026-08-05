@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { connection } from "next/server";
 import { CTASection } from "@/features/portfolio/components/CTASection";
 import { Container } from "@/shared/components/layout/Container";
 import { ImagePlaceholder } from "@/shared/components/ui/ImagePlaceholder";
@@ -27,6 +28,8 @@ export const metadata: Metadata = {
 };
 
 export default async function AboutPage() {
+  await connection();
+
   const { header, education, intro, workProcess, outsideEngineering, principles } =
     await portfolioService.getAboutPageData();
 

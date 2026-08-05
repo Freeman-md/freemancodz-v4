@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { connection } from "next/server";
 import { CTASection } from "@/features/portfolio/components/CTASection";
 import { Container } from "@/shared/components/layout/Container";
 import { ProjectCard } from "@/features/portfolio/components/ProjectCard";
@@ -27,6 +28,8 @@ export const metadata: Metadata = {
 };
 
 export default async function WorkPage() {
+  await connection();
+
   const { featuredProjects, otherProjects } = await portfolioService.getWorkPageData();
 
   return (

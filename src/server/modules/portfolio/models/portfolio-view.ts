@@ -1,4 +1,17 @@
 import type { ProjectLinks } from "@/server/modules/portfolio/schemas/content-block.schema";
+import type { AboutHeaderContent } from "@/server/modules/portfolio/schemas/content-block.schema";
+import type { CurrentDirectionContent } from "@/server/modules/portfolio/schemas/content-block.schema";
+import type { EducationContent } from "@/server/modules/portfolio/schemas/content-block.schema";
+import type { HeroContent } from "@/server/modules/portfolio/schemas/content-block.schema";
+import type { OutsideEngineeringContent } from "@/server/modules/portfolio/schemas/content-block.schema";
+import type { PhilosophyContent } from "@/server/modules/portfolio/schemas/content-block.schema";
+import type { TextBlockContent } from "@/server/modules/portfolio/schemas/content-block.schema";
+import type {
+  HomeAuditOfferContent,
+  HomeFinalCtaContent,
+  HomeProofOfWorkContent,
+  HomeServicesIntroContent,
+} from "@/server/modules/portfolio/schemas/content-block.schema";
 
 export type ProfileService = {
   title: string;
@@ -16,6 +29,7 @@ export type Experience = {
   category: string;
 };
 export type Project = {
+  key: string;
   title: string;
   summary: string;
   category: string;
@@ -29,13 +43,6 @@ export type Project = {
   positioning?: string;
   featured?: boolean;
 };
-import type { AboutHeaderContent } from "@/server/modules/portfolio/schemas/content-block.schema";
-import type { CurrentDirectionContent } from "@/server/modules/portfolio/schemas/content-block.schema";
-import type { EducationContent } from "@/server/modules/portfolio/schemas/content-block.schema";
-import type { HeroContent } from "@/server/modules/portfolio/schemas/content-block.schema";
-import type { OutsideEngineeringContent } from "@/server/modules/portfolio/schemas/content-block.schema";
-import type { PhilosophyContent } from "@/server/modules/portfolio/schemas/content-block.schema";
-import type { TextBlockContent } from "@/server/modules/portfolio/schemas/content-block.schema";
 
 export type Principle = {
   title: string;
@@ -47,19 +54,39 @@ export type {
   CurrentDirectionContent,
   EducationContent,
   HeroContent,
+  HomeAuditOfferContent,
+  HomeFinalCtaContent,
+  HomeProofOfWorkContent,
+  HomeServicesIntroContent,
   OutsideEngineeringContent,
   PhilosophyContent,
   TextBlockContent,
 };
 
+export type HomeProofAction = HomeProofOfWorkContent["items"][number]["action"];
+
+export type HomeProofProject = {
+  key: string;
+  title: string;
+  category: string;
+  problem: string;
+  whatIBuilt: string;
+  outcome: string;
+};
+
+export type HomeProofOfWork = Omit<HomeProofOfWorkContent, "items"> & {
+  items: Array<{ project: HomeProofProject; action: HomeProofAction }>;
+};
+
+export type HomeAuditOffer = HomeAuditOfferContent;
+
 export type HomePageData = {
   hero: HeroContent;
-  philosophy: PhilosophyContent;
-  currentDirection: CurrentDirectionContent;
+  servicesIntro: HomeServicesIntroContent;
+  proof: HomeProofOfWork;
+  auditOffer: HomeAuditOffer;
+  finalCta: HomeFinalCtaContent;
   services: ProfileService[];
-  principles: Principle[];
-  featuredProjects: Project[];
-  experiences: Experience[];
 };
 
 export type WorkPageData = {
