@@ -19,7 +19,7 @@ export const siteConfig = {
   shortName: SITE_OWNER_NAME,
   title: `${SITE_OWNER_NAME} | Software Engineer`,
   description:
-    "Software Engineer helping founders and teams translate ideas into reliable and scalable systems.",
+    "Building customer-facing products and reliable operational workflows that help businesses improve customer journeys and reduce repetitive work.",
   url: getSiteUrl(),
   ogImage: "/opengraph-image",
   links: {

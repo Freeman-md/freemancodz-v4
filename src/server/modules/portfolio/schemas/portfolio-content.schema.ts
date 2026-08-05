@@ -23,24 +23,39 @@ const contentSchemas = {
 
 function assertUniqueKeys(records: { key: string }[], label: string) {
   const keys = new Set<string>();
+
   for (const record of records) {
-    if (keys.has(record.key)) throw new Error(`Duplicate stable key in ${label}: ${record.key}`);
+    if (keys.has(record.key)) {throw new Error(`Duplicate stable key in ${label}: ${record.key}`);}
+
     keys.add(record.key);
   }
 }
 
 export function validatePortfolioContentScopes(scopes: PortfolioContentScope[]) {
-  const selectedKeys = scopes.flatMap((scope) => portfolioContent[scope].map((record) => ({ key: record.key })));
+  const selectedKeys = scopes.flatMap((scope) =>
+    portfolioContent[scope].map((record) => ({ key: record.key })),
+  );
+
   assertUniqueKeys(selectedKeys, "selected portfolio content");
   const contentBlocks = [
     ...(scopes.includes("home") ? portfolioContent.home : []),
     ...(scopes.includes("about") ? portfolioContent.about : []),
   ];
+
   for (const block of contentBlocks) {
-    const schema = contentSchemas[block.key as keyof typeof contentSchemas] ??
-      (block.section === "ABOUT_INTRO" || block.section === "WORK_PROCESS" ? textBlockContentSchema : block.section === "OUTSIDE_ENGINEERING" ? outsideEngineeringContentSchema : undefined);
-    if (!schema) throw new Error(`Unsupported portfolio content block: ${block.key}`);
+    const schema =
+      contentSchemas[block.key as keyof typeof contentSchemas] ??
+      (block.section === "ABOUT_INTRO" || block.section === "WORK_PROCESS"
+        ? textBlockContentSchema
+        : block.section === "OUTSIDE_ENGINEERING"
+          ? outsideEngineeringContentSchema
+          : undefined);
+
+    if (!schema) {throw new Error(`Unsupported portfolio content block: ${block.key}`);}
+
     const result = schema.safeParse(block.content);
-    if (!result.success) throw new Error(`Invalid portfolio content block: ${block.key}`, { cause: result.error });
+
+    if (!result.success)
+      {throw new Error(`Invalid portfolio content block: ${block.key}`, { cause: result.error });}
   }
 }

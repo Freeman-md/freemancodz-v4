@@ -18,7 +18,13 @@ export type PortfolioSeedData = {
     position: number;
     content: Record<string, string>;
   }[];
-  principles: { key: string; section: "home" | "about"; title: string; body: string; position: number }[];
+  principles: {
+    key: string;
+    section: "home" | "about";
+    title: string;
+    body: string;
+    position: number;
+  }[];
   services: {
     key: string;
     title: string;

@@ -1,6 +1,6 @@
 # Milestone 13: Homepage Conversion and File-Based Content Sync
 
-**Status:** Active  
+**Status:** Frozen
 **Version:** 1.0.0  
 **Last Updated:** 2026-08-05  
 **Depends On:** Milestone 12  

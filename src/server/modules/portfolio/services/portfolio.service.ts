@@ -8,19 +8,16 @@ import type { IProjectRepository } from "../interfaces/project.repository.interf
 import type { IVercelBlobProvider } from "../interfaces/vercel-blob.provider.interface";
 import {
   mapAboutHeaderBlock,
-  mapCurrentDirectionBlock,
   mapEducationBlock,
+  mapHomeAuditOfferBlock,
+  mapHomeFinalCtaBlock,
+  mapHomeProofOfWorkBlock,
+  mapHomeServicesIntroBlock,
   mapHeroBlock,
   mapOutsideEngineeringBlock,
-  mapPhilosophyBlock,
   mapTextBlock,
 } from "../mappers/content-block.mapper";
-import {
-  mapExperience,
-  mapPrinciple,
-  mapProject,
-  mapService,
-} from "../mappers/portfolio-view.mapper";
+import { mapPrinciple, mapProject, mapService } from "../mappers/portfolio-view.mapper";
 import type { PortfolioAsset } from "../models/portfolio-asset";
 import type { AboutPageData, HomePageData, WorkPageData } from "../models/portfolio-view";
 
@@ -35,25 +32,54 @@ export class PortfolioService implements IPortfolioService {
   ) {}
 
   async getHomePageData(): Promise<HomePageData> {
-    const [hero, philosophy, currentDirection, services, principles, projects, experiences] =
+    const [hero, servicesIntro, proofBlock, auditOffer, finalCta, services, projects] =
       await Promise.all([
         this.contentBlocks.findRequiredByKey("home.hero"),
-        this.contentBlocks.findRequiredByKey("home.philosophy"),
-        this.contentBlocks.findRequiredByKey("home.current-direction"),
+        this.contentBlocks.findRequiredByKey("home.services-intro"),
+        this.contentBlocks.findRequiredByKey("home.proof-of-work"),
+        this.contentBlocks.findRequiredByKey("home.audit-offer"),
+        this.contentBlocks.findRequiredByKey("home.final-cta"),
         this.services.findAll(),
-        this.principles.findBySection("home"),
-        this.projects.findFeatured(),
-        this.experiences.findAll(),
+        this.projects.findAll(),
       ]);
+
+    const proofContent = mapHomeProofOfWorkBlock(proofBlock);
+
+    const projectsByKey = new Map(
+      projects.map(mapProject).map((project) => [project.key, project]),
+    );
+
+    const proof = {
+      title: proofContent.title,
+      copy: proofContent.copy,
+      items: proofContent.items.map((item) => {
+        const project = projectsByKey.get(item.projectKey);
+
+        if (!project || !project.positioning) {
+          throw new Error(`Required homepage proof project not found: ${item.projectKey}`);
+        }
+
+        return {
+          action: item.action,
+          project: {
+            key: project.key,
+            title: project.title,
+            category: project.category,
+            problem: project.positioning,
+            whatIBuilt: project.detail,
+            outcome: project.outcome,
+          },
+        };
+      }),
+    };
 
     return {
       hero: mapHeroBlock(hero),
-      philosophy: mapPhilosophyBlock(philosophy),
-      currentDirection: mapCurrentDirectionBlock(currentDirection),
+      servicesIntro: mapHomeServicesIntroBlock(servicesIntro),
+      proof,
+      auditOffer: mapHomeAuditOfferBlock(auditOffer),
+      finalCta: mapHomeFinalCtaBlock(finalCta),
       services: services.map(mapService),
-      principles: principles.map(mapPrinciple),
-      featuredProjects: projects.map(mapProject),
-      experiences: experiences.map(mapExperience),
     };
   }
 

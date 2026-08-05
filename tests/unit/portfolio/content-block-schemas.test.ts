@@ -9,7 +9,19 @@ import { philosophyContentSchema } from "@/server/modules/portfolio/schemas/cont
 import { textBlockContentSchema } from "@/server/modules/portfolio/schemas/content-block.schema";
 
 const schemas = [
-  [heroContentSchema, { name: "Freeman", headline: "Headline", intro: "Intro", heroNote: "Note", primaryLabel: "Audit", primaryHref: "/audit", secondaryLabel: "Work", secondaryHref: "/work" }],
+  [
+    heroContentSchema,
+    {
+      name: "Freeman",
+      headline: "Headline",
+      intro: "Intro",
+      heroNote: "Note",
+      primaryLabel: "Audit",
+      primaryHref: "/audit",
+      secondaryLabel: "Work",
+      secondaryHref: "/work",
+    },
+  ],
   [philosophyContentSchema, { philosophyQuestion: "Question" }],
   [
     currentDirectionContentSchema,

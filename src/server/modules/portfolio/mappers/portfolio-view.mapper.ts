@@ -39,6 +39,7 @@ export function mapExperience(record: ExperienceRecord): Experience {
 
 export function mapProject(record: ProjectRecord): Project {
   return {
+    key: record.key,
     title: record.title,
     summary: record.summary,
     category: record.category,

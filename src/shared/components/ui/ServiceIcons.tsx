@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 
 const serviceIcons: Record<string, ReactNode> = {
-  "Customer-Facing Assistants": (
+  "Customer Journeys": (
     <svg
       viewBox="0 0 24 24"
       fill="none"

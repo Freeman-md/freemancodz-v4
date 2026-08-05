@@ -5,7 +5,7 @@ const config = [
   ...nextVitals,
 
   {
-    ignores: ["src/generated/prisma/**"],
+    ignores: ["src/generated/prisma/**", "supabase/.temp/**"],
   },
 
   {
