@@ -1,3 +1,4 @@
+import { connection } from "next/server";
 import { AssistantTriggerButton } from "@/features/assistant/components/AssistantTriggerButton";
 import { AuditOfferSection } from "@/features/portfolio/components/AuditOfferSection";
 import { ProofOfWorkSection } from "@/features/portfolio/components/ProofOfWorkSection";
@@ -10,6 +11,8 @@ import { portfolioService } from "@/server/composition-root";
 import { siteAssetLinks } from "@/shared/config/links";
 
 export default async function Home() {
+  await connection();
+
   const { hero, servicesIntro, services, proof, auditOffer, finalCta } =
     await portfolioService.getHomePageData();
 
