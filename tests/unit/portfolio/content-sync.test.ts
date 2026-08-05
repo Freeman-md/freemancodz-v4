@@ -1,10 +1,20 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import {
+  executePortfolioContentSync,
+  parsePortfolioContentSyncArguments,
+} from "@/server/entrypoints/maintenance/portfolio-content-sync.arguments";
 import { services } from "../../../content/portfolio/services";
+import { projects } from "../../../content/portfolio/projects";
 import { PortfolioContentRepository } from "@/server/modules/portfolio/repositories/portfolio-content.repository";
 import { PortfolioContentService } from "@/server/modules/portfolio/services/portfolio-content.service";
 
 type StoredService = (typeof services)[number];
+type StoredProject = (typeof projects)[number] & {
+  collaboration: string | null;
+  future: string | null;
+  positioning: string | null;
+};
 
 function createServiceRepository(stored: Map<string, StoredService>) {
   const created: StoredService[] = [];
@@ -30,6 +40,26 @@ function createServiceRepository(stored: Map<string, StoredService>) {
   } as never);
 
   return { repository, created, updated };
+}
+
+function createProjectRepository(stored: Map<string, StoredProject>) {
+  const repository = new PortfolioContentRepository({
+    $transaction: async (callback: (database: unknown) => unknown) =>
+      callback({
+        project: {
+          findUnique: async ({ where: { key } }: { where: { key: string } }) =>
+            stored.get(key) ?? null,
+          create: async ({ data }: { data: StoredProject }) => {
+            stored.set(data.key, data);
+          },
+          update: async ({ where: { key }, data }: { where: { key: string }; data: StoredProject }) => {
+            stored.set(key, data);
+          },
+        },
+      }),
+  } as never);
+
+  return repository;
 }
 
 test("content sync inserts missing records and leaves unmentioned records untouched", async () => {
@@ -66,6 +96,17 @@ test("content sync updates changed records and skips unchanged records", async (
   assert.equal(stored.get(services[0].key)?.lead, services[0].lead);
 });
 
+test("project sync converges when optional content fields are omitted", async () => {
+  const repository = createProjectRepository(new Map());
+
+  const first = await repository.sync("projects");
+
+  const second = await repository.sync("projects");
+
+  assert.equal(first.inserted, projects.length);
+  assert.deepEqual(second, { inserted: 0, updated: 0, unchanged: projects.length });
+});
+
 test("content validation rejects duplicate selected scopes before repository writes", async () => {
   let calls = 0;
 
@@ -95,4 +136,46 @@ test("content sync sends only the selected scope to its repository", async () =>
   await service.sync(["services"]);
 
   assert.deepEqual(scopes, ["services"]);
+});
+
+test("sync argument parsing filters recognised flags and rejects unknown scopes before execution", async () => {
+  const production = parsePortfolioContentSyncArguments(
+    ["--production", "--confirm-production", "projects"],
+    ["home", "projects"],
+  );
+
+  assert.deepEqual(production.scopes, ["projects"]);
+  assert.equal(production.isProduction, true);
+  assert.equal(production.confirmProduction, true);
+  assert.throws(
+    () => parsePortfolioContentSyncArguments(["unknown"], ["home", "projects"]),
+    /Unknown content scope: unknown/,
+  );
+
+  let writes = 0;
+
+  await assert.rejects(
+    executePortfolioContentSync(
+      parsePortfolioContentSyncArguments(["--production", "projects"], ["projects"]),
+      { confirmProduction: () => undefined, sync: async () => { writes++; } },
+    ),
+    /--confirm-production/,
+  );
+  assert.equal(writes, 0);
+});
+
+test("confirmed production sync executes only its selected scope", async () => {
+  const calls: string[] = [];
+
+  const argumentsResult = parsePortfolioContentSyncArguments(
+    ["--production", "--confirm-production", "projects"],
+    ["home", "projects"],
+  );
+
+  await executePortfolioContentSync(argumentsResult, {
+    confirmProduction: () => calls.push("confirmed"),
+    sync: async (scopes) => calls.push(...scopes),
+  });
+
+  assert.deepEqual(calls, ["confirmed", "projects"]);
 });

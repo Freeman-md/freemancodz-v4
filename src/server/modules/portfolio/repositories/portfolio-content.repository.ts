@@ -9,6 +9,15 @@ import type {
 
 type RecordWithKey = { key: string };
 
+function normalizeProjectRecord(project: (typeof portfolioContent.projects)[number]) {
+  return {
+    ...project,
+    collaboration: project.collaboration ?? null,
+    future: project.future ?? null,
+    positioning: project.positioning ?? null,
+  };
+}
+
 function changed(
   existing: Record<string, unknown>,
   incoming: Record<string, unknown>,
@@ -39,7 +48,7 @@ export class PortfolioContentRepository implements IPortfolioContentRepository {
           );
         case "projects":
           return this.syncRecords(
-            portfolioContent.projects,
+            portfolioContent.projects.map(normalizeProjectRecord),
             (key) => database.project.findUnique({ where: { key } }),
             (data) => database.project.create({ data }),
             (key, data) => database.project.update({ where: { key }, data }),
