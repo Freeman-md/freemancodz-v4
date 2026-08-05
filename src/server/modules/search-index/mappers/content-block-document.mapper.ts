@@ -4,6 +4,10 @@ import {
   currentDirectionContentSchema,
   educationContentSchema,
   heroContentSchema,
+  homeAuditOfferContentSchema,
+  homeFinalCtaContentSchema,
+  homeProofOfWorkContentSchema,
+  homeServicesIntroContentSchema,
   outsideEngineeringContentSchema,
   philosophyContentSchema,
   textBlockContentSchema,
@@ -44,6 +48,92 @@ export function mapContentBlockDocument(block: ContentBlock): IndexDocument {
           `Profile: Freeman is ${parsed.data.name}. ${parsed.data.headline}`,
           parsed.data.intro,
           parsed.data.heroNote,
+        ],
+      });
+    }
+  }
+
+  if (
+    block.key === "home.services-intro" &&
+    block.page === "HOME" &&
+    block.section === "SERVICES_INTRO"
+  ) {
+    const parsed = homeServicesIntroContentSchema.safeParse(block.content);
+
+    if (parsed.success) {
+      return document(block, {
+        title: parsed.data.title,
+        category: "Services",
+        url: "/",
+        keywords: ["Customer journeys", "Operational workflows", "Freeman services"],
+        paragraphs: [parsed.data.copy],
+      });
+    }
+  }
+
+  if (
+    block.key === "home.proof-of-work" &&
+    block.page === "HOME" &&
+    block.section === "PROOF_OF_WORK"
+  ) {
+    const parsed = homeProofOfWorkContentSchema.safeParse(block.content);
+
+    if (parsed.success) {
+      return document(block, {
+        title: parsed.data.title,
+        category: "Portfolio proof",
+        url: "/",
+        keywords: ["Proof of work", "Portfolio projects", ...parsed.data.items.map((item) => item.projectKey)],
+        paragraphs: [
+          parsed.data.copy,
+          ...parsed.data.items.map((item) => {
+            const action = item.action ? ` Available next action: ${item.action.label}.` : "";
+
+            return `Featured proof project: ${item.projectKey}.${action}`;
+          }),
+        ],
+      });
+    }
+  }
+
+  if (
+    block.key === "home.audit-offer" &&
+    block.page === "HOME" &&
+    block.section === "AUDIT_OFFER"
+  ) {
+    const parsed = homeAuditOfferContentSchema.safeParse(block.content);
+
+    if (parsed.success) {
+      return document(block, {
+        title: parsed.data.label,
+        category: "Free audit",
+        url: parsed.data.actionHref,
+        keywords: ["Free audit", "Customer journey", "Operational workflow"],
+        paragraphs: [
+          parsed.data.title,
+          parsed.data.copy,
+          `The audit covers: ${parsed.data.checklist.join(", ")}.`,
+        ],
+      });
+    }
+  }
+
+  if (
+    block.key === "home.final-cta" &&
+    block.page === "HOME" &&
+    block.section === "FINAL_CTA"
+  ) {
+    const parsed = homeFinalCtaContentSchema.safeParse(block.content);
+
+    if (parsed.success) {
+      return document(block, {
+        title: "Freeman's next steps",
+        category: "Call to action",
+        url: "/",
+        keywords: ["Free audit", "Customer journey", "Operational workflow", "Portfolio work"],
+        paragraphs: [
+          parsed.data.title,
+          `Next steps: ${parsed.data.primaryLabel} (${parsed.data.primaryHref}) or ${parsed.data.secondaryLabel} (${parsed.data.secondaryHref}).`,
         ],
       });
     }
