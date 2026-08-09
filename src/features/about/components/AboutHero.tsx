@@ -133,7 +133,7 @@ export function AboutHero() {
           </div>
         </div>
 
-        <div className="mt-14 grid overflow-hidden rounded-3xl border border-line bg-white shadow-soft sm:grid-cols-2 lg:mt-20 lg:grid-cols-4">
+        <div className="mt-14 grid overflow-hidden rounded-3xl border border-line bg-white shadow-soft grid-cols-2 lg:mt-20 lg:grid-cols-4">
           {principles.map(({ icon: Icon, label }, index) => (
             <article
               className={`flex items-center gap-4 p-5 sm:p-6 ${
