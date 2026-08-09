@@ -71,6 +71,7 @@ model Meeting {
 enum ContentPage {
   HOME  @map("home")
   ABOUT @map("about")
+  AUDIT @map("audit")
 
   @@map("content_page")
 }
@@ -88,6 +89,9 @@ enum ContentSection {
   PROOF_OF_WORK       @map("proof_of_work")
   AUDIT_OFFER         @map("audit_offer")
   FINAL_CTA           @map("final_cta")
+  AUDIT_PROBLEM_SIGNALS @map("audit_problem_signals")
+  AUDIT_DELIVERABLE     @map("audit_deliverable")
+  AUDIT_PROOF           @map("audit_proof")
 
   @@map("content_section")
 }

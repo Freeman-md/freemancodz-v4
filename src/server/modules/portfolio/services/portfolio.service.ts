@@ -7,6 +7,11 @@ import type { IPrincipleRepository } from "../interfaces/principle.repository.in
 import type { IProjectRepository } from "../interfaces/project.repository.interface";
 import type { IVercelBlobProvider } from "../interfaces/vercel-blob.provider.interface";
 import {
+  mapAuditDeliverableBlock,
+  mapAuditFinalCtaBlock,
+  mapAuditHeroBlock,
+  mapAuditProblemSignalsBlock,
+  mapAuditProofBlock,
   mapAboutHeaderBlock,
   mapEducationBlock,
   mapHomeAuditOfferBlock,
@@ -19,7 +24,7 @@ import {
 } from "../mappers/content-block.mapper";
 import { mapPrinciple, mapProject, mapService } from "../mappers/portfolio-view.mapper";
 import type { PortfolioAsset } from "../models/portfolio-asset";
-import type { AboutPageData, HomePageData, WorkPageData } from "../models/portfolio-view";
+import type { AboutPageData, AuditPageData, HomePageData, WorkPageData } from "../models/portfolio-view";
 
 export class PortfolioService implements IPortfolioService {
   constructor(
@@ -94,6 +99,22 @@ export class PortfolioService implements IPortfolioService {
       featuredProjects: projects.filter((project) => project.featured),
       otherProjects: projects.filter((project) => !project.featured),
     };
+  }
+
+  async getAuditPageData(): Promise<AuditPageData> {
+    const [heroBlock, signalsBlock, deliverableBlock, proofBlock, finalCtaBlock, projects] = await Promise.all([
+      this.contentBlocks.findRequiredByKey("audit.hero"), this.contentBlocks.findRequiredByKey("audit.problem-signals"), this.contentBlocks.findRequiredByKey("audit.deliverable"), this.contentBlocks.findRequiredByKey("audit.proof"), this.contentBlocks.findRequiredByKey("audit.final-cta"), this.projects.findAll(),
+    ]);
+
+    const proof = mapAuditProofBlock(proofBlock);
+
+    const projectsByKey = new Map(projects.map(mapProject).map((project) => [project.key, project]));
+
+    return { hero: mapAuditHeroBlock(heroBlock), problemSignals: mapAuditProblemSignalsBlock(signalsBlock), deliverable: mapAuditDeliverableBlock(deliverableBlock), proof: { eyebrow: proof.eyebrow, headline: proof.headline, copy: proof.copy, items: proof.items.map((item) => { const project = projectsByKey.get(item.projectKey);
+
+ if (!project) {throw new Error(`Required audit proof project not found: ${item.projectKey}`);}
+
+ return { key: project.key, title: project.title, outcome: project.outcome, label: item.label }; }) }, finalCta: mapAuditFinalCtaBlock(finalCtaBlock) };
   }
 
   async getAboutPageData(): Promise<AboutPageData> {

@@ -2,7 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { ArrowRight } from "lucide-react";
+import { assistantTriggerEvent } from "@/contracts/assistant.contract";
 import { navigation, externalLinks } from "@/shared/config/links";
+import { Button } from "@/shared/components/ui/Button";
 
 export function Navbar() {
   const pathname = usePathname();
@@ -33,15 +36,35 @@ export function Navbar() {
             );
           })}
         </div>
-        <a
-          href={externalLinks.linkedin}
-          target="_blank"
-          rel="noreferrer"
-          className="hidden items-center gap-2 rounded-sm border border-line px-4 py-2 font-mono text-[12px] text-ink transition hover:bg-surface md:inline-flex"
-        >
-          LinkedIn
-          <span aria-hidden="true">↗</span>
-        </a>
+        {pathname === "/audit" ? (
+          <Button
+            className="hidden h-9 px-4 font-mono text-[11px] md:inline-flex"
+            size="sm"
+            onClick={() => {
+              window.dispatchEvent(
+                new CustomEvent(assistantTriggerEvent, {
+                  detail: {
+                    message:
+                      "I would like to claim my free customer journey and workflow audit.",
+                  },
+                }),
+              );
+            }}
+          >
+            Claim My Free Audit
+            <ArrowRight size={13} strokeWidth={2.25} />
+          </Button>
+        ) : (
+          <a
+            href={externalLinks.linkedin}
+            target="_blank"
+            rel="noreferrer"
+            className="hidden items-center gap-2 rounded-sm border border-line px-4 py-2 font-mono text-[12px] text-ink transition hover:bg-surface md:inline-flex"
+          >
+            LinkedIn
+            <span aria-hidden="true">↗</span>
+          </a>
+        )}
       </nav>
       <div className="flex justify-center gap-8 border-t border-line px-5 py-3 md:hidden">
         {navigation.map((item) => {

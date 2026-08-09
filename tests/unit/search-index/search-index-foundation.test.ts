@@ -20,6 +20,7 @@ import type {
 } from "@/server/modules/search-index/interfaces/source-record.repository.interface";
 import type { ISiteChunkRepository } from "@/server/modules/search-index/interfaces/site-chunk.repository.interface";
 import { mapContentBlockDocument } from "@/server/modules/search-index/mappers/content-block-document.mapper";
+import { audit } from "../../../content/portfolio/audit";
 import { mapSourceDocument } from "@/server/modules/search-index/mappers/source-document.mapper";
 import { SearchIndexService } from "@/server/modules/search-index/services/search-index.service";
 
@@ -182,6 +183,32 @@ test("new homepage content blocks map to meaningful search documents", () => {
   );
   assert.match(documents[1]?.paragraphs.join(" ") ?? "", /pay4me-withradius/);
   assert.match(documents[2]?.paragraphs.join(" ") ?? "", /Customer journey friction/);
+});
+
+test("all audit content blocks map to the Audit search document", () => {
+  const base = { id: "audit-block", page: "AUDIT", position: 0, createdAt: new Date(), updatedAt: new Date() } as ContentBlock;
+
+  const documents = audit.map((record) => mapContentBlockDocument({ ...base, key: record.key, section: record.section as never, content: record.content as never }));
+
+  assert.deepEqual(documents.map((document) => document.url), ["/audit", "/audit", "/audit", "/audit", "/audit"]);
+  assert.ok(documents.every((document) => document.paragraphs.length > 0));
+});
+
+test("invalid Audit content blocks fail instead of being indexed", () => {
+  const hero = audit[0];
+
+  const block = {
+    id: "invalid-audit-block",
+    key: hero.key,
+    page: "AUDIT",
+    section: hero.section,
+    position: 0,
+    content: { ...hero.content, headline: undefined },
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  } as ContentBlock;
+
+  assert.throws(() => mapContentBlockDocument(block), /Unsupported or invalid content block: audit.hero/);
 });
 test("all supported source records map to meaningful source-specific text", () => {
   const documents = [

@@ -1,3 +1,4 @@
+import type { AuditPageData } from "@/contracts/audit-page.contract";
 import type { ProjectLinks } from "@/server/modules/portfolio/schemas/content-block.schema";
 import type { AboutHeaderContent } from "@/server/modules/portfolio/schemas/content-block.schema";
 import type { CurrentDirectionContent } from "@/server/modules/portfolio/schemas/content-block.schema";
@@ -7,6 +8,11 @@ import type { OutsideEngineeringContent } from "@/server/modules/portfolio/schem
 import type { PhilosophyContent } from "@/server/modules/portfolio/schemas/content-block.schema";
 import type { TextBlockContent } from "@/server/modules/portfolio/schemas/content-block.schema";
 import type {
+  AuditDeliverableContent,
+  AuditFinalCtaContent,
+  AuditHeroContent,
+  AuditProblemSignalsContent,
+  AuditProofContent,
   HomeAuditOfferContent,
   HomeFinalCtaContent,
   HomeProofOfWorkContent,
@@ -102,3 +108,5 @@ export type AboutPageData = {
   outsideEngineering: OutsideEngineeringContent[];
   principles: Principle[];
 };
+
+export type { AuditPageData };

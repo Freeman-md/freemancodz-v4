@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { PortfolioService } from "@/server/modules/portfolio/services/portfolio.service";
+import { audit } from "../../../content/portfolio/audit";
 const required = async (key: string) =>
   ({
     "home.hero": {
@@ -80,4 +81,23 @@ test("portfolio service maps missing and streamed assets", async () => {
   ).getAsset("asset");
 
   assert.equal(result.kind, "stream");
+});
+
+test("audit page data preserves configured proof-project order and fails for a missing project", async () => {
+  const blocks = new Map(audit.map((block) => [block.key, { ...block, id: block.key }]));
+
+  const projects = [
+    { key: "pay4me-withradius", title: "Pay4Me / WithRadius", summary: "", category: "", role: "", outcome: "Payments", detail: "", future: null, collaboration: null, positioning: null, featured: false, stacks: [], links: [] },
+    { key: "portfolio-assistant", title: "Portfolio Assistant", summary: "", category: "", role: "", outcome: "Guidance", detail: "", future: null, collaboration: null, positioning: null, featured: false, stacks: [], links: [] },
+    { key: "email-pa", title: "Email PA", summary: "", category: "", role: "", outcome: "Reporting", detail: "", future: null, collaboration: null, positioning: null, featured: false, stacks: [], links: [] },
+  ] as never[];
+
+  const auditService = new PortfolioService(
+    { findRequiredByKey: async (key: string) => blocks.get(key) as never, findBySection: async () => [] }, { findAll: async () => [] }, { findBySection: async () => [] }, { findAll: async () => projects, findFeatured: async () => [] }, { findAll: async () => [] }, { getPrivate: async () => null },
+  );
+
+  assert.deepEqual((await auditService.getAuditPageData()).proof.items.map((project) => project.key), ["pay4me-withradius", "portfolio-assistant", "email-pa"]);
+  await assert.rejects(new PortfolioService(
+    { findRequiredByKey: async (key: string) => blocks.get(key) as never, findBySection: async () => [] }, { findAll: async () => [] }, { findBySection: async () => [] }, { findAll: async () => projects.slice(0, 2), findFeatured: async () => [] }, { findAll: async () => [] }, { getPrivate: async () => null },
+  ).getAuditPageData(), /Required audit proof project not found: email-pa/);
 });

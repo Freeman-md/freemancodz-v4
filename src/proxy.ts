@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 
-const allowedPageRoutes = new Set(["/", "/work", "/about"]);
+const allowedPageRoutes = new Set(["/", "/work", "/about", "/audit"]);
 
 const allowedGeneratedRoutes = new Set(["/opengraph-image", "/robots.txt", "/sitemap.xml"]);
 

@@ -2,6 +2,8 @@ import { z } from "zod";
 
 const MAX_MESSAGE_LENGTH = 500;
 
+export const assistantTriggerEvent = "portfolio-chat:open";
+
 const sourceSchema = z.object({
   id: z.string(),
   title: z.string(),

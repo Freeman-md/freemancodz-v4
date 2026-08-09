@@ -1,5 +1,10 @@
 import { portfolioContent, type PortfolioContentScope } from "../../../../../content/portfolio";
 import {
+  auditDeliverableContentSchema,
+  auditFinalCtaContentSchema,
+  auditHeroContentSchema,
+  auditProblemSignalsContentSchema,
+  auditProofContentSchema,
   aboutHeaderContentSchema,
   educationContentSchema,
   heroContentSchema,
@@ -12,6 +17,11 @@ import {
 } from "./content-block.schema";
 
 const contentSchemas = {
+  "audit.hero": auditHeroContentSchema,
+  "audit.problem-signals": auditProblemSignalsContentSchema,
+  "audit.deliverable": auditDeliverableContentSchema,
+  "audit.proof": auditProofContentSchema,
+  "audit.final-cta": auditFinalCtaContentSchema,
   "home.hero": heroContentSchema,
   "home.services-intro": homeServicesIntroContentSchema,
   "home.proof-of-work": homeProofOfWorkContentSchema,
@@ -40,6 +50,7 @@ export function validatePortfolioContentScopes(scopes: PortfolioContentScope[]) 
   const contentBlocks = [
     ...(scopes.includes("home") ? portfolioContent.home : []),
     ...(scopes.includes("about") ? portfolioContent.about : []),
+    ...(scopes.includes("audit") ? portfolioContent.audit : []),
   ];
 
   for (const block of contentBlocks) {
