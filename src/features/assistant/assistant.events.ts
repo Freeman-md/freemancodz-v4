@@ -1,4 +1,8 @@
-export const OPEN_PORTFOLIO_CHAT_EVENT = "portfolio-chat:open";
+import {
+  assistantTriggerEvent,
+  assistantTriggerDetailSchema,
+  type AssistantTriggerDetail,
+} from "@/contracts/assistant.contract";
 
 export type OpenPortfolioChatDetail = AssistantTriggerDetail;
 
@@ -14,13 +18,10 @@ export function dispatchOpenPortfolioChat(detail: OpenPortfolioChatDetail = {}) 
   }
 
   window.dispatchEvent(
-    new CustomEvent<OpenPortfolioChatDetail>(OPEN_PORTFOLIO_CHAT_EVENT, {
+    new CustomEvent<OpenPortfolioChatDetail>(assistantTriggerEvent, {
       detail: parsed.data,
     }),
   );
 }
 
-import {
-  assistantTriggerDetailSchema,
-  type AssistantTriggerDetail,
-} from "@/contracts/assistant.contract";
+export { assistantTriggerEvent as OPEN_PORTFOLIO_CHAT_EVENT } from "@/contracts/assistant.contract";

@@ -1,5 +1,27 @@
-import { ArrowRight, ClipboardCheck } from "lucide-react";
-import type { AuditPageData } from "@/contracts/audit-page.contract";
+import { Clock3 } from "lucide-react";
 import { Container } from "@/shared/components/layout/Container";
-import { AuditAction } from "./AuditAction";
-export function AuditHero({ hero }: { hero: AuditPageData["hero"] }) { return <Container className="grid gap-12 py-16 md:py-24 lg:grid-cols-2 lg:items-center lg:py-32"><section><p className="font-mono text-xs uppercase tracking-[0.25em] text-accent">{hero.eyebrow}</p><h1 className="mt-5 text-5xl font-semibold leading-[0.96] tracking-[-0.06em] text-ink md:text-6xl">{hero.headline}</h1><p className="mt-6 text-lg leading-8 text-muted">{hero.copy}</p><p className="mt-5 font-medium text-ink">{hero.audience}</p><ul className="mt-8 grid gap-3 sm:grid-cols-3">{hero.deliverables.map((item) => <li key={item} className="rounded-sm border border-line bg-white p-3 text-sm text-ink"><ClipboardCheck className="mb-2 text-accent" size={18}/>{item}</li>)}</ul><div className="mt-8"><AuditAction action={hero.action}/></div><p className="mt-4 font-mono text-xs text-muted">{hero.reassurance}</p></section><aside className="rounded-lg border border-line bg-surface p-6"><p className="font-mono text-xs uppercase tracking-[0.2em] text-accent">{hero.example.label}</p><div className="mt-6 grid gap-3">{hero.example.steps.map((step, index) => <div key={step.label} className={`flex items-center gap-3 rounded-sm border p-4 ${step.emphasis ? "border-amber-300 bg-amber-50" : "border-line bg-white"}`}><span>{index + 1}</span><span>{step.label}</span>{index < 3 && <ArrowRight className="ml-auto" size={16}/>}</div>)}</div><div className="mt-5 grid gap-4"><p className="rounded-sm border border-amber-300 bg-amber-50 p-4 text-sm"><strong>{hero.example.frictionLabel}</strong><br/>{hero.example.frictionCopy}</p><p className="rounded-sm border border-accent/30 bg-white p-4 text-sm"><strong>{hero.example.recommendationLabel}</strong><br/>{hero.example.recommendationCopy}</p></div><p className="mt-4 font-mono text-xs text-muted">Illustrative example — not client data.</p></aside></Container>; }
+import { AuditButton } from "./AuditButton";
+
+export function AuditHero() {
+  return (
+    <Container>
+      <section className="flex min-h-[calc(100svh-4rem)] flex-col items-center justify-start pt-24 text-center">
+        <p className="rounded-full border border-[#cfcfcf] px-3 py-1 font-mono text-[10px] font-medium uppercase tracking-[0.08em] text-[#333]">
+          Free customer journey &amp; workflow audit
+        </p>
+        <h1 className="mt-8 max-w-[760px] text-5xl font-semibold leading-[0.92] tracking-[-0.065em] text-black sm:text-6xl lg:text-[72px]">
+          Find where customers get stuck or work slows down.
+        </h1>
+        <p className="mt-7 max-w-[590px] text-base leading-7 text-[#3f3f46] sm:text-[17px]">
+          A focused review of one important customer journey or operational workflow.
+          Personally reviewed by Freeman, delivered within 48 hours.
+        </p>
+        <AuditButton />
+        <p className="mt-4 flex items-center gap-1.5 font-mono text-[10px] tracking-[0.02em] text-[#737373]">
+          <Clock3 size={12} strokeWidth={1.5} />
+          Takes 2 - 3 minutes
+        </p>
+      </section>
+    </Container>
+  );
+}
