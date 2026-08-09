@@ -9,7 +9,6 @@ import {
   NotebookPen,
   Send,
   UserRound,
-  Zap,
 } from "lucide-react";
 
 import { Container } from "@/shared/components/layout/Container";
@@ -39,7 +38,6 @@ const afterCustomerJourney: WorkflowNodeData[] = [
 const afterOperationalWorkflow: WorkflowNodeData[] = [
   { icon: Folder, label: "Right place" },
   { icon: UserRound, label: "Clear owner" },
-  { icon: Zap, label: "Next action" },
   { icon: CircleCheck, label: "Timely update" },
 ];
 
@@ -55,8 +53,8 @@ function WorkflowNode({
       <div
         className={`flex size-16 items-center justify-center rounded-full border bg-white sm:size-[72px] ${
           isAfter
-            ? "border-emerald-200 text-emerald-700 shadow-[0_8px_22px_-16px_rgba(21,128,61,0.65)]"
-            : "border-red-300 text-ink shadow-[0_0_0_6px_rgba(254,242,242,0.9),0_10px_24px_-14px_rgba(220,38,38,0.64)]"
+            ? "border-emerald-300 text-emerald-700 motion-safe:animate-success-glow"
+            : "border-red-300 text-ink motion-safe:animate-alert-glow"
         }`}
       >
         <Icon aria-hidden="true" className="size-7 stroke-[1.75] sm:size-8" />
@@ -84,14 +82,18 @@ function WorkflowPanel({
       <h3 className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500 sm:text-xs">
         {title}
       </h3>
-      <div className="mt-7 flex items-start gap-2 sm:gap-3">
+      <div className={`mt-7 flex items-start gap-3 sm:gap-4 ${
+        tone === "after" && nodes.length === 3 ? "md:gap-7" : ""
+      }`}>
         {nodes.map((node, index) => (
           <div className="contents" key={node.label}>
             <WorkflowNode {...node} tone={tone} />
             {index < nodes.length - 1 ? (
               <div
                 aria-hidden="true"
-                className={`relative top-8 hidden min-w-4 flex-1 border-t-2 sm:block ${connectorClass} ${connectorStyle}`}
+                className={`relative top-8 hidden min-w-6 flex-1 border-t-2 sm:block ${
+                  tone === "after" && nodes.length === 3 ? "md:min-w-10" : ""
+                } ${connectorClass} ${connectorStyle}`}
               >
                 {tone === "after" ? (
                   <span className="absolute -right-1.5 -top-1.5 size-3 rounded-full bg-emerald-600" />
