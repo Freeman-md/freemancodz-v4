@@ -22,7 +22,7 @@ export function AuditFooterCta() {
             </h2>
             <span aria-hidden="true" className="mx-auto mt-7 block h-1 w-14 rounded-full bg-signal-500 lg:mx-0" />
             <p className="mx-auto mt-7 max-w-xl text-lg leading-7 text-slate-700 lg:mx-0">
-              Share one customer journey or operational workflow. The assistant will help you
+              Share one customer journey or operational workflow. My assistant will help you
               provide the relevant context.
             </p>
             <div className="order-2 mt-10 lg:hidden">
