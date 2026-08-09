@@ -37,6 +37,27 @@ All browser-only visuals remain feature-owned, responsive, and free of server im
 Signal is reserved for audit-specific badges, controls, supporting icons, connector details,
 and the helper icon; major display headings retain the neutral ink treatment for hierarchy.
 
+## About page addition
+
+- Reference captures:
+  - /Users/freemancodz/Downloads/about-hero-desktop.png
+  - /Users/freemancodz/Downloads/about-hero-mobile.png
+  - /Users/freemancodz/Downloads/ChatGPT Image Aug 9, 2026, 09_21_35 AM (1).png
+  - /Users/freemancodz/Downloads/ChatGPT Image Aug 9, 2026, 09_21_36 AM (2).png
+- Implementation review: `/about` inspected at desktop and 390px mobile widths.
+
+The new static About page begins with the specified hero and “How I got here” journey.
+The hero keeps the supplied customer and workflow framing but uses the existing profile image
+as the animated circular centrepiece. On mobile, the sequence remains customer side,
+portrait, then workflow side, with intentional spacing around the portrait. The journey is a
+four-stage progression that becomes a readable numbered vertical sequence on mobile. The
+previous, data-backed page remains available at `/about-old`.
+
+The journey deliberately avoids a shared timeline rail: each step has a contained number
+badge, preventing the line-and-number collision at smaller widths. It uses one column on
+small screens, two columns from medium widths, and four columns only on extra-large
+displays. The Today connector has a dedicated centered track between its two focus cards.
+
 ## Result
 
 final result: passed
