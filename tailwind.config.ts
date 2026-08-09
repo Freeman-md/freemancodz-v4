@@ -62,12 +62,17 @@ const config: Config = {
           "0%": { strokeDashoffset: "32" },
           "100%": { strokeDashoffset: "0" },
         },
+        "skeleton-shimmer": {
+          "0%": { backgroundPosition: "200% 0" },
+          "100%": { backgroundPosition: "-200% 0" },
+        },
       },
       animation: {
         "signal-glow": "signal-glow 2.6s ease-in-out infinite",
         "alert-glow": "alert-glow 2.4s ease-in-out infinite",
         "success-glow": "success-glow 2.4s ease-in-out infinite",
         "signal-flow": "signal-flow 2.8s linear infinite",
+        "skeleton-shimmer": "skeleton-shimmer 2s ease-in-out infinite",
       },
     },
   },

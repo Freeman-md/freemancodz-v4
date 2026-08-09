@@ -7,7 +7,6 @@ import {
   Filter,
   Globe2,
   Mail,
-  MessageCircleMore,
   Sparkles,
   UserRound,
   UsersRound,
@@ -41,23 +40,26 @@ function ProofNode({ icon: Icon, label }: ProofNodeData) {
 
 function Pay4MeVisual() {
   return (
-    <div className="relative mt-8 rounded-2xl border border-line p-4 sm:p-5">
-      <svg
-        aria-hidden="true"
-        className="absolute left-10 right-10 top-10 h-4 w-[calc(100%-5rem)] text-signal-300"
-        fill="none"
-        viewBox="0 0 300 16"
-      >
-        <path className="motion-safe:animate-signal-flow" d="M2 8H298" stroke="currentColor" strokeDasharray="5 6" strokeWidth="1.5" />
-        <circle cx="2" cy="8" fill="currentColor" r="3" />
-        <circle cx="150" cy="8" fill="currentColor" r="3" />
-        <circle cx="298" cy="8" fill="currentColor" r="3" />
-      </svg>
-      <div className="relative flex justify-between">
+    <div className="mt-8 rounded-2xl border border-line p-4 sm:p-5">
+      <div className="grid grid-cols-[auto_minmax(1rem,1fr)_auto_minmax(1rem,1fr)_auto] items-start">
         <ProofNode icon={UserRound} label="Customer" />
+        <FlowConnector />
         <ProofNode icon={CreditCard} label="Payment" />
+        <FlowConnector />
         <ProofNode icon={Globe2} label="Global payout" />
       </div>
+    </div>
+  );
+}
+
+function FlowConnector({ className }: { className?: string }) {
+  return (
+    <div
+      aria-hidden="true"
+      className={`relative top-6 min-w-2 border-t border-dashed border-signal-400 motion-safe:animate-signal-flow ${className ?? ""}`}
+    >
+      <span className="absolute -left-0.5 -top-1 size-2 rounded-full bg-signal-500" />
+      <span className="absolute -right-0.5 -top-1 size-2 rounded-full bg-signal-500" />
     </div>
   );
 }
@@ -69,9 +71,14 @@ function PortfolioAssistantVisual() {
         <div className="flex size-12 shrink-0 items-center justify-center rounded-full border border-signal-200 bg-signal-50/50 text-signal-800">
           <Sparkles aria-hidden="true" className="size-5" />
         </div>
-        <div className="flex min-h-16 flex-1 items-center rounded-xl border border-signal-100 bg-white px-4 text-sm font-medium leading-5 text-slate-700 shadow-[0_8px_20px_-18px_rgba(55,48,163,0.45)]">
-          <MessageCircleMore aria-hidden="true" className="mr-2 size-4 shrink-0 text-signal-800" />
-          Clear, useful guidance
+        <div
+          aria-label="Guidance response loading"
+          className="flex min-h-16 flex-1 flex-col justify-center gap-2 overflow-hidden rounded-xl border border-signal-100 bg-white px-4 shadow-[0_8px_20px_-18px_rgba(55,48,163,0.45)]"
+          role="status"
+        >
+          <span className="h-2 w-4/5 rounded-full bg-[linear-gradient(90deg,#e5e7eb_20%,#f8fafc_50%,#e5e7eb_80%)] bg-[length:200%_100%] motion-safe:animate-skeleton-shimmer" />
+          <span className="h-2 w-[92%] rounded-full bg-[linear-gradient(90deg,#e5e7eb_20%,#f8fafc_50%,#e5e7eb_80%)] bg-[length:200%_100%] motion-safe:animate-skeleton-shimmer" />
+          <span className="h-2 w-3/5 rounded-full bg-[linear-gradient(90deg,#e5e7eb_20%,#f8fafc_50%,#e5e7eb_80%)] bg-[length:200%_100%] motion-safe:animate-skeleton-shimmer" />
         </div>
       </div>
       <div className="mt-5 flex flex-wrap gap-2">
@@ -97,22 +104,13 @@ function EmailWorkflowVisual() {
   ];
 
   return (
-    <div className="relative mt-8 rounded-2xl border border-line p-4">
-      <div className="relative flex items-center justify-between">
-        <svg
-          aria-hidden="true"
-          className="absolute left-8 right-8 top-6 h-10 w-[calc(100%-4rem)] text-signal-300"
-          fill="none"
-          viewBox="0 0 300 40"
-        >
-          <path className="motion-safe:animate-signal-flow" d="M4 20H296" stroke="currentColor" strokeDasharray="5 6" strokeWidth="1.5" />
-          <circle cx="4" cy="20" fill="currentColor" r="3" />
-          <circle cx="296" cy="20" fill="currentColor" r="3" />
-        </svg>
+    <div className="relative mt-8 rounded-2xl border border-line p-4 sm:p-5">
+      <div className="grid grid-cols-[auto_minmax(2rem,1fr)_auto] items-start">
         <ProofNode icon={Mail} label="Inbox" />
+        <FlowConnector />
         <ProofNode icon={Filter} label="Triage" />
       </div>
-      <div className="relative mt-6">
+      <div className="relative mt-6 border-t border-dashed border-signal-300 pt-7">
         <svg
           aria-hidden="true"
           className="absolute left-[16%] top-0 h-10 w-[68%] text-signal-300"

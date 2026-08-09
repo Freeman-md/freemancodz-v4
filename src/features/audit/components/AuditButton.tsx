@@ -16,7 +16,10 @@ export function AuditButton({
 }) {
   return (
     <Button
-      className={cn("mt-9 h-12 rounded-sm px-6 font-mono text-xs font-semibold", className)}
+      className={cn(
+        "mt-9 h-12 rounded-sm bg-signal-800 px-6 font-mono text-xs font-semibold text-white shadow-[0_12px_28px_-14px_rgba(55,48,163,0.72)] hover:bg-signal-900",
+        className,
+      )}
       size="lg"
       onClick={() => {
         window.dispatchEvent(

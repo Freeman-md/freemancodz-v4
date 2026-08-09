@@ -20,17 +20,22 @@
 - Implementation review: `/audit` inspected in desktop and 390px mobile views
 
 The Why section keeps its existing direction while adding a pulse animation to the
-diagnostic circle, responsive two-column symptom grid, and low-contrast SVG connection
-lines. Before and After uses animated red or green node treatments, with a deliberately
-spaced three-stage operational flow after the audit.
+diagnostic circle and responsive two-column symptom grid. Its supporting labels stay
+deliberately quiet so the diagnosis remains the visual focal point. Before and After uses
+animated red or green node treatments, with a deliberately spaced three-stage operational
+flow after the audit.
 
-Proof now has centered, animated connector paths for the Pay4Me journey; a concise
-“Clear, useful guidance” assistant response; and an Email PA workflow that branches from
-inbox triage into three named outcomes. The external-link controls are visible and have
-accessible labels. The final CTA has one action, indigo-800 signal styling, and a reusable
-three-dot notification visual that moves before the action and reassurance on mobile.
+Proof now has centered, animated connector paths for the Pay4Me journey; a three-line,
+subtly shimmering guidance preview; and an Email PA workflow that branches from inbox
+triage into three named outcomes. The horizontal flows use dedicated connector
+columns, so each connector reaches the adjoining circles rather than ending short. The
+external-link controls are visible and have accessible labels. The final CTA has one action,
+indigo-800 signal styling, and a reusable three-dot notification visual that moves before
+the action and reassurance on mobile.
 
 All browser-only visuals remain feature-owned, responsive, and free of server imports.
+Signal is reserved for audit-specific badges, controls, supporting icons, connector details,
+and the helper icon; major display headings retain the neutral ink treatment for hierarchy.
 
 ## Result
 

@@ -6,7 +6,7 @@ export function AuditHero() {
   return (
     <Container>
       <section className="flex flex-col items-center justify-start pb-16 pt-24 text-center sm:pb-20 sm:pt-28">
-        <p className="rounded-full border border-[#cfcfcf] px-3 py-1 font-mono text-[10px] font-medium uppercase tracking-[0.08em] text-[#333]">
+        <p className="rounded-full border border-signal-100 bg-signal-50/50 px-3 py-1 font-mono text-[10px] font-medium uppercase tracking-[0.08em] text-signal-800">
           Free customer journey &amp; workflow audit
         </p>
         <h1 className="mt-8 max-w-[760px] text-5xl font-semibold leading-[0.92] tracking-[-0.065em] text-black sm:text-6xl lg:text-[72px]">
@@ -17,8 +17,8 @@ export function AuditHero() {
           Personally reviewed by Freeman, delivered within 48 hours.
         </p>
         <AuditButton />
-        <p className="mt-4 flex items-center gap-1.5 font-mono text-[10px] tracking-[0.02em] text-[#737373]">
-          <Clock3 size={12} strokeWidth={1.5} />
+        <p className="mt-4 flex items-center gap-1.5 font-mono text-[10px] tracking-[0.02em] text-black">
+          <Clock3 className="text-signal-700" size={12} strokeWidth={1.5} />
           Takes 2 - 3 minutes
         </p>
       </section>

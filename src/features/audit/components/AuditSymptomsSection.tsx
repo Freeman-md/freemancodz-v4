@@ -78,25 +78,7 @@ export function AuditSymptomsSection() {
           </div>
 
           <div className="border-t border-line pt-8 sm:pt-10">
-            <div className="relative flex w-full flex-col items-center gap-7 sm:grid sm:grid-cols-[1fr_auto_1fr] sm:gap-8">
-              <svg
-                aria-hidden="true"
-                className="pointer-events-none absolute inset-x-[12%] top-1/2 hidden h-24 w-[76%] -translate-y-1/2 text-signal-300 sm:block"
-                fill="none"
-                viewBox="0 0 720 96"
-              >
-                <path d="M0 48C104 48 133 12 252 48" stroke="currentColor" strokeWidth="1.25" />
-                <path d="M720 48C616 48 587 84 468 48" stroke="currentColor" strokeWidth="1.25" />
-                <path
-                  className="motion-safe:animate-signal-flow"
-                  d="M10 48H250M470 48H710"
-                  stroke="currentColor"
-                  strokeDasharray="5 8"
-                  strokeWidth="1.5"
-                />
-                <circle cx="252" cy="48" fill="currentColor" r="3" />
-                <circle cx="468" cy="48" fill="currentColor" r="3" />
-              </svg>
+            <div className="flex w-full flex-col items-center gap-7 sm:grid sm:grid-cols-[1fr_auto_1fr] sm:gap-8">
               <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:text-left">
                 <div className="flex size-16 shrink-0 items-center justify-center rounded-full border border-signal-100 bg-signal-50/50 text-signal-800 shadow-[0_8px_22px_-16px_rgba(67,56,202,0.55)]">
                   <UserRound aria-hidden="true" className="size-7 stroke-[1.7]" />
