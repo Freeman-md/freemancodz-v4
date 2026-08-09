@@ -44,6 +44,16 @@ and the helper icon; major display headings retain the neutral ink treatment for
   - /Users/freemancodz/Downloads/about-hero-mobile.png
   - /Users/freemancodz/Downloads/ChatGPT Image Aug 9, 2026, 09_21_35 AM (1).png
   - /Users/freemancodz/Downloads/ChatGPT Image Aug 9, 2026, 09_21_36 AM (2).png
+  - /Users/freemancodz/Downloads/ChatGPT Image Aug 9, 2026, 09_50_50 AM (1).png
+  - /Users/freemancodz/Downloads/ChatGPT Image Aug 9, 2026, 09_50_50 AM (2).png
+  - /Users/freemancodz/Downloads/ChatGPT Image Aug 9, 2026, 09_58_07 AM (1).png
+  - /Users/freemancodz/Downloads/ChatGPT Image Aug 9, 2026, 09_58_07 AM (2).png
+  - /Users/freemancodz/Downloads/ChatGPT Image Aug 9, 2026, 10_05_40 AM (1).png
+  - /Users/freemancodz/Downloads/ChatGPT Image Aug 9, 2026, 10_05_40 AM (2).png
+  - /Users/freemancodz/Downloads/ChatGPT Image Aug 9, 2026, 10_09_37 AM (1).png
+  - /Users/freemancodz/Downloads/ChatGPT Image Aug 9, 2026, 10_09_37 AM (2).png
+  - /Users/freemancodz/Downloads/ChatGPT Image Aug 9, 2026, 10_15_20 AM (1).png
+  - /Users/freemancodz/Downloads/ChatGPT Image Aug 9, 2026, 10_15_20 AM (2).png
 - Implementation review: `/about` inspected at desktop and 390px mobile widths.
 
 The new static About page begins with the specified hero and “How I got here” journey.
@@ -57,6 +67,27 @@ The journey deliberately avoids a shared timeline rail: each step has a containe
 badge, preventing the line-and-number collision at smaller widths. It uses one column on
 small screens, two columns from medium widths, and four columns only on extra-large
 displays. The Today connector has a dedicated centered track between its two focus cards.
+
+The product-thinking section pairs the four-stage customer experience with the operational
+workflow through a deliberate handoff card. The sequence remains horizontal at 390px while
+using smaller, readable nodes and contained connectors. Its three principles collapse into
+calm full-width cards on mobile.
+
+The work-process section follows the supplied five-stage composition on desktop and becomes
+a connected vertical sequence on mobile. Its production feedback connector remains inside
+the section at both breakpoints, and the three closing principles preserve the green process
+accent without competing with the primary signal colour.
+
+The current-exploration section presents controlled recovery as a five-stage observability
+flow with human oversight and explicit guardrails. Its display heading uses the same neutral
+About-page typography as the surrounding sections. The desktop flow becomes a contained
+vertical diagnostic sequence on mobile.
+
+Outside Engineering uses the four existing portfolio asset endpoints for Freeman's own
+strength, endurance, community, and learning photography. The two-by-two image composition
+is preserved at desktop and mobile widths. The closing section carries the audit conversion
+language into the About page, uses the same reassurance copy as the Audit CTA, and finishes
+with a dedicated Allura signature treatment in neutral ink.
 
 ## Result
 
