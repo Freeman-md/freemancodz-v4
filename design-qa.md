@@ -3,22 +3,27 @@
 ## Reference
 
 - Stitch project: Workflow Friction Audit
-- Screen: Customer Journey Audit - Enhanced Flow
-- Scope: the `/audit` hero only
+- Screens: Customer Journey Audit - Enhanced Flow and Why This Audit Exists
+- Scope: the `/audit` hero, audit symptoms, and before-and-after workflow comparison
 
 ## Comparison
 
-- Reference capture: `/tmp/customer-journey-audit-enhanced-flow-full.png`
-- Implementation capture: `/tmp/audit-hero-implementation.jpg`
-- Viewport: 1280 × 720
-- State: default desktop view
+- Reference captures:
+  - `/Users/freemancodz/Downloads/ChatGPT Image Aug 9, 2026, 07_30_04 AM.png`
+  - `/Users/freemancodz/Downloads/ChatGPT Image Aug 9, 2026, 07_22_46 AM.png`
+- Implementation captures:
+  - `/tmp/audit-symptoms-icons.png`
+  - `/tmp/audit-before-after-aligned.png`
+- State: default desktop view, scrolled to each compared section
 
-The audit hero matches the reference's centered monochrome treatment: compact outlined
-eyebrow, three-line headline, restrained supporting copy, black primary action, and
-small time estimate. The existing site navigation, footer, and assistant launcher stay
-outside the requested hero scope. The hero was positioned so the persistent launcher
-does not cover its primary action at the comparison viewport.
+The page uses a consistent vertical rhythm between the hero, symptoms, and comparison
+sections. The new symptoms panel follows the reference's six symptoms, diagnostic circle,
+customer/workflow framing, and outcome message. Each symptom now has a specific line icon;
+the central warning remains a subtle red glow. The before journey has no warning stems or
+extra alert icons, leaving red-glowing node borders and matching card heights. The after
+state intentionally remains green rather than reference blue, with a note for “Right info
+once,” as requested.
 
 ## Result
 
-passed
+final result: passed

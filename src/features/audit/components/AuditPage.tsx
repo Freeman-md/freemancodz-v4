@@ -1,5 +1,13 @@
 import { AuditHero } from "./AuditHero";
+import { AuditSymptomsSection } from "./AuditSymptomsSection";
+import { BeforeAfterSection } from "./BeforeAfterSection";
 
 export function AuditPage() {
-  return <AuditHero />;
+  return (
+    <>
+      <AuditHero />
+      <AuditSymptomsSection />
+      <BeforeAfterSection />
+    </>
+  );
 }

@@ -5,7 +5,7 @@ import { AuditButton } from "./AuditButton";
 export function AuditHero() {
   return (
     <Container>
-      <section className="flex min-h-[calc(100svh-4rem)] flex-col items-center justify-start pt-24 text-center">
+      <section className="flex flex-col items-center justify-start pb-16 pt-24 text-center sm:pb-20 sm:pt-28">
         <p className="rounded-full border border-[#cfcfcf] px-3 py-1 font-mono text-[10px] font-medium uppercase tracking-[0.08em] text-[#333]">
           Free customer journey &amp; workflow audit
         </p>
