@@ -3,13 +3,8 @@ import {
   ArrowRight,
   ArrowUpRight,
   AudioLines,
-  BookOpenText,
   BriefcaseBusiness,
-  CheckCircle2,
   Code2,
-  FileText,
-  MessageSquareText,
-  Search,
   ShieldCheck,
   Siren,
   Sparkles,
@@ -23,8 +18,8 @@ type SupportingProject = {
   title: string;
   category: string;
   description: string;
-  tone: "signal" | "success" | "violet" | "orange" | "slate";
-  visual: "voice" | "recovery" | "meeting" | "analytics" | "knowledge" | "open-source";
+  tone: "success" | "violet";
+  visual: "voice" | "recovery";
   href: string;
 };
 
@@ -45,46 +40,11 @@ const supportingProjects: SupportingProject[] = [
     visual: "recovery",
     href: "https://github.com/Freeman-md",
   },
-  {
-    title: "Meeting Assistant",
-    category: "AI · Prototype",
-    description: "AI assistant that captures key discussion points and surfaces clear action items.",
-    tone: "signal",
-    visual: "meeting",
-    href: "https://github.com/Freeman-md",
-  },
-  {
-    title: "Analytics Dashboard",
-    category: "Data · Experiment",
-    description: "Exploring product usage patterns through event tracking and clean visual insights.",
-    tone: "orange",
-    visual: "analytics",
-    href: "https://github.com/Freeman-md",
-  },
-  {
-    title: "Knowledge Base Assistant",
-    category: "AI · Experiment",
-    description: "RAG-powered guidance for internal documentation with sources and citations.",
-    tone: "signal",
-    visual: "knowledge",
-    href: "https://github.com/Freeman-md",
-  },
-  {
-    title: "Open Source Contributions",
-    category: "Open source",
-    description: "Meaningful improvements to developer tools and practical AI infrastructure projects.",
-    tone: "slate",
-    visual: "open-source",
-    href: "https://github.com/Freeman-md",
-  },
 ];
 
 const badgeClasses: Record<SupportingProject["tone"], string> = {
-  signal: "bg-signal-50 text-signal-700",
   success: "bg-success-50 text-success-700",
   violet: "bg-violet-50 text-violet-700",
-  orange: "bg-orange-50 text-orange-700",
-  slate: "bg-slate-100 text-slate-700",
 };
 
 function DarkVisual({ children }: { children: React.ReactNode }) {
@@ -142,109 +102,12 @@ function RecoveryVisual() {
   );
 }
 
-function MeetingVisual() {
-  return (
-    <div className="relative flex h-full min-h-[11rem] items-center justify-center overflow-hidden bg-signal-50/60 p-4">
-      <div className="absolute left-3 top-5 h-[72%] w-[70%] rotate-[-4deg] rounded-xl border border-signal-100 bg-white/70" />
-      <div className="relative w-full rounded-xl border border-signal-100 bg-white p-3 shadow-soft">
-        <div className="flex items-center gap-2 text-[9px] font-semibold text-signal-800">
-          <MessageSquareText aria-hidden="true" className="size-4" /> Meeting notes
-        </div>
-        <div className="mt-3 grid grid-cols-[1fr_2.25rem] gap-2">
-          <div className="space-y-2">
-            <span className="block h-2 rounded-full bg-slate-100" />
-            <span className="block h-2 w-4/5 rounded-full bg-slate-100" />
-            <span className="block h-2 w-2/3 rounded-full bg-slate-100" />
-          </div>
-          <div className="space-y-1.5">
-            {[1, 2, 3].map((item) => (
-              <span className="flex size-5 items-center justify-center rounded-full bg-signal-50" key={item}>
-                <CheckCircle2 aria-hidden="true" className="size-3 text-signal-600" />
-              </span>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function AnalyticsVisual() {
-  return (
-    <div className="flex h-full min-h-[11rem] flex-col bg-orange-50/40 p-4">
-      <div className="grid grid-cols-3 gap-2">
-        {["12.4K", "63%", "8.2m"].map((metric) => (
-          <span className="rounded-lg border border-orange-100 bg-white p-2 text-center text-[10px] font-semibold text-slate-700" key={metric}>
-            {metric}
-          </span>
-        ))}
-      </div>
-      <svg aria-hidden="true" className="mt-auto h-20 w-full text-orange-500" fill="none" viewBox="0 0 220 82">
-        <path d="M0 70L28 52L50 59L77 28L104 45L129 21L156 35L184 14L220 23" stroke="currentColor" strokeWidth="2" />
-        <path d="M0 70L28 52L50 59L77 28L104 45L129 21L156 35L184 14L220 23V82H0Z" fill="currentColor" opacity=".08" />
-      </svg>
-    </div>
-  );
-}
-
-function KnowledgeVisual() {
-  return (
-    <div className="relative flex h-full min-h-[11rem] items-center justify-center overflow-hidden bg-signal-50/60 p-4">
-      <div className="absolute right-4 top-5 w-[68%] rounded-xl border border-signal-100 bg-white/75 p-3 opacity-70">
-        <FileText aria-hidden="true" className="size-4 text-signal-600" />
-        <span className="mt-3 block h-2 rounded-full bg-slate-100" />
-        <span className="mt-2 block h-2 w-2/3 rounded-full bg-slate-100" />
-      </div>
-      <div className="relative mr-7 mt-9 w-[78%] rounded-xl border border-signal-100 bg-white p-3 shadow-soft">
-        <div className="flex items-center gap-2 text-[9px] font-semibold text-signal-800">
-          <BookOpenText aria-hidden="true" className="size-4" /> Knowledge search
-        </div>
-        <div className="mt-3 flex items-center gap-2 rounded-lg bg-slate-50 px-2 py-1.5 text-[8px] text-slate-400">
-          <Search aria-hidden="true" className="size-3" /> Ask the documentation…
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function OpenSourceVisual() {
-  return (
-    <DarkVisual>
-      <pre className="relative z-10 self-center whitespace-pre-wrap font-mono text-[8px] leading-4 text-slate-300">
-        <span className="text-orange-400">export</span> <span className="text-violet-300">async function</span>{" "}
-        <span className="text-blue-300">recover</span>() {"{"}
-        {"\n  "}<span className="text-orange-300">const</span> result = <span className="text-blue-300">await</span> diagnose();
-        {"\n  "}<span className="text-violet-300">if</span> (result.safe) {"{"}
-        {"\n    "}<span className="text-blue-300">return</span> verify(result);
-        {"\n  "}{"}"}
-        {"\n"}{"}"}
-      </pre>
-    </DarkVisual>
-  );
-}
-
 function ProjectVisual({ visual }: Pick<SupportingProject, "visual">) {
   if (visual === "voice") {
     return <VoiceVisual />;
   }
 
-  if (visual === "recovery") {
-    return <RecoveryVisual />;
-  }
-
-  if (visual === "meeting") {
-    return <MeetingVisual />;
-  }
-
-  if (visual === "analytics") {
-    return <AnalyticsVisual />;
-  }
-
-  if (visual === "knowledge") {
-    return <KnowledgeVisual />;
-  }
-
-  return <OpenSourceVisual />;
+  return <RecoveryVisual />;
 }
 
 function SupportingProjectCard({ project }: { project: SupportingProject }) {
@@ -279,7 +142,7 @@ export function WorkAdditionalSection() {
     <section aria-labelledby="additional-work-heading" className="bg-white py-20 sm:py-28">
       <Container className="max-w-[1340px]">
         <div className="text-center">
-          <h2 className="text-4xl font-semibold tracking-[-0.045em] text-slate-950 sm:text-5xl" id="additional-work-heading">
+          <h2 className="font-display text-4xl tracking-[-0.04em] text-slate-950 sm:text-5xl" id="additional-work-heading">
             Additional Work &amp; Experiments
           </h2>
           <span aria-hidden="true" className="mx-auto mt-6 block h-1 w-16 rounded-full bg-signal-600" />
