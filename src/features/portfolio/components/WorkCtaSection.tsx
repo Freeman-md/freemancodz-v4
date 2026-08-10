@@ -48,7 +48,7 @@ export function WorkCtaSection() {
             <AssistantTriggerButton
               detail={{
                 message:
-                  "I saw something in your work that maps to what I am building, hiring for, or trying to improve.",
+                  "I’ve been looking through your work and I’d like to talk about something I’m working on.",
               }}
               variant="marketing"
             >
