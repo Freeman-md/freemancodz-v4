@@ -4,24 +4,28 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ArrowRight, Menu, X } from "lucide-react";
 import { assistantTriggerEvent } from "@/contracts/assistant.contract";
-import { navigation, externalLinks } from "@/shared/config/links";
 import { Button } from "@/shared/components/ui/Button";
+import { navigation, externalLinks } from "@/shared/config/links";
 import { siteConfig } from "@/shared/config/site-metadata";
 
 export function Navbar() {
   const pathname = usePathname();
 
+  const isHome = pathname === "/";
+
+  const visibleNavigation = isHome ? navigation.filter((item) => item.href !== "/") : navigation;
+
   return (
     <header className="sticky top-0 z-50 border-b border-line bg-white/95 backdrop-blur">
-      <nav className="mx-auto flex h-16 max-w-[1200px] items-center justify-between px-5 md:px-6">
+      <nav className={`mx-auto flex h-16 items-center justify-between px-5 md:px-6 ${isHome ? "max-w-[1440px] lg:px-20" : "max-w-[1200px]"}`}>
         <Link
           href="/"
-          className="font-display text-xl tracking-[-0.03em] text-ink transition hover:text-accent md:text-2xl"
+          className={isHome ? "text-xl font-bold tracking-[-0.04em] text-slate-950 md:text-2xl" : "font-display text-xl tracking-[-0.03em] text-ink transition hover:text-accent md:text-2xl"}
         >
-          {siteConfig.shortName}
+          {isHome ? <>FREEMAN<span className="text-signal-600">.</span></> : siteConfig.shortName}
         </Link>
         <div className="hidden items-center gap-8 md:flex">
-          {navigation.map((item) => {
+          {visibleNavigation.map((item) => {
             const active = pathname === item.href;
 
             return (
@@ -38,7 +42,23 @@ export function Navbar() {
           })}
         </div>
         <div className="hidden md:block">
-          {pathname === "/audit" ? (
+          {isHome ? (
+            <button
+              className="font-sans text-sm font-medium text-slate-950 transition hover:text-signal-700"
+              type="button"
+              onClick={() => {
+                window.dispatchEvent(
+                  new CustomEvent(assistantTriggerEvent, {
+                    detail: {
+                      message: "I would like to talk about something I am working on.",
+                    },
+                  }),
+                );
+              }}
+            >
+              Assistant
+            </button>
+          ) : pathname === "/audit" ? (
             <Button
               className="h-9 px-4 font-mono text-[11px]"
               size="sm"
@@ -76,7 +96,7 @@ export function Navbar() {
           </summary>
           <div className="absolute inset-x-0 top-full border-t border-line bg-white px-5 py-6 shadow-soft">
             <div className="mx-auto grid max-w-[1200px] gap-1">
-              {navigation.map((item) => {
+              {visibleNavigation.map((item) => {
                 const active = pathname === item.href;
 
                 return (

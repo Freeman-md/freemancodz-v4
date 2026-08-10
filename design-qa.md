@@ -127,3 +127,13 @@ The three supporting Work case studies use a compact, side-by-side card composit
 small breakpoint upward, with text on the left and the project visual on the right. At the
 narrowest mobile width, the visual moves above the text to preserve its detail. Category badges
 size to their content instead of stretching across the card.
+
+## Homepage redesign
+
+### Hero checkpoint
+
+- Scope: archived the existing data-backed homepage at `/home-old` and introduced the new static homepage hero at `/`.
+- References: compared against the supplied desktop and mobile hero captures.
+- Responsive review: verified the reduced three-line mobile headline, centred supporting copy, full-width CTA stack, audience wrap, and the desktop split between narrative and portrait signal visual.
+- Behaviour: both primary actions use real routes, the homepage navigation retains access to the assistant through the shared event contract, and `/home-old` remains an allowed route.
+- Local asset note: the portrait is served by the existing Blob-backed asset route. Its local preview requires the repository's configured Blob environment, so the structure was reviewed with the existing endpoint while no alternate asset source was introduced.
