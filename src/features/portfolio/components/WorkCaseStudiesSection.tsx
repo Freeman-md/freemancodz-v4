@@ -36,7 +36,7 @@ function CaseBadge({
 
   return (
     <p
-      className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 font-mono text-[10px] font-semibold uppercase tracking-[0.08em] ${toneClasses}`}
+      className={`inline-flex w-fit max-w-full self-start items-center gap-1.5 rounded-md border px-2.5 py-1 font-mono text-[10px] font-semibold uppercase tracking-[0.08em] ${toneClasses}`}
     >
       {children}
     </p>
@@ -60,11 +60,13 @@ function StudyLink({ href, icon: Icon, label }: CaseStudyLink) {
 
 function StudyPoint({
   children,
+  compact = false,
   icon: Icon,
   title,
   tone = "signal",
 }: {
   children: React.ReactNode;
+  compact?: boolean;
   icon: LucideIcon;
   title: string;
   tone?: "signal" | "success";
@@ -73,6 +75,20 @@ function StudyPoint({
     tone === "success"
       ? "border-success-100 bg-success-50 text-success-700"
       : "border-signal-100 bg-signal-50 text-signal-700";
+
+  if (compact) {
+    return (
+      <div>
+        <div className="flex items-center gap-2">
+          <span className={`flex size-8 shrink-0 items-center justify-center rounded-full border ${toneClasses}`}>
+            <Icon aria-hidden="true" className="size-3.5" />
+          </span>
+          <h4 className="text-sm font-semibold text-ink">{title}</h4>
+        </div>
+        <div className="mt-1.5 text-xs leading-5 text-slate-700">{children}</div>
+      </div>
+    );
+  }
 
   return (
     <div className="grid grid-cols-[2.5rem_1fr] gap-3">
@@ -128,15 +144,16 @@ function EmailWorkflowPreview() {
       <span aria-hidden="true" className="absolute bottom-8 left-6 top-8 border-l border-dashed border-success-300" />
       {emailSteps.map(([Icon, title, copy]) => (
         <div
-          className="relative grid grid-cols-[2.5rem_1fr] items-center gap-3 rounded-xl border border-success-100 bg-white p-3 shadow-[0_12px_28px_-24px_rgba(4,120,87,0.7)]"
+          className="relative flex items-center justify-center rounded-xl border border-success-100 bg-white p-2 shadow-[0_12px_28px_-24px_rgba(4,120,87,0.7)] sm:grid sm:grid-cols-[2rem_1fr] sm:justify-start sm:gap-2"
           key={title}
+          title={`${title}: ${copy}`}
         >
           <span className="z-10 flex size-8 items-center justify-center rounded-full border border-success-100 bg-success-50 text-success-700">
             <Icon aria-hidden="true" className="size-4" />
           </span>
-          <span>
+          <span className="hidden min-w-0 sm:block">
             <strong className="block text-xs text-ink">{title}</strong>
-            <span className="mt-0.5 block text-[10px] text-slate-500">{copy}</span>
+            <span className="mt-0.5 hidden text-[10px] text-slate-500 sm:block">{copy}</span>
           </span>
         </div>
       ))}
@@ -213,15 +230,23 @@ function CompactStudy({
   visual: React.ReactNode;
 }) {
   return (
-    <article className="flex flex-col rounded-3xl border border-line bg-white p-6 shadow-soft sm:p-7">
-      <CaseBadge tone={tone}>{badge}</CaseBadge>
-      <h3 className="mt-5 font-display text-3xl tracking-[-0.035em] text-slate-950">{title}</h3>
-      <div className="mt-6 min-h-[15rem] rounded-2xl border border-line bg-slate-50/50 p-4">{visual}</div>
-      <div className="mt-7 grid gap-5">{children}</div>
-      <div className="mt-auto flex flex-wrap gap-x-5 gap-y-3 pt-7">
-        {links.map((link) => (
-          <StudyLink {...link} key={link.label} />
-        ))}
+    <article className="rounded-3xl border border-line bg-white p-5 shadow-soft sm:p-6">
+      <div className="grid gap-5 sm:grid-cols-[minmax(0,1fr)_minmax(8rem,34%)]">
+        <div className="order-2 flex min-w-0 flex-col sm:order-1">
+          <CaseBadge tone={tone}>{badge}</CaseBadge>
+          <h3 className="mt-4 font-display text-2xl leading-tight tracking-[-0.035em] text-slate-950 sm:text-3xl">
+            {title}
+          </h3>
+          <div className="mt-5 grid gap-5">{children}</div>
+          <div className="mt-auto flex flex-wrap gap-x-5 gap-y-3 pt-6">
+            {links.map((link) => (
+              <StudyLink {...link} key={link.label} />
+            ))}
+          </div>
+        </div>
+        <div className="order-1 min-h-[15rem] overflow-hidden rounded-2xl border border-line bg-slate-50/50 p-3 sm:order-2 sm:p-4">
+          {visual}
+        </div>
       </div>
     </article>
   );
@@ -245,7 +270,7 @@ export function WorkCaseStudiesSection() {
         <div className="mt-12 space-y-6 sm:mt-16">
           <FeaturedStudy />
 
-          <div className="grid gap-6 lg:grid-cols-3">
+          <div className="grid items-start gap-6 xl:grid-cols-3">
             <CompactStudy
               badge="Customer guidance · AI product"
               links={[
@@ -255,11 +280,11 @@ export function WorkCaseStudiesSection() {
               title="Portfolio Assistant"
               visual={<PortfolioAssistantPreview />}
             >
-              <StudyPoint icon={ShieldCheck} title="Problem">
+              <StudyPoint compact icon={ShieldCheck} title="Problem">
                 Different visitors need different information and next steps, but traditional navigation
                 requires everyone to find those answers manually.
               </StudyPoint>
-              <StudyPoint icon={Wrench} title="Solution">
+              <StudyPoint compact icon={Wrench} title="Solution">
                 A customer-facing assistant that retrieves relevant information, answers with evidence and
                 supports appropriate next actions.
               </StudyPoint>
@@ -275,11 +300,11 @@ export function WorkCaseStudiesSection() {
               tone="success"
               visual={<EmailWorkflowPreview />}
             >
-              <StudyPoint icon={ShieldCheck} title="Problem" tone="success">
+              <StudyPoint compact icon={ShieldCheck} title="Problem" tone="success">
                 Important changes buried in email require repeated checking and manually reconstructing what
                 has changed.
               </StudyPoint>
-              <StudyPoint icon={Wrench} title="Solution" tone="success">
+              <StudyPoint compact icon={Wrench} title="Solution" tone="success">
                 A background workflow that detects relevant messages, understands changes and keeps important
                 state visible.
               </StudyPoint>
@@ -304,11 +329,11 @@ export function WorkCaseStudiesSection() {
                 </div>
               }
             >
-              <StudyPoint icon={ShieldCheck} title="Problem">
+              <StudyPoint compact icon={ShieldCheck} title="Problem">
                 A study-abroad platform helping users access education and relocation resources, offers,
                 reviews and related services.
               </StudyPoint>
-              <StudyPoint icon={Wrench} title="Solution">
+              <StudyPoint compact icon={Wrench} title="Solution">
                 Freeman worked on production frontend experiences inside a Laravel application using Blade,
                 Vue.js and Tailwind CSS.
               </StudyPoint>

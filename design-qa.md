@@ -122,3 +122,8 @@ through one shared marketing heading component. The About and Work closing actio
 one CTA treatment while retaining their distinct destinations and assistant-opening behaviour.
 The About journey keeps its original “How I got here” eyebrow and “From the interface to the
 full journey” title; only its title typography changed.
+
+The three supporting Work case studies use a compact, side-by-side card composition from the
+small breakpoint upward, with text on the left and the project visual on the right. At the
+narrowest mobile width, the visual moves above the text to preserve its detail. Category badges
+size to their content instead of stretching across the card.
