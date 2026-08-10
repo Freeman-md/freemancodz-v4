@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 
+import { WorkCaseStudiesSection } from "@/features/portfolio/components/WorkCaseStudiesSection";
 import { WorkHero } from "@/features/portfolio/components/WorkHero";
 import { siteConfig } from "@/shared/config/site-metadata";
 
@@ -24,5 +25,10 @@ export const metadata: Metadata = {
 };
 
 export default function WorkPage() {
-  return <WorkHero />;
+  return (
+    <>
+      <WorkHero />
+      <WorkCaseStudiesSection />
+    </>
+  );
 }
