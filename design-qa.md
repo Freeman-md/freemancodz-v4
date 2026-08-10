@@ -137,3 +137,10 @@ size to their content instead of stretching across the card.
 - Responsive review: verified the reduced three-line mobile headline, centred supporting copy, full-width CTA stack, audience wrap, and the desktop split between narrative and portrait signal visual.
 - Behaviour: both primary actions use real routes, the homepage navigation retains access to the assistant through the shared event contract, and `/home-old` remains an allowed route.
 - Local asset note: the portrait is served by the existing Blob-backed asset route. Its local preview requires the repository's configured Blob environment, so the structure was reviewed with the existing endpoint while no alternate asset source was introduced.
+
+### What I Help Improve checkpoint
+
+- Scope: added the customer-journey and operational-workflow relationship section immediately after the hero.
+- Desktop: the two bounded flows read toward a centred handoff signal and share a single outcome statement without labels colliding with the steps.
+- Mobile: each four-stage flow remains horizontal and readable, while the handoff becomes a centred vertical bridge between the two panels.
+- Responsive review: inspected at 1440px and 390px; headings, descriptions, nodes, connectors, and the outcome card preserve their intended hierarchy.
