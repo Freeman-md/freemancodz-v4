@@ -43,7 +43,7 @@ const explorationSteps: ExplorationStep[] = [
     icon: SquareTerminal,
     title: "Recover",
     copy: "Take an allowed action within defined boundaries.",
-    tone: "border-emerald-200 bg-emerald-50 text-emerald-700",
+    tone: "border-success-200 bg-success-50 text-success-700",
   },
   {
     icon: ShieldCheck,

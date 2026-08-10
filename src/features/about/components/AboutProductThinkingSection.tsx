@@ -56,12 +56,12 @@ function ProductFlow({
   return (
     <section
       className={`rounded-3xl border p-5 sm:p-7 lg:grid lg:grid-cols-[12rem_1fr] lg:items-center lg:gap-8 ${
-        isSignal ? "border-signal-100 bg-signal-50/20" : "border-emerald-100 bg-emerald-50/20"
+        isSignal ? "border-signal-100 bg-signal-50/20" : "border-success-100 bg-success-50/20"
       }`}
     >
       <h3
         className={`text-lg font-semibold leading-6 ${
-          isSignal ? "text-signal-700" : "text-emerald-700"
+          isSignal ? "text-signal-700" : "text-success-700"
         }`}
       >
         {title}
@@ -74,7 +74,7 @@ function ProductFlow({
                 className={`flex size-14 items-center justify-center rounded-full border bg-white shadow-[0_10px_24px_-18px_rgba(55,48,163,0.55)] sm:size-16 ${
                   isSignal
                     ? "border-signal-200 text-signal-700"
-                    : "border-emerald-200 text-emerald-700"
+                    : "border-success-200 text-success-700"
                 }`}
               >
                 <Icon aria-hidden="true" className="size-6 stroke-[1.7] sm:size-7" />
@@ -85,7 +85,7 @@ function ProductFlow({
               <div
                 aria-hidden="true"
                 className={`relative top-7 flex min-w-3 items-center sm:top-8 ${
-                  isSignal ? "text-signal-500" : "text-emerald-600"
+                  isSignal ? "text-signal-500" : "text-success-600"
                 }`}
               >
                 <span className="h-px flex-1 bg-current opacity-60" />

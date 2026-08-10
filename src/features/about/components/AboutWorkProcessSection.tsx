@@ -43,7 +43,7 @@ function ProcessNode({ step, index }: { step: ProcessStep; index: number }) {
     <div className="grid grid-cols-[2rem_5rem_1fr] items-center gap-4 lg:flex lg:flex-col lg:text-center">
       <span
         className={`font-mono text-sm font-semibold lg:mb-4 lg:text-base ${
-          isSuccess ? "text-emerald-700" : "text-signal-700"
+          isSuccess ? "text-success-700" : "text-signal-700"
         }`}
       >
         {String(index + 1).padStart(2, "0")}
@@ -51,7 +51,7 @@ function ProcessNode({ step, index }: { step: ProcessStep; index: number }) {
       <div
         className={`flex size-20 items-center justify-center rounded-full border shadow-[0_12px_28px_-20px_rgba(55,48,163,0.65)] lg:size-24 ${
           isSuccess
-            ? "border-emerald-200 bg-emerald-50/50 text-emerald-800"
+            ? "border-success-200 bg-success-50/50 text-success-800"
             : "border-signal-200 bg-signal-50/50 text-signal-800"
         }`}
       >
@@ -88,13 +88,13 @@ function MobileConnector() {
 
 function ProductionFeedback() {
   return (
-    <div className="mt-10 flex items-center gap-3 text-emerald-700 sm:gap-5 lg:mt-12">
+    <div className="mt-10 flex items-center gap-3 text-success-700 sm:gap-5 lg:mt-12">
       <ArrowUp aria-hidden="true" className="size-5 shrink-0 stroke-[1.7]" />
-      <span aria-hidden="true" className="h-px flex-1 border-t border-dashed border-emerald-400" />
-      <p className="shrink-0 rounded-xl border border-emerald-200 bg-emerald-50/40 px-4 py-2 text-sm font-medium sm:px-6 sm:text-base">
+      <span aria-hidden="true" className="h-px flex-1 border-t border-dashed border-success-400" />
+      <p className="shrink-0 rounded-xl border border-success-200 bg-success-50/40 px-4 py-2 text-sm font-medium sm:px-6 sm:text-base">
         Learn from production
       </p>
-      <span aria-hidden="true" className="h-px flex-1 border-t border-dashed border-emerald-400" />
+      <span aria-hidden="true" className="h-px flex-1 border-t border-dashed border-success-400" />
       <ArrowDown aria-hidden="true" className="size-5 shrink-0 stroke-[1.7]" />
     </div>
   );
@@ -105,10 +105,10 @@ export function AboutWorkProcessSection() {
     <section aria-labelledby="work-process-heading" className="py-20 sm:py-28">
       <Container>
         <div className="max-w-5xl">
-          <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.22em] text-emerald-700">
+          <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.22em] text-success-700">
             How I work
           </p>
-          <span aria-hidden="true" className="mt-5 block h-px w-10 bg-emerald-600" />
+          <span aria-hidden="true" className="mt-5 block h-px w-10 bg-success-600" />
           <h2
             className="mt-7 font-display text-4xl leading-[1.02] tracking-[-0.04em] text-slate-950 sm:text-5xl lg:text-6xl"
             id="work-process-heading"
@@ -143,7 +143,7 @@ export function AboutWorkProcessSection() {
               className="flex items-center gap-4 rounded-2xl border border-line bg-white p-4 shadow-soft sm:p-5"
               key={principle}
             >
-              <div className="flex size-10 shrink-0 items-center justify-center rounded-full border border-emerald-200 bg-emerald-50/50 text-emerald-700">
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-full border border-success-200 bg-success-50/50 text-success-700">
                 <CircleCheck aria-hidden="true" className="size-5 stroke-[1.7]" />
               </div>
               <p className="text-sm font-medium leading-5 text-ink sm:text-base">{principle}</p>

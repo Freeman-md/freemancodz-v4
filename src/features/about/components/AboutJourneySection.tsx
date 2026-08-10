@@ -70,7 +70,7 @@ const stages: JourneyStage[] = [
 
 const nodeToneClasses = {
   signal: "border-signal-200 bg-signal-50/60 text-signal-700",
-  success: "border-emerald-200 bg-emerald-50/60 text-emerald-700",
+  success: "border-success-200 bg-success-50/60 text-success-700",
 };
 
 function StageNodes({ nodes, tone }: { nodes: JourneyNode[]; tone: JourneyStage["tone"] }) {
@@ -88,7 +88,7 @@ function StageNodes({ nodes, tone }: { nodes: JourneyNode[]; tone: JourneyStage[
             <span
               aria-hidden="true"
               className={`relative top-7 min-w-3 border-t border-dashed ${
-                tone === "signal" ? "border-signal-400" : "border-emerald-400"
+                tone === "signal" ? "border-signal-400" : "border-success-400"
               }`}
             />
           ) : null}
@@ -106,7 +106,7 @@ function JourneyCard({ stage, index }: { stage: JourneyStage; index: number }) {
       <div className="flex items-center gap-3">
         <span
           className={`flex size-9 shrink-0 items-center justify-center rounded-full border bg-white font-mono text-sm font-semibold ${
-            isSignal ? "border-signal-200 text-signal-700" : "border-emerald-200 text-emerald-700"
+            isSignal ? "border-signal-200 text-signal-700" : "border-success-200 text-success-700"
           }`}
         >
           {index + 1}
@@ -117,7 +117,7 @@ function JourneyCard({ stage, index }: { stage: JourneyStage; index: number }) {
         className={`mt-3 inline-flex rounded-full border px-3 py-1 text-xs font-medium ${
           isSignal
             ? "border-signal-100 bg-signal-50/60 text-signal-700"
-            : "border-emerald-100 bg-emerald-50/70 text-emerald-700"
+            : "border-success-100 bg-success-50/70 text-success-700"
         }`}
       >
         {stage.tag}
@@ -126,7 +126,7 @@ function JourneyCard({ stage, index }: { stage: JourneyStage; index: number }) {
       <p className="mt-8 border-t border-line pt-6 text-sm leading-6 text-slate-700">{stage.copy}</p>
       <p
         className={`mt-6 border-l-2 px-3 text-sm leading-5 ${
-          isSignal ? "border-signal-500 text-slate-700" : "border-emerald-500 text-slate-700"
+          isSignal ? "border-signal-500 text-slate-700" : "border-success-500 text-slate-700"
         }`}
       >
         {stage.note}
@@ -139,7 +139,7 @@ function TodayCard() {
   return (
     <article className="rounded-3xl border border-signal-400 bg-white p-6 shadow-[0_18px_40px_-30px_rgba(55,48,163,0.45)] sm:p-7">
       <div className="flex items-center gap-3">
-        <span className="flex size-9 shrink-0 items-center justify-center rounded-full border border-emerald-500 bg-emerald-50 font-mono text-sm font-semibold text-emerald-700">
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-full border border-success-500 bg-success-50 font-mono text-sm font-semibold text-success-700">
           4
         </span>
         <h3 className="text-2xl font-semibold tracking-[-0.04em] text-ink">Today</h3>
@@ -152,7 +152,7 @@ function TodayCard() {
         <div aria-hidden="true" className="flex h-6 justify-center">
           <span className="border-l border-dashed border-signal-400" />
         </div>
-        <div className="flex items-center gap-3 rounded-2xl border border-emerald-100 bg-emerald-50/50 p-4 text-sm font-semibold text-emerald-800">
+        <div className="flex items-center gap-3 rounded-2xl border border-success-100 bg-success-50/50 p-4 text-sm font-semibold text-success-800">
           <CheckCircle2 aria-hidden="true" className="size-6 shrink-0" />
           Reliable operational workflows
         </div>
@@ -194,7 +194,7 @@ export function AboutJourneySection() {
         <div className="mt-10 flex flex-wrap items-center justify-center gap-x-5 gap-y-3 rounded-full border border-line bg-white px-5 py-4 text-sm font-medium text-slate-700 shadow-soft">
           <span className="text-signal-700">Product</span>
           <span aria-hidden="true" className="text-signal-300">→</span>
-          <span className="text-emerald-700">Operations</span>
+          <span className="text-success-700">Operations</span>
           <span aria-hidden="true" className="text-signal-300">→</span>
           <span className="text-signal-700">Systems</span>
           <span aria-hidden="true" className="text-signal-300">→</span>

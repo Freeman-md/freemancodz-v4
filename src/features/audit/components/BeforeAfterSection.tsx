@@ -53,7 +53,7 @@ function WorkflowNode({
       <div
         className={`flex size-16 items-center justify-center rounded-full border bg-white sm:size-[72px] ${
           isAfter
-            ? "border-emerald-300 text-emerald-700 motion-safe:animate-success-glow"
+            ? "border-success-300 text-success-700 motion-safe:animate-success-glow"
             : "border-red-300 text-ink motion-safe:animate-alert-glow"
         }`}
       >
@@ -73,7 +73,7 @@ function WorkflowPanel({
   nodes: WorkflowNodeData[];
   tone: "before" | "after";
 }) {
-  const connectorClass = tone === "after" ? "border-emerald-600" : "border-slate-400";
+  const connectorClass = tone === "after" ? "border-success-600" : "border-slate-400";
 
   const connectorStyle = tone === "after" ? "border-solid" : "border-dashed";
 
@@ -96,7 +96,7 @@ function WorkflowPanel({
                 } ${connectorClass} ${connectorStyle}`}
               >
                 {tone === "after" ? (
-                  <span className="absolute -right-1.5 -top-1.5 size-3 rounded-full bg-emerald-600" />
+                  <span className="absolute -right-1.5 -top-1.5 size-3 rounded-full bg-success-600" />
                 ) : null}
               </div>
             ) : null}
@@ -118,14 +118,14 @@ function ComparisonCard({ tone }: { tone: "before" | "after" }) {
     <article
       className={`rounded-3xl border bg-white p-5 shadow-soft transition duration-300 motion-safe:hover:-translate-y-1 sm:p-6 ${
         isAfter
-          ? "border-emerald-100 shadow-[0_16px_42px_-30px_rgba(21,128,61,0.42)] motion-safe:hover:shadow-[0_20px_48px_-28px_rgba(21,128,61,0.34)]"
+          ? "border-success-100 shadow-[0_16px_42px_-30px_rgba(4,120,87,0.42)] motion-safe:hover:shadow-[0_20px_48px_-28px_rgba(4,120,87,0.34)]"
           : "border-line motion-safe:hover:shadow-[0_20px_48px_-28px_rgba(185,28,28,0.22)]"
       }`}
     >
       <div className="flex flex-wrap items-center gap-x-5 gap-y-3 px-2 pb-6">
         <p
           className={`rounded-full px-5 py-2 font-mono text-base font-semibold uppercase tracking-[0.16em] sm:text-lg ${
-            isAfter ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-600"
+            isAfter ? "bg-success-50 text-success-700" : "bg-red-50 text-red-600"
           }`}
         >
           {isAfter ? "After" : "Before"}
@@ -137,7 +137,7 @@ function ComparisonCard({ tone }: { tone: "before" | "after" }) {
 
       <div
         className={`overflow-hidden rounded-2xl border ${
-          isAfter ? "border-emerald-100" : "border-line"
+          isAfter ? "border-success-100" : "border-line"
         }`}
       >
         <div className="p-5 sm:p-6">
@@ -147,7 +147,7 @@ function ComparisonCard({ tone }: { tone: "before" | "after" }) {
             tone={tone}
           />
         </div>
-        <div className={`border-t p-5 sm:p-6 ${isAfter ? "border-emerald-100" : "border-line"}`}>
+        <div className={`border-t p-5 sm:p-6 ${isAfter ? "border-success-100" : "border-line"}`}>
           <WorkflowPanel
             nodes={operationalWorkflow}
             title="Operational workflow"

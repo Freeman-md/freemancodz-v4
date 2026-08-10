@@ -51,7 +51,7 @@ function JourneyRail({
   const colors =
     tone === "signal"
       ? "border-signal-100 bg-signal-50/40 text-signal-800"
-      : "border-emerald-100 bg-emerald-50/50 text-emerald-700";
+      : "border-success-100 bg-success-50/50 text-success-700";
 
   return (
     <section className={`rounded-3xl border bg-white/80 p-5 shadow-soft ${colors.split(" ")[0]}`}>
@@ -65,7 +65,7 @@ function JourneyRail({
               <span
                 aria-hidden="true"
                 className={`absolute -left-1/2 top-7 hidden h-px w-full lg:-top-5 lg:left-1/2 lg:block lg:h-5 lg:w-px ${
-                  tone === "signal" ? "bg-signal-200" : "bg-emerald-200"
+                  tone === "signal" ? "bg-signal-200" : "bg-success-200"
                 }`}
               />
             ) : null}
