@@ -1,6 +1,6 @@
 import { Container } from "@/shared/components/layout/Container";
 
-export default function WorkLoading() {
+export default function WorkOldLoading() {
   return (
     <Container className="py-20 md:py-[120px]">
       <main className="animate-pulse space-y-12" aria-busy="true" aria-label="Loading work">

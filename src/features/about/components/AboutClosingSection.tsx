@@ -50,7 +50,7 @@ export function AboutClosingSection() {
               <div>
                 <p className="font-semibold text-slate-900">Want to see more of my work?</p>
                 <p className="mt-2 flex items-center gap-2 font-medium text-signal-700">
-                  View selected work
+                  View relevant work
                   <ArrowRight
                     aria-hidden="true"
                     className="size-4 transition group-hover:translate-x-1"

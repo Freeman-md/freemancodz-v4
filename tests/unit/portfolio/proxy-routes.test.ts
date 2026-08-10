@@ -8,3 +8,9 @@ test("proxy allows the Audit page route", () => {
 
   assert.equal(response.headers.get("x-middleware-next"), "1");
 });
+
+test("proxy allows the archived Work page route", () => {
+  const response = proxy(new NextRequest("https://freeman.dev/work-old"));
+
+  assert.equal(response.headers.get("x-middleware-next"), "1");
+});
