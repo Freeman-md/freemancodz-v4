@@ -144,3 +144,11 @@ size to their content instead of stretching across the card.
 - Desktop: the two bounded flows read toward a centred handoff signal and share a single outcome statement without labels colliding with the steps.
 - Mobile: each four-stage flow remains horizontal and readable, while the handoff becomes a centred vertical bridge between the two panels.
 - Responsive review: inspected at 1440px and 390px; headings, descriptions, nodes, connectors, and the outcome card preserve their intended hierarchy.
+
+### Relevant Work checkpoint
+
+- Scope: added one featured product and two supporting projects using the portfolio feature's existing case-study badges, points, links, and preview illustrations.
+- Ownership: the reused case-study presentation remains in `features/portfolio` because Home and Work belong to the same product capability; no domain-specific UI was moved into generic shared ownership.
+- Desktop: the featured narrative and wide WithRadius visual sit side by side, followed by two balanced supporting cards.
+- Mobile: the featured preview enters the reading order before the problem/solution/outcome detail, while supporting project content and previews remain contained and readable.
+- Responsive review: inspected at 1440px and 390px with real destinations for case-study, website, assistant, and repository actions.

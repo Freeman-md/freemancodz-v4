@@ -22,7 +22,7 @@ type CaseStudyLink = {
   icon?: LucideIcon;
 };
 
-function CaseBadge({
+export function CaseBadge({
   children,
   tone = "signal",
 }: {
@@ -43,7 +43,7 @@ function CaseBadge({
   );
 }
 
-function StudyLink({ href, icon: Icon, label }: CaseStudyLink) {
+export function StudyLink({ href, icon: Icon, label }: CaseStudyLink) {
   return (
     <a
       className="inline-flex items-center gap-2 text-sm font-semibold text-signal-700 transition hover:text-signal-900"
@@ -58,7 +58,7 @@ function StudyLink({ href, icon: Icon, label }: CaseStudyLink) {
   );
 }
 
-function StudyPoint({
+export function StudyPoint({
   children,
   compact = false,
   icon: Icon,
@@ -103,7 +103,7 @@ function StudyPoint({
   );
 }
 
-function PortfolioAssistantPreview() {
+export function PortfolioAssistantPreview() {
   return (
     <div className="relative mx-auto w-full max-w-[18rem] rounded-2xl border border-signal-100 bg-signal-50/40 p-4 shadow-[0_16px_36px_-26px_rgba(55,48,163,0.7)]">
       <div className="flex items-center gap-2 text-xs font-semibold text-signal-900">
@@ -138,7 +138,7 @@ const emailSteps = [
   [Sparkles, "Surface what matters", "Show the important updates"],
 ] as const;
 
-function EmailWorkflowPreview() {
+export function EmailWorkflowPreview() {
   return (
     <div className="relative mx-auto w-full max-w-[18rem] space-y-2 py-2">
       <span aria-hidden="true" className="absolute bottom-8 left-6 top-8 border-l border-dashed border-success-300" />
