@@ -92,3 +92,24 @@ with a dedicated Allura signature treatment in neutral ink.
 ## Result
 
 final result: passed
+
+## Work page addition
+
+- Scope: rebuilt `/work` with a responsive hero, case studies, supporting work, positioning illustration, and final conversation CTA.
+- Archive: preserved the previous implementation at `/work-old`.
+- References: the supplied desktop and mobile Work-page captures were treated as the visual source of truth.
+- Responsive review: verified the desktop hierarchy and 390px mobile composition, including split supporting cards, content-width badges, the overlapping desktop positioning graphic, its vertical mobile adaptation, and the final CTA topic list.
+- Assets: used live captures from WithRadius and AcrossTheHorizon for the relevant project previews.
+- Behaviour: external project links use valid destinations, the CTA uses the existing portfolio-assistant event boundary, and no portfolio client component imports backend code.
+
+Validation passed:
+
+- `npm run prisma:validate`
+- `npm run prisma:generate`
+- `npm run lint`
+- `npm run typecheck`
+- `npm test` (71 tests)
+- `npm run build`
+- `git diff --check HEAD`
+
+Work page final result: passed
