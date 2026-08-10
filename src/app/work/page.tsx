@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 
 import { WorkAdditionalSection } from "@/features/portfolio/components/WorkAdditionalSection";
 import { WorkCaseStudiesSection } from "@/features/portfolio/components/WorkCaseStudiesSection";
+import { WorkConnectionSection } from "@/features/portfolio/components/WorkConnectionSection";
 import { WorkHero } from "@/features/portfolio/components/WorkHero";
 import { siteConfig } from "@/shared/config/site-metadata";
 
@@ -31,6 +32,7 @@ export default function WorkPage() {
       <WorkHero />
       <WorkCaseStudiesSection />
       <WorkAdditionalSection />
+      <WorkConnectionSection />
     </>
   );
 }
