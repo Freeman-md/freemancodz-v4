@@ -160,3 +160,11 @@ size to their content instead of stretching across the card.
 - Mobile: the offer headline leads into stacked problem and improvement flows before the audit action and reassurance text.
 - Visual semantics: red is limited to the identified manual friction; the improvement uses the established success theme; the primary action remains signal-coloured.
 - Responsive review: inspected at 1440px and 390px, including the five-step problem flow, four-step improvement flow, callouts, and breakpoint-specific reading order.
+
+### Closing CTA checkpoint
+
+- Scope: added the final low-friction audit invitation and a responsive friction-to-resolution signal visual.
+- Desktop: the narrative and single audit action balance the SVG path visual without introducing a competing action.
+- Mobile: the CTA remains first in the reading order and the visual follows beneath it, preserving the reference's calm close.
+- Visual semantics: a tangled, red warning state transitions through a dashed diagnostic segment into a clear signal path and resolved check state.
+- Responsive review: inspected at 1440px and 390px; typography, CTA width, reassurance copy, line path, and endpoint glows remain legible.
