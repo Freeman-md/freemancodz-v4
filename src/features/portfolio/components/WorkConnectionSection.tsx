@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 
 import { Container } from "@/shared/components/layout/Container";
+import { MarketingSectionHeading } from "@/shared/components/marketing/MarketingSectionHeading";
 
 type ConnectionItem = {
   icon: LucideIcon;
@@ -28,7 +29,7 @@ const productItems: ConnectionItem[] = [
 const workflowItems: ConnectionItem[] = [
   { icon: Mail, label: "Email PA" },
   { icon: UsersRound, label: "Shifty" },
-  { icon: ShieldCheck, label: "Self-Healing Backend Operations System" },
+  { icon: ShieldCheck, label: "Self-Healing Backend Operating System" },
 ];
 
 const outcomes = [
@@ -45,7 +46,7 @@ function ConnectionList({ items, tone }: { items: ConnectionItem[]; tone: "signa
       : "border-success-100 bg-success-50 text-success-700";
 
   return (
-    <ul className="mt-8 grid gap-4">
+    <ul className="mt-6 grid gap-3">
       {items.map(({ icon: Icon, label }) => (
         <li className="flex items-center gap-3 text-sm font-semibold text-slate-900" key={label}>
           <span className={`flex size-9 shrink-0 items-center justify-center rounded-lg border shadow-sm ${toneClasses}`}>
@@ -117,7 +118,7 @@ function DesktopConnectionDiagram() {
       <div className="absolute inset-y-0 left-0 w-[59%] rounded-[4.5rem_18rem_18rem_4.5rem] border border-signal-100 bg-[linear-gradient(115deg,rgba(238,242,255,0.76),rgba(255,255,255,0.78))] p-12 pr-64">
         <ProductSide />
       </div>
-      <div className="absolute inset-y-0 right-0 w-[59%] rounded-[18rem_4.5rem_4.5rem_18rem] border border-success-100 bg-[linear-gradient(245deg,rgba(236,253,245,0.76),rgba(255,255,255,0.78))] p-12 pl-64">
+      <div className="absolute inset-y-0 right-0 w-[59%] rounded-[18rem_4.5rem_4.5rem_18rem] border border-success-100 bg-[linear-gradient(245deg,rgba(236,253,245,0.76),rgba(255,255,255,0.78))] p-12 lg:pl-[16.5rem] xl:pl-80">
         <WorkflowSide />
       </div>
       <div className="absolute left-1/2 top-1/2 z-10 flex h-[86%] w-[30%] -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-[50%] border border-signal-100 bg-[linear-gradient(145deg,rgba(224,231,255,0.78),rgba(236,253,245,0.78))] shadow-[0_24px_70px_-45px_rgba(55,48,163,0.8)]">
@@ -149,18 +150,11 @@ export function WorkConnectionSection() {
     <section aria-labelledby="work-connection-heading" className="bg-[#fbf9f9] py-20 sm:py-28">
       <Container className="max-w-[1340px]">
         <div className="rounded-[2rem] border border-line bg-white px-5 py-16 shadow-soft sm:px-10 lg:px-14 lg:py-20">
-          <div className="mx-auto max-w-4xl text-center">
-            <p className="text-sm font-semibold uppercase tracking-[0.04em] text-signal-700">
-              How the work connects
-            </p>
-            <span aria-hidden="true" className="mx-auto mt-5 block h-1 w-16 rounded-full bg-signal-600" />
-            <h2
-              className="mt-7 text-4xl font-semibold leading-[1.08] tracking-[-0.045em] text-slate-950 sm:text-5xl lg:text-6xl"
-              id="work-connection-heading"
-            >
-              Different problems. The same focus: make the experience clearer and the system behind it work better.
-            </h2>
-          </div>
+          <MarketingSectionHeading
+            eyebrow="How the work connects"
+            id="work-connection-heading"
+            title="Different problems. The same focus: make the experience clearer and the system behind it work better."
+          />
 
           <DesktopConnectionDiagram />
           <MobileConnectionDiagram />

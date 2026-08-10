@@ -1,5 +1,3 @@
-"use client";
-
 import {
   ArrowRight,
   Code2,
@@ -9,9 +7,9 @@ import {
   UsersRound,
 } from "lucide-react";
 
-import { assistantTriggerEvent } from "@/contracts/assistant.contract";
+import { AssistantTriggerButton } from "@/features/assistant/components/AssistantTriggerButton";
 import { Container } from "@/shared/components/layout/Container";
-import { Button } from "@/shared/components/ui/Button";
+import { MarketingSectionHeading } from "@/shared/components/marketing/MarketingSectionHeading";
 
 const conversationTopics = [
   { icon: Layers3, label: "Projects" },
@@ -21,17 +19,6 @@ const conversationTopics = [
 ];
 
 export function WorkCtaSection() {
-  function startConversation() {
-    window.dispatchEvent(
-      new CustomEvent(assistantTriggerEvent, {
-        detail: {
-          message:
-            "I saw something in your work that maps to what I am building, hiring for, or trying to improve.",
-        },
-      }),
-    );
-  }
-
   return (
     <section className="bg-white py-10 sm:py-16" id="work-cta">
       <Container className="max-w-[1440px]">
@@ -46,26 +33,29 @@ export function WorkCtaSection() {
           />
 
           <div className="relative z-10 mx-auto max-w-4xl text-center">
-            <p className="text-lg font-semibold uppercase tracking-[0.03em] text-signal-700 sm:text-xl">
-              What&apos;s next?
-            </p>
-            <span aria-hidden="true" className="mx-auto mt-6 block h-1 w-16 rounded-full bg-signal-600" />
-            <h2 className="mt-8 text-4xl font-semibold leading-[1.08] tracking-[-0.045em] text-slate-950 sm:text-5xl lg:text-6xl">
-              Seen something here that maps to what you&apos;re working on?
-            </h2>
-            <p className="mx-auto mt-7 max-w-3xl text-lg leading-8 text-slate-700 sm:text-xl lg:text-2xl lg:leading-9">
-              Tell me what you&apos;re building, hiring for or trying to improve. My assistant will help get
-              the right context across.
-            </p>
+            <MarketingSectionHeading
+              copy={
+                <p>
+                  Tell me what you&apos;re building, hiring for or trying to improve. My assistant will help
+                  get the right context across.
+                </p>
+              }
+              eyebrow="What's next?"
+              id="work-cta-heading"
+              title="Seen something here that maps to what you're working on?"
+            />
 
-            <Button
-              className="mt-10 h-20 w-full max-w-[36rem] rounded-xl bg-signal-600 px-6 text-xl font-semibold text-white shadow-[0_18px_36px_-18px_rgba(55,48,163,0.9)] hover:bg-signal-700 sm:text-2xl"
-              onClick={startConversation}
+            <AssistantTriggerButton
+              detail={{
+                message:
+                  "I saw something in your work that maps to what I am building, hiring for, or trying to improve.",
+              }}
+              variant="marketing"
             >
               <MessageCircleMore aria-hidden="true" className="size-7 sm:size-8" />
               Start a Conversation
-              <ArrowRight aria-hidden="true" className="ml-auto size-7 sm:size-8" />
-            </Button>
+              <ArrowRight aria-hidden="true" className="size-7 sm:size-8" />
+            </AssistantTriggerButton>
 
             <ul className="mx-auto mt-12 max-w-4xl divide-y divide-line text-left sm:grid sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-4">
               {conversationTopics.map(({ icon: Icon, label }) => (

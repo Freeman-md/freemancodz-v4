@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 
 import { Container } from "@/shared/components/layout/Container";
+import { MarketingSectionHeading } from "@/shared/components/marketing/MarketingSectionHeading";
 
 type CaseStudyLink = {
   href: string;
@@ -230,21 +231,16 @@ export function WorkCaseStudiesSection() {
   return (
     <section aria-labelledby="case-studies-heading" className="bg-[#fbf9f9] py-20 sm:py-28">
       <Container className="max-w-[1340px]">
-        <div className="mx-auto max-w-4xl text-center">
-          <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-signal-700">
-            Relevant work
-          </p>
-          <span aria-hidden="true" className="mx-auto mt-4 block h-0.5 w-24 bg-signal-600" />
-          <h2
-            className="mt-6 text-4xl font-semibold leading-[1.05] tracking-[-0.045em] text-slate-950 sm:text-5xl lg:text-6xl"
-            id="case-studies-heading"
-          >
-            Relevant Work. Real Problems. Meaningful Impact
-          </h2>
-          <p className="mx-auto mt-5 max-w-2xl text-base leading-7 text-slate-700 sm:text-lg">
-            Selected case studies across customer-facing products, operational systems and practical AI.
-          </p>
-        </div>
+        <MarketingSectionHeading
+          copy={
+            <p>
+              Selected case studies across customer-facing products, operational systems and practical AI.
+            </p>
+          }
+          eyebrow="Relevant work"
+          id="case-studies-heading"
+          title="Relevant Work. Real Problems. Meaningful Impact"
+        />
 
         <div className="mt-12 space-y-6 sm:mt-16">
           <FeaturedStudy />

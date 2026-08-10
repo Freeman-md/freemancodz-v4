@@ -173,10 +173,10 @@ export function AboutJourneySection() {
             How I got here
           </p>
           <h2
-            className="mt-5 text-4xl font-semibold leading-[0.98] tracking-[-0.055em] text-ink sm:text-5xl lg:text-6xl"
+            className="mt-5 font-display text-4xl leading-[1.02] tracking-[-0.04em] text-ink sm:text-5xl lg:text-6xl"
             id="about-journey-heading"
           >
-            From the interface to the full <span className="text-signal-600">journey</span>
+            From the interface to the full journey
           </h2>
           <p className="mt-6 max-w-3xl text-lg leading-8 text-slate-700 sm:text-xl">
             My focus broadened from building customer-facing products to understanding the systems

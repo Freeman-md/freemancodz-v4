@@ -3,6 +3,8 @@ import { Allura } from "next/font/google";
 import Link from "next/link";
 
 import { Container } from "@/shared/components/layout/Container";
+import { MarketingCtaLink } from "@/shared/components/marketing/MarketingCtaLink";
+import { MarketingSectionHeading } from "@/shared/components/marketing/MarketingSectionHeading";
 
 const signatureFont = Allura({ subsets: ["latin"], weight: "400" });
 
@@ -11,29 +13,23 @@ export function AboutClosingSection() {
     <section aria-labelledby="about-closing-heading" className="pb-20 pt-16 sm:pb-28 sm:pt-20">
       <Container>
         <div className="overflow-hidden rounded-3xl border border-line bg-white px-6 py-14 text-center shadow-soft sm:px-10 sm:py-20 lg:px-20">
-          <p className="font-mono text-sm font-semibold uppercase tracking-[0.08em] text-signal-700">
-            What&apos;s next?
-          </p>
-          <span aria-hidden="true" className="mx-auto mt-5 block h-1 w-14 rounded-full bg-signal-500" />
-          <h2
-            className="mx-auto mt-9 max-w-4xl font-display text-4xl leading-[1.04] tracking-[-0.04em] text-slate-950 sm:text-5xl lg:text-6xl"
+          <MarketingSectionHeading
+            copy={
+              <p>
+                Let&apos;s take a look together. I&apos;ll audit one journey or workflow and show you what
+                would make the biggest difference.
+              </p>
+            }
+            eyebrow="What's next?"
             id="about-closing-heading"
-          >
-            Have a customer journey or workflow that isn&apos;t running as smoothly as it should?
-          </h2>
-          <p className="mx-auto mt-7 max-w-2xl text-lg leading-8 text-slate-600 sm:text-xl">
-            Let&apos;s take a look together. I&apos;ll audit one journey or workflow and show you what
-            would make the biggest difference.
-          </p>
+            title="Have a customer journey or workflow that isn't running as smoothly as it should?"
+          />
 
-          <Link
-            className="mx-auto mt-10 inline-flex w-full max-w-lg items-center justify-center gap-5 rounded-sm bg-signal-800 px-7 py-5 text-lg font-semibold text-white shadow-[0_12px_28px_-14px_rgba(55,48,163,0.72)] transition hover:bg-signal-900 sm:text-xl"
-            href="/audit"
-          >
+          <MarketingCtaLink href="/audit">
             <MessageCircle aria-hidden="true" className="size-7 stroke-[1.7]" />
             <span>Start My Free Audit</span>
             <ArrowRight aria-hidden="true" className="size-6 stroke-[1.7]" />
-          </Link>
+          </MarketingCtaLink>
           <p className="mt-6 flex items-center justify-center gap-3 text-sm text-slate-500 sm:text-base">
             <ShieldCheck aria-hidden="true" className="size-5 text-slate-500" />
             Free. No obligation. Your information is never shared.

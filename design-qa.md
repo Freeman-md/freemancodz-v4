@@ -113,3 +113,12 @@ Validation passed:
 - `git diff --check HEAD`
 
 Work page final result: passed
+
+### Cross-page marketing consistency
+
+The Work hero now uses the same strong sans-serif headline treatment as the Audit and About
+heroes. Repeated section eyebrows, rules, display headings, and supporting copy are composed
+through one shared marketing heading component. The About and Work closing actions also share
+one CTA treatment while retaining their distinct destinations and assistant-opening behaviour.
+The About journey keeps its original “How I got here” eyebrow and “From the interface to the
+full journey” title; only its title typography changed.
