@@ -67,9 +67,9 @@ export function ChatComposer({
       <Button
         type="submit"
         disabled={!canSubmit}
-        variant="default"
+        variant="primary"
         size="icon"
-        className="size-10 shrink-0 rounded-full bg-black text-white hover:bg-black/88"
+        className="size-10 shrink-0 rounded-full"
       >
         <ArrowUpIcon />
       </Button>

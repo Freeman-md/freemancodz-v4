@@ -9,6 +9,7 @@ import {
   StudyLink,
   StudyPoint,
 } from "@/features/portfolio/components/WorkCaseStudiesSection";
+import { buttonVariants } from "@/shared/components/ui/Button";
 
 function FeaturedProject() {
   return (
@@ -47,7 +48,7 @@ function FeaturedProject() {
         </div>
         <div className="mt-8 flex flex-wrap items-center gap-x-7 gap-y-4 lg:mt-auto lg:pt-8">
           <a
-            className="inline-flex items-center gap-3 rounded-lg bg-signal-600 px-6 py-3.5 text-sm font-semibold text-white shadow-[0_14px_28px_-16px_rgba(55,48,163,0.75)] transition hover:bg-signal-700"
+            className={buttonVariants({ size: "lg", variant: "signal" })}
             href="https://withradius.com"
             rel="noreferrer"
             target="_blank"

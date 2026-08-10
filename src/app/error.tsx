@@ -1,6 +1,7 @@
 "use client";
 
 import { Container } from "@/shared/components/layout/Container";
+import { Button } from "@/shared/components/ui/Button";
 
 export default function GlobalError({ reset }: { reset: () => void }) {
   return (
@@ -10,13 +11,15 @@ export default function GlobalError({ reset }: { reset: () => void }) {
           Something went wrong.
         </h1>
         <p className="mt-4 text-muted">The portfolio content could not be displayed.</p>
-        <button
+        <Button
           type="button"
           onClick={reset}
-          className="mt-6 font-mono text-[12px] text-accent hover:underline"
+          className="mt-6 font-mono text-[12px]"
+          size="sm"
+          variant="link"
         >
           Try again
-        </button>
+        </Button>
       </main>
     </Container>
   );

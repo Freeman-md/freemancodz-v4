@@ -2,18 +2,21 @@
 
 import { MessageSquareIcon } from "lucide-react";
 
+import { Button } from "@/shared/components/ui/Button";
+
 type ChatLauncherProps = {
   onOpen: () => void;
 };
 
 export function ChatLauncher({ onOpen }: ChatLauncherProps) {
   return (
-    <button
+    <Button
       type="button"
       aria-label="Open portfolio chat"
       onClick={onOpen}
       onFocus={onOpen}
-      className="flex h-16 w-full items-center gap-3 px-4 text-left text-white"
+      variant="ghost"
+      className="h-16 w-full justify-start gap-3 rounded-none px-4 text-left text-white hover:bg-white/5 hover:text-white"
     >
       <span className="flex size-10 items-center justify-center rounded-full bg-white/10 text-white">
         <MessageSquareIcon aria-hidden="true" className="size-4.5" />
@@ -27,6 +30,6 @@ export function ChatLauncher({ onOpen }: ChatLauncherProps) {
         </span>
       </span>
       <span className="ml-1 size-2 shrink-0 rounded-full bg-[#5b4df8]" />
-    </button>
+    </Button>
   );
 }

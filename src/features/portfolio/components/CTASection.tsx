@@ -1,4 +1,5 @@
 import { externalLinks } from "@/shared/config/links";
+import { buttonVariants } from "@/shared/components/ui/Button";
 
 export function CTASection({ title, copy }: { title?: string; copy: string }) {
   return (
@@ -15,7 +16,11 @@ export function CTASection({ title, copy }: { title?: string; copy: string }) {
         <div className="flex flex-wrap gap-3">
           <a
             href="/work"
-            className="inline-flex items-center justify-center gap-2 rounded-[3px] border border-[#4f46e5] bg-[#4f46e5] px-5 py-3 font-mono text-[12px] font-medium tracking-[0.02em] text-white transition hover:border-[#6366f1] hover:bg-[#6366f1]"
+            className={buttonVariants({
+              className: "font-mono text-[12px] tracking-[0.02em]",
+              size: "lg",
+              variant: "signal",
+            })}
           >
             View My Work
           </a>
@@ -23,7 +28,12 @@ export function CTASection({ title, copy }: { title?: string; copy: string }) {
             href={externalLinks.linkedin}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex items-center justify-center gap-2 rounded-[3px] border border-white bg-transparent px-5 py-3 font-mono text-[12px] font-medium tracking-[0.02em] text-white transition hover:bg-white/10"
+            className={buttonVariants({
+              className:
+                "border-white bg-transparent font-mono text-[12px] tracking-[0.02em] text-white hover:border-white hover:bg-white/10",
+              size: "lg",
+              variant: "outline",
+            })}
           >
             Connect on LinkedIn
             <span aria-hidden="true">↗</span>

@@ -29,7 +29,7 @@ export function AuditFooterCta() {
               <SignalVisual />
             </div>
             <AuditButton
-              className="bg-signal-800 px-7 text-base shadow-[0_12px_28px_-14px_rgba(55,48,163,0.72)] hover:bg-signal-900"
+              className="px-7 text-base"
               label="Start My Free Audit"
             />
             <p className="mt-5 flex items-center justify-center gap-2 text-sm text-slate-500 lg:justify-start">

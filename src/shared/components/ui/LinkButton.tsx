@@ -1,10 +1,14 @@
 import Link from "next/link";
 import type { AnchorHTMLAttributes, ReactNode } from "react";
+import type { VariantProps } from "class-variance-authority";
+
+import { buttonVariants } from "@/shared/components/ui/Button";
+import { cn } from "@/shared/utils/class-names";
 
 type LinkButtonProps = AnchorHTMLAttributes<HTMLAnchorElement> & {
   href: string;
   children: ReactNode;
-  variant?: "primary" | "ghost" | "accent" | "text";
+  variant?: "primary" | "ghost" | "accent" | "text" | "signal" | "light" | "success";
 };
 
 export function LinkButton({
@@ -14,17 +18,24 @@ export function LinkButton({
   className = "",
   ...props
 }: LinkButtonProps) {
-  const styles = {
-    primary: "border border-black bg-black text-white hover:opacity-90",
-    accent: "border border-accent bg-accent text-white hover:bg-indigo-500 hover:border-indigo-500",
-    ghost: "border border-line bg-transparent text-ink hover:bg-surface",
-    text: "text-ink hover:text-accent",
-  }[variant];
+  const buttonVariant = {
+    accent: "signal",
+    ghost: "outline",
+    light: "light",
+    primary: "primary",
+    signal: "signal",
+    success: "success",
+    text: "link",
+  }[variant] as NonNullable<VariantProps<typeof buttonVariants>["variant"]>;
 
   return (
     <Link
       href={href}
-      className={`inline-flex items-center justify-center gap-2 rounded-sm px-5 py-3 font-mono text-[12px] font-medium tracking-[0.02em] transition ${styles} ${className}`}
+      className={cn(
+        buttonVariants({ size: variant === "text" ? "sm" : "lg", variant: buttonVariant }),
+        "font-mono text-[12px] tracking-[0.02em]",
+        className,
+      )}
       {...props}
     >
       {children}

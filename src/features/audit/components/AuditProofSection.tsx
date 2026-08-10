@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 
 import { Container } from "@/shared/components/layout/Container";
+import { buttonVariants } from "@/shared/components/ui/Button";
 
 type ProofNodeData = {
   icon: LucideIcon;
@@ -136,7 +137,11 @@ function ProofLink({ href, label }: { href: string; label: string }) {
   return (
     <a
       aria-label={`Open ${label}`}
-      className="absolute right-6 top-6 inline-flex size-10 items-center justify-center rounded-full border border-signal-100 bg-white text-signal-800 transition hover:border-signal-300 hover:bg-signal-50"
+      className={buttonVariants({
+        className: "absolute right-6 top-6 rounded-full",
+        size: "icon",
+        variant: "outline",
+      })}
       href={href}
       rel="noreferrer"
       target="_blank"

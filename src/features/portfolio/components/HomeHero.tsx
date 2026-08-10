@@ -14,7 +14,9 @@ import {
   UsersRound,
 } from "lucide-react";
 
+import { buttonVariants } from "@/shared/components/ui/Button";
 import { siteAssetLinks } from "@/shared/config/links";
+import { cn } from "@/shared/utils/class-names";
 
 const audiences = [
   { icon: Users, label: "Founders" },
@@ -64,7 +66,7 @@ export function HomeHero() {
 
           <div className="mx-auto mt-7 grid w-full max-w-2xl gap-3 sm:grid-cols-2 lg:mx-0 lg:mt-9">
             <Link
-              className="inline-flex min-h-14 items-center justify-center gap-5 rounded-lg bg-signal-600 px-6 text-base font-semibold text-white shadow-[0_16px_32px_-18px_rgba(55,48,163,0.78)] transition hover:bg-signal-700"
+              className={cn(buttonVariants({ size: "lg", variant: "signal" }), "w-full gap-5")}
               href="/audit"
             >
               <MessageCircleMore aria-hidden="true" className="size-5 sm:hidden" />
@@ -72,7 +74,7 @@ export function HomeHero() {
               <ArrowRight aria-hidden="true" className="ml-auto size-5" />
             </Link>
             <Link
-              className="inline-flex min-h-14 items-center justify-center gap-5 rounded-lg border border-slate-300 bg-white px-6 text-base font-semibold text-slate-950 shadow-sm transition hover:border-signal-200 hover:bg-signal-50/30"
+              className={cn(buttonVariants({ size: "lg", variant: "light" }), "w-full gap-5")}
               href="/work"
             >
               View Relevant Work

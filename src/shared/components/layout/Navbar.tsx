@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ArrowRight, Menu, X } from "lucide-react";
 import { assistantTriggerEvent } from "@/contracts/assistant.contract";
-import { Button } from "@/shared/components/ui/Button";
+import { Button, buttonVariants } from "@/shared/components/ui/Button";
 import { navigation, externalLinks } from "@/shared/config/links";
 import { siteConfig } from "@/shared/config/site-metadata";
 
@@ -43,9 +43,11 @@ export function Navbar() {
         </div>
         <div className="hidden md:block">
           {isHome ? (
-            <button
-              className="font-sans text-sm font-medium text-slate-950 transition hover:text-signal-700"
+            <Button
+              className="h-auto px-0 font-sans text-sm font-medium text-slate-950 hover:bg-transparent hover:text-signal-700"
+              size="sm"
               type="button"
+              variant="ghost"
               onClick={() => {
                 window.dispatchEvent(
                   new CustomEvent(assistantTriggerEvent, {
@@ -57,11 +59,12 @@ export function Navbar() {
               }}
             >
               Assistant
-            </button>
+            </Button>
           ) : pathname === "/audit" ? (
             <Button
               className="h-9 px-4 font-mono text-[11px]"
               size="sm"
+              variant="signal"
               onClick={() => {
                 window.dispatchEvent(
                   new CustomEvent(assistantTriggerEvent, {
@@ -81,7 +84,11 @@ export function Navbar() {
               href={externalLinks.linkedin}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center gap-2 rounded-sm border border-line px-4 py-2 font-mono text-[12px] text-ink transition hover:bg-surface"
+              className={buttonVariants({
+                className: "font-mono text-[12px]",
+                size: "sm",
+                variant: "outline",
+              })}
             >
               LinkedIn
               <span aria-hidden="true">↗</span>

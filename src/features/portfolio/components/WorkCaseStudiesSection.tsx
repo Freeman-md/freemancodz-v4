@@ -15,6 +15,7 @@ import {
 
 import { Container } from "@/shared/components/layout/Container";
 import { MarketingSectionHeading } from "@/shared/components/marketing/MarketingSectionHeading";
+import { buttonVariants } from "@/shared/components/ui/Button";
 
 type CaseStudyLink = {
   href: string;
@@ -190,7 +191,7 @@ function FeaturedStudy() {
         </div>
         <div className="mt-8 flex flex-wrap gap-x-6 gap-y-4 lg:mt-auto lg:pt-8">
           <a
-            className="inline-flex items-center gap-2 rounded-md bg-signal-600 px-5 py-3 text-sm font-semibold text-white shadow-[0_12px_24px_-14px_rgba(55,48,163,0.75)] transition hover:bg-signal-700"
+            className={buttonVariants({ size: "lg", variant: "signal" })}
             href="https://withradius.com"
             rel="noreferrer"
             target="_blank"
