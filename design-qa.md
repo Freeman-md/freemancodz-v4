@@ -152,3 +152,11 @@ size to their content instead of stretching across the card.
 - Desktop: the featured narrative and wide WithRadius visual sit side by side, followed by two balanced supporting cards.
 - Mobile: the featured preview enters the reading order before the problem/solution/outcome detail, while supporting project content and previews remain contained and readable.
 - Responsive review: inspected at 1440px and 390px with real destinations for case-study, website, assistant, and repository actions.
+
+### Free Audit checkpoint
+
+- Scope: added the homepage audit offer with a concrete current-process and improved-process comparison.
+- Desktop: the audit promise, supporting benefits, conversion action, and full-detail link sit beside the two-state workflow diagram.
+- Mobile: the offer headline leads into stacked problem and improvement flows before the audit action and reassurance text.
+- Visual semantics: red is limited to the identified manual friction; the improvement uses the established success theme; the primary action remains signal-coloured.
+- Responsive review: inspected at 1440px and 390px, including the five-step problem flow, four-step improvement flow, callouts, and breakpoint-specific reading order.
