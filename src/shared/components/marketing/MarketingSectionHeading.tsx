@@ -7,15 +7,21 @@ export function MarketingSectionHeading({
   id,
   title,
 }: {
-  align?: "center" | "left";
+  align?: "center" | "left" | "right";
   copy?: ReactNode;
   eyebrow: string;
   id: string;
   title: ReactNode;
 }) {
-  const alignment = align === "center" ? "mx-auto text-center" : "text-left";
+  const alignment = {
+    center: "mx-auto text-center",
+    left: "mr-auto text-left",
+    right: "ml-auto text-right",
+  }[align];
 
-  const ruleAlignment = align === "center" ? "mx-auto" : "";
+  const ruleAlignment = { center: "mx-auto", left: "mr-auto", right: "ml-auto" }[align];
+
+  const copyAlignment = { center: "mx-auto", left: "mr-auto", right: "ml-auto" }[align];
 
   return (
     <div className={`max-w-4xl ${alignment}`}>
@@ -30,7 +36,9 @@ export function MarketingSectionHeading({
         {title}
       </h2>
       {copy ? (
-        <div className="mx-auto mt-6 max-w-3xl text-lg leading-8 text-slate-700 sm:text-xl">{copy}</div>
+        <div className={`mt-6 max-w-3xl text-lg leading-8 text-slate-700 sm:text-xl ${copyAlignment}`}>
+          {copy}
+        </div>
       ) : null}
     </div>
   );

@@ -2,30 +2,45 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ArrowRight, Menu, X } from "lucide-react";
+import { ArrowRight, Bot, Menu, X } from "lucide-react";
 import { assistantTriggerEvent } from "@/contracts/assistant.contract";
 import { Button, buttonVariants } from "@/shared/components/ui/Button";
-import { navigation, externalLinks } from "@/shared/config/links";
-import { siteConfig } from "@/shared/config/site-metadata";
+import { externalLinks } from "@/shared/config/links";
+
+const navigation = [
+  { label: "Work", href: "/work" },
+  { label: "About", href: "/about" },
+  { label: "Audit", href: "/audit" },
+] as const;
 
 export function Navbar() {
   const pathname = usePathname();
 
   const isHome = pathname === "/";
 
-  const visibleNavigation = isHome ? navigation.filter((item) => item.href !== "/") : navigation;
-
   return (
     <header className="sticky top-0 z-50 border-b border-line bg-white/95 backdrop-blur">
       <nav className={`mx-auto flex h-16 items-center justify-between px-5 md:px-6 ${isHome ? "max-w-[1440px] lg:px-20" : "max-w-[1200px]"}`}>
         <Link
           href="/"
-          className={isHome ? "text-xl font-bold tracking-[-0.04em] text-slate-950 md:text-2xl" : "font-display text-xl tracking-[-0.03em] text-ink transition hover:text-accent md:text-2xl"}
+          aria-label="Freemancodz home"
+          className="group block shrink-0"
         >
-          {isHome ? <>FREEMAN<span className="text-signal-600">.</span></> : siteConfig.shortName}
+          <span className="relative block">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              alt="Freemancodz"
+              className="block h-6 w-auto md:h-7"
+              src="/images/logo.svg"
+            />
+            <span
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 bg-violet-600 opacity-0 transition-opacity duration-200 [clip-path:inset(0_0_0_91%)] [mask-image:url('/images/logo.svg')] [mask-position:center] [mask-repeat:no-repeat] [mask-size:contain] group-hover:opacity-100"
+            />
+          </span>
         </Link>
         <div className="hidden items-center gap-8 md:flex">
-          {visibleNavigation.map((item) => {
+          {navigation.map((item) => {
             const active = pathname === item.href;
 
             return (
@@ -44,10 +59,10 @@ export function Navbar() {
         <div className="hidden md:block">
           {isHome ? (
             <Button
-              className="h-auto px-0 font-sans text-sm font-medium text-slate-950 hover:bg-transparent hover:text-signal-700"
+              className="font-mono text-[12px]"
               size="sm"
               type="button"
-              variant="ghost"
+              variant="outline"
               onClick={() => {
                 window.dispatchEvent(
                   new CustomEvent(assistantTriggerEvent, {
@@ -58,6 +73,7 @@ export function Navbar() {
                 );
               }}
             >
+              <Bot aria-hidden="true" className="size-4" />
               Assistant
             </Button>
           ) : pathname === "/audit" ? (
@@ -103,7 +119,7 @@ export function Navbar() {
           </summary>
           <div className="absolute inset-x-0 top-full border-t border-line bg-white px-5 py-6 shadow-soft">
             <div className="mx-auto grid max-w-[1200px] gap-1">
-              {visibleNavigation.map((item) => {
+              {navigation.map((item) => {
                 const active = pathname === item.href;
 
                 return (
