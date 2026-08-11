@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 
 import { Container } from "@/shared/components/layout/Container";
+import { MarketingSectionHeading } from "@/shared/components/marketing/MarketingSectionHeading";
 
 type SupportingProject = {
   title: string;
@@ -141,12 +142,11 @@ export function WorkAdditionalSection() {
   return (
     <section aria-labelledby="additional-work-heading" className="bg-white py-20 sm:py-28">
       <Container className="max-w-[1340px]">
-        <div className="text-center">
-          <h2 className="font-display text-4xl tracking-[-0.04em] text-slate-950 sm:text-5xl" id="additional-work-heading">
-            Additional Work &amp; Experiments
-          </h2>
-          <span aria-hidden="true" className="mx-auto mt-6 block h-1 w-16 rounded-full bg-signal-600" />
-        </div>
+        <MarketingSectionHeading
+          eyebrow="Supporting work"
+          id="additional-work-heading"
+          title="Additional Work & Experiments"
+        />
 
         <div className="mt-12 grid gap-5 lg:grid-cols-2 xl:grid-cols-3">
           {supportingProjects.map((project) => (

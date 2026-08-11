@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 
 import { MarketingCtaLink } from "@/shared/components/marketing/MarketingCtaLink";
+import { MarketingSectionHeading } from "@/shared/components/marketing/MarketingSectionHeading";
 
 const problemSteps = [
   { icon: UserRound, label: "Customer submits enquiry" },
@@ -85,7 +86,7 @@ function AuditDiagram() {
         </div>
       </div>
 
-      <div className="absolute left-1/2 top-1/2 z-20 flex size-16 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-signal-100 bg-white text-signal-600 shadow-soft">
+      <div className="absolute left-1/2 top-1/2 z-20 flex size-16 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-signal-100 bg-white text-signal-600 shadow-soft mt-12 md:mt-3">
         <ArrowDown aria-hidden="true" className="size-7" />
       </div>
 
@@ -159,15 +160,12 @@ export function HomeAuditSection() {
   return (
     <section className="bg-white px-5 py-24 sm:px-8 lg:py-32">
       <div className="mx-auto grid max-w-[1360px] gap-10 lg:grid-cols-[0.38fr_0.62fr] lg:grid-rows-[auto_1fr] lg:gap-x-16">
-        <header>
-          <p className="text-sm font-bold uppercase tracking-[-0.01em] text-signal-700">
-            Free customer journey &amp; workflow audit
-          </p>
-          <span aria-hidden="true" className="mt-5 block h-0.5 w-10 bg-signal-600" />
-          <h2 className="mt-8 text-[clamp(2.7rem,5vw,4.4rem)] font-semibold leading-[1.04] tracking-[-0.055em] text-slate-950">
-            Find where customers get stuck or work falls back to manual effort<span className="text-signal-600">.</span>
-          </h2>
-        </header>
+        <MarketingSectionHeading
+          align="left"
+          eyebrow="Free customer journey & workflow audit"
+          id="home-audit-heading"
+          title="Find where customers get stuck or work falls back to manual effort."
+        />
         <AuditDiagram />
         <AuditAction />
       </div>

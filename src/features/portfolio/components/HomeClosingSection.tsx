@@ -1,6 +1,7 @@
 import { ArrowRight, Check, CircleAlert } from "lucide-react";
 
 import { MarketingCtaLink } from "@/shared/components/marketing/MarketingCtaLink";
+import { MarketingVisualCta } from "@/shared/components/marketing/MarketingVisualCta";
 
 function FrictionResolutionVisual() {
   return (
@@ -46,34 +47,33 @@ function FrictionResolutionVisual() {
 
 export function HomeClosingSection() {
   return (
-    <section className="overflow-hidden border-t border-line bg-[#fbf9f9] px-5 py-24 sm:px-8 lg:py-32">
-      <div className="mx-auto grid max-w-[1360px] items-center gap-12 lg:grid-cols-[0.48fr_0.52fr] lg:gap-20">
-        <div>
-          <p className="text-sm font-bold uppercase tracking-[-0.01em] text-signal-700">
-            Not sure where the friction is?
-          </p>
-          <span aria-hidden="true" className="mt-6 block h-0.5 w-12 bg-signal-600" />
-          <h2 className="mt-9 text-[clamp(2.8rem,5.4vw,4.7rem)] font-semibold leading-[1.04] tracking-[-0.055em] text-slate-950">
-            Show me one part of the journey that isn’t working as smoothly as it should<span className="text-signal-600">.</span>
-          </h2>
-          <p className="mt-8 max-w-xl text-lg leading-8 text-slate-700 sm:text-xl sm:leading-9">
-            You don’t need to know whether the answer is software, automation or AI. Start with what is happening now.
-          </p>
-
-          <MarketingCtaLink className="mx-0 mt-9 max-w-md" href="/audit">
-            Start My Free Audit
-            <ArrowRight aria-hidden="true" className="ml-auto size-6" />
-          </MarketingCtaLink>
-          <p className="mt-6 flex items-center gap-3 text-sm leading-6 text-slate-700 sm:text-base">
-            <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-signal-50 text-signal-700">
-              <Check aria-hidden="true" className="size-5" />
-            </span>
-            Free · Personally reviewed · Delivered within 48 hours
-          </p>
-        </div>
-
-        <FrictionResolutionVisual />
-      </div>
-    </section>
+    <MarketingVisualCta
+      action={
+        <MarketingCtaLink className="mx-0 mt-0 max-w-md" href="/audit">
+          Start My Free Audit
+          <ArrowRight aria-hidden="true" className="ml-auto size-6" />
+        </MarketingCtaLink>
+      }
+      align="left"
+      className="border-t border-line bg-[#fbf9f9]"
+      copy={
+        <p>
+          You don’t need to know whether the answer is software, automation or AI. Start with what is
+          happening now.
+        </p>
+      }
+      eyebrow="Not sure where the friction is?"
+      helper={
+        <p className="mt-6 flex items-center gap-3 text-sm leading-6 text-slate-700 sm:text-base">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-signal-50 text-signal-700">
+            <Check aria-hidden="true" className="size-5" />
+          </span>
+          Free · Personally reviewed · Delivered within 48 hours
+        </p>
+      }
+      id="home-closing-heading"
+      title="Show me one part of the journey that isn’t working as smoothly as it should."
+      visual={<FrictionResolutionVisual />}
+    />
   );
 }
