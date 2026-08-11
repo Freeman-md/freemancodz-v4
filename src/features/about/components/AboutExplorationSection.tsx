@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 
 import { Container } from "@/shared/components/layout/Container";
+import { MarketingSectionHeading } from "@/shared/components/marketing/MarketingSectionHeading";
 
 type ExplorationStep = {
   icon: LucideIcon;
@@ -126,7 +127,7 @@ function MobileExplorationFlow() {
       <HumanControl />
       <div className="relative mt-8 space-y-4 before:absolute before:bottom-10 before:left-10 before:top-10 before:border-l before:border-dashed before:border-signal-300">
         {explorationSteps.map(({ icon: Icon, title, copy, tone }) => (
-          <article className="relative z-10 grid grid-cols-[5rem_1fr] items-center" key={title}>
+          <article className="relative z-10 grid gap-x-2 grid-cols-[5rem_1fr] items-center" key={title}>
             <div
               className={`flex size-20 items-center justify-center rounded-full border shadow-[0_14px_30px_-24px_rgba(55,48,163,0.55)] ${tone}`}
             >
@@ -173,17 +174,12 @@ export function AboutExplorationSection() {
   return (
     <section aria-labelledby="exploration-heading" className="py-20 sm:py-28">
       <Container>
-        <div className="max-w-4xl">
-          <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.22em] text-signal-700">
-            Current exploration
-          </p>
-          <h2
-            className="mt-7 font-display text-4xl leading-[1.03] tracking-[-0.04em] text-slate-950 sm:text-5xl lg:text-6xl"
-            id="exploration-heading"
-          >
-            Exploring software that can recover without losing control.
-          </h2>
-        </div>
+        <MarketingSectionHeading
+          align="left"
+          eyebrow="Current exploration"
+          id="exploration-heading"
+          title="Exploring software that can recover without losing control."
+        />
 
         <DesktopExplorationFlow />
         <MobileExplorationFlow />

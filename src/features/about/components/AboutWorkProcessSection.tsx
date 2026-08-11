@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 
 import { Container } from "@/shared/components/layout/Container";
+import { MarketingSectionHeading } from "@/shared/components/marketing/MarketingSectionHeading";
 
 type ProcessStep = {
   icon: LucideIcon;
@@ -104,22 +105,18 @@ export function AboutWorkProcessSection() {
   return (
     <section aria-labelledby="work-process-heading" className="py-20 sm:py-28">
       <Container>
-        <div className="max-w-5xl">
-          <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.22em] text-success-700">
-            How I work
-          </p>
-          <span aria-hidden="true" className="mt-5 block h-px w-10 bg-success-600" />
-          <h2
-            className="mt-7 font-display text-4xl leading-[1.02] tracking-[-0.04em] text-slate-950 sm:text-5xl lg:text-6xl"
-            id="work-process-heading"
-          >
-            From problem to working system
-          </h2>
-          <p className="mt-6 max-w-3xl text-lg leading-8 text-slate-700 sm:text-xl">
-            I start by understanding what should happen, then map the journey, build what matters,
-            connect the right pieces and verify the result.
-          </p>
-        </div>
+        <MarketingSectionHeading
+          align="left"
+          copy={
+            <p>
+              I start by understanding what should happen, then map the journey, build what matters, connect the
+              right pieces and verify the result.
+            </p>
+          }
+          eyebrow="How I work"
+          id="work-process-heading"
+          title="From problem to working system"
+        />
 
         <div className="mt-14 lg:grid lg:grid-cols-[auto_1fr_auto_1fr_auto_1fr_auto_1fr_auto] lg:items-start lg:gap-5">
           {processSteps.map((step, index) => (

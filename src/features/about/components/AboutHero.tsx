@@ -1,8 +1,8 @@
 import type { LucideIcon } from "lucide-react";
 import {
-  BookOpen,
+  Lightbulb,
   CircleCheck,
-  FileText,
+  Download,
   GitBranch,
   MousePointer2,
   Network,
@@ -22,12 +22,12 @@ type JourneyStep = {
 
 const customerSteps: JourneyStep[] = [
   { icon: Search, label: "Find" },
-  { icon: BookOpen, label: "Understand" },
+  { icon: Lightbulb, label: "Understand" },
   { icon: MousePointer2, label: "Act" },
 ];
 
 const workflowSteps: JourneyStep[] = [
-  { icon: FileText, label: "Capture" },
+  { icon: Download, label: "Capture" },
   { icon: GitBranch, label: "Route" },
   { icon: CircleCheck, label: "Complete" },
 ];

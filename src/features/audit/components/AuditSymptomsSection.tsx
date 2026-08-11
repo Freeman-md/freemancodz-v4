@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 
 import { Container } from "@/shared/components/layout/Container";
+import { MarketingSectionHeading } from "@/shared/components/marketing/MarketingSectionHeading";
 
 const symptoms: { icon: LucideIcon; label: string }[] = [
   { icon: MessageCircleQuestion, label: "Repeated questions" },
@@ -54,21 +55,17 @@ export function AuditSymptomsSection() {
   return (
     <section aria-labelledby="audit-symptoms-heading" className="py-16 sm:py-20">
       <Container>
-        <div className="mx-auto max-w-5xl text-center">
-          <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-700 sm:text-xs">
-            Why this audit exists
-          </p>
-          <h2
-            className="mt-5 font-display text-4xl leading-[1.02] tracking-[-0.04em] text-slate-950 sm:text-5xl md:text-6xl"
-            id="audit-symptoms-heading"
-          >
-            You usually notice the symptoms first
-          </h2>
-          <p className="mx-auto mt-5 max-w-4xl text-lg leading-7 text-slate-700 sm:text-xl">
-            Small issues often point to deeper friction between the customer journey and the
-            workflow behind it.
-          </p>
-        </div>
+        <MarketingSectionHeading
+          copy={
+            <p>
+              Small issues often point to deeper friction between the customer journey and the workflow behind
+              it.
+            </p>
+          }
+          eyebrow="Why this audit exists"
+          id="audit-symptoms-heading"
+          title="You usually notice the symptoms first"
+        />
 
         <div className="mt-12 overflow-hidden rounded-3xl border border-line bg-white p-5 shadow-soft sm:p-7 lg:p-10">
           <div className="grid grid-cols-2 border-t border-line lg:grid-cols-3">

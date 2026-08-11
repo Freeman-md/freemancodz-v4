@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 
 import { Container } from "@/shared/components/layout/Container";
+import { MarketingSectionHeading } from "@/shared/components/marketing/MarketingSectionHeading";
 
 type WorkflowNodeData = {
   icon: LucideIcon;
@@ -163,20 +164,12 @@ export function BeforeAfterSection() {
   return (
     <section aria-labelledby="friction-heading" className="py-16 sm:py-20">
       <Container>
-        <div className="mx-auto max-w-3xl text-center">
-          <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-700 sm:text-xs">
-            Before &amp; after
-          </p>
-          <h2
-            className="mt-5 font-display text-4xl leading-[1.02] tracking-[-0.04em] text-slate-950 sm:text-5xl md:text-6xl"
-            id="friction-heading"
-          >
-            Where the friction hides
-          </h2>
-          <p className="mx-auto mt-5 max-w-xl text-lg leading-7 text-slate-700 sm:text-xl">
-            Same customer action. Very different experience behind the scenes.
-          </p>
-        </div>
+        <MarketingSectionHeading
+          copy={<p>Same customer action. Very different experience behind the scenes.</p>}
+          eyebrow="Before & after"
+          id="friction-heading"
+          title="Where the friction hides"
+        />
 
         <div className="mt-12 grid gap-7 lg:grid-cols-2 lg:gap-8">
           <ComparisonCard tone="before" />

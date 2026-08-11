@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 
 import { Container } from "@/shared/components/layout/Container";
+import { MarketingSectionHeading } from "@/shared/components/marketing/MarketingSectionHeading";
 import { buttonVariants } from "@/shared/components/ui/Button";
 
 type ProofNodeData = {
@@ -155,20 +156,12 @@ export function AuditProofSection() {
   return (
     <section aria-labelledby="proof-heading" className="py-16 sm:py-20">
       <Container>
-        <div className="mx-auto max-w-4xl text-center">
-          <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-700 sm:text-xs">
-            Proof
-          </p>
-          <h2
-            className="mt-5 font-display text-4xl leading-[1.02] tracking-[-0.04em] text-slate-950 sm:text-5xl md:text-6xl"
-            id="proof-heading"
-          >
-            Customer-Facing. Operationally Sound.
-          </h2>
-          <p className="mx-auto mt-5 max-w-2xl text-lg leading-7 text-slate-700 sm:text-xl">
-            Real work across customer-facing journeys and operational workflows.
-          </p>
-        </div>
+        <MarketingSectionHeading
+          copy={<p>Real work across customer-facing journeys and operational workflows.</p>}
+          eyebrow="Proof"
+          id="proof-heading"
+          title="Customer-Facing. Operationally Sound."
+        />
 
         <div className="mt-12 overflow-hidden rounded-3xl border border-line bg-white shadow-soft lg:grid lg:grid-cols-3 lg:divide-x lg:divide-line">
           <article className="relative p-6 sm:p-8">

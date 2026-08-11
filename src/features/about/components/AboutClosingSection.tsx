@@ -2,8 +2,8 @@ import { ArrowRight, BriefcaseBusiness, MessageCircle, ShieldCheck } from "lucid
 import { Allura } from "next/font/google";
 import Link from "next/link";
 
+import { AssistantTriggerButton } from "@/features/assistant/components/AssistantTriggerButton";
 import { Container } from "@/shared/components/layout/Container";
-import { MarketingCtaLink } from "@/shared/components/marketing/MarketingCtaLink";
 import { MarketingSectionHeading } from "@/shared/components/marketing/MarketingSectionHeading";
 
 const signatureFont = Allura({ subsets: ["latin"], weight: "400" });
@@ -16,23 +16,28 @@ export function AboutClosingSection() {
           <MarketingSectionHeading
             copy={
               <p>
-                Let&apos;s take a look together. I&apos;ll audit one journey or workflow and show you what
-                would make the biggest difference.
+                Send me the context. My assistant will gather what I need and make sure it reaches me
+                properly.
               </p>
             }
-            eyebrow="What's next?"
+            eyebrow="Let's talk"
             id="about-closing-heading"
-            title="Have a customer journey or workflow that isn't running as smoothly as it should?"
+            title="Got a role, project, collaboration or event in mind?"
           />
 
-          <MarketingCtaLink href="/audit">
+          <AssistantTriggerButton
+            detail={{
+              message: "I’d like to get in touch about something and share a bit of context.",
+            }}
+            variant="marketing"
+          >
             <MessageCircle aria-hidden="true" className="size-7 stroke-[1.7]" />
-            <span>Start My Free Audit</span>
+            <span>Send Me a Message</span>
             <ArrowRight aria-hidden="true" className="size-6 stroke-[1.7]" />
-          </MarketingCtaLink>
-          <p className="mt-6 flex items-center justify-center gap-3 text-sm text-slate-500 sm:text-base">
+          </AssistantTriggerButton>
+          <p className="mt-6 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-sm text-slate-500 sm:text-base">
             <ShieldCheck aria-hidden="true" className="size-5 text-slate-500" />
-            Free. No obligation. Your information is never shared.
+            Roles · Projects · Collaborations · Speaking · Other enquiries
           </p>
 
           <div className="mx-auto mt-16 grid max-w-4xl gap-10 border-t border-line pt-10 text-left md:grid-cols-2 md:items-center">

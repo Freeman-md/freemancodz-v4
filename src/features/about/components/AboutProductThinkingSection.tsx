@@ -8,14 +8,14 @@ import {
   Lightbulb,
   Scale,
   Search,
-  Send,
+  MousePointer2,
   ShieldCheck,
   SlidersHorizontal,
   Target,
-  UserCheck,
 } from "lucide-react";
 
 import { Container } from "@/shared/components/layout/Container";
+import { MarketingSectionHeading } from "@/shared/components/marketing/MarketingSectionHeading";
 
 type FlowStep = {
   icon: LucideIcon;
@@ -26,13 +26,13 @@ const customerFlow: FlowStep[] = [
   { icon: Search, label: "Find" },
   { icon: Lightbulb, label: "Understand" },
   { icon: Scale, label: "Decide" },
-  { icon: Send, label: "Act" },
+  { icon: MousePointer2, label: "Act" },
 ];
 
 const operationalFlow: FlowStep[] = [
   { icon: Download, label: "Capture" },
   { icon: GitBranch, label: "Route" },
-  { icon: UserCheck, label: "Decide" },
+  { icon: Scale, label: "Decide" },
   { icon: CircleCheck, label: "Complete" },
 ];
 
@@ -121,21 +121,18 @@ export function AboutProductThinkingSection() {
   return (
     <section aria-labelledby="product-thinking-heading" className="py-20 sm:py-28">
       <Container>
-        <div className="max-w-5xl">
-          <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.22em] text-signal-700">
-            How I think about products
-          </p>
-          <h2
-            className="mt-5 font-display text-4xl leading-[1.02] tracking-[-0.04em] text-slate-950 sm:text-5xl lg:text-6xl"
-            id="product-thinking-heading"
-          >
-            The interface is only half the product
-          </h2>
-          <p className="mt-6 max-w-3xl text-lg leading-8 text-slate-700 sm:text-xl">
-            A product only works when the customer-facing experience and the operational workflow
-            behind it work together.
-          </p>
-        </div>
+        <MarketingSectionHeading
+          align="left"
+          copy={
+            <p>
+              A product only works when the customer-facing experience and the operational workflow behind it
+              work together.
+            </p>
+          }
+          eyebrow="How I think about products"
+          id="product-thinking-heading"
+          title="The interface is only half the product"
+        />
 
         <div className="mt-12 rounded-3xl border border-line bg-white p-4 shadow-soft sm:p-6">
           <ProductFlow title="Customer-facing experience" steps={customerFlow} tone="signal" />

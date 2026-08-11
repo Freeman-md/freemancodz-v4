@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 
 import { Container } from "@/shared/components/layout/Container";
+import { MarketingSectionHeading } from "@/shared/components/marketing/MarketingSectionHeading";
 
 type JourneyNode = {
   icon: LucideIcon;
@@ -168,21 +169,18 @@ export function AboutJourneySection() {
   return (
     <section aria-labelledby="about-journey-heading" className="pb-20 pt-8 sm:pb-28 sm:pt-12">
       <Container>
-        <div className="max-w-4xl">
-          <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.22em] text-signal-700">
-            How I got here
-          </p>
-          <h2
-            className="mt-5 font-display text-4xl leading-[1.02] tracking-[-0.04em] text-ink sm:text-5xl lg:text-6xl"
-            id="about-journey-heading"
-          >
-            From the interface to the full journey
-          </h2>
-          <p className="mt-6 max-w-3xl text-lg leading-8 text-slate-700 sm:text-xl">
-            My focus broadened from building customer-facing products to understanding the systems
-            and operations that make them work.
-          </p>
-        </div>
+        <MarketingSectionHeading
+          align="left"
+          copy={
+            <p>
+              My focus broadened from building customer-facing products to understanding the systems and
+              operations that make them work.
+            </p>
+          }
+          eyebrow="How I got here"
+          id="about-journey-heading"
+          title="From the interface to the full journey"
+        />
 
         <div className="mt-16 grid gap-8 md:grid-cols-2 xl:grid-cols-4 xl:gap-7">
           {stages.map((stage, index) => (
