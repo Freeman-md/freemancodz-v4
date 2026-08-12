@@ -12,49 +12,51 @@ import { getDatabaseUrl } from "../../infrastructure/config/env";
 import { prisma } from "../../infrastructure/database/prisma";
 import { createSupabaseStorageClient } from "../../infrastructure/supabase/supabase-storage.client";
 import { SupabaseStorageProvider } from "../../modules/portfolio/providers/supabase-storage.provider";
+import { parsePortfolioBootstrapArguments } from "./bootstrap-portfolio.arguments";
 
-const production = process.argv.includes("--production");
+async function main() {
+  const { production } = parsePortfolioBootstrapArguments(process.argv.slice(2));
 
-const confirmed = process.argv.includes("--confirm-production");
+  const databaseTarget = new URL(getDatabaseUrl());
 
-if (production && !confirmed) {
-  throw new Error("Production bootstrap requires --confirm-production.");
-}
+  const storageTarget = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "not configured";
 
-const databaseTarget = new URL(getDatabaseUrl());
+  console.info(
+    `Portfolio bootstrap mode: ${production ? "PRODUCTION (one-time, non-overwriting)" : "LOCAL (portfolio-only reset)"}`,
+  );
+  console.info(
+    `Database target: ${databaseTarget.hostname}:${databaseTarget.port || "5432"}/${databaseTarget.pathname.slice(1)}`,
+  );
+  console.info(`Storage target: ${storageTarget}/storage/v1/object/public/portfolio-media`);
 
-const storageTarget = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "not configured";
+  const sourceDirectory = process.env.PORTFOLIO_MEDIA_SOURCE_DIR;
 
-console.info(
-  `Portfolio bootstrap mode: ${production ? "PRODUCTION (one-time, non-overwriting)" : "LOCAL (portfolio-only reset)"}`,
-);
-console.info(
-  `Database target: ${databaseTarget.hostname}:${databaseTarget.port || "5432"}/${databaseTarget.pathname.slice(1)}`,
-);
-console.info(`Storage target: ${storageTarget}/storage/v1/object/public/portfolio-media`);
+  const storage = new SupabaseStorageProvider(createSupabaseStorageClient());
 
-const sourceDirectory = process.env.PORTFOLIO_MEDIA_SOURCE_DIR;
+  await bootstrapMedia(storage, async (filename) => {
+    if (!sourceDirectory) {
+      throw new Error(
+        `Missing portfolio binary ${filename}. Set PORTFOLIO_MEDIA_SOURCE_DIR to the approved six source files.`,
+      );
+    }
 
-const storage = new SupabaseStorageProvider(createSupabaseStorageClient());
+    return readFile(resolve(sourceDirectory, filename));
+  });
 
-await bootstrapMedia(storage, async (filename) => {
-  if (!sourceDirectory) {
-    throw new Error(
-      `Missing portfolio binary ${filename}. Set PORTFOLIO_MEDIA_SOURCE_DIR to the approved six source files.`,
-    );
+  if (production) {
+    await assertProductionPortfolioIsUninitialised(prisma);
   }
 
-  return readFile(resolve(sourceDirectory, filename));
+  if (!production) {
+    await resetPortfolio(prisma);
+  }
+
+  await seedPortfolio(prisma, storage);
+  console.info("Portfolio bootstrap verified:", await verifyPortfolio(prisma));
+  await prisma.$disconnect();
+}
+
+void main().catch((error: unknown) => {
+  console.error(error instanceof Error ? error.message : "Portfolio bootstrap failed.");
+  process.exitCode = 1;
 });
-
-if (production) {
-  await assertProductionPortfolioIsUninitialised(prisma);
-}
-
-if (!production) {
-  await resetPortfolio(prisma);
-}
-
-await seedPortfolio(prisma, storage);
-console.info("Portfolio bootstrap verified:", await verifyPortfolio(prisma));
-await prisma.$disconnect();

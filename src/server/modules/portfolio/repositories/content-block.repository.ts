@@ -18,36 +18,50 @@ const relations = {
   },
 } satisfies Prisma.ContentBlockInclude;
 
-const childInclude = {
-  ...relations,
-  children: {
-    orderBy: { order: "asc" },
-    include: {
-      child: {
-        include: {
-          ...relations,
-          children: { orderBy: { order: "asc" }, include: { child: { include: relations } } },
-        },
-      },
-    },
-  },
-} satisfies Prisma.ContentBlockInclude;
-
 export class ContentBlockRepository implements IContentBlockRepository {
   constructor(private readonly database: PrismaClient) {}
 
   async findPageTree(page: PortfolioPagePath): Promise<ContentBlockNode[]> {
-    const url = page === "/" ? { in: ["/"], startsWith: "/#" } : { startsWith: page };
-
-    const where =
+    const pageWhere =
       page === "/"
-        ? { parent: null, order: { not: null }, OR: [{ url: "/" }, { url: { startsWith: "/#" } }] }
-        : { parent: null, order: { not: null }, url };
+        ? { OR: [{ url: "/" }, { url: { startsWith: "/#" } }] }
+        : { url: { startsWith: page } };
 
-    return this.database.contentBlock.findMany({
-      where,
-      orderBy: { order: "asc" },
-      include: childInclude,
-    }) as Promise<ContentBlockNode[]>;
+    const records = await this.database.contentBlock.findMany({
+      where: pageWhere,
+      orderBy: [{ order: "asc" }, { createdAt: "asc" }],
+      include: { ...relations, parent: true },
+    });
+
+    const nodes = new Map<string, ContentBlockNode>();
+
+    for (const { parent: _parent, ...record } of records) {
+      nodes.set(record.id, { ...record, children: [] });
+    }
+
+    const roots: ContentBlockNode[] = [];
+
+    for (const record of records) {
+      const node = nodes.get(record.id)!;
+
+      if (!record.parent) {
+        roots.push(node);
+        continue;
+      }
+
+      const parent = nodes.get(record.parent.parentId);
+
+      if (!parent) {
+        throw new Error(`Portfolio content tree is missing parent ${record.parent.parentId}.`);
+      }
+
+      parent.children.push({ order: record.parent.order, child: node });
+    }
+
+    for (const node of nodes.values()) {
+      node.children.sort((left, right) => left.order - right.order);
+    }
+
+    return roots.sort((left, right) => (left.order ?? 0) - (right.order ?? 0));
   }
 }

@@ -45,6 +45,9 @@ export async function portfolioIsInitialised(database: PrismaClient) {
   const counts = await Promise.all([
     database.profile.count(),
     database.contentBlock.count(),
+    database.iconBlock.count(),
+    database.mediaBlock.count(),
+    database.actionBlock.count(),
     database.project.count(),
     database.experience.count(),
   ]);

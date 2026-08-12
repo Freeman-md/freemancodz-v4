@@ -23,9 +23,47 @@ const profile = {
   ],
 } as ProfileWithCollections;
 
-const blocks = [
-  { id: "hero", order: 1, children: [{ order: 1, child: { id: "child", children: [] } }] },
-] as unknown as ContentBlockNode[];
+function block(id: string, childId: string, relationLabel: string) {
+  return {
+    id,
+    order: 1,
+    iconBlocks: [{ order: 1, iconBlock: { label: relationLabel } }],
+    mediaBlocks: [],
+    actionBlocks: [],
+    children: [
+      {
+        order: 1,
+        child: {
+          id: childId,
+          iconBlocks: [],
+          mediaBlocks: [],
+          actionBlocks: [],
+          children: [],
+        },
+      },
+    ],
+  } as unknown as ContentBlockNode;
+}
+
+const pageBlocks = {
+  "/": [block("home.hero", "home.hero.child", "Home relation")],
+  "/work": [block("work.hero", "work.hero.child", "Work relation")],
+  "/about": [block("about.hero", "about.hero.child", "About relation")],
+  "/audit": [
+    {
+      ...block("audit.before-after", "audit.before", "Audit relation"),
+      children: [
+        {
+          order: 1,
+          child: {
+            ...block("audit.before", "audit.before.customer", "Before relation"),
+            order: null,
+          },
+        },
+      ],
+    } as ContentBlockNode,
+  ],
+} satisfies Record<string, ContentBlockNode[]>;
 
 const projects = [
   "pay4me-withradius",
@@ -46,7 +84,7 @@ const contentBlocks: IContentBlockRepository = {
   findPageTree: async (page) => {
     pages.push(page);
 
-    return blocks;
+    return pageBlocks[page];
   },
 };
 
@@ -87,7 +125,16 @@ test("page services compose canonical independent records and ordered block tree
     ["pay4me-withradius", "portfolio-assistant", "email-pa"],
   );
   assert.deepEqual(pages, ["/", "/work", "/about", "/audit"]);
-  assert.equal(home.contentBlocks[0]?.children[0]?.order, 1);
+  assert.deepEqual(
+    [home, work, about, audit].map(({ contentBlocks: result }) => result[0]?.id),
+    ["home.hero", "work.hero", "about.hero", "audit.before-after"],
+  );
+  assert.equal(home.contentBlocks[0]?.children[0]?.child.id, "home.hero.child");
+  assert.equal(
+    audit.contentBlocks[0]?.children[0]?.child.children[0]?.child.id,
+    "audit.before.customer",
+  );
+  assert.equal(about.contentBlocks[0]?.iconBlocks[0]?.iconBlock.label, "About relation");
   assert.equal(
     work.profile.iconCollections.some(({ collection }) => collection === "OUTCOMES"),
     true,

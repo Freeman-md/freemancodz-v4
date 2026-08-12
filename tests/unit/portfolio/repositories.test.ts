@@ -56,7 +56,7 @@ test("seven portfolio repositories expose ordered domain reads and subtype bases
   );
   assert.match(
     JSON.stringify(calls.find(([name]) => name === "content.many")?.[1]),
-    /children.*order/,
+    /orderBy.*order.*parent/,
   );
   assert.match(
     JSON.stringify(calls.find(([name]) => name === "experience.many")?.[1]),
@@ -72,4 +72,29 @@ test("profile repository requires the database-enforced singleton", async () => 
   const database = { profile: { findUnique: async () => null } } as unknown as PrismaClient;
 
   await assert.rejects(new ProfileRepository(database).findSingleton(), /not initialised/);
+});
+
+test("content repository assembles complete recursively traversable trees from flat records", async () => {
+  const relationFields = { iconBlocks: [], mediaBlocks: [], actionBlocks: [] };
+
+  const records = [
+    { id: "second", order: 2, parent: null, ...relationFields },
+    { id: "leaf", order: null, parent: { parentId: "child", order: 1 }, ...relationFields },
+    { id: "first", order: 1, parent: null, ...relationFields },
+    { id: "child", order: null, parent: { parentId: "first", order: 2 }, ...relationFields },
+  ];
+
+  const database = {
+    contentBlock: { findMany: async () => records },
+  } as unknown as PrismaClient;
+
+  const result = await new ContentBlockRepository(database).findPageTree("/audit");
+
+  assert.deepEqual(
+    result.map(({ id }) => id),
+    ["first", "second"],
+  );
+  assert.equal(result[0]?.children[0]?.child.id, "child");
+  assert.equal(result[0]?.children[0]?.child.children[0]?.child.id, "leaf");
+  assert.deepEqual(result[0]?.children[0]?.child.children[0]?.child.children, []);
 });

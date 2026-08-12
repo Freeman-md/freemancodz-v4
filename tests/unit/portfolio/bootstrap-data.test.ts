@@ -90,18 +90,30 @@ test("media bootstrap uses the six stable paths and skips existing objects", asy
   assert.match(uploaded.at(-1)!, /^documents\/cv:application\/pdf$/);
 });
 
-test("production bootstrap refuses an already-initialised portfolio", async () => {
-  const database = {
-    profile: { count: async () => 1 },
-    contentBlock: { count: async () => 0 },
-    project: { count: async () => 0 },
-    experience: { count: async () => 0 },
-  } as unknown as PrismaClient;
+test("production bootstrap refuses every independently initialised portfolio table", async () => {
+  const modelNames = [
+    "profile",
+    "contentBlock",
+    "iconBlock",
+    "mediaBlock",
+    "actionBlock",
+    "project",
+    "experience",
+  ] as const;
 
-  await assert.rejects(
-    assertProductionPortfolioIsUninitialised(database),
-    /already initialised; refusing to overwrite/,
-  );
+  for (const populatedModel of modelNames) {
+    const database = Object.fromEntries(
+      modelNames.map((modelName) => [
+        modelName,
+        { count: async () => Number(modelName === populatedModel) },
+      ]),
+    ) as unknown as PrismaClient;
+
+    await assert.rejects(
+      assertProductionPortfolioIsUninitialised(database),
+      /already initialised; refusing to overwrite/,
+    );
+  }
 });
 
 test("a failed database seed transaction does not leave an initialised portfolio", async () => {
@@ -110,9 +122,12 @@ test("a failed database seed transaction does not leave an initialised portfolio
   let nextId = 0;
 
   const transaction = {
-    iconBlock: { create: async () => ({ id: `icon-${++nextId}` }) },
-    actionBlock: { create: async () => ({}) },
-    mediaBlock: { create: async () => ({}) },
+    iconBlock: {
+      create: async () => ({ id: `icon-${++nextId}` }),
+      count: async () => Number(initialised),
+    },
+    actionBlock: { create: async () => ({}), count: async () => 0 },
+    mediaBlock: { create: async () => ({}), count: async () => 0 },
     profile: {
       create: async () => {
         initialised = true;
