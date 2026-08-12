@@ -1,6 +1,6 @@
 # Freeman Madudili portfolio
 
-This is a Next.js App Router portfolio. Pages render validated portfolio records from PostgreSQL through Prisma, the floating assistant streams answers from OpenAI with search-index context, and a durable search-index worker maintains embeddings.
+This is a Next.js App Router portfolio. The current pages remain component-driven while the portfolio content backend is stored in PostgreSQL through Prisma. The floating assistant streams answers from OpenAI with existing search-index context.
 
 ## Structure
 
@@ -9,7 +9,7 @@ This is a Next.js App Router portfolio. Pages render validated portfolio records
 - `src/server/modules` owns portfolio, assistant, and search-index use cases. Pages, routes, and other modules import only a module's `public.ts` API.
 - `src/server/infrastructure` owns Prisma, environment, OpenAI, and logging configuration; `src/server/entrypoints` owns CLI, worker, and maintenance adapters.
 - `src/shared` contains domain-free layout, UI primitives, configuration, and utilities. `src/contracts` owns runtime-validated HTTP and stream shapes.
-- `prisma/seed-data` is seed input only; runtime content comes from the database.
+- `prisma/portfolio-seed-data.ts` is the canonical one-time bootstrap input transcribed from the approved Notion artifacts; runtime content comes from the database.
   New UI belongs in its feature; backend use cases, persistence, and providers belong in the owning server module. Server Components call module `public.ts` directly, while browser code flows through feature API → Route Handler → module `public.ts`. Process entrypoints are thin adapters over the same public services. See `.agents/skills/nextjs-architecture/SKILL.md` for the authoritative standard.
 
 ## Local development
@@ -23,13 +23,29 @@ npm run prisma:generate
 npm run dev
 ```
 
-Provide `DATABASE_URL` for Prisma. Assistant and indexing operations additionally require `OPENAI_API_KEY`; optional `OPENAI_MODEL` and `OPENAI_EMBEDDING_MODEL` select the existing defaults. `SEARCH_INDEX_WORKER_SECRET` protects the production worker route. Public site and social-link settings use the documented `NEXT_PUBLIC_` variables in `src/shared/config/links.ts` and `src/shared/config/site-metadata.ts`.
+Provide `DATABASE_URL` for Prisma. Portfolio storage requires `NEXT_PUBLIC_SUPABASE_URL`, server-only `SUPABASE_SERVICE_ROLE_KEY`, and `PORTFOLIO_MEDIA_SOURCE_DIR` containing the six approved extensionless files (`me`, `strength-training`, `running`, `community`, `learning`, and `cv`). `NEXT_PUBLIC_SUPABASE_URL` must be a valid HTTP(S) project URL outside local development; only an explicit development runtime may fall back to local Supabase at `127.0.0.1:54321`. Assistant operations additionally require `OPENAI_API_KEY`.
 
-Prisma migrations in `prisma/migrations` are the migration source of truth. Supabase remains the PostgreSQL host and optional local database tooling; the application does not use a Supabase JavaScript client.
+Prisma migrations in `prisma/migrations` are the only migration source of truth. The Supabase JavaScript client is server-only and used solely for the public `portfolio-media` Object Storage bucket.
 
 ## Operations
 
-Seed the repeatable portfolio records with `npm run seed:portfolio`. Search-index adapters are:
+Apply local migrations, then recreate only the portfolio domain and verify it with:
+
+```bash
+npm run portfolio:bootstrap:local
+```
+
+The disposable PostgreSQL regression suite requires an admin connection to a non-production local/test server so it can create and drop one randomly named database:
+
+```bash
+PORTFOLIO_TEST_DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54332/postgres npm run test:portfolio:database
+```
+
+Production is deliberately two guarded operations: `npm run prisma:migrate:production`, then `npm run portfolio:bootstrap:production -- --confirm-production`. The confirmation argument must be supplied by the operator; it is not built into the package script. The production bootstrap prints database/storage targets, uploads only missing media objects, and refuses to overwrite any initialized portfolio-domain table.
+
+Managed Profile and Outside Engineering values are stored as environment-correct public Supabase URLs. The CV is not a database entity; the live site resolves `documents/cv` through the same public bucket. Repo-public Project covers remain `/images/work/*` paths.
+
+Search-index adapters are:
 
 ```bash
 npm run index:source -- <sourceType> <sourceId>
@@ -39,7 +55,7 @@ npm run index:status
 npm run index:preview -- <sourceType> <sourceId>
 ```
 
-The local worker and protected `/api/internal/search-index-worker` endpoint call the same bounded batch operation. Production administration commands require their existing production confirmation arguments. Configure the host cron with `SEARCH_INDEX_WORKER_SECRET`. The in-process assistant limiter is bounded best-effort per instance only; configure host-level rate limiting when global cost protection is required.
+Existing SiteChunks remain searchable. Legacy portfolio source indexing, clean rebuild, preview, direct removal, and pending legacy jobs fail closed or remain unclaimed until the dedicated new-domain indexing milestone; no full re-index is part of this bootstrap.
 
 ## Validation
 

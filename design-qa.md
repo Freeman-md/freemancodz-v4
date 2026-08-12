@@ -61,7 +61,7 @@ The hero keeps the supplied customer and workflow framing but uses the existing 
 as the animated circular centrepiece. On mobile, the sequence remains customer side,
 portrait, then workflow side, with intentional spacing around the portrait. The journey is a
 four-stage progression that becomes a readable numbered vertical sequence on mobile. The
-previous, data-backed page remains available at `/about-old`.
+retired data-backed archive is no longer routed.
 
 The journey deliberately avoids a shared timeline rail: each step has a contained number
 badge, preventing the line-and-number collision at smaller widths. It uses one column on
@@ -96,7 +96,7 @@ final result: passed
 ## Work page addition
 
 - Scope: rebuilt `/work` with a responsive hero, case studies, supporting work, positioning illustration, and final conversation CTA.
-- Archive: preserved the previous implementation at `/work-old`.
+- Archive: the previous implementation was retired after the current page replaced it.
 - References: the supplied desktop and mobile Work-page captures were treated as the visual source of truth.
 - Responsive review: verified the desktop hierarchy and 390px mobile composition, including split supporting cards, content-width badges, the overlapping desktop positioning graphic, its vertical mobile adaptation, and the final CTA topic list.
 - Assets: used live captures from WithRadius and AcrossTheHorizon for the relevant project previews.
@@ -132,11 +132,11 @@ size to their content instead of stretching across the card.
 
 ### Hero checkpoint
 
-- Scope: archived the existing data-backed homepage at `/home-old` and introduced the new static homepage hero at `/`.
+- Scope: replaced the existing data-backed homepage with the new static homepage hero at `/`.
 - References: compared against the supplied desktop and mobile hero captures.
 - Responsive review: verified the reduced three-line mobile headline, centred supporting copy, full-width CTA stack, audience wrap, and the desktop split between narrative and portrait signal visual.
-- Behaviour: both primary actions use real routes, the homepage navigation retains access to the assistant through the shared event contract, and `/home-old` remains an allowed route.
-- Local asset note: the portrait is served by the existing Blob-backed asset route. Its local preview requires the repository's configured Blob environment, so the structure was reviewed with the existing endpoint while no alternate asset source was introduced.
+- Behaviour: both primary actions use real routes, and the homepage navigation retains access to the assistant through the shared event contract.
+- Asset note: the portrait is served from the public Supabase portfolio-media bucket.
 
 ### What I Help Improve checkpoint
 

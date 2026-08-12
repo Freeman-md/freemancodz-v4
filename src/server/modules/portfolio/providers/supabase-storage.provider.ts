@@ -1,0 +1,74 @@
+import "server-only";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type {
+  ISupabaseStorageProvider,
+  PortfolioMediaUpload,
+} from "../interfaces/supabase-storage.provider.interface";
+
+export const PORTFOLIO_MEDIA_BUCKET = "portfolio-media";
+
+export class PortfolioStorageError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "PortfolioStorageError";
+  }
+}
+
+export class SupabaseStorageProvider implements ISupabaseStorageProvider {
+  constructor(private readonly client: SupabaseClient) {}
+
+  async ensurePublicBucket() {
+    const { data, error } = await this.client.storage.getBucket(PORTFOLIO_MEDIA_BUCKET);
+
+    if (error && !/not found/i.test(error.message)) {
+      throw new PortfolioStorageError("Portfolio media bucket could not be checked.");
+    }
+
+    if (!data) {
+      const result = await this.client.storage.createBucket(PORTFOLIO_MEDIA_BUCKET, {
+        public: true,
+      });
+
+      if (result.error) {
+        throw new PortfolioStorageError("Portfolio media bucket could not be created.");
+      }
+
+      return;
+    }
+
+    if (!data.public) {
+      throw new PortfolioStorageError("Portfolio media bucket must be public.");
+    }
+  }
+
+  async uploadIfMissing(asset: PortfolioMediaUpload) {
+    const bucket = this.client.storage.from(PORTFOLIO_MEDIA_BUCKET);
+
+    const existing = await bucket.download(asset.objectPath);
+
+    if (!existing.error) {
+      return this.getPublicUrl(asset.objectPath);
+    }
+
+    const result = await bucket.upload(asset.objectPath, asset.body, {
+      contentType: asset.contentType,
+      upsert: false,
+    });
+
+    if (result.error) {
+      throw new PortfolioStorageError(`Portfolio media upload failed: ${asset.objectPath}`);
+    }
+
+    return this.getPublicUrl(asset.objectPath);
+  }
+
+  async hasObject(objectPath: string) {
+    const result = await this.client.storage.from(PORTFOLIO_MEDIA_BUCKET).download(objectPath);
+
+    return !result.error;
+  }
+
+  getPublicUrl(objectPath: string) {
+    return this.client.storage.from(PORTFOLIO_MEDIA_BUCKET).getPublicUrl(objectPath).data.publicUrl;
+  }
+}
