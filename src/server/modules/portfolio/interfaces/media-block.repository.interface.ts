@@ -5,6 +5,7 @@ export interface IMediaBlockRepository {
   findAll(): Promise<MediaBlockWithBase[]>;
 }
 export interface IMediaBlockAdministrationRepository extends IMediaBlockRepository {
+  countSourceReferences(source: string): Promise<number>;
   create(input: UpsertMediaBlockInput): Promise<string>;
   update(id: string, input: UpsertMediaBlockInput): Promise<void>;
   updateSource(id: string, source: string): Promise<void>;

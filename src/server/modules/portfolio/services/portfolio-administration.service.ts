@@ -1,4 +1,5 @@
 import "server-only";
+import { requiredPortfolioProjectSlugs } from "@/contracts/portfolio-presentation.contract";
 import type { IActionBlockAdministrationRepository } from "../interfaces/action-block.repository.interface";
 import type { IContentBlockAdministrationRepository } from "../interfaces/content-block.repository.interface";
 import type { IExperienceAdministrationRepository } from "../interfaces/experience.repository.interface";
@@ -20,11 +21,7 @@ import type {
   ProjectUpdateResult,
 } from "../models/portfolio-administration";
 
-const PROTECTED_PROJECT_SLUGS = new Set([
-  "pay4me-withradius",
-  "portfolio-assistant",
-  "email-pa",
-]);
+const PROTECTED_PROJECT_SLUGS = new Set<string>(requiredPortfolioProjectSlugs);
 
 export class PortfolioAdministrationError extends Error {
   constructor(message: string) {
@@ -161,7 +158,7 @@ export class PortfolioAdministrationService implements IPortfolioAdministrationS
 
     if (PROTECTED_PROJECT_SLUGS.has(project.slug)) {
       throw new PortfolioAdministrationError(
-        "This curated Project is required by the public Home and Audit compositions.",
+        "This curated Project is required by a public portfolio composition.",
       );
     }
 

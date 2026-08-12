@@ -9,7 +9,12 @@ import { PortfolioMediaService } from "@/server/modules/portfolio/services/portf
 
 const profile = { id: "global", name: "Freeman", title: "Engineer", positioning: "Systems", email: "f@example.com", linkedInUrl: "https://linkedin.com", githubUrl: "https://github.com", coverImage: "https://storage.test/storage/v1/object/public/portfolio-media/images/profile/old.webp", createdAt: new Date(), updatedAt: new Date(), iconCollections: [] };
 
-function setup(databaseFails = false, oldCleanupFails = false) {
+function setup(
+  databaseFails = false,
+  oldCleanupFails = false,
+  remainingSourceReferences = 0,
+  referenceCheckFails = false,
+) {
   const removed: string[] = [];
 
   const updatedMedia: Array<{ id: string; source: string }> = [];
@@ -18,7 +23,9 @@ function setup(databaseFails = false, oldCleanupFails = false) {
 
   const profiles: IProfileAdministrationRepository = { findSingleton: async () => profile, updateSingleton: async () => undefined, updateCoverImage: async () => { if (databaseFails) {throw new Error("database");} }, replaceCollection: async () => undefined };
 
-  const media: IMediaBlockAdministrationRepository = { findById: async () => null, findAll: async () => [], create: async () => "", update: async () => undefined, updateSource: async (id, source) => { if (databaseFails) {throw new Error("database");}
+  const media: IMediaBlockAdministrationRepository = { findById: async () => null, findAll: async () => [], countSourceReferences: async () => { if (referenceCheckFails) {throw new Error("reference check");}
+
+ return remainingSourceReferences; }, create: async () => "", update: async () => undefined, updateSource: async (id, source) => { if (databaseFails) {throw new Error("database");}
 
  updatedMedia.push({ id, source }); }, delete: async () => undefined };
 
@@ -69,6 +76,35 @@ test("old-object cleanup failure preserves the successful new source and reports
   const result = await service.replaceMedia({ owner: { type: "profile" }, body: new Uint8Array([1]), contentType: "image/webp", fileExtension: "webp" });
 
   assert.equal(result.cleanupWarning, true); assert.deepEqual(removed, ["images/profile/old.webp"]); assert.deepEqual(errors, ["portfolio.media.old_object_cleanup_failed"]);
+});
+
+test("shared managed sources remain stored while another portfolio owner references them", async () => {
+  const { service, removed } = setup(false, false, 1);
+
+  const result = await service.replaceMedia({
+    owner: { type: "profile" },
+    body: new Uint8Array([1]),
+    contentType: "image/webp",
+    fileExtension: "webp",
+  });
+
+  assert.equal(result.cleanupWarning, false);
+  assert.deepEqual(removed, []);
+});
+
+test("reference-check failure preserves the old managed source and reports a cleanup warning", async () => {
+  const { service, removed, errors } = setup(false, false, 0, true);
+
+  const result = await service.replaceMedia({
+    owner: { type: "profile" },
+    body: new Uint8Array([1]),
+    contentType: "image/webp",
+    fileExtension: "webp",
+  });
+
+  assert.equal(result.cleanupWarning, true);
+  assert.deepEqual(removed, []);
+  assert.deepEqual(errors, ["portfolio.media.old_object_cleanup_failed"]);
 });
 
 test("project-cover replacement updates its owned MediaBlock and returns the canonical slug tag identity", async () => {

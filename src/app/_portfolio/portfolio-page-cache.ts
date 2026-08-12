@@ -12,13 +12,14 @@ import {
   getHomePageCacheTags,
   getWorkPageCacheTags,
 } from "@/server/modules/portfolio/public";
+import { registerPortfolioCacheTags } from "./register-portfolio-cache-tags";
 
 export async function getCachedHomePageData() {
   "use cache";
   cacheLife("max");
   const data = await homeService.getPageData();
 
-  cacheTag(...getHomePageCacheTags(data));
+  registerPortfolioCacheTags(getHomePageCacheTags(data), cacheTag);
 
   return data;
 }
@@ -28,7 +29,7 @@ export async function getCachedWorkPageData() {
   cacheLife("max");
   const data = await workService.getPageData();
 
-  cacheTag(...getWorkPageCacheTags(data));
+  registerPortfolioCacheTags(getWorkPageCacheTags(data), cacheTag);
 
   return data;
 }
@@ -38,7 +39,7 @@ export async function getCachedAboutPageData() {
   cacheLife("max");
   const data = await aboutService.getPageData();
 
-  cacheTag(...getAboutPageCacheTags(data));
+  registerPortfolioCacheTags(getAboutPageCacheTags(data), cacheTag);
 
   return data;
 }
@@ -48,7 +49,7 @@ export async function getCachedAuditPageData() {
   cacheLife("max");
   const data = await auditService.getPageData();
 
-  cacheTag(...getAuditPageCacheTags(data));
+  registerPortfolioCacheTags(getAuditPageCacheTags(data), cacheTag);
 
   return data;
 }

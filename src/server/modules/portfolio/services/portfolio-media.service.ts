@@ -63,15 +63,21 @@ export class PortfolioMediaService implements IPortfolioMediaService {
       throw new PortfolioMediaError("Media metadata could not be updated.");
     }
 
-    const oldObjectPath = ownership.previousSource
-      ? this.storage.getObjectPath(ownership.previousSource)
+    const previousSource = ownership.previousSource;
+
+    const oldObjectPath = previousSource
+      ? this.storage.getObjectPath(previousSource)
       : null;
 
     let cleanupWarning = false;
 
-    if (oldObjectPath && oldObjectPath !== objectPath) {
+    if (oldObjectPath && previousSource && oldObjectPath !== objectPath) {
       try {
-        await this.storage.removeObject(oldObjectPath);
+        const remainingReferences = await this.media.countSourceReferences(previousSource);
+
+        if (remainingReferences === 0) {
+          await this.storage.removeObject(oldObjectPath);
+        }
       } catch (error) {
         cleanupWarning = true;
         this.logger.error("portfolio.media.old_object_cleanup_failed", {

@@ -21,6 +21,7 @@ import {
   PortfolioCacheTag,
 } from "@/server/modules/portfolio/public";
 import { invalidateProjectUpdate } from "./project-cache-invalidation";
+import { invalidateReusableBlockUpdate } from "./reusable-block-cache-invalidation";
 import { runAuthorizedAdminMutation } from "./admin-action-boundary";
 
 export type AdminActionResult = {
@@ -159,7 +160,7 @@ export async function updateActionBlockAction(input: unknown) {
     const { id } = entityMutationSchema.parse(input);
 
     await portfolioAdministrationService.updateActionBlock(id, upsertActionBlockSchema.parse(input));
-    updateTag(PortfolioCacheTag.actionBlock(id));
+    invalidateReusableBlockUpdate("action", id, updateTag);
 
     return success("Action saved.", id);
   });
@@ -189,7 +190,7 @@ export async function updateMediaBlockAction(input: unknown) {
     const { id } = entityMutationSchema.parse(input);
 
     await portfolioAdministrationService.updateMediaBlock(id, upsertMediaBlockSchema.parse(input));
-    updateTag(PortfolioCacheTag.mediaBlock(id));
+    invalidateReusableBlockUpdate("media", id, updateTag);
 
     return success("Media reference saved.", id);
   });

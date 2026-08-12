@@ -13,6 +13,16 @@ export class MediaBlockRepository implements IMediaBlockAdministrationRepository
     return this.database.mediaBlock.findMany({ include: { iconBlock: true }, orderBy: { id: "asc" } });
   }
 
+  async countSourceReferences(source: string) {
+    const [profiles, mediaBlocks, projectCovers] = await this.database.$transaction([
+      this.database.profile.count({ where: { coverImage: source } }),
+      this.database.mediaBlock.count({ where: { source } }),
+      this.database.project.count({ where: { cover: { is: { source } } } }),
+    ]);
+
+    return profiles + mediaBlocks + projectCovers;
+  }
+
   async create({ type, source, altText, ...base }: UpsertMediaBlockInput) {
     const record = await this.database.iconBlock.create({
       data: { ...base, mediaBlock: { create: { type, source, altText } } },

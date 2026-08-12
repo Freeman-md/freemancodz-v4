@@ -3,6 +3,7 @@ import test from "node:test";
 import { MAX_PORTFOLIO_MEDIA_REQUEST_BYTES } from "@/contracts/portfolio-admin.contract";
 import { runAuthorizedAdminMutation } from "@/app/admin/admin-action-boundary";
 import { invalidateProjectUpdate } from "@/app/admin/project-cache-invalidation";
+import { invalidateReusableBlockUpdate } from "@/app/admin/reusable-block-cache-invalidation";
 import { handlePortfolioMediaUpload } from "@/app/api/admin/media/media-upload";
 import { AdminAuthenticationError } from "@/server/modules/admin-auth/public";
 import type { IPortfolioMediaService } from "@/server/modules/portfolio/interfaces/portfolio-media.service.interface";
@@ -53,6 +54,20 @@ test("project field invalidation is slug-targeted while membership changes add t
     (tag) => tags.push(tag),
   );
   assert.deepEqual(tags, ["portfolio:project:pay4me-withradius", "portfolio:projects"]);
+});
+
+test("Action and Media metadata updates invalidate subtype and shared IconBlock identities", () => {
+  const tags: string[] = [];
+
+  invalidateReusableBlockUpdate("action", "action-id", (tag) => tags.push(tag));
+  invalidateReusableBlockUpdate("media", "media-id", (tag) => tags.push(tag));
+
+  assert.deepEqual(tags, [
+    "portfolio:action-block:action-id",
+    "portfolio:icon-block:action-id",
+    "portfolio:media-block:media-id",
+    "portfolio:icon-block:media-id",
+  ]);
 });
 
 test("media route boundary rejects unauthorised and over-limit requests before media writes", async () => {

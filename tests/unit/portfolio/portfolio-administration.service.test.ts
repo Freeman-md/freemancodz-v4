@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { requiredPortfolioProjectSlugs } from "@/contracts/portfolio-presentation.contract";
 import type { IActionBlockAdministrationRepository } from "@/server/modules/portfolio/interfaces/action-block.repository.interface";
 import type { IContentBlockAdministrationRepository } from "@/server/modules/portfolio/interfaces/content-block.repository.interface";
 import type { IExperienceAdministrationRepository } from "@/server/modules/portfolio/interfaces/experience.repository.interface";
@@ -31,7 +32,7 @@ const canonicalProject = {
   cover: null,
 };
 
-function setup(references = 0) {
+function setup(references = 0, project = canonicalProject) {
   const deletedProjects: string[] = [];
 
   const updatedProjects: string[] = [];
@@ -63,14 +64,15 @@ function setup(references = 0) {
   };
 
   const media: IMediaBlockAdministrationRepository = {
-    findById: async () => null, findAll: async () => [], create: async () => "media",
+    findById: async () => null, findAll: async () => [], countSourceReferences: async () => 0,
+    create: async () => "media",
     update: async () => undefined, updateSource: async () => undefined, delete: async () => undefined,
   };
 
   const projects: IProjectAdministrationRepository = {
-    findAll: async () => [canonicalProject], findById: async () => canonicalProject,
-    findBySlug: async () => canonicalProject, findBySlugs: async () => [canonicalProject],
-    findFeatured: async () => [canonicalProject], create: async () => "project",
+    findAll: async () => [project], findById: async () => project,
+    findBySlug: async () => project, findBySlugs: async () => [project],
+    findFeatured: async () => [project], create: async () => "project",
     update: async (id) => { updatedProjects.push(id); },
     delete: async (id) => { deletedProjects.push(id); },
   };
@@ -128,4 +130,22 @@ test("canonical project and referenced reusable deletion guards fail before repo
 
   await unreferenced.service.deleteIconBlock("icon-id");
   assert.deepEqual(unreferenced.deletedIcons, ["icon-id"]);
+});
+
+test("every Project required by a public adapter is protected from deletion", async () => {
+  for (const slug of requiredPortfolioProjectSlugs) {
+    const project = { ...canonicalProject, id: `${slug}-id`, slug };
+
+    const guarded = setup(0, project);
+
+    await assert.rejects(() => guarded.service.deleteProject(project.id), /required/);
+    assert.deepEqual(guarded.deletedProjects, []);
+  }
+
+  const optionalProject = { ...canonicalProject, id: "optional-id", slug: "optional-project" };
+
+  const unguarded = setup(0, optionalProject);
+
+  await unguarded.service.deleteProject(optionalProject.id);
+  assert.deepEqual(unguarded.deletedProjects, [optionalProject.id]);
 });

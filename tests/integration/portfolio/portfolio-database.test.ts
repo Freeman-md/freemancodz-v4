@@ -13,6 +13,7 @@ import {
 } from "../../../prisma/portfolio-bootstrap";
 import type { ISupabaseStorageProvider } from "@/server/modules/portfolio/interfaces/supabase-storage.provider.interface";
 import { ContentBlockRepository } from "@/server/modules/portfolio/repositories/content-block.repository";
+import { MediaBlockRepository } from "@/server/modules/portfolio/repositories/media-block.repository";
 import { ProjectRepository } from "@/server/modules/portfolio/repositories/project.repository";
 
 const adminConnectionUrl = process.env.PORTFOLIO_TEST_DATABASE_URL;
@@ -263,6 +264,29 @@ test(
           const pay4Me = await projectRepository.findBySlug("pay4me-withradius");
 
           assert.ok(pay4Me);
+
+          const mediaRepository = new MediaBlockRepository(prisma!);
+
+          const unownedMedia = await prisma!.mediaBlock.findFirst({
+            where: { coveredProject: null },
+          });
+
+          assert.ok(unownedMedia);
+          assert.equal(await mediaRepository.countSourceReferences(unownedMedia.source), 1);
+          await prisma!.profile.update({
+            where: { id: "global" },
+            data: { coverImage: unownedMedia.source },
+          });
+          assert.equal(await mediaRepository.countSourceReferences(unownedMedia.source), 2);
+
+          const projectCover = await prisma!.project.findFirstOrThrow({
+            where: { coverId: { not: null } },
+            include: { cover: true },
+          });
+
+          assert.ok(projectCover.cover);
+          assert.equal(await mediaRepository.countSourceReferences(projectCover.cover.source) >= 2, true);
+
           await projectRepository.update(pay4Me.id, {
             slug: pay4Me.slug,
             title: pay4Me.title,

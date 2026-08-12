@@ -22,3 +22,14 @@ export const projectVisualNames = [
 
 export const projectVisualNameSchema = z.enum(projectVisualNames);
 export type ProjectVisualName = z.infer<typeof projectVisualNameSchema>;
+
+export const requiredPortfolioProjectSlugs = [
+  "pay4me-withradius",
+  "portfolio-assistant",
+  "email-pa",
+  "across-the-horizon",
+  "shifty",
+  "self-healing-backend-operations-system",
+] as const;
+
+export type RequiredPortfolioProjectSlug = typeof requiredPortfolioProjectSlugs[number];

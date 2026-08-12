@@ -13,6 +13,9 @@ import type {
   PortfolioProfileSource,
   PortfolioProjectSource,
 } from "./portfolio-source";
+import { requiredPortfolioProjectSlugs } from "@/contracts/portfolio-presentation.contract";
+
+const [pay4MeSlug, portfolioAssistantSlug, emailPaSlug, acrossTheHorizonSlug, shiftySlug, selfHealingSlug] = requiredPortfolioProjectSlugs;
 
 class PortfolioPresentationError extends Error {
   constructor(identity: string) {
@@ -104,9 +107,9 @@ export function createHomePresentationData(source: {
     improve: { ...section(improve), customerJourney: section(childAt(improve, 1)), operationalWorkflow: section(childAt(improve, 2)) },
     relevantWork: section(rootAt(source.contentBlocks, "/#home-relevant-work-heading")),
     projects: {
-      pay4Me: projectBySlug(source.projects, "pay4me-withradius"),
-      portfolioAssistant: projectBySlug(source.projects, "portfolio-assistant"),
-      emailPa: projectBySlug(source.projects, "email-pa"),
+      pay4Me: projectBySlug(source.projects, pay4MeSlug),
+      portfolioAssistant: projectBySlug(source.projects, portfolioAssistantSlug),
+      emailPa: projectBySlug(source.projects, emailPaSlug),
     },
     audit: { ...section(audit), problem: section(childAt(audit, 1)), improvement: section(childAt(audit, 2)) },
     closing: section(rootAt(source.contentBlocks, "/#home-closing-heading")),
@@ -127,12 +130,12 @@ export function createWorkPresentationData(source: {
     relevantWork: section(rootAt(source.contentBlocks, "/work#case-studies-heading")),
     additionalWork: section(rootAt(source.contentBlocks, "/work#additional-work-heading")),
     projects: {
-      pay4Me: projectBySlug(source.projects, "pay4me-withradius"),
-      portfolioAssistant: projectBySlug(source.projects, "portfolio-assistant"),
-      emailPa: projectBySlug(source.projects, "email-pa"),
-      acrossTheHorizon: projectBySlug(source.projects, "across-the-horizon"),
-      shifty: projectBySlug(source.projects, "shifty"),
-      selfHealing: projectBySlug(source.projects, "self-healing-backend-operations-system"),
+      pay4Me: projectBySlug(source.projects, pay4MeSlug),
+      portfolioAssistant: projectBySlug(source.projects, portfolioAssistantSlug),
+      emailPa: projectBySlug(source.projects, emailPaSlug),
+      acrossTheHorizon: projectBySlug(source.projects, acrossTheHorizonSlug),
+      shifty: projectBySlug(source.projects, shiftySlug),
+      selfHealing: projectBySlug(source.projects, selfHealingSlug),
     },
     connects: {
       ...section(connects),
@@ -197,7 +200,7 @@ export function createAuditPresentationData(source: {
       after: { ...section(after), customer: section(childAt(after, 1)), workflow: section(childAt(after, 2)) },
     },
     proof: section(rootAt(source.contentBlocks, "/audit#proof-heading")),
-    projects: ["pay4me-withradius", "portfolio-assistant", "email-pa"].map((slug) => projectBySlug(source.projects, slug)),
+    projects: [pay4MeSlug, portfolioAssistantSlug, emailPaSlug].map((slug) => projectBySlug(source.projects, slug)),
     closing: section(rootAt(source.contentBlocks, "/audit#audit-cta-heading")),
   };
 }
