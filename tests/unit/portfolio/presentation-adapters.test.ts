@@ -139,6 +139,41 @@ test("page adapters use URL and hierarchy identities instead of root array posit
   assert.equal(audit.beforeAfter.after.workflow.title, "After workflow");
 });
 
+test("page adapters fail closed when required section or project identity is unavailable", () => {
+  assert.throws(
+    () => createHomePresentationData({ profile, contentBlocks: [], projects }),
+    /Required portfolio presentation content is unavailable: \/#home-improve-heading/,
+  );
+
+  const homeBlocks = [
+    block("/", "Hero"),
+    block("/#home-improve-heading", "Improve", [block("/shared", "Journey"), block("/shared", "Workflow")]),
+    block("/#home-relevant-work-heading", "Relevant"),
+    block("/#home-audit-heading", "Audit", [block("/shared", "Problem"), block("/shared", "Improvement")]),
+    block("/#home-closing-heading", "Closing"),
+  ];
+
+  assert.throws(
+    () => createHomePresentationData({
+      profile,
+      contentBlocks: homeBlocks,
+      projects: projects.filter(({ slug }) => slug !== "portfolio-assistant"),
+    }),
+    /Required portfolio presentation content is unavailable: project:portfolio-assistant/,
+  );
+
+  const incompleteImprove = block("/#home-improve-heading", "Improve", [block("/shared", "Journey")]);
+
+  assert.throws(
+    () => createHomePresentationData({
+      profile,
+      contentBlocks: homeBlocks.map((item) => item.url === incompleteImprove.url ? incompleteImprove : item),
+      projects,
+    }),
+    /Required portfolio presentation content is unavailable: \/#home-improve-heading child 2/,
+  );
+});
+
 test("icon and project visual registries accept only approved stored identifiers", () => {
   assert.equal(portfolioIconNameSchema.safeParse("Search").success, true);
   assert.equal(portfolioIconNameSchema.safeParse("UnknownIcon").success, false);

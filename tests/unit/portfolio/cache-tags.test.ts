@@ -72,3 +72,11 @@ test("page-only blocks remain entity-targeted while collection tags represent me
   assert.equal(homeTags.includes(PortfolioCacheTag.page("work")), false);
   assert.equal(homeTags.includes(PortfolioCacheTag.experiences), false);
 });
+
+test("public cache dependencies contain portfolio content identity only, never admin session identity", () => {
+  const tags = getHomePageCacheTags({ profile, contentBlocks: [content], projects: [project] });
+
+  assert.equal(tags.every((tag) => tag.startsWith("portfolio:")), true);
+  assert.equal(tags.some((tag) => tag.includes(profile.email)), false);
+  assert.equal(tags.some((tag) => /admin|auth|session/i.test(tag)), false);
+});

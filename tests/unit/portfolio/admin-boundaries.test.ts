@@ -23,6 +23,21 @@ test("direct admin mutation boundary rejects before executing a write", async ()
   assert.equal(writes, 1);
 });
 
+test("admin authorization is evaluated for every mutation and never reused as public cache state", async () => {
+  let authorizationChecks = 0;
+
+  const requireAdmin = async () => {
+    authorizationChecks += 1;
+
+    return { id: `admin-${authorizationChecks}` };
+  };
+
+  await runAuthorizedAdminMutation(requireAdmin, async () => "first");
+  await runAuthorizedAdminMutation(requireAdmin, async () => "second");
+
+  assert.equal(authorizationChecks, 2);
+});
+
 test("project field invalidation is slug-targeted while membership changes add the collection tag", () => {
   const tags: string[] = [];
 
@@ -129,6 +144,7 @@ test("authorised media route writes once and revalidates the owning Project slug
   });
 
   assert.equal(response.status, 200);
+  assert.equal(response.headers.get("cache-control"), "private, no-store");
   assert.equal(writes, 1);
   assert.deepEqual(tags, ["portfolio:project:pay4me-withradius"]);
 });

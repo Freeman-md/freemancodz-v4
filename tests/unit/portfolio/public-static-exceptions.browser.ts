@@ -1,16 +1,30 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { isValidElement, type ReactNode } from "react";
+import { isValidElement, type ReactElement, type ReactNode } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { AboutJourneySection } from "@/features/about/components/AboutJourneySection";
 import { AboutProductThinkingSection } from "@/features/about/components/AboutProductThinkingSection";
 import { AboutWorkProcessSection } from "@/features/about/components/AboutWorkProcessSection";
 import { AuditFooterCta } from "@/features/audit/components/AuditFooterCta";
 import { AuditHero } from "@/features/audit/components/AuditHero";
-import { AuditSymptomsSection } from "@/features/audit/components/AuditSymptomsSection";
+import {
+  AuditSymptomsSection,
+} from "@/features/audit/components/AuditSymptomsSection";
+import {
+  projectVisualRegistry,
+  resolveProjectVisual,
+} from "@/features/audit/components/AuditProofSection";
+import { OPEN_PORTFOLIO_CHAT_EVENT } from "@/features/assistant/assistant.events";
 import { HomeImproveSection } from "@/features/portfolio/components/HomeImproveSection";
+import { PortfolioAction } from "@/features/portfolio/components/PortfolioAction";
 import { WorkConnectionSection } from "@/features/portfolio/components/WorkConnectionSection";
+import {
+  portfolioIconRegistry,
+  resolvePortfolioIcon,
+} from "@/features/portfolio/models/icon-registry";
 import type {
   AboutPresentationData,
+  PortfolioAction as PortfolioActionModel,
   PortfolioProject,
   PortfolioSection,
 } from "@/features/portfolio/models/portfolio-presentation";
@@ -67,6 +81,113 @@ const aboutProfile: AboutPresentationData["profile"] = {
   processPrinciples: [],
   controlPrinciples: [],
 };
+
+function renderedAction(action: PortfolioActionModel) {
+  const rendered = PortfolioAction({ action });
+
+  assert.equal(isValidElement(rendered), true);
+
+  return rendered as ReactElement<Record<string, unknown>>;
+}
+
+test("icon and project visual resolvers return known components and reject unknown identities", () => {
+  assert.equal(resolvePortfolioIcon("Search"), portfolioIconRegistry.Search);
+  assert.equal(resolvePortfolioIcon("UnknownIcon"), null);
+  assert.equal(resolvePortfolioIcon(null), null);
+  assert.equal(resolveProjectVisual("Pay4MeVisual"), projectVisualRegistry.Pay4MeVisual);
+  assert.equal(resolveProjectVisual("UnknownVisual"), null);
+  assert.equal(resolveProjectVisual(null), null);
+});
+
+test("PortfolioAction renders internal and external links with approved variant mappings", () => {
+  const variants = {
+    GHOST: "border-line",
+    LINK: "border-none",
+    PRIMARY: "bg-signal-800",
+    SECONDARY: "bg-white",
+  } as const;
+
+  for (const [variant, expectedClass] of Object.entries(variants)) {
+    const action = renderedAction({
+      iconName: null,
+      label: `${variant} action`,
+      copy: null,
+      variant: variant as PortfolioActionModel["variant"],
+      url: variant === "SECONDARY" ? "https://example.com/work" : "/work",
+      assistantMessage: null,
+    });
+
+    const markup = renderToStaticMarkup(action);
+
+    assert.match(markup, new RegExp(`href="${variant === "SECONDARY" ? "https://example.com/work" : "/work"}"`));
+    assert.match(markup, new RegExp(expectedClass));
+  }
+});
+
+test("PortfolioAction assistant mode dispatches the validated assistant event contract", () => {
+  const assistantVariants = {
+    GHOST: "ghost",
+    LINK: "text",
+    PRIMARY: "marketing",
+    SECONDARY: "ghost",
+  } as const;
+
+  for (const [variant, expectedVariant] of Object.entries(assistantVariants)) {
+    const rendered = renderedAction({
+      iconName: null,
+      label: `${variant} assistant action`,
+      copy: null,
+      variant: variant as PortfolioActionModel["variant"],
+      url: null,
+      assistantMessage: "Open assistant",
+    });
+
+    assert.equal(rendered.props.variant, expectedVariant);
+  }
+
+  const action = renderedAction({
+    iconName: "MessageCircleQuestion",
+    label: "Start the audit",
+    copy: null,
+    variant: "PRIMARY",
+    url: "/audit",
+    assistantMessage: "Audit my workflow",
+  });
+
+  const eventTarget = new EventTarget();
+
+  const previousWindow = Object.getOwnPropertyDescriptor(globalThis, "window");
+
+  Object.defineProperty(globalThis, "window", { configurable: true, value: eventTarget });
+
+  let received: unknown;
+
+  eventTarget.addEventListener(OPEN_PORTFOLIO_CHAT_EVENT, (event) => {
+    received = (event as CustomEvent).detail;
+  });
+
+  try {
+    assert.equal(typeof action.type, "function");
+    assert.equal(action.props.variant, "marketing");
+    assert.deepEqual(action.props.detail, { message: "Audit my workflow" });
+
+    const button = Reflect.apply(
+      action.type as (...values: unknown[]) => ReactElement,
+      null,
+      [action.props],
+    ) as ReactElement<Record<string, unknown>>;
+
+    assert.equal(button.props.variant, "signal");
+    (button.props.onClick as () => void)();
+    assert.deepEqual(received, { message: "Audit my workflow" });
+  } finally {
+    if (previousWindow) {
+      Object.defineProperty(globalThis, "window", previousWindow);
+    } else {
+      Reflect.deleteProperty(globalThis, "window");
+    }
+  }
+});
 
 test("Home and Work preserve their mapped static presentation beside dynamic content", () => {
   const homeText = collectText(HomeImproveSection({
