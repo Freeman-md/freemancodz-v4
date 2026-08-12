@@ -1,5 +1,4 @@
 import "server-only";
-import { get } from "@vercel/blob";
 import {
   getEmbeddingModel,
   getResponseModel,
@@ -13,18 +12,19 @@ import { AssistantService } from "./modules/assistant/services/assistant.service
 import type { IAssistantService } from "./modules/assistant/interfaces/assistant.service.interface";
 import { ContentBlockRepository } from "./modules/portfolio/repositories/content-block.repository";
 import { ExperienceRepository } from "./modules/portfolio/repositories/experience.repository";
-import { PrincipleRepository } from "./modules/portfolio/repositories/principle.repository";
+import { ProfileRepository } from "./modules/portfolio/repositories/profile.repository";
 import { ProjectRepository } from "./modules/portfolio/repositories/project.repository";
-import { PortfolioServiceRepository } from "./modules/portfolio/repositories/portfolio-service.repository";
-import { PortfolioSeedRepository } from "./modules/portfolio/repositories/portfolio-seed.repository";
-import { VercelBlobProvider } from "./modules/portfolio/providers/vercel-blob.provider";
-import { PortfolioService } from "./modules/portfolio/services/portfolio.service";
-import { PortfolioSeedService } from "./modules/portfolio/services/portfolio-seed.service";
-import { PortfolioContentRepository } from "./modules/portfolio/repositories/portfolio-content.repository";
-import { PortfolioContentService } from "./modules/portfolio/services/portfolio-content.service";
-import type { IPortfolioService } from "./modules/portfolio/interfaces/portfolio.service.interface";
-import type { IPortfolioSeedService } from "./modules/portfolio/interfaces/portfolio-seed.service.interface";
-import type { IPortfolioContentService } from "./modules/portfolio/interfaces/portfolio-content.service.interface";
+import { IconBlockRepository } from "./modules/portfolio/repositories/icon-block.repository";
+import { MediaBlockRepository } from "./modules/portfolio/repositories/media-block.repository";
+import { ActionBlockRepository } from "./modules/portfolio/repositories/action-block.repository";
+import { HomeService } from "./modules/portfolio/services/home.service";
+import { WorkService } from "./modules/portfolio/services/work.service";
+import { AboutService } from "./modules/portfolio/services/about.service";
+import { AuditService } from "./modules/portfolio/services/audit.service";
+import type { IHomeService } from "./modules/portfolio/interfaces/home.service.interface";
+import type { IWorkService } from "./modules/portfolio/interfaces/work.service.interface";
+import type { IAboutService } from "./modules/portfolio/interfaces/about.service.interface";
+import type { IAuditService } from "./modules/portfolio/interfaces/audit.service.interface";
 import { SourceRecordRepository } from "./modules/search-index/repositories/source-record.repository";
 import { SearchIndexJobRepository } from "./modules/search-index/repositories/search-index-job.repository";
 import { SiteChunkRepository } from "./modules/search-index/repositories/site-chunk.repository";
@@ -46,13 +46,13 @@ const contentBlocks = new ContentBlockRepository(prisma);
 
 const experiences = new ExperienceRepository(prisma);
 
-const principles = new PrincipleRepository(prisma);
+const profiles = new ProfileRepository(prisma);
 
 const projects = new ProjectRepository(prisma);
 
-const portfolioServices = new PortfolioServiceRepository(prisma);
-
-const seedRepository = new PortfolioSeedRepository(prisma);
+export const iconBlockRepository = new IconBlockRepository(prisma);
+export const mediaBlockRepository = new MediaBlockRepository(prisma);
+export const actionBlockRepository = new ActionBlockRepository(prisma);
 
 const sources = new SourceRecordRepository(prisma);
 
@@ -88,15 +88,7 @@ export const assistantService: IAssistantService = new AssistantService(
   meetingService,
   workflow,
 );
-export const portfolioService: IPortfolioService = new PortfolioService(
-  contentBlocks,
-  experiences,
-  principles,
-  projects,
-  portfolioServices,
-  new VercelBlobProvider({ get }),
-);
-export const portfolioSeedService: IPortfolioSeedService = new PortfolioSeedService(seedRepository);
-export const portfolioContentService: IPortfolioContentService = new PortfolioContentService(
-  new PortfolioContentRepository(prisma),
-);
+export const homeService: IHomeService = new HomeService(profiles, contentBlocks, projects);
+export const workService: IWorkService = new WorkService(profiles, contentBlocks, projects);
+export const aboutService: IAboutService = new AboutService(profiles, contentBlocks, experiences);
+export const auditService: IAuditService = new AuditService(contentBlocks, projects);

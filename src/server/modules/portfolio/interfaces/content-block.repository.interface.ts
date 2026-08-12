@@ -1,5 +1,5 @@
-import type { ContentBlock, ContentPage, ContentSection } from "@/generated/prisma/client";
+import type { ContentBlockNode } from "../models/portfolio-records";
+export type PortfolioPagePath = "/" | "/work" | "/about" | "/audit";
 export interface IContentBlockRepository {
-  findRequiredByKey(key: string): Promise<ContentBlock>;
-  findBySection(page: ContentPage, section: ContentSection): Promise<ContentBlock[]>;
+  findPageTree(page: PortfolioPagePath): Promise<ContentBlockNode[]>;
 }

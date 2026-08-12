@@ -102,12 +102,9 @@ export class SearchIndexService implements ISearchIndexService {
   }
 
   async removeSource(input: IndexSourceInput): Promise<IndexSourceResult> {
-    return {
-      created: 0,
-      changed: 0,
-      unchanged: 0,
-      deleted: await this.chunks.deleteSource(input.sourceType, input.sourceId),
-    };
+    throw new Error(
+      `Portfolio source removal is unavailable until the deferred search-index milestone (${input.sourceType}:${input.sourceId}).`,
+    );
   }
 
   async preview(

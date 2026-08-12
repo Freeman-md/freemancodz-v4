@@ -143,7 +143,6 @@ const config = [
             "@/lib/env",
             "@/lib/openai",
             "openai",
-            "@vercel/blob",
             "server-only",
           ],
         },

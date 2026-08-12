@@ -8,24 +8,21 @@ datasource db {
 }
 
 model SiteChunk {
-  id         String @id
-  sourceType String @map("source_type")
-  sourceId   String @map("source_id")
-  chunkIndex Int   @map("chunk_index")
-
-  title    String
-  category String
-  url      String
-  content  String
-  keywords String[]
-
+  id             String                      @id
+  sourceType     String                      @map("source_type")
+  sourceId       String                      @map("source_id")
+  chunkIndex     Int                         @map("chunk_index")
+  title          String
+  category       String
+  url            String
+  content        String
+  keywords       String[]
   embedding      Unsupported("vector(1536)")
-  contentHash    String?                        @map("content_hash")
-  embeddingModel String?                        @map("embedding_model")
-  embeddedAt     DateTime?                      @map("embedded_at")
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  contentHash    String?                     @map("content_hash")
+  embeddingModel String?                     @map("embedding_model")
+  embeddedAt     DateTime?                   @map("embedded_at")
+  createdAt      DateTime                    @default(now())
+  updatedAt      DateTime                    @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   @@unique([sourceType, sourceId, chunkIndex])
   @@map("site_chunks")
@@ -68,115 +65,222 @@ model Meeting {
   @@map("meetings")
 }
 
-enum ContentPage {
-  HOME  @map("home")
-  ABOUT @map("about")
-  AUDIT @map("audit")
+enum ProfileIconCollection {
+  AUDIENCE            @map("audience")
+  PRINCIPLES          @map("principles")
+  THINKING_PRINCIPLES @map("thinking_principles")
+  PROCESS_PRINCIPLES  @map("process_principles")
+  CONTROL_PRINCIPLES  @map("control_principles")
+  OUTCOMES            @map("outcomes")
 
-  @@map("content_page")
+  @@map("profile_icon_collection")
 }
 
-enum ContentSection {
-  HERO                @map("hero")
-  PHILOSOPHY          @map("philosophy")
-  CURRENT_DIRECTION   @map("current_direction")
-  ABOUT_HEADER        @map("about_header")
-  ABOUT_INTRO         @map("about_intro")
-  EDUCATION           @map("education")
-  WORK_PROCESS        @map("work_process")
-  OUTSIDE_ENGINEERING @map("outside_engineering")
-  SERVICES_INTRO      @map("services_intro")
-  PROOF_OF_WORK       @map("proof_of_work")
-  AUDIT_OFFER         @map("audit_offer")
-  FINAL_CTA           @map("final_cta")
-  AUDIT_PROBLEM_SIGNALS @map("audit_problem_signals")
-  AUDIT_DELIVERABLE     @map("audit_deliverable")
-  AUDIT_PROOF           @map("audit_proof")
+enum MediaType {
+  IMAGE @map("image")
+  VIDEO @map("video")
 
-  @@map("content_section")
+  @@map("media_type")
+}
+
+enum ActionVariant {
+  PRIMARY   @map("primary")
+  SECONDARY @map("secondary")
+  GHOST     @map("ghost")
+  LINK      @map("link")
+
+  @@map("action_variant")
+}
+
+model Profile {
+  id              String             @id @default("global")
+  name            String
+  title           String
+  positioning     String
+  email           String
+  linkedInUrl     String             @map("linkedin_url")
+  githubUrl       String             @map("github_url")
+  coverImage      String?            @map("cover_image")
+  iconCollections ProfileIconBlock[]
+  createdAt       DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime           @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("profiles")
 }
 
 model ContentBlock {
-  id        String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  key       String         @unique
-  page      ContentPage
-  section   ContentSection
-  position  Int            @default(0)
-  content   Json           @db.JsonB
-  createdAt DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt DateTime       @default(now()) @map("updated_at") @db.Timestamptz(6)
+  id           String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  eyebrow      String?
+  title        String?
+  copy         String?
+  url          String
+  order        Int?
+  iconBlocks   ContentBlockIconBlock[]
+  mediaBlocks  ContentBlockMediaBlock[]
+  actionBlocks ContentBlockActionBlock[]
+  children     ContentBlockChild[]       @relation("ContentBlockParent")
+  parent       ContentBlockChild?        @relation("ContentBlockChild")
+  createdAt    DateTime                  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime                  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  @@unique([page, section, position])
-  @@index([page, section, position])
+  @@index([url, order])
   @@map("content_blocks")
 }
 
-model Principle {
-  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  key       String   @unique
-  section   String
-  title     String
-  body      String
-  position  Int
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+model IconBlock {
+  id                   String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  iconName             String?                 @map("icon_name")
+  label                String
+  copy                 String?
+  colour               String?
+  mediaBlock           MediaBlock?
+  actionBlock          ActionBlock?
+  contentBlockIcons    ContentBlockIconBlock[]
+  profileCollections   ProfileIconBlock[]
+  experienceIconBlocks ExperienceIconBlock[]
+  createdAt            DateTime                @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt            DateTime                @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  @@unique([section, position])
-  @@index([section, position])
-  @@map("principles")
+  @@map("icon_blocks")
 }
 
-model Service {
-  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  key             String   @unique
-  title           String
-  lead            String
-  description     String
-  cta             String
-  assistantPrompt String?  @map("assistant_prompt")
-  position        Int
-  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt       DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+model MediaBlock {
+  id             String                   @id @db.Uuid
+  type           MediaType
+  source         String
+  altText        String                   @map("alt_text")
+  iconBlock      IconBlock                @relation(fields: [id], references: [id], onDelete: Cascade)
+  contentLinks   ContentBlockMediaBlock[]
+  coveredProject Project?
 
-  @@unique([position])
-  @@map("services")
+  @@map("media_blocks")
+}
+
+model ActionBlock {
+  id               String                    @id @db.Uuid
+  variant          ActionVariant
+  url              String?
+  assistantMessage String?                   @map("assistant_message")
+  iconBlock        IconBlock                 @relation(fields: [id], references: [id], onDelete: Cascade)
+  contentLinks     ContentBlockActionBlock[]
+
+  @@map("action_blocks")
+}
+
+model ContentBlockIconBlock {
+  contentBlockId String       @map("content_block_id") @db.Uuid
+  iconBlockId    String       @map("icon_block_id") @db.Uuid
+  order          Int
+  contentBlock   ContentBlock @relation(fields: [contentBlockId], references: [id], onDelete: Cascade)
+  iconBlock      IconBlock    @relation(fields: [iconBlockId], references: [id], onDelete: Restrict)
+
+  @@id([contentBlockId, iconBlockId])
+  @@unique([contentBlockId, order])
+  @@index([iconBlockId])
+  @@map("content_block_icon_blocks")
+}
+
+model ContentBlockMediaBlock {
+  contentBlockId String       @map("content_block_id") @db.Uuid
+  mediaBlockId   String       @map("media_block_id") @db.Uuid
+  order          Int
+  contentBlock   ContentBlock @relation(fields: [contentBlockId], references: [id], onDelete: Cascade)
+  mediaBlock     MediaBlock   @relation(fields: [mediaBlockId], references: [id], onDelete: Restrict)
+
+  @@id([contentBlockId, mediaBlockId])
+  @@unique([contentBlockId, order])
+  @@index([mediaBlockId])
+  @@map("content_block_media_blocks")
+}
+
+model ContentBlockActionBlock {
+  contentBlockId String       @map("content_block_id") @db.Uuid
+  actionBlockId  String       @map("action_block_id") @db.Uuid
+  order          Int
+  contentBlock   ContentBlock @relation(fields: [contentBlockId], references: [id], onDelete: Cascade)
+  actionBlock    ActionBlock  @relation(fields: [actionBlockId], references: [id], onDelete: Restrict)
+
+  @@id([contentBlockId, actionBlockId])
+  @@unique([contentBlockId, order])
+  @@index([actionBlockId])
+  @@map("content_block_action_blocks")
+}
+
+model ContentBlockChild {
+  parentId String       @map("parent_id") @db.Uuid
+  childId  String       @unique @map("child_id") @db.Uuid
+  order    Int
+  parent   ContentBlock @relation("ContentBlockParent", fields: [parentId], references: [id], onDelete: Cascade)
+  child    ContentBlock @relation("ContentBlockChild", fields: [childId], references: [id], onDelete: Cascade)
+
+  @@id([parentId, childId])
+  @@unique([parentId, order])
+  @@map("content_block_children")
+}
+
+model ProfileIconBlock {
+  profileId   String                @map("profile_id")
+  iconBlockId String                @map("icon_block_id") @db.Uuid
+  collection  ProfileIconCollection
+  order       Int
+  profile     Profile               @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  iconBlock   IconBlock             @relation(fields: [iconBlockId], references: [id], onDelete: Restrict)
+
+  @@id([profileId, collection, iconBlockId])
+  @@unique([profileId, collection, order])
+  @@index([iconBlockId])
+  @@map("profile_icon_blocks")
 }
 
 model Experience {
-  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  key       String   @unique
-  title     String
-  company   String
-  dates     String
-  location  String?
-  category  String
-  focus     String
-  position  Int      @unique
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+  id         String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title      String
+  tag        String?
+  copy       String
+  insight    String?
+  role       String?
+  startDate  DateTime?             @map("start_date") @db.Date
+  endDate    DateTime?             @map("end_date") @db.Date
+  order      Int                   @unique
+  iconBlocks ExperienceIconBlock[]
+  createdAt  DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime              @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   @@map("experiences")
 }
 
-model Project {
-  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  key           String   @unique
-  title         String   @unique
-  summary       String
-  category      String
-  role          String
-  outcome       String
-  detail        String
-  future        String?
-  collaboration String?
-  positioning   String?
-  featured      Boolean  @default(false)
-  position      Int      @unique
-  stacks        String[] @default([])
-  links         Json     @default("[]")
-  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt     DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+model ExperienceIconBlock {
+  experienceId String     @map("experience_id") @db.Uuid
+  iconBlockId  String     @map("icon_block_id") @db.Uuid
+  order        Int
+  experience   Experience @relation(fields: [experienceId], references: [id], onDelete: Cascade)
+  iconBlock    IconBlock  @relation(fields: [iconBlockId], references: [id], onDelete: Restrict)
 
-  @@index([featured, position])
+  @@id([experienceId, iconBlockId])
+  @@unique([experienceId, order])
+  @@index([iconBlockId])
+  @@map("experience_icon_blocks")
+}
+
+model Project {
+  id            String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  slug          String      @unique
+  title         String      @unique
+  category      String
+  problem       String
+  solution      String
+  outcome       String?
+  coverId       String?     @unique @map("cover_id") @db.Uuid
+  cover         MediaBlock? @relation(fields: [coverId], references: [id], onDelete: SetNull)
+  externalLinks String[]    @default([]) @map("external_links")
+  featured      Boolean     @default(false)
+  order         Int         @unique
+  markdown      String?
+  visualBlock   String?     @map("visual_block")
+  visualText    String?     @map("visual_text")
+  createdAt     DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime    @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([featured, order])
   @@map("projects")
 }

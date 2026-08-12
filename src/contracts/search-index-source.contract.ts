@@ -6,3 +6,4 @@ export const SearchIndexSourceInputSchema = z.object({
 });
 
 export type SearchIndexSourceInput = z.infer<typeof SearchIndexSourceInputSchema>;
+export type SearchIndexSourceType = SearchIndexSourceInput["sourceType"];

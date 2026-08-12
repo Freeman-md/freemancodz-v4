@@ -9,14 +9,10 @@ test("proxy allows the Audit page route", () => {
   assert.equal(response.headers.get("x-middleware-next"), "1");
 });
 
-test("proxy allows the archived Work page route", () => {
-  const response = proxy(new NextRequest("https://freeman.dev/work-old"));
+test("proxy rejects retired portfolio page routes", () => {
+  for (const path of ["/home-old", "/work-old", "/about-old"]) {
+    const response = proxy(new NextRequest(`https://freeman.dev${path}`));
 
-  assert.equal(response.headers.get("x-middleware-next"), "1");
-});
-
-test("proxy allows the archived Home page route", () => {
-  const response = proxy(new NextRequest("https://freeman.dev/home-old"));
-
-  assert.equal(response.headers.get("x-middleware-next"), "1");
+    assert.equal(response.status, 404, path);
+  }
 });

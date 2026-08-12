@@ -36,6 +36,13 @@ export function getWorkflowSecret() {
   return requireEnv("MEETING_WORKFLOW_SECRET");
 }
 
+export function getSupabaseStorageConfig() {
+  return {
+    url: requireEnvValue("NEXT_PUBLIC_SUPABASE_URL"),
+    serviceRoleKey: requireEnvValue("SUPABASE_SERVICE_ROLE_KEY"),
+  };
+}
+
 export function getGoogleCalendarConfig() {
   return {
     clientId: requireEnvValue("GOOGLE_CLIENT_ID"),

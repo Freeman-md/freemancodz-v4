@@ -1,5 +1,7 @@
-import type { Project } from "@/generated/prisma/client";
+import type { ProjectWithCover } from "../models/portfolio-records";
 export interface IProjectRepository {
-  findAll(): Promise<Project[]>;
-  findFeatured(): Promise<Project[]>;
+  findAll(): Promise<ProjectWithCover[]>;
+  findBySlug(slug: string): Promise<ProjectWithCover | null>;
+  findBySlugs(slugs: string[]): Promise<ProjectWithCover[]>;
+  findFeatured(): Promise<ProjectWithCover[]>;
 }

@@ -47,6 +47,13 @@ export class SearchIndexJobRepository implements ISearchIndexJobRepository {
         FROM search_index_jobs
         WHERE status = 'pending'
           AND available_at <= NOW()
+          AND source_type NOT IN (
+            'content_blocks',
+            'projects',
+            'services',
+            'principles',
+            'experiences'
+          )
         ORDER BY available_at ASC, created_at ASC
         FOR UPDATE SKIP LOCKED
         LIMIT ${limit}

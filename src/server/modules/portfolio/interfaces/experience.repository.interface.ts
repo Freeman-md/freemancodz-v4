@@ -1,4 +1,4 @@
-import type { Experience } from "@/generated/prisma/client";
+import type { ExperienceWithIcons } from "../models/portfolio-records";
 export interface IExperienceRepository {
-  findAll(): Promise<Experience[]>;
+  findAll(): Promise<ExperienceWithIcons[]>;
 }

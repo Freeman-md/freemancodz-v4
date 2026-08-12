@@ -1,18 +1,11 @@
-import type {
-  ContentBlock,
-  Experience,
-  Principle,
-  Project,
-  Service,
-} from "@/generated/prisma/client";
-import type { IndexableSourceType } from "../mappers/source-document.mapper";
-export type SourceRecord =
-  | { sourceType: "content_blocks"; record: ContentBlock }
-  | { sourceType: "projects"; record: Project }
-  | { sourceType: "services"; record: Service }
-  | { sourceType: "principles"; record: Principle }
-  | { sourceType: "experiences"; record: Experience };
+import type { SearchIndexSourceType } from "@/contracts/search-index-source.contract";
+
+export type SourceRecord = {
+  sourceType: SearchIndexSourceType;
+  record: { id: string };
+};
+
 export interface ISourceRecordRepository {
-  findById(sourceType: IndexableSourceType, sourceId: string): Promise<SourceRecord | null>;
+  findById(sourceType: SearchIndexSourceType, sourceId: string): Promise<SourceRecord | null>;
   findAll(): Promise<SourceRecord[]>;
 }
