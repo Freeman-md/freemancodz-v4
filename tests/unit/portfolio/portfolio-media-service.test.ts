@@ -34,8 +34,6 @@ function setup(
 
   const storage: IPortfolioMediaStorageProvider = {
     ensurePublicBucket: async () => undefined,
-    hasObject: async () => true,
-    uploadIfMissing: async () => "",
     getPublicUrl: (path) => `https://storage.test/storage/v1/object/public/portfolio-media/${path}`,
     upload: async ({ objectPath }) =>
       `https://storage.test/storage/v1/object/public/portfolio-media/${objectPath}`,

@@ -25,7 +25,7 @@ npm run prisma:generate
 npm run dev
 ```
 
-Provide `DATABASE_URL` for Prisma. Portfolio storage requires `NEXT_PUBLIC_SUPABASE_URL`, server-only `SUPABASE_SERVICE_ROLE_KEY`, and `PORTFOLIO_MEDIA_SOURCE_DIR` containing the six approved extensionless files (`me`, `strength-training`, `running`, `community`, `learning`, and `cv`). `NEXT_PUBLIC_SUPABASE_URL` must be a valid HTTP(S) project URL outside local development; only an explicit development runtime may fall back to local Supabase at `127.0.0.1:54321`. Assistant operations additionally require `OPENAI_API_KEY`.
+Provide `DATABASE_URL` for Prisma. Portfolio storage requires `NEXT_PUBLIC_SUPABASE_URL` and server-only `SUPABASE_SERVICE_ROLE_KEY`. Bootstrap creates or verifies the public `portfolio-media` bucket but does not require or upload local media files; media can be added later through the protected admin. `NEXT_PUBLIC_SUPABASE_URL` must be a valid HTTP(S) project URL outside local development; only an explicit development runtime may fall back to local Supabase at `127.0.0.1:54321`. Assistant operations additionally require `OPENAI_API_KEY`.
 
 Prisma migrations in `prisma/migrations` are the only migration source of truth. The Supabase JavaScript client is server-only and used solely for the public `portfolio-media` Object Storage bucket.
 

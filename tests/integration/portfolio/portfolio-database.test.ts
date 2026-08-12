@@ -209,8 +209,6 @@ test(
 
       const storage: ISupabaseStorageProvider = {
         ensurePublicBucket: async () => undefined,
-        hasObject: async () => true,
-        uploadIfMissing: async ({ objectPath }) => `https://portfolio.test/${objectPath}`,
         getPublicUrl: (objectPath) => `https://portfolio.test/${objectPath}`,
       };
 

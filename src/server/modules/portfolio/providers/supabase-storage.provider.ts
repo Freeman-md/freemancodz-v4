@@ -45,27 +45,6 @@ export class SupabaseStorageProvider implements IPortfolioMediaStorageProvider {
     }
   }
 
-  async uploadIfMissing(asset: PortfolioMediaUpload) {
-    const bucket = this.client.storage.from(PORTFOLIO_MEDIA_BUCKET);
-
-    const existing = await bucket.download(asset.objectPath);
-
-    if (!existing.error) {
-      return this.getPublicUrl(asset.objectPath);
-    }
-
-    const result = await bucket.upload(asset.objectPath, asset.body, {
-      contentType: asset.contentType,
-      upsert: false,
-    });
-
-    if (result.error) {
-      throw new PortfolioStorageError(`Portfolio media upload failed: ${asset.objectPath}`);
-    }
-
-    return this.getPublicUrl(asset.objectPath);
-  }
-
   async upload(asset: PortfolioMediaUpload) {
     const result = await this.client.storage
       .from(PORTFOLIO_MEDIA_BUCKET)
@@ -98,12 +77,6 @@ export class SupabaseStorageProvider implements IPortfolioMediaStorageProvider {
     } catch {
       return null;
     }
-  }
-
-  async hasObject(objectPath: string) {
-    const result = await this.client.storage.from(PORTFOLIO_MEDIA_BUCKET).download(objectPath);
-
-    return !result.error;
   }
 
   getPublicUrl(objectPath: string) {

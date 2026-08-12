@@ -108,7 +108,7 @@ npm run portfolio:bootstrap:local
 npm run dev
 ```
 
-The app requires `DATABASE_URL`. Admin/auth requires the public Supabase URL and publishable key plus `ADMIN_EMAIL`; Storage writes require `SUPABASE_SERVICE_ROLE_KEY`. Bootstrap additionally requires `PORTFOLIO_MEDIA_SOURCE_DIR` with the six approved files. Assistant functionality separately requires `OPENAI_API_KEY`.
+The app requires `DATABASE_URL`. Admin/auth requires the public Supabase URL and publishable key plus `ADMIN_EMAIL`; Storage writes require `SUPABASE_SERVICE_ROLE_KEY`. Bootstrap creates or verifies the public `portfolio-media` bucket but does not require local media files or pre-upload objects. Media can be uploaded or replaced later through the protected admin. Assistant functionality separately requires `OPENAI_API_KEY`.
 
 Focused verification:
 
@@ -119,7 +119,7 @@ PORTFOLIO_TEST_DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54332/postg
 
 ## 12. Database / Initial Bootstrap
 
-Apply `prisma/migrations` first. `npm run portfolio:bootstrap:local` recreates only the local portfolio domain, uploads missing approved assets and seeds the canonical payload transactionally. Production is deliberately separate: apply migrations, then run `npm run portfolio:bootstrap:production -- --confirm-production`. The production bootstrap prints its targets and refuses any independently initialized portfolio table; it does not overwrite content.
+Apply `prisma/migrations` first. `npm run portfolio:bootstrap:local` recreates only the local portfolio domain, creates or verifies the public media bucket, and seeds the canonical payload transactionally. It does not require or upload media binaries. Production is deliberately separate: apply migrations, then run `npm run portfolio:bootstrap:production -- --confirm-production`. The production bootstrap prints its targets and refuses any independently initialized portfolio table; it does not overwrite content. Objects referenced by seeded media URLs may remain absent from Storage until their files are uploaded through the admin.
 
 ## 13. Production Setup
 
@@ -128,7 +128,7 @@ These are human-only operations:
 1. Provision the approved Supabase Auth user without enabling public self-registration.
 2. Configure Auth Site URL, production/local confirmation redirects and the documented token-hash email template.
 3. Configure `DATABASE_URL`, public Supabase URL/publishable key, server-only Storage service-role key and `ADMIN_EMAIL` in the deployment environment.
-4. Confirm the public `portfolio-media` bucket and bootstrap inputs.
+4. Confirm the public `portfolio-media` bucket; no local media source directory is required.
 5. Apply the production migration and guarded bootstrap commands above.
 6. Deploy with database access available during `next build` and at runtime for cache misses/invalidation.
 7. Exercise the manual verification checklist before treating admin operations as live.
