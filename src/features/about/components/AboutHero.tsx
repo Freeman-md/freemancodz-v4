@@ -1,7 +1,10 @@
 import { Container } from "@/shared/components/layout/Container";
 import { siteAssetLinks } from "@/shared/config/links";
 import { PortfolioIcon } from "@/features/portfolio/components/PortfolioIcon";
-import type { AboutPresentationData, PortfolioIcon as PortfolioIconModel } from "@/features/portfolio/models/portfolio-presentation";
+import type {
+  AboutPresentationData,
+  PortfolioIcon as PortfolioIconModel,
+} from "@/features/portfolio/models/portfolio-presentation";
 
 type JourneyStep = PortfolioIconModel;
 
@@ -21,7 +24,9 @@ function JourneyRail({
 
   return (
     <section className={`rounded-3xl border bg-white/80 p-5 shadow-soft ${colors.split(" ")[0]}`}>
-      <p className={`text-center font-mono text-[10px] font-semibold uppercase tracking-[0.15em] ${colors.split(" ").slice(2).join(" ")}`}>
+      <p
+        className={`text-center font-mono text-[10px] font-semibold uppercase tracking-[0.15em] ${colors.split(" ").slice(2).join(" ")}`}
+      >
         {label}
       </p>
       <div className="mt-5 grid grid-cols-3 gap-2 lg:grid-cols-1 lg:gap-5">
@@ -35,7 +40,9 @@ function JourneyRail({
                 }`}
               />
             ) : null}
-            <div className={`relative z-10 flex size-14 items-center justify-center rounded-full border ${colors}`}>
+            <div
+              className={`relative z-10 flex size-14 items-center justify-center rounded-full border ${colors}`}
+            >
               <PortfolioIcon aria-hidden="true" className="size-6 stroke-[1.6]" name={iconName} />
             </div>
             <p className="mt-2 text-xs font-medium text-ink">{stepLabel}</p>
@@ -79,14 +86,19 @@ export function AboutHero({ hero, profile }: Pick<AboutPresentationData, "hero" 
             </h1>
             <span aria-hidden="true" className="mt-8 block h-1 w-14 rounded-full bg-signal-500" />
             <div className="mt-9 max-w-xl space-y-5 text-base leading-7 text-slate-700 sm:text-lg sm:leading-8">
-              {paragraphs.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
+              {paragraphs.map((paragraph) => (
+                <p key={paragraph}>{paragraph}</p>
+              ))}
             </div>
           </div>
 
           <div className="grid items-center gap-10 lg:grid-cols-[minmax(8rem,0.75fr)_auto_minmax(8rem,0.75fr)] lg:gap-6">
             <JourneyRail label={hero.customer.title} steps={hero.customer.icons} tone="signal" />
             <div className="flex justify-center py-2 lg:py-0">
-              <PortraitSignal image={profile.coverImage ?? siteAssetLinks.heroImage} name={profile.name} />
+              <PortraitSignal
+                image={profile.coverImage ?? siteAssetLinks.heroImage}
+                name={profile.name}
+              />
             </div>
             <JourneyRail label={hero.system.title} steps={hero.system.icons} tone="success" />
           </div>
@@ -96,7 +108,9 @@ export function AboutHero({ hero, profile }: Pick<AboutPresentationData, "hero" 
           {profile.principles.map(({ iconName, label }, index) => (
             <article
               className={`flex items-center gap-4 p-5 sm:p-6 ${
-                index < profile.principles.length - 1 ? "border-b border-line lg:border-b-0 lg:border-r" : ""
+                index < profile.principles.length - 1
+                  ? "border-b border-line lg:border-b-0 lg:border-r"
+                  : ""
               } ${index === 1 ? "sm:border-b sm:border-r lg:border-r" : ""}`}
               key={label}
             >

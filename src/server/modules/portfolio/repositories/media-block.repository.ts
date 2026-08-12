@@ -10,7 +10,10 @@ export class MediaBlockRepository implements IMediaBlockAdministrationRepository
   }
 
   findAll() {
-    return this.database.mediaBlock.findMany({ include: { iconBlock: true }, orderBy: { id: "asc" } });
+    return this.database.mediaBlock.findMany({
+      include: { iconBlock: true },
+      orderBy: { id: "asc" },
+    });
   }
 
   async countSourceReferences(source: string) {

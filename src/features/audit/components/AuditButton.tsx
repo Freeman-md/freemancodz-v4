@@ -8,5 +8,7 @@ export function AuditButton({
   className?: string;
   action: PortfolioActionModel;
 }) {
-  return <PortfolioAction action={action} className={`mt-9 font-mono text-xs ${className ?? ""}`} />;
+  return (
+    <PortfolioAction action={action} className={`mt-9 font-mono text-xs ${className ?? ""}`} />
+  );
 }

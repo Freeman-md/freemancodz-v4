@@ -1,7 +1,10 @@
 import "server-only";
 import type { PrismaClient } from "@/generated/prisma/client";
 import type { IExperienceAdministrationRepository } from "../interfaces/experience.repository.interface";
-import type { OrderedRelationInput, UpsertExperienceInput } from "../models/portfolio-administration";
+import type {
+  OrderedRelationInput,
+  UpsertExperienceInput,
+} from "../models/portfolio-administration";
 export class ExperienceRepository implements IExperienceAdministrationRepository {
   constructor(private readonly database: PrismaClient) {}
 
@@ -18,7 +21,10 @@ export class ExperienceRepository implements IExperienceAdministrationRepository
 
   async update(id: string, input: UpsertExperienceInput) {
     await this.database.$transaction(async (transaction) => {
-      const current = await transaction.experience.findUniqueOrThrow({ where: { id }, select: { order: true } });
+      const current = await transaction.experience.findUniqueOrThrow({
+        where: { id },
+        select: { order: true },
+      });
 
       if (current.order === input.order) {
         await transaction.experience.update({ where: { id }, data: input });
@@ -26,10 +32,18 @@ export class ExperienceRepository implements IExperienceAdministrationRepository
         return;
       }
 
-      const occupant = await transaction.experience.findUnique({ where: { order: input.order }, select: { id: true } });
+      const occupant = await transaction.experience.findUnique({
+        where: { order: input.order },
+        select: { id: true },
+      });
 
       await transaction.experience.update({ where: { id }, data: { order: -2_147_483_648 } });
-      if (occupant) {await transaction.experience.update({ where: { id: occupant.id }, data: { order: current.order } });}
+      if (occupant) {
+        await transaction.experience.update({
+          where: { id: occupant.id },
+          data: { order: current.order },
+        });
+      }
 
       await transaction.experience.update({ where: { id }, data: input });
     });

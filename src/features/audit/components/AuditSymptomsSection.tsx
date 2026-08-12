@@ -1,14 +1,12 @@
-import {
-  CircleAlert,
-  Folder,
-  Sparkles,
-  UserRound,
-} from "lucide-react";
+import { CircleAlert, Folder, Sparkles, UserRound } from "lucide-react";
 
 import { Container } from "@/shared/components/layout/Container";
 import { MarketingSectionHeading } from "@/shared/components/marketing/MarketingSectionHeading";
 import { PortfolioIcon } from "@/features/portfolio/components/PortfolioIcon";
-import type { AuditPresentationData, PortfolioIcon as PortfolioIconModel } from "@/features/portfolio/models/portfolio-presentation";
+import type {
+  AuditPresentationData,
+  PortfolioIcon as PortfolioIconModel,
+} from "@/features/portfolio/models/portfolio-presentation";
 
 function Symptom({
   iconName,
@@ -42,11 +40,7 @@ export function AuditSymptomsSection({ symptoms }: Pick<AuditPresentationData, "
     <section aria-labelledby="audit-symptoms-heading" className="py-16 sm:py-20">
       <Container>
         <MarketingSectionHeading
-          copy={
-            <p>
-              {symptoms.copy}
-            </p>
-          }
+          copy={<p>{symptoms.copy}</p>}
           eyebrow={symptoms.eyebrow}
           id="audit-symptoms-heading"
           title={symptoms.title}
@@ -72,7 +66,9 @@ export function AuditSymptomsSection({ symptoms }: Pick<AuditPresentationData, "
 
               <div className="relative z-10 flex size-40 shrink-0 flex-col items-center justify-center rounded-full border border-red-200 bg-white px-5 text-center motion-safe:animate-alert-glow sm:size-44">
                 <CircleAlert aria-hidden="true" className="size-8 text-red-500" />
-                <p className="mt-2 text-xl font-medium leading-6 text-slate-900">Underlying disconnect</p>
+                <p className="mt-2 text-xl font-medium leading-6 text-slate-900">
+                  Underlying disconnect
+                </p>
               </div>
 
               <div className="flex flex-col items-center gap-4 text-center sm:flex-row-reverse sm:text-right">
@@ -91,8 +87,7 @@ export function AuditSymptomsSection({ symptoms }: Pick<AuditPresentationData, "
               <Sparkles aria-hidden="true" className="size-5" />
             </div>
             <p className="text-base leading-6 sm:text-lg">
-              The audit helps identify where the friction lives before deciding what should
-              change.
+              The audit helps identify where the friction lives before deciding what should change.
             </p>
           </div>
         </div>

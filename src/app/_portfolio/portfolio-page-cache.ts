@@ -1,11 +1,6 @@
 import "server-only";
 import { cacheLife, cacheTag } from "next/cache";
-import {
-  aboutService,
-  auditService,
-  homeService,
-  workService,
-} from "@/server/composition-root";
+import { aboutService, auditService, homeService, workService } from "@/server/composition-root";
 import {
   getAboutPageCacheTags,
   getAuditPageCacheTags,

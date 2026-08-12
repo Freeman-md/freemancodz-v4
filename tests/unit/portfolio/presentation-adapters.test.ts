@@ -38,7 +38,10 @@ function block(
     eyebrow: `${title} eyebrow`,
     title,
     copy: `${title} copy`,
-    iconBlocks: [{ order: 2, iconBlock: icon(`${title} second`) }, { order: 1, iconBlock: icon(`${title} first`) }],
+    iconBlocks: [
+      { order: 2, iconBlock: icon(`${title} second`) },
+      { order: 1, iconBlock: icon(`${title} first`) },
+    ],
     mediaBlocks: [],
     actionBlocks: [],
     children: children.map((child, index) => ({ order: index + 1, child })),
@@ -85,9 +88,15 @@ const projects: PortfolioProjectSource[] = projectSlugs.map((slug) => ({
 test("page adapters use URL and hierarchy identities instead of root array position", () => {
   const homeBlocks = [
     block("/#home-closing-heading", "Closing"),
-    block("/#home-audit-heading", "Audit", [block("/shared", "Problem"), block("/shared", "Improvement")]),
+    block("/#home-audit-heading", "Audit", [
+      block("/shared", "Problem"),
+      block("/shared", "Improvement"),
+    ]),
     block("/#home-relevant-work-heading", "Relevant"),
-    block("/#home-improve-heading", "Improve", [block("/shared", "Journey"), block("/shared", "Workflow")]),
+    block("/#home-improve-heading", "Improve", [
+      block("/shared", "Journey"),
+      block("/shared", "Workflow"),
+    ]),
     block("/", "Hero"),
   ];
 
@@ -95,45 +104,99 @@ test("page adapters use URL and hierarchy identities instead of root array posit
 
   assert.equal(home.hero.title, "Hero");
   assert.equal(home.improve.operationalWorkflow.title, "Workflow");
-  assert.deepEqual(home.hero.icons.map(({ label }) => label), ["Hero first", "Hero second"]);
+  assert.deepEqual(
+    home.hero.icons.map(({ label }) => label),
+    ["Hero first", "Hero second"],
+  );
 
-  const workHero = block("/work", "Work hero", [block("/work", "Focus"), block("/work", "Approach")]);
+  const workHero = block("/work", "Work hero", [
+    block("/work", "Focus"),
+    block("/work", "Approach"),
+  ]);
 
-  const connects = block("/work#work-connection-heading", "Connects", [block("/work#work-connection-heading", "Products"), block("/work#work-connection-heading", "Experiences"), block("/work#work-connection-heading", "Workflows")]);
+  const connects = block("/work#work-connection-heading", "Connects", [
+    block("/work#work-connection-heading", "Products"),
+    block("/work#work-connection-heading", "Experiences"),
+    block("/work#work-connection-heading", "Workflows"),
+  ]);
 
   const work = createWorkPresentationData({
     profile,
     projects,
-    contentBlocks: [block("/work#work-cta", "CTA"), connects, block("/work#additional-work-heading", "Additional"), block("/work#case-studies-heading", "Relevant"), workHero],
+    contentBlocks: [
+      block("/work#work-cta", "CTA"),
+      connects,
+      block("/work#additional-work-heading", "Additional"),
+      block("/work#case-studies-heading", "Relevant"),
+      workHero,
+    ],
   });
 
   assert.equal(work.hero.approach.title, "Approach");
   assert.equal(work.projects.selfHealing.title, "self-healing-backend-operations-system");
 
-  const aboutHero = block("/about", "About hero", [block("/about", "Customer"), block("/about", "System")]);
+  const aboutHero = block("/about", "About hero", [
+    block("/about", "Customer"),
+    block("/about", "System"),
+  ]);
 
-  const thinking = block("/about#product-thinking-heading", "Thinking", [block("/about#product-thinking-heading", "Customer"), block("/about#product-thinking-heading", "Workflow")]);
+  const thinking = block("/about#product-thinking-heading", "Thinking", [
+    block("/about#product-thinking-heading", "Customer"),
+    block("/about#product-thinking-heading", "Workflow"),
+  ]);
 
-  const closing = block("/about#about-closing-heading", "Closing", [block("/about#about-closing-heading", "Work")]);
+  const closing = block("/about#about-closing-heading", "Closing", [
+    block("/about#about-closing-heading", "Work"),
+  ]);
 
-  const experiences: PortfolioExperienceSource[] = ["Pay4Me", "Today"].map((title, order) => ({ title, order, tag: null, copy: title, insight: null, iconBlocks: [] }));
+  const experiences: PortfolioExperienceSource[] = ["Pay4Me", "Today"].map((title, order) => ({
+    title,
+    order,
+    tag: null,
+    copy: title,
+    insight: null,
+    iconBlocks: [],
+  }));
 
   const about = createAboutPresentationData({
     profile,
     experiences,
-    contentBlocks: [closing, block("/about#outside-engineering-heading", "Outside"), block("/about#exploration-heading", "Explore"), block("/about#work-process-heading", "Process"), thinking, block("/about#about-journey-heading", "Journey"), aboutHero],
+    contentBlocks: [
+      closing,
+      block("/about#outside-engineering-heading", "Outside"),
+      block("/about#exploration-heading", "Explore"),
+      block("/about#work-process-heading", "Process"),
+      thinking,
+      block("/about#about-journey-heading", "Journey"),
+      aboutHero,
+    ],
   });
 
   assert.equal(about.hero.system.title, "System");
-  assert.deepEqual(about.experiences.map(({ title }) => title), ["Pay4Me", "Today"]);
+  assert.deepEqual(
+    about.experiences.map(({ title }) => title),
+    ["Pay4Me", "Today"],
+  );
 
-  const before = block("/audit#friction-heading", "Before", [block("/audit#friction-heading", "Before customer"), block("/audit#friction-heading", "Before workflow")]);
+  const before = block("/audit#friction-heading", "Before", [
+    block("/audit#friction-heading", "Before customer"),
+    block("/audit#friction-heading", "Before workflow"),
+  ]);
 
-  const after = block("/audit#friction-heading", "After", [block("/audit#friction-heading", "After customer"), block("/audit#friction-heading", "After workflow")]);
+  const after = block("/audit#friction-heading", "After", [
+    block("/audit#friction-heading", "After customer"),
+    block("/audit#friction-heading", "After workflow"),
+  ]);
 
   const audit = createAuditPresentationData({
     projects,
-    contentBlocks: [block("/audit#audit-cta-heading", "CTA"), block("/audit#proof-heading", "Proof"), block("/audit#friction-heading", "Before after", [before, after]), block("/audit#audit-symptoms-heading", "Symptoms"), block("/audit", "Hero")],
+    contentBlocks: [
+      block("/audit#audit-cta-heading", "CTA"),
+      block("/audit#proof-heading", "Proof"),
+      block("/audit#friction-heading", "Before after", [before, after]),
+      block("/audit#audit-symptoms-heading", "Symptoms"),
+      block("/audit", "Hero"),
+    ],
   });
 
   assert.equal(audit.beforeAfter.after.workflow.title, "After workflow");
@@ -147,29 +210,41 @@ test("page adapters fail closed when required section or project identity is una
 
   const homeBlocks = [
     block("/", "Hero"),
-    block("/#home-improve-heading", "Improve", [block("/shared", "Journey"), block("/shared", "Workflow")]),
+    block("/#home-improve-heading", "Improve", [
+      block("/shared", "Journey"),
+      block("/shared", "Workflow"),
+    ]),
     block("/#home-relevant-work-heading", "Relevant"),
-    block("/#home-audit-heading", "Audit", [block("/shared", "Problem"), block("/shared", "Improvement")]),
+    block("/#home-audit-heading", "Audit", [
+      block("/shared", "Problem"),
+      block("/shared", "Improvement"),
+    ]),
     block("/#home-closing-heading", "Closing"),
   ];
 
   assert.throws(
-    () => createHomePresentationData({
-      profile,
-      contentBlocks: homeBlocks,
-      projects: projects.filter(({ slug }) => slug !== "portfolio-assistant"),
-    }),
+    () =>
+      createHomePresentationData({
+        profile,
+        contentBlocks: homeBlocks,
+        projects: projects.filter(({ slug }) => slug !== "portfolio-assistant"),
+      }),
     /Required portfolio presentation content is unavailable: project:portfolio-assistant/,
   );
 
-  const incompleteImprove = block("/#home-improve-heading", "Improve", [block("/shared", "Journey")]);
+  const incompleteImprove = block("/#home-improve-heading", "Improve", [
+    block("/shared", "Journey"),
+  ]);
 
   assert.throws(
-    () => createHomePresentationData({
-      profile,
-      contentBlocks: homeBlocks.map((item) => item.url === incompleteImprove.url ? incompleteImprove : item),
-      projects,
-    }),
+    () =>
+      createHomePresentationData({
+        profile,
+        contentBlocks: homeBlocks.map((item) =>
+          item.url === incompleteImprove.url ? incompleteImprove : item,
+        ),
+        projects,
+      }),
     /Required portfolio presentation content is unavailable: \/#home-improve-heading child 2/,
   );
 });
@@ -197,7 +272,13 @@ test("portfolio actions preserve relative navigation and assistant-message prece
   const base = { iconName: null, label: "Action", copy: null, variant: "PRIMARY" as const };
 
   assert.equal(getPortfolioActionMode({ ...base, url: "/work", assistantMessage: null }), "link");
-  assert.equal(getPortfolioActionMode({ ...base, url: null, assistantMessage: "Show me the audit" }), "assistant");
-  assert.equal(getPortfolioActionMode({ ...base, url: "/audit", assistantMessage: "Start audit" }), "assistant");
+  assert.equal(
+    getPortfolioActionMode({ ...base, url: null, assistantMessage: "Show me the audit" }),
+    "assistant",
+  );
+  assert.equal(
+    getPortfolioActionMode({ ...base, url: "/audit", assistantMessage: "Start audit" }),
+    "assistant",
+  );
   assert.equal(getPortfolioActionMode({ ...base, url: null, assistantMessage: null }), "hidden");
 });

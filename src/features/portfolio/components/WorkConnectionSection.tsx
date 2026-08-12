@@ -31,7 +31,9 @@ function ConnectionList({ items, tone }: { items: ConnectionItem[]; tone: "signa
     <ul className="mt-6 grid gap-3">
       {items.map(({ icon: Icon, label }) => (
         <li className="flex items-center gap-3 text-sm font-semibold text-slate-900" key={label}>
-          <span className={`flex size-9 shrink-0 items-center justify-center rounded-lg border shadow-sm ${toneClasses}`}>
+          <span
+            className={`flex size-9 shrink-0 items-center justify-center rounded-lg border shadow-sm ${toneClasses}`}
+          >
             <Icon aria-hidden="true" className="size-4" />
           </span>
           {label}
@@ -50,9 +52,7 @@ function ProductSide({ items, section }: { items: ConnectionItem[]; section: Por
       <h3 className="mt-6 max-w-xs text-2xl font-semibold uppercase leading-7 text-signal-700">
         {section.title}
       </h3>
-      <p className="mt-4 max-w-[17rem] text-base leading-7 text-slate-700">
-        {section.copy}
-      </p>
+      <p className="mt-4 max-w-[17rem] text-base leading-7 text-slate-700">{section.copy}</p>
       <span aria-hidden="true" className="mt-5 block h-px w-14 bg-signal-300" />
       <ConnectionList items={items} tone="signal" />
     </div>
@@ -68,9 +68,7 @@ function WorkflowSide({ items, section }: { items: ConnectionItem[]; section: Po
       <h3 className="mt-6 max-w-sm text-2xl font-semibold uppercase leading-7 text-success-700">
         {section.title}
       </h3>
-      <p className="mt-4 max-w-[17rem] text-base leading-7 text-slate-700">
-        {section.copy}
-      </p>
+      <p className="mt-4 max-w-[17rem] text-base leading-7 text-slate-700">{section.copy}</p>
       <span aria-hidden="true" className="mt-5 block h-px w-14 bg-success-300" />
       <ConnectionList items={items} tone="success" />
     </div>
@@ -86,14 +84,20 @@ function ConnectedExperience({ section }: { section: PortfolioSection }) {
       <h3 className="mt-6 text-xl font-semibold uppercase leading-6 text-signal-950">
         {section.title}
       </h3>
-      <p className="mt-4 max-w-[13rem] text-base leading-6 text-slate-700">
-        {section.copy}
-      </p>
+      <p className="mt-4 max-w-[13rem] text-base leading-6 text-slate-700">{section.copy}</p>
     </div>
   );
 }
 
-function DesktopConnectionDiagram({ connects, productItems, workflowItems }: { connects: WorkPresentationData["connects"]; productItems: ConnectionItem[]; workflowItems: ConnectionItem[] }) {
+function DesktopConnectionDiagram({
+  connects,
+  productItems,
+  workflowItems,
+}: {
+  connects: WorkPresentationData["connects"];
+  productItems: ConnectionItem[];
+  workflowItems: ConnectionItem[];
+}) {
   return (
     <div className="relative mx-auto mt-14 hidden min-h-[550px] max-w-[1120px] lg:block">
       <div className="absolute inset-y-0 left-0 w-[59%] rounded-[4.5rem_18rem_18rem_4.5rem] border border-signal-100 bg-[linear-gradient(115deg,rgba(238,242,255,0.76),rgba(255,255,255,0.78))] p-12 pr-64">
@@ -109,7 +113,15 @@ function DesktopConnectionDiagram({ connects, productItems, workflowItems }: { c
   );
 }
 
-function MobileConnectionDiagram({ connects, productItems, workflowItems }: { connects: WorkPresentationData["connects"]; productItems: ConnectionItem[]; workflowItems: ConnectionItem[] }) {
+function MobileConnectionDiagram({
+  connects,
+  productItems,
+  workflowItems,
+}: {
+  connects: WorkPresentationData["connects"];
+  productItems: ConnectionItem[];
+  workflowItems: ConnectionItem[];
+}) {
   return (
     <div className="mt-12 grid gap-7 lg:hidden">
       <article className="rounded-3xl border border-signal-100 bg-signal-50/30 p-6 sm:p-8">
@@ -117,7 +129,10 @@ function MobileConnectionDiagram({ connects, productItems, workflowItems }: { co
       </article>
       <div className="relative rounded-full border border-signal-100 bg-[linear-gradient(110deg,rgba(238,242,255,0.9),rgba(236,253,245,0.9))] p-6 shadow-soft">
         <ConnectedExperience section={connects.experiences} />
-        <span aria-hidden="true" className="absolute left-1/2 top-full h-7 border-l border-dashed border-signal-300" />
+        <span
+          aria-hidden="true"
+          className="absolute left-1/2 top-full h-7 border-l border-dashed border-signal-300"
+        />
       </div>
       <article className="rounded-3xl border border-success-100 bg-success-50/30 p-6 sm:p-8">
         <WorkflowSide items={workflowItems} section={connects.workflows} />
@@ -126,7 +141,10 @@ function MobileConnectionDiagram({ connects, productItems, workflowItems }: { co
   );
 }
 
-export function WorkConnectionSection({ connects, projects }: Pick<WorkPresentationData, "connects" | "projects">) {
+export function WorkConnectionSection({
+  connects,
+  projects,
+}: Pick<WorkPresentationData, "connects" | "projects">) {
   const productItems: ConnectionItem[] = [
     { icon: TrendingUp, label: projects.pay4Me.title },
     { icon: Sparkles, label: projects.portfolioAssistant.title },
@@ -149,8 +167,16 @@ export function WorkConnectionSection({ connects, projects }: Pick<WorkPresentat
             title={connects.title}
           />
 
-          <DesktopConnectionDiagram connects={connects} productItems={productItems} workflowItems={workflowItems} />
-          <MobileConnectionDiagram connects={connects} productItems={productItems} workflowItems={workflowItems} />
+          <DesktopConnectionDiagram
+            connects={connects}
+            productItems={productItems}
+            workflowItems={workflowItems}
+          />
+          <MobileConnectionDiagram
+            connects={connects}
+            productItems={productItems}
+            workflowItems={workflowItems}
+          />
 
           <div className="mt-14">
             <div className="flex items-center gap-5">

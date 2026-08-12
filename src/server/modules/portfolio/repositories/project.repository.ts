@@ -41,7 +41,10 @@ export class ProjectRepository implements IProjectAdministrationRepository {
 
   async update(id: string, input: UpsertProjectInput) {
     await this.database.$transaction(async (transaction) => {
-      const current = await transaction.project.findUniqueOrThrow({ where: { id }, select: { order: true } });
+      const current = await transaction.project.findUniqueOrThrow({
+        where: { id },
+        select: { order: true },
+      });
 
       if (current.order === input.order) {
         await transaction.project.update({ where: { id }, data: input });
@@ -49,10 +52,18 @@ export class ProjectRepository implements IProjectAdministrationRepository {
         return;
       }
 
-      const occupant = await transaction.project.findUnique({ where: { order: input.order }, select: { id: true } });
+      const occupant = await transaction.project.findUnique({
+        where: { order: input.order },
+        select: { id: true },
+      });
 
       await transaction.project.update({ where: { id }, data: { order: -2_147_483_648 } });
-      if (occupant) {await transaction.project.update({ where: { id: occupant.id }, data: { order: current.order } });}
+      if (occupant) {
+        await transaction.project.update({
+          where: { id: occupant.id },
+          data: { order: current.order },
+        });
+      }
 
       await transaction.project.update({ where: { id }, data: input });
     });

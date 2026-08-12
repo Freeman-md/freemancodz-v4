@@ -41,21 +41,33 @@ export class PortfolioAdministrationService implements IPortfolioAdministrationS
     private readonly experiences: IExperienceAdministrationRepository,
   ) {}
 
-  getProfile() { return this.profiles.findSingleton(); }
+  getProfile() {
+    return this.profiles.findSingleton();
+  }
 
   getPageContent(page: "/" | "/work" | "/about" | "/audit") {
     return this.contentBlocks.findPageTree(page);
   }
 
-  getIconBlocks() { return this.icons.findAll(); }
+  getIconBlocks() {
+    return this.icons.findAll();
+  }
 
-  getActionBlocks() { return this.actions.findAll(); }
+  getActionBlocks() {
+    return this.actions.findAll();
+  }
 
-  getMediaBlocks() { return this.media.findAll(); }
+  getMediaBlocks() {
+    return this.media.findAll();
+  }
 
-  getProjects() { return this.projects.findAll(); }
+  getProjects() {
+    return this.projects.findAll();
+  }
 
-  getExperiences() { return this.experiences.findAll(); }
+  getExperiences() {
+    return this.experiences.findAll();
+  }
 
   async updateProfile(input: UpdateProfileInput) {
     await this.profiles.updateSingleton(input);

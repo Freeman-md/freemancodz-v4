@@ -9,7 +9,11 @@ function FrictionResolutionVisual() {
     <div aria-hidden="true" className="relative mx-auto aspect-[1.05/1] w-full max-w-2xl">
       <div className="absolute right-[3%] top-[3%] size-[34%] rounded-full bg-signal-100/60 blur-3xl" />
       <div className="absolute bottom-[8%] left-[1%] size-[34%] rounded-full bg-red-50/70 blur-3xl" />
-      <svg className="absolute inset-0 size-full overflow-visible" fill="none" viewBox="0 0 680 640">
+      <svg
+        className="absolute inset-0 size-full overflow-visible"
+        fill="none"
+        viewBox="0 0 680 640"
+      >
         <g opacity=".25" stroke="#818cf8" strokeWidth="1.5">
           <ellipse cx="155" cy="470" rx="104" ry="66" transform="rotate(12 155 470)" />
           <ellipse cx="154" cy="470" rx="88" ry="105" transform="rotate(56 154 470)" />
@@ -49,18 +53,12 @@ function FrictionResolutionVisual() {
 export function HomeClosingSection({ closing }: Pick<HomePresentationData, "closing">) {
   return (
     <MarketingVisualCta
-      action={
-        closing.actions.map((action) => (
-          <PortfolioAction action={action} className="mx-0 mt-0 max-w-md" key={action.label} />
-        ))
-      }
+      action={closing.actions.map((action) => (
+        <PortfolioAction action={action} className="mx-0 mt-0 max-w-md" key={action.label} />
+      ))}
       align="left"
       className="border-t border-line bg-[#fbf9f9]"
-      copy={
-        <p>
-          {closing.copy}
-        </p>
-      }
+      copy={<p>{closing.copy}</p>}
       eyebrow={closing.eyebrow}
       helper={
         <p className="mt-6 flex items-center gap-3 text-sm leading-6 text-slate-700 sm:text-base">

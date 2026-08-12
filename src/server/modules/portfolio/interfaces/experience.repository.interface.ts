@@ -1,5 +1,8 @@
 import type { ExperienceWithIcons } from "../models/portfolio-records";
-import type { OrderedRelationInput, UpsertExperienceInput } from "../models/portfolio-administration";
+import type {
+  OrderedRelationInput,
+  UpsertExperienceInput,
+} from "../models/portfolio-administration";
 export interface IExperienceRepository {
   findAll(): Promise<ExperienceWithIcons[]>;
 }

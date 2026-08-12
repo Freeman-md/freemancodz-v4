@@ -7,23 +7,24 @@ import type { AboutPresentationData } from "@/features/portfolio/models/portfoli
 
 const signatureFont = Allura({ subsets: ["latin"], weight: "400" });
 
-export function AboutClosingSection({ closing, profile }: Pick<AboutPresentationData, "closing" | "profile">) {
+export function AboutClosingSection({
+  closing,
+  profile,
+}: Pick<AboutPresentationData, "closing" | "profile">) {
   return (
     <section aria-labelledby="about-closing-heading" className="pb-20 pt-16 sm:pb-28 sm:pt-20">
       <Container>
         <div className="overflow-hidden rounded-3xl border border-line bg-white px-6 py-14 text-center shadow-soft sm:px-10 sm:py-20 lg:px-20">
           <MarketingSectionHeading
-            copy={
-              <p>
-                {closing.copy}
-              </p>
-            }
+            copy={<p>{closing.copy}</p>}
             eyebrow={closing.eyebrow}
             id="about-closing-heading"
             title={closing.title}
           />
 
-          {closing.actions.map((action) => <PortfolioAction action={action} className="mx-auto mt-9 max-w-lg" key={action.label} />)}
+          {closing.actions.map((action) => (
+            <PortfolioAction action={action} className="mx-auto mt-9 max-w-lg" key={action.label} />
+          ))}
           <p className="mt-6 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-sm text-slate-500 sm:text-base">
             <ShieldCheck aria-hidden="true" className="size-5 text-slate-500" />
             Roles · Projects · Collaborations · Speaking · Other enquiries
@@ -36,20 +37,22 @@ export function AboutClosingSection({ closing, profile }: Pick<AboutPresentation
               </div>
               <div>
                 <p className="font-semibold text-slate-900">{closing.work.title}</p>
-                {closing.work.actions.map((action) => <PortfolioAction action={action} className="mt-2 h-auto p-0" key={action.label} />)}
+                {closing.work.actions.map((action) => (
+                  <PortfolioAction action={action} className="mt-2 h-auto p-0" key={action.label} />
+                ))}
               </div>
             </div>
 
             <div className="text-center md:text-left">
-              <p className={`${signatureFont.className} text-5xl leading-none text-slate-950 sm:text-6xl`}>
+              <p
+                className={`${signatureFont.className} text-5xl leading-none text-slate-950 sm:text-6xl`}
+              >
                 {profile.name}
               </p>
               <p className="mt-4 font-mono text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
                 {profile.title}
               </p>
-              <p className="mt-2 text-sm text-slate-600">
-                {profile.positioning}
-              </p>
+              <p className="mt-2 text-sm text-slate-600">{profile.positioning}</p>
             </div>
           </div>
         </div>

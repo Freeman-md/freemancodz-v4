@@ -1,9 +1,4 @@
-import type {
-  AboutPageData,
-  AuditPageData,
-  HomePageData,
-  WorkPageData,
-} from "./page-data";
+import type { AboutPageData, AuditPageData, HomePageData, WorkPageData } from "./page-data";
 import type { ContentBlockNode } from "./portfolio-records";
 
 export const PortfolioCacheTag = {

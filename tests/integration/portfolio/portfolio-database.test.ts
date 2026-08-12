@@ -285,7 +285,10 @@ test(
           });
 
           assert.ok(projectCover.cover);
-          assert.equal(await mediaRepository.countSourceReferences(projectCover.cover.source) >= 2, true);
+          assert.equal(
+            (await mediaRepository.countSourceReferences(projectCover.cover.source)) >= 2,
+            true,
+          );
 
           await projectRepository.update(pay4Me.id, {
             slug: pay4Me.slug,
@@ -302,8 +305,15 @@ test(
             visualText: pay4Me.visualText,
           });
           assert.deepEqual(
-            await prisma!.project.findMany({ where: { order: { in: [1, 2] } }, orderBy: { order: "asc" }, select: { slug: true, order: true } }),
-            [{ slug: "portfolio-assistant", order: 1 }, { slug: "pay4me-withradius", order: 2 }],
+            await prisma!.project.findMany({
+              where: { order: { in: [1, 2] } },
+              orderBy: { order: "asc" },
+              select: { slug: true, order: true },
+            }),
+            [
+              { slug: "portfolio-assistant", order: 1 },
+              { slug: "pay4me-withradius", order: 2 },
+            ],
           );
 
           const parent = await prisma!.contentBlock.findFirst({
@@ -314,11 +324,18 @@ test(
           assert.ok(parent);
           const contentRepository = new ContentBlockRepository(prisma!);
 
-          const reversed = parent.children.toReversed().map(({ childId }, order) => ({ id: childId, order }));
+          const reversed = parent.children
+            .toReversed()
+            .map(({ childId }, order) => ({ id: childId, order }));
 
           await contentRepository.replaceChildren(parent.id, reversed);
           assert.deepEqual(
-            (await prisma!.contentBlockChild.findMany({ where: { parentId: parent.id }, orderBy: { order: "asc" } })).map(({ childId }) => childId),
+            (
+              await prisma!.contentBlockChild.findMany({
+                where: { parentId: parent.id },
+                orderBy: { order: "asc" },
+              })
+            ).map(({ childId }) => childId),
             reversed.map(({ id }) => id),
           );
 
@@ -335,7 +352,12 @@ test(
 
           await contentRepository.replaceIcons(reusableParent.id, reversedIcons);
           assert.deepEqual(
-            (await prisma!.contentBlockIconBlock.findMany({ where: { contentBlockId: reusableParent.id }, orderBy: { order: "asc" } })).map(({ iconBlockId }) => iconBlockId),
+            (
+              await prisma!.contentBlockIconBlock.findMany({
+                where: { contentBlockId: reusableParent.id },
+                orderBy: { order: "asc" },
+              })
+            ).map(({ iconBlockId }) => iconBlockId),
             reversedIcons.map(({ id }) => id),
           );
 

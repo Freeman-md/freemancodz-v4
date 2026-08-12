@@ -16,7 +16,10 @@ import {
 import { Container } from "@/shared/components/layout/Container";
 import { MarketingSectionHeading } from "@/shared/components/marketing/MarketingSectionHeading";
 import { buttonVariants } from "@/shared/components/ui/Button";
-import { projectVisualNameSchema, type ProjectVisualName } from "@/contracts/portfolio-presentation.contract";
+import {
+  projectVisualNameSchema,
+  type ProjectVisualName,
+} from "@/contracts/portfolio-presentation.contract";
 import type { AuditPresentationData } from "@/features/portfolio/models/portfolio-presentation";
 
 type ProofNodeData = {
@@ -38,7 +41,9 @@ function ProofNode({ icon: Icon, label }: ProofNodeData) {
       <div className="flex size-12 items-center justify-center rounded-full border border-signal-200 bg-signal-50/50 text-signal-800 shadow-[0_8px_22px_-16px_rgba(55,48,163,0.6)]">
         <Icon aria-hidden="true" className="size-5" />
       </div>
-      <span className="whitespace-nowrap text-[11px] font-medium text-slate-700 sm:text-xs">{label}</span>
+      <span className="whitespace-nowrap text-[11px] font-medium text-slate-700 sm:text-xs">
+        {label}
+      </span>
     </div>
   );
 }
@@ -122,7 +127,12 @@ function EmailWorkflowVisual() {
           fill="none"
           viewBox="0 0 260 44"
         >
-          <path d="M130 0V14M130 14H36M130 14H224M36 14V42M130 14V42M224 14V42" stroke="currentColor" strokeDasharray="4 5" strokeWidth="1.25" />
+          <path
+            d="M130 0V14M130 14H36M130 14H224M36 14V42M130 14V42M224 14V42"
+            stroke="currentColor"
+            strokeDasharray="4 5"
+            strokeWidth="1.25"
+          />
           <circle cx="36" cy="42" fill="currentColor" r="3" />
           <circle cx="130" cy="42" fill="currentColor" r="3" />
           <circle cx="224" cy="42" fill="currentColor" r="3" />
@@ -167,7 +177,10 @@ function ProofLink({ href, label }: { href: string; label: string }) {
   );
 }
 
-export function AuditProofSection({ projects, proof }: Pick<AuditPresentationData, "projects" | "proof">) {
+export function AuditProofSection({
+  projects,
+  proof,
+}: Pick<AuditPresentationData, "projects" | "proof">) {
   return (
     <section aria-labelledby="proof-heading" className="py-16 sm:py-20">
       <Container>
@@ -183,11 +196,22 @@ export function AuditProofSection({ projects, proof }: Pick<AuditPresentationDat
             const Visual = resolveProjectVisual(project.visualBlock);
 
             return (
-              <article className={index === 0 ? "relative p-6 sm:p-8" : "relative border-t border-line p-6 sm:p-8 lg:border-t-0"} key={project.slug}>
+              <article
+                className={
+                  index === 0
+                    ? "relative p-6 sm:p-8"
+                    : "relative border-t border-line p-6 sm:p-8 lg:border-t-0"
+                }
+                key={project.slug}
+              >
                 <ProofLink href={project.externalLinks[0] ?? "#"} label={project.title} />
                 <ProofBadge>{project.category}</ProofBadge>
-                <h3 className="mt-6 font-display text-3xl tracking-[-0.035em] text-signal-900">{project.title}</h3>
-                <p className="mt-3 max-w-xs text-base leading-6 text-slate-700">{project.visualText}</p>
+                <h3 className="mt-6 font-display text-3xl tracking-[-0.035em] text-signal-900">
+                  {project.title}
+                </h3>
+                <p className="mt-3 max-w-xs text-base leading-6 text-slate-700">
+                  {project.visualText}
+                </p>
                 {Visual ? <Visual /> : null}
               </article>
             );

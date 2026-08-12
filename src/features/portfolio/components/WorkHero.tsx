@@ -1,7 +1,13 @@
 import Image from "next/image";
 import type { WorkPresentationData } from "../models/portfolio-presentation";
 
-export function WorkHero({ hero, project }: { hero: WorkPresentationData["hero"]; project: WorkPresentationData["projects"]["pay4Me"] }) {
+export function WorkHero({
+  hero,
+  project,
+}: {
+  hero: WorkPresentationData["hero"];
+  project: WorkPresentationData["projects"]["pay4Me"];
+}) {
   return (
     <section className="relative hidden lg:block overflow-hidden border-b border-line bg-[#fbf9f9]">
       <div className="relative mx-auto sm:min-h-[calc(100svh-4rem)] max-w-[1440px] px-5 pb-10 pt-10 sm:px-8 sm:pt-20 lg:min-h-[780px] lg:px-20 lg:pb-32 lg:pt-24">

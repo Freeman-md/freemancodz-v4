@@ -1,5 +1,8 @@
 import { z } from "zod";
-import { portfolioIconNameSchema, projectVisualNameSchema } from "./portfolio-presentation.contract";
+import {
+  portfolioIconNameSchema,
+  projectVisualNameSchema,
+} from "./portfolio-presentation.contract";
 
 export const MAX_PORTFOLIO_MEDIA_BYTES = 8 * 1024 * 1024;
 export const MAX_PORTFOLIO_MEDIA_REQUEST_BYTES = MAX_PORTFOLIO_MEDIA_BYTES + 64 * 1024;
@@ -15,8 +18,12 @@ const idSchema = z.string().uuid();
 
 export const portfolioPageSchema = z.enum(["home", "work", "about", "audit"]);
 export const profileCollectionSchema = z.enum([
-  "AUDIENCE", "PRINCIPLES", "THINKING_PRINCIPLES", "PROCESS_PRINCIPLES",
-  "CONTROL_PRINCIPLES", "OUTCOMES",
+  "AUDIENCE",
+  "PRINCIPLES",
+  "THINKING_PRINCIPLES",
+  "PROCESS_PRINCIPLES",
+  "CONTROL_PRINCIPLES",
+  "OUTCOMES",
 ]);
 export const actionVariantSchema = z.enum(["PRIMARY", "SECONDARY", "GHOST", "LINK"]);
 export const mediaTypeSchema = z.enum(["IMAGE", "VIDEO"]);
@@ -39,15 +46,18 @@ export const updateContentBlockSchema = z.object({
 });
 
 export const orderedRelationSchema = z.object({ id: idSchema, order: orderSchema });
-export const orderedRelationsSchema = z.array(orderedRelationSchema).max(100).superRefine((items, context) => {
-  if (new Set(items.map(({ id }) => id)).size !== items.length) {
-    context.addIssue({ code: "custom", message: "Items must be unique." });
-  }
+export const orderedRelationsSchema = z
+  .array(orderedRelationSchema)
+  .max(100)
+  .superRefine((items, context) => {
+    if (new Set(items.map(({ id }) => id)).size !== items.length) {
+      context.addIssue({ code: "custom", message: "Items must be unique." });
+    }
 
-  if (new Set(items.map(({ order }) => order)).size !== items.length) {
-    context.addIssue({ code: "custom", message: "Ordering positions must be unique." });
-  }
-});
+    if (new Set(items.map(({ order }) => order)).size !== items.length) {
+      context.addIssue({ code: "custom", message: "Ordering positions must be unique." });
+    }
+  });
 
 export const updateProfileCollectionSchema = z.object({
   collection: profileCollectionSchema,
@@ -64,29 +74,35 @@ const reusableIconFields = {
 
 export const upsertIconBlockSchema = z.object(reusableIconFields);
 
-export const actionDestinationSchema = z.string().trim().max(2_000).refine((value) => {
-  if (/^\/(?!\/)[^\s\\]*$/.test(value)) {
-    return true;
-  }
+export const actionDestinationSchema = z
+  .string()
+  .trim()
+  .max(2_000)
+  .refine((value) => {
+    if (/^\/(?!\/)[^\s\\]*$/.test(value)) {
+      return true;
+    }
 
-  try {
-    const destination = new URL(value);
+    try {
+      const destination = new URL(value);
 
-    return destination.protocol === "https:" || destination.protocol === "http:";
-  } catch {
-    return false;
-  }
-}, "Use a safe site path or HTTP(S) URL.");
+      return destination.protocol === "https:" || destination.protocol === "http:";
+    } catch {
+      return false;
+    }
+  }, "Use a safe site path or HTTP(S) URL.");
 
-export const upsertActionBlockSchema = z.object({
-  ...reusableIconFields,
-  variant: actionVariantSchema,
-  url: actionDestinationSchema.nullable(),
-  assistantMessage: nullableText(4_000),
-}).refine(({ url, assistantMessage }) => Boolean(url || assistantMessage), {
-  message: "Provide a destination URL or an assistant message.",
-  path: ["url"],
-});
+export const upsertActionBlockSchema = z
+  .object({
+    ...reusableIconFields,
+    variant: actionVariantSchema,
+    url: actionDestinationSchema.nullable(),
+    assistantMessage: nullableText(4_000),
+  })
+  .refine(({ url, assistantMessage }) => Boolean(url || assistantMessage), {
+    message: "Provide a destination URL or an assistant message.",
+    path: ["url"],
+  });
 
 export const upsertMediaBlockSchema = z.object({
   ...reusableIconFields,
@@ -96,7 +112,12 @@ export const upsertMediaBlockSchema = z.object({
 });
 
 export const upsertProjectSchema = z.object({
-  slug: z.string().trim().min(1).max(120).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
+  slug: z
+    .string()
+    .trim()
+    .min(1)
+    .max(120)
+    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
   title: requiredText("Title", 240),
   category: requiredText("Category", 160),
   problem: requiredText("Problem", 10_000),
@@ -112,19 +133,21 @@ export const upsertProjectSchema = z.object({
 
 const nullableDate = z.union([z.coerce.date(), z.null()]);
 
-export const upsertExperienceSchema = z.object({
-  title: requiredText("Title", 240),
-  tag: nullableText(160),
-  copy: requiredText("Copy", 10_000),
-  insight: nullableText(10_000),
-  role: nullableText(240),
-  startDate: nullableDate,
-  endDate: nullableDate,
-  order: orderSchema,
-}).refine(({ startDate, endDate }) => !startDate || !endDate || startDate <= endDate, {
-  message: "End date must be on or after the start date.",
-  path: ["endDate"],
-});
+export const upsertExperienceSchema = z
+  .object({
+    title: requiredText("Title", 240),
+    tag: nullableText(160),
+    copy: requiredText("Copy", 10_000),
+    insight: nullableText(10_000),
+    role: nullableText(240),
+    startDate: nullableDate,
+    endDate: nullableDate,
+    order: orderSchema,
+  })
+  .refine(({ startDate, endDate }) => !startDate || !endDate || startDate <= endDate, {
+    message: "End date must be on or after the start date.",
+    path: ["endDate"],
+  });
 
 export const entityMutationSchema = z.object({ id: idSchema });
 export const contentRelationMutationSchema = z.object({
@@ -132,7 +155,10 @@ export const contentRelationMutationSchema = z.object({
   relation: z.enum(["children", "icons", "media", "actions"]),
   items: orderedRelationsSchema,
 });
-export const experienceIconsMutationSchema = z.object({ id: idSchema, items: orderedRelationsSchema });
+export const experienceIconsMutationSchema = z.object({
+  id: idSchema,
+  items: orderedRelationsSchema,
+});
 
 export const mediaOwnerSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("profile") }),

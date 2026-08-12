@@ -24,7 +24,13 @@ const assistantVariant = {
   SECONDARY: "ghost",
 } as const;
 
-export function PortfolioAction({ action, className }: { action: PortfolioActionModel; className?: string }) {
+export function PortfolioAction({
+  action,
+  className,
+}: {
+  action: PortfolioActionModel;
+  className?: string;
+}) {
   const content = (
     <>
       <PortfolioIcon aria-hidden="true" className="size-5" name={action.iconName} />
@@ -47,11 +53,16 @@ export function PortfolioAction({ action, className }: { action: PortfolioAction
     );
   }
 
-  if (mode === "hidden" || !action.url) {return null;}
+  if (mode === "hidden" || !action.url) {
+    return null;
+  }
 
   return (
     <Link
-      className={cn(buttonVariants({ size: "lg", variant: actionVariant[action.variant] }), className)}
+      className={cn(
+        buttonVariants({ size: "lg", variant: actionVariant[action.variant] }),
+        className,
+      )}
       href={action.url}
     >
       {content}

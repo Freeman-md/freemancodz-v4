@@ -22,7 +22,9 @@ export async function requestAdminMagicLink(
 
     const origin = requestHeaders.get("origin");
 
-    if (!origin) {return { status: "error" as const, message: "Sign-in could not be started." };}
+    if (!origin) {
+      return { status: "error" as const, message: "Sign-in could not be started." };
+    }
 
     await adminAuthService.requestMagicLink(parsed.data, `${origin}/auth/confirm`);
 

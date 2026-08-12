@@ -65,9 +65,7 @@ export class PortfolioMediaService implements IPortfolioMediaService {
 
     const previousSource = ownership.previousSource;
 
-    const oldObjectPath = previousSource
-      ? this.storage.getObjectPath(previousSource)
-      : null;
+    const oldObjectPath = previousSource ? this.storage.getObjectPath(previousSource) : null;
 
     let cleanupWarning = false;
 

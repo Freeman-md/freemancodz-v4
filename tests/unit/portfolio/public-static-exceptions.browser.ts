@@ -7,9 +7,7 @@ import { AboutProductThinkingSection } from "@/features/about/components/AboutPr
 import { AboutWorkProcessSection } from "@/features/about/components/AboutWorkProcessSection";
 import { AuditFooterCta } from "@/features/audit/components/AuditFooterCta";
 import { AuditHero } from "@/features/audit/components/AuditHero";
-import {
-  AuditSymptomsSection,
-} from "@/features/audit/components/AuditSymptomsSection";
+import { AuditSymptomsSection } from "@/features/audit/components/AuditSymptomsSection";
 import {
   projectVisualRegistry,
   resolveProjectVisual,
@@ -119,7 +117,10 @@ test("PortfolioAction renders internal and external links with approved variant 
 
     const markup = renderToStaticMarkup(action);
 
-    assert.match(markup, new RegExp(`href="${variant === "SECONDARY" ? "https://example.com/work" : "/work"}"`));
+    assert.match(
+      markup,
+      new RegExp(`href="${variant === "SECONDARY" ? "https://example.com/work" : "/work"}"`),
+    );
     assert.match(markup, new RegExp(expectedClass));
   }
 });
@@ -171,11 +172,9 @@ test("PortfolioAction assistant mode dispatches the validated assistant event co
     assert.equal(action.props.variant, "marketing");
     assert.deepEqual(action.props.detail, { message: "Audit my workflow" });
 
-    const button = Reflect.apply(
-      action.type as (...values: unknown[]) => ReactElement,
-      null,
-      [action.props],
-    ) as ReactElement<Record<string, unknown>>;
+    const button = Reflect.apply(action.type as (...values: unknown[]) => ReactElement, null, [
+      action.props,
+    ]) as ReactElement<Record<string, unknown>>;
 
     assert.equal(button.props.variant, "signal");
     (button.props.onClick as () => void)();
@@ -190,35 +189,39 @@ test("PortfolioAction assistant mode dispatches the validated assistant event co
 });
 
 test("Home and Work preserve their mapped static presentation beside dynamic content", () => {
-  const homeText = collectText(HomeImproveSection({
-    improve: {
-      ...section("Dynamic improve"),
-      customerJourney: section("Dynamic customer journey"),
-      operationalWorkflow: section("Dynamic operational workflow"),
-    },
-  }));
+  const homeText = collectText(
+    HomeImproveSection({
+      improve: {
+        ...section("Dynamic improve"),
+        customerJourney: section("Dynamic customer journey"),
+        operationalWorkflow: section("Dynamic operational workflow"),
+      },
+    }),
+  );
 
   assert.match(homeText, /Dynamic improve/);
   assert.match(homeText, /The handoff that drives outcomes/);
   assert.match(homeText, /Right action\. Right next step\./);
 
-  const workText = collectText(WorkConnectionSection({
-    connects: {
-      ...section("Dynamic connection"),
-      products: section("Dynamic products"),
-      experiences: section("Dynamic experiences"),
-      workflows: section("Dynamic workflows"),
-      outcomes: [],
-    },
-    projects: {
-      pay4Me: project("Pay4Me"),
-      portfolioAssistant: project("Portfolio Assistant"),
-      emailPa: project("Email PA"),
-      acrossTheHorizon: project("Across the Horizon"),
-      shifty: project("Shifty"),
-      selfHealing: project("Self-Healing Backend Operations System"),
-    },
-  }));
+  const workText = collectText(
+    WorkConnectionSection({
+      connects: {
+        ...section("Dynamic connection"),
+        products: section("Dynamic products"),
+        experiences: section("Dynamic experiences"),
+        workflows: section("Dynamic workflows"),
+        outcomes: [],
+      },
+      projects: {
+        pay4Me: project("Pay4Me"),
+        portfolioAssistant: project("Portfolio Assistant"),
+        emailPa: project("Email PA"),
+        acrossTheHorizon: project("Across the Horizon"),
+        shifty: project("Shifty"),
+        selfHealing: project("Self-Healing Backend Operations System"),
+      },
+    }),
+  );
 
   assert.match(workText, /Dynamic connection/);
   assert.match(workText, /Self-Healing Backend Operations System/);
@@ -226,24 +229,30 @@ test("Home and Work preserve their mapped static presentation beside dynamic con
 });
 
 test("About preserves mapped static rails and feedback beside dynamic content", () => {
-  const thinkingText = collectText(AboutProductThinkingSection({
-    profile: aboutProfile,
-    thinking: {
-      ...section("Dynamic thinking"),
-      customer: section("Dynamic customer"),
-      workflow: section("Dynamic workflow"),
-    },
-  }));
+  const thinkingText = collectText(
+    AboutProductThinkingSection({
+      profile: aboutProfile,
+      thinking: {
+        ...section("Dynamic thinking"),
+        customer: section("Dynamic customer"),
+        workflow: section("Dynamic workflow"),
+      },
+    }),
+  );
 
-  const journeyText = collectText(AboutJourneySection({
-    experiences: [],
-    journey: section("Dynamic journey"),
-  }));
+  const journeyText = collectText(
+    AboutJourneySection({
+      experiences: [],
+      journey: section("Dynamic journey"),
+    }),
+  );
 
-  const processText = collectText(AboutWorkProcessSection({
-    process: section("Dynamic process"),
-    profile: aboutProfile,
-  }));
+  const processText = collectText(
+    AboutWorkProcessSection({
+      process: section("Dynamic process"),
+      profile: aboutProfile,
+    }),
+  );
 
   assert.match(thinkingText, /Dynamic thinking/);
   assert.match(thinkingText, /Customer action\s+Clear handoff\s+Reliable response/);
@@ -252,18 +261,18 @@ test("About preserves mapped static rails and feedback beside dynamic content", 
 });
 
 test("Audit public integration renders canonical dynamic content beside approved static guidance", () => {
-  const text = collectText(AuditSymptomsSection({
-    symptoms: {
-      eyebrow: "Why this audit exists",
-      title: "Dynamic symptoms heading",
-      copy: "Dynamic symptoms copy",
-      icons: [
-        { iconName: "Search", label: "Dynamic symptom", copy: null },
-      ],
-      media: [],
-      actions: [],
-    },
-  }));
+  const text = collectText(
+    AuditSymptomsSection({
+      symptoms: {
+        eyebrow: "Why this audit exists",
+        title: "Dynamic symptoms heading",
+        copy: "Dynamic symptoms copy",
+        icons: [{ iconName: "Search", label: "Dynamic symptom", copy: null }],
+        media: [],
+        actions: [],
+      },
+    }),
+  );
 
   assert.match(text, /Dynamic symptoms heading/);
   assert.match(text, /Dynamic symptoms copy/);
@@ -271,7 +280,10 @@ test("Audit public integration renders canonical dynamic content beside approved
   assert.match(text, /Customer journey/);
   assert.match(text, /Underlying disconnect/);
   assert.match(text, /Operational workflow/);
-  assert.match(text, /The audit helps identify where the friction lives before deciding what should/);
+  assert.match(
+    text,
+    /The audit helps identify where the friction lives before deciding what should/,
+  );
 });
 
 test("Audit preserves its mapped static timing and privacy guidance", () => {

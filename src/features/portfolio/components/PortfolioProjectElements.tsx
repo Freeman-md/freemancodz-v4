@@ -1,12 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import {
-  ArrowUpRight,
-  Bot,
-  Mail,
-  MessageCircle,
-  Sparkles,
-  TrendingUp,
-} from "lucide-react";
+import { ArrowUpRight, Bot, Mail, MessageCircle, Sparkles, TrendingUp } from "lucide-react";
 import type { ReactNode } from "react";
 
 type CaseStudyLink = {
@@ -73,7 +66,9 @@ export function StudyPoint({
     return (
       <div>
         <div className="flex items-center gap-2">
-          <span className={`flex size-8 shrink-0 items-center justify-center rounded-full border ${toneClasses}`}>
+          <span
+            className={`flex size-8 shrink-0 items-center justify-center rounded-full border ${toneClasses}`}
+          >
             <Icon aria-hidden="true" className="size-3.5" />
           </span>
           <h4 className="text-sm font-semibold text-ink">{title}</h4>
@@ -85,7 +80,9 @@ export function StudyPoint({
 
   return (
     <div className="grid grid-cols-[2.5rem_1fr] gap-3">
-      <span className={`flex size-10 items-center justify-center rounded-full border ${toneClasses}`}>
+      <span
+        className={`flex size-10 items-center justify-center rounded-full border ${toneClasses}`}
+      >
         <Icon aria-hidden="true" className="size-4.5" />
       </span>
       <div>
@@ -134,7 +131,10 @@ const emailSteps = [
 export function EmailWorkflowPreview() {
   return (
     <div className="relative mx-auto w-full max-w-[18rem] space-y-2 py-2">
-      <span aria-hidden="true" className="absolute bottom-8 left-6 top-8 border-l border-dashed border-success-300" />
+      <span
+        aria-hidden="true"
+        className="absolute bottom-8 left-6 top-8 border-l border-dashed border-success-300"
+      />
       {emailSteps.map(([Icon, title, copy]) => (
         <div
           className="relative flex items-center justify-center rounded-xl border border-success-100 bg-white p-2 shadow-[0_12px_28px_-24px_rgba(4,120,87,0.7)] sm:grid sm:grid-cols-[2rem_1fr] sm:justify-start sm:gap-2"

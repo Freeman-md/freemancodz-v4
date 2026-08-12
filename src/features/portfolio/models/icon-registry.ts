@@ -118,7 +118,10 @@ export function isPortfolioIconName(value: string | null | undefined): value is 
   return portfolioIconNameSchema.safeParse(value).success;
 }
 
-export { portfolioIconNames, type PortfolioIconName } from "@/contracts/portfolio-presentation.contract";
+export {
+  portfolioIconNames,
+  type PortfolioIconName,
+} from "@/contracts/portfolio-presentation.contract";
 
 export function resolvePortfolioIcon(value: string | null | undefined): LucideIcon | null {
   return isPortfolioIconName(value) ? portfolioIconRegistry[value] : null;

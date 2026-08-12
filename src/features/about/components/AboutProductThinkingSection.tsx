@@ -1,12 +1,12 @@
-import {
-  ArrowDown,
-  ArrowRight,
-} from "lucide-react";
+import { ArrowDown, ArrowRight } from "lucide-react";
 
 import { Container } from "@/shared/components/layout/Container";
 import { MarketingSectionHeading } from "@/shared/components/marketing/MarketingSectionHeading";
 import { PortfolioIcon } from "@/features/portfolio/components/PortfolioIcon";
-import type { AboutPresentationData, PortfolioIcon as PortfolioIconModel } from "@/features/portfolio/models/portfolio-presentation";
+import type {
+  AboutPresentationData,
+  PortfolioIcon as PortfolioIconModel,
+} from "@/features/portfolio/models/portfolio-presentation";
 
 type FlowStep = PortfolioIconModel;
 
@@ -45,7 +45,11 @@ function ProductFlow({
                     : "border-success-200 text-success-700"
                 }`}
               >
-                <PortfolioIcon aria-hidden="true" className="size-6 stroke-[1.7] sm:size-7" name={iconName} />
+                <PortfolioIcon
+                  aria-hidden="true"
+                  className="size-6 stroke-[1.7] sm:size-7"
+                  name={iconName}
+                />
               </div>
               <p className="mt-3 text-xs font-medium leading-4 text-ink sm:text-sm">{label}</p>
             </div>
@@ -85,26 +89,33 @@ function Handoff() {
   );
 }
 
-export function AboutProductThinkingSection({ profile, thinking }: Pick<AboutPresentationData, "profile" | "thinking">) {
+export function AboutProductThinkingSection({
+  profile,
+  thinking,
+}: Pick<AboutPresentationData, "profile" | "thinking">) {
   return (
     <section aria-labelledby="product-thinking-heading" className="py-20 sm:py-28">
       <Container>
         <MarketingSectionHeading
           align="left"
-          copy={
-            <p>
-              {thinking.copy}
-            </p>
-          }
+          copy={<p>{thinking.copy}</p>}
           eyebrow={thinking.eyebrow}
           id="product-thinking-heading"
           title={thinking.title}
         />
 
         <div className="mt-12 rounded-3xl border border-line bg-white p-4 shadow-soft sm:p-6">
-          <ProductFlow title={thinking.customer.title} steps={thinking.customer.icons} tone="signal" />
+          <ProductFlow
+            title={thinking.customer.title}
+            steps={thinking.customer.icons}
+            tone="signal"
+          />
           <Handoff />
-          <ProductFlow title={thinking.workflow.title} steps={thinking.workflow.icons} tone="success" />
+          <ProductFlow
+            title={thinking.workflow.title}
+            steps={thinking.workflow.icons}
+            tone="success"
+          />
         </div>
 
         <div className="mt-10 grid gap-4 lg:grid-cols-3">

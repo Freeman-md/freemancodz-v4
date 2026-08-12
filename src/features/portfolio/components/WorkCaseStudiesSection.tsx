@@ -14,18 +14,17 @@ import { MarketingSectionHeading } from "@/shared/components/marketing/Marketing
 import { SupportingProject } from "@/shared/components/marketing/SupportingProject";
 import type { WorkPresentationData } from "../models/portfolio-presentation";
 
-export function WorkCaseStudiesSection({ projects, relevantWork }: Pick<WorkPresentationData, "projects" | "relevantWork">) {
+export function WorkCaseStudiesSection({
+  projects,
+  relevantWork,
+}: Pick<WorkPresentationData, "projects" | "relevantWork">) {
   const supporting = [projects.portfolioAssistant, projects.emailPa, projects.acrossTheHorizon];
 
   return (
     <section aria-labelledby="case-studies-heading" className="bg-[#fbf9f9] py-20 sm:py-28">
       <Container className="max-w-[1340px]">
         <MarketingSectionHeading
-          copy={
-            <p>
-              {relevantWork.copy}
-            </p>
-          }
+          copy={<p>{relevantWork.copy}</p>}
           eyebrow={relevantWork.eyebrow}
           id="case-studies-heading"
           title={relevantWork.title}
@@ -39,7 +38,9 @@ export function WorkCaseStudiesSection({ projects, relevantWork }: Pick<WorkPres
               actions={[
                 { href: supporting[0].externalLinks[0] ?? "#", label: "View Case Study" },
                 { href: supporting[0].externalLinks[0] ?? "#", icon: Code2, label: "GitHub" },
-              ].map((link) => <StudyLink {...link} key={link.label} />)}
+              ].map((link) => (
+                <StudyLink {...link} key={link.label} />
+              ))}
               badge={<CaseBadge>{supporting[0].category}</CaseBadge>}
               title={supporting[0].title}
               visual={<PortfolioAssistantPreview />}
@@ -56,7 +57,9 @@ export function WorkCaseStudiesSection({ projects, relevantWork }: Pick<WorkPres
               actions={[
                 { href: supporting[1].externalLinks[0] ?? "#", label: "View Case Study" },
                 { href: supporting[1].externalLinks[0] ?? "#", icon: Code2, label: "GitHub" },
-              ].map((link) => <StudyLink {...link} key={link.label} />)}
+              ].map((link) => (
+                <StudyLink {...link} key={link.label} />
+              ))}
               badge={<CaseBadge tone="success">{supporting[1].category}</CaseBadge>}
               title={supporting[1].title}
               visual={<EmailWorkflowPreview />}
@@ -73,7 +76,9 @@ export function WorkCaseStudiesSection({ projects, relevantWork }: Pick<WorkPres
               actions={[
                 { href: supporting[2].externalLinks[0] ?? "#", label: "View Case Study" },
                 { href: supporting[2].externalLinks[0] ?? "#", label: "View Live" },
-              ].map((link) => <StudyLink {...link} key={link.label} />)}
+              ].map((link) => (
+                <StudyLink {...link} key={link.label} />
+              ))}
               badge={<CaseBadge>{supporting[2].category}</CaseBadge>}
               title={supporting[2].title}
               visual={

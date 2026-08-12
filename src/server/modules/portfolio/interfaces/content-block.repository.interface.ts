@@ -1,5 +1,8 @@
 import type { ContentBlockNode } from "../models/portfolio-records";
-import type { OrderedRelationInput, UpdateContentBlockInput } from "../models/portfolio-administration";
+import type {
+  OrderedRelationInput,
+  UpdateContentBlockInput,
+} from "../models/portfolio-administration";
 export type PortfolioPagePath = "/" | "/work" | "/about" | "/audit";
 export interface IContentBlockRepository {
   findPageTree(page: PortfolioPagePath): Promise<ContentBlockNode[]>;

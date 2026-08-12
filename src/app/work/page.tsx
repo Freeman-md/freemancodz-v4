@@ -35,8 +35,14 @@ export default async function WorkPage() {
   return (
     <>
       <WorkHero hero={presentation.hero} project={presentation.projects.pay4Me} />
-      <WorkCaseStudiesSection projects={presentation.projects} relevantWork={presentation.relevantWork} />
-      <WorkAdditionalSection additionalWork={presentation.additionalWork} projects={presentation.projects} />
+      <WorkCaseStudiesSection
+        projects={presentation.projects}
+        relevantWork={presentation.relevantWork}
+      />
+      <WorkAdditionalSection
+        additionalWork={presentation.additionalWork}
+        projects={presentation.projects}
+      />
       <WorkConnectionSection connects={presentation.connects} projects={presentation.projects} />
       <WorkCtaSection closing={presentation.closing} />
     </>

@@ -1,10 +1,5 @@
 import Image from "next/image";
-import {
-  Check,
-  Database,
-  LineChart,
-  ListChecks,
-} from "lucide-react";
+import { Check, Database, LineChart, ListChecks } from "lucide-react";
 
 import { siteAssetLinks } from "@/shared/config/links";
 import type { HomePresentationData } from "../models/portfolio-presentation";
@@ -53,7 +48,11 @@ export function HomeHero({ hero, profile }: Pick<HomePresentationData, "hero" | 
           <ul className="mx-auto mt-8 flex max-w-2xl flex-wrap justify-center gap-x-6 gap-y-5 text-sm text-slate-800 lg:mx-0 lg:mt-9 lg:justify-start">
             {profile.audience.map(({ iconName, label }) => (
               <li className="flex items-center gap-2.5" key={label}>
-                <PortfolioIcon aria-hidden="true" className="size-5 text-signal-600" name={iconName} />
+                <PortfolioIcon
+                  aria-hidden="true"
+                  className="size-5 text-signal-600"
+                  name={iconName}
+                />
                 {label}
               </li>
             ))}
@@ -61,9 +60,23 @@ export function HomeHero({ hero, profile }: Pick<HomePresentationData, "hero" | 
         </div>
 
         <div className="relative min-h-[30rem] lg:min-h-full">
-          <svg aria-hidden="true" className="absolute inset-0 size-full text-signal-300" fill="none" viewBox="0 0 720 760" preserveAspectRatio="none">
-            <path d="M0 760C115 690 108 586 212 526C324 462 320 329 451 264C557 211 570 101 720 62" stroke="currentColor" strokeWidth="1.5" />
-            <path d="M0 760C143 704 169 626 257 576C365 515 391 405 492 354C605 297 601 207 720 171" stroke="currentColor" strokeOpacity=".35" />
+          <svg
+            aria-hidden="true"
+            className="absolute inset-0 size-full text-signal-300"
+            fill="none"
+            viewBox="0 0 720 760"
+            preserveAspectRatio="none"
+          >
+            <path
+              d="M0 760C115 690 108 586 212 526C324 462 320 329 451 264C557 211 570 101 720 62"
+              stroke="currentColor"
+              strokeWidth="1.5"
+            />
+            <path
+              d="M0 760C143 704 169 626 257 576C365 515 391 405 492 354C605 297 601 207 720 171"
+              stroke="currentColor"
+              strokeOpacity=".35"
+            />
             <circle cx="213" cy="525" fill="currentColor" r="5" />
           </svg>
           <HeroSignalCards />

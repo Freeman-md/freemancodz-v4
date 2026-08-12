@@ -13,7 +13,10 @@ export default async function HomePage() {
     <>
       <HomeHero hero={presentation.hero} profile={presentation.profile} />
       <HomeImproveSection improve={presentation.improve} />
-      <HomeRelevantWorkSection projects={presentation.projects} relevantWork={presentation.relevantWork} />
+      <HomeRelevantWorkSection
+        projects={presentation.projects}
+        relevantWork={presentation.relevantWork}
+      />
       <HomeAuditSection audit={presentation.audit} />
       <HomeClosingSection closing={presentation.closing} />
     </>

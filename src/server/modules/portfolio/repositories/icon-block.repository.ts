@@ -26,14 +26,15 @@ export class IconBlockRepository implements IIconBlockAdministrationRepository {
   }
 
   async countReferences(id: string) {
-    const [iconLinks, actionLinks, mediaLinks, profileCollections, experiences, projectCovers] = await Promise.all([
-      this.database.contentBlockIconBlock.count({ where: { iconBlockId: id } }),
-      this.database.contentBlockActionBlock.count({ where: { actionBlockId: id } }),
-      this.database.contentBlockMediaBlock.count({ where: { mediaBlockId: id } }),
-      this.database.profileIconBlock.count({ where: { iconBlockId: id } }),
-      this.database.experienceIconBlock.count({ where: { iconBlockId: id } }),
-      this.database.project.count({ where: { coverId: id } }),
-    ]);
+    const [iconLinks, actionLinks, mediaLinks, profileCollections, experiences, projectCovers] =
+      await Promise.all([
+        this.database.contentBlockIconBlock.count({ where: { iconBlockId: id } }),
+        this.database.contentBlockActionBlock.count({ where: { actionBlockId: id } }),
+        this.database.contentBlockMediaBlock.count({ where: { mediaBlockId: id } }),
+        this.database.profileIconBlock.count({ where: { iconBlockId: id } }),
+        this.database.experienceIconBlock.count({ where: { iconBlockId: id } }),
+        this.database.project.count({ where: { coverId: id } }),
+      ]);
 
     return {
       contentBlocks: iconLinks + actionLinks + mediaLinks,

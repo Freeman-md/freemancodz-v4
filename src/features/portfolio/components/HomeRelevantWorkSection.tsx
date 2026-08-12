@@ -13,7 +13,10 @@ import { SupportingProject } from "@/shared/components/marketing/SupportingProje
 import type { HomePresentationData } from "../models/portfolio-presentation";
 import { PortfolioAction } from "./PortfolioAction";
 
-export function HomeRelevantWorkSection({ projects, relevantWork }: Pick<HomePresentationData, "projects" | "relevantWork">) {
+export function HomeRelevantWorkSection({
+  projects,
+  relevantWork,
+}: Pick<HomePresentationData, "projects" | "relevantWork">) {
   const assistantHref = projects.portfolioAssistant.externalLinks[0] ?? "#";
 
   const emailHref = projects.emailPa.externalLinks[0] ?? "#";
@@ -72,7 +75,11 @@ export function HomeRelevantWorkSection({ projects, relevantWork }: Pick<HomePre
         </div>
 
         {relevantWork.actions.map((action) => (
-          <PortfolioAction action={action} className="mx-auto mt-10 flex w-fit gap-3 text-lg" key={action.label} />
+          <PortfolioAction
+            action={action}
+            className="mx-auto mt-10 flex w-fit gap-3 text-lg"
+            key={action.label}
+          />
         ))}
       </div>
     </section>

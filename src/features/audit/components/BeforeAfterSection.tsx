@@ -1,15 +1,15 @@
 import { Container } from "@/shared/components/layout/Container";
 import { MarketingSectionHeading } from "@/shared/components/marketing/MarketingSectionHeading";
 import { PortfolioIcon } from "@/features/portfolio/components/PortfolioIcon";
-import type { AuditPresentationData, PortfolioIcon as PortfolioIconModel, PortfolioSection } from "@/features/portfolio/models/portfolio-presentation";
+import type {
+  AuditPresentationData,
+  PortfolioIcon as PortfolioIconModel,
+  PortfolioSection,
+} from "@/features/portfolio/models/portfolio-presentation";
 
 type WorkflowNodeData = PortfolioIconModel;
 
-function WorkflowNode({
-  iconName,
-  label,
-  tone,
-}: WorkflowNodeData & { tone: "before" | "after" }) {
+function WorkflowNode({ iconName, label, tone }: WorkflowNodeData & { tone: "before" | "after" }) {
   const isAfter = tone === "after";
 
   return (
@@ -21,9 +21,15 @@ function WorkflowNode({
             : "border-red-300 text-ink motion-safe:animate-alert-glow"
         }`}
       >
-        <PortfolioIcon aria-hidden="true" className="size-7 stroke-[1.75] sm:size-8" name={iconName} />
+        <PortfolioIcon
+          aria-hidden="true"
+          className="size-7 stroke-[1.75] sm:size-8"
+          name={iconName}
+        />
       </div>
-      <p className="mt-3 max-w-[10rem] text-sm font-medium leading-5 text-ink sm:text-base">{label}</p>
+      <p className="mt-3 max-w-[10rem] text-sm font-medium leading-5 text-ink sm:text-base">
+        {label}
+      </p>
     </div>
   );
 }
@@ -46,9 +52,11 @@ function WorkflowPanel({
       <h3 className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500 sm:text-xs">
         {title}
       </h3>
-      <div className={`mt-7 flex items-start gap-3 sm:gap-4 ${
-        tone === "after" && nodes.length === 3 ? "md:gap-7" : ""
-      }`}>
+      <div
+        className={`mt-7 flex items-start gap-3 sm:gap-4 ${
+          tone === "after" && nodes.length === 3 ? "md:gap-7" : ""
+        }`}
+      >
         {nodes.map((node, index) => (
           <div className="contents" key={node.label}>
             <WorkflowNode {...node} tone={tone} />
@@ -71,7 +79,13 @@ function WorkflowPanel({
   );
 }
 
-function ComparisonCard({ data, tone }: { data: PortfolioSection & { customer: PortfolioSection; workflow: PortfolioSection }; tone: "before" | "after" }) {
+function ComparisonCard({
+  data,
+  tone,
+}: {
+  data: PortfolioSection & { customer: PortfolioSection; workflow: PortfolioSection };
+  tone: "before" | "after";
+}) {
   const isAfter = tone === "after";
 
   const customerJourney = data.customer.icons;
@@ -94,9 +108,7 @@ function ComparisonCard({ data, tone }: { data: PortfolioSection & { customer: P
         >
           {data.title}
         </p>
-        <p className="text-base font-medium text-ink sm:text-lg">
-          {data.copy}
-        </p>
+        <p className="text-base font-medium text-ink sm:text-lg">{data.copy}</p>
       </div>
 
       <div
@@ -105,18 +117,10 @@ function ComparisonCard({ data, tone }: { data: PortfolioSection & { customer: P
         }`}
       >
         <div className="p-5 sm:p-6">
-          <WorkflowPanel
-            nodes={customerJourney}
-            title={data.customer.title}
-            tone={tone}
-          />
+          <WorkflowPanel nodes={customerJourney} title={data.customer.title} tone={tone} />
         </div>
         <div className={`border-t p-5 sm:p-6 ${isAfter ? "border-success-100" : "border-line"}`}>
-          <WorkflowPanel
-            nodes={operationalWorkflow}
-            title={data.workflow.title}
-            tone={tone}
-          />
+          <WorkflowPanel nodes={operationalWorkflow} title={data.workflow.title} tone={tone} />
         </div>
       </div>
     </article>

@@ -15,7 +15,14 @@ import type {
 } from "./portfolio-source";
 import { requiredPortfolioProjectSlugs } from "@/contracts/portfolio-presentation.contract";
 
-const [pay4MeSlug, portfolioAssistantSlug, emailPaSlug, acrossTheHorizonSlug, shiftySlug, selfHealingSlug] = requiredPortfolioProjectSlugs;
+const [
+  pay4MeSlug,
+  portfolioAssistantSlug,
+  emailPaSlug,
+  acrossTheHorizonSlug,
+  shiftySlug,
+  selfHealingSlug,
+] = requiredPortfolioProjectSlugs;
 
 class PortfolioPresentationError extends Error {
   constructor(identity: string) {
@@ -51,7 +58,9 @@ function section(source: PortfolioContentSource): PortfolioSection {
 function rootAt(blocks: PortfolioContentSource[], url: string): PortfolioContentSource {
   const matches = blocks.filter((block) => block.url === url);
 
-  if (matches.length !== 1) {throw new PortfolioPresentationError(url);}
+  if (matches.length !== 1) {
+    throw new PortfolioPresentationError(url);
+  }
 
   return matches[0];
 }
@@ -59,7 +68,9 @@ function rootAt(blocks: PortfolioContentSource[], url: string): PortfolioContent
 function childAt(parent: PortfolioContentSource, order: number): PortfolioContentSource {
   const match = parent.children.find((item) => item.order === order)?.child;
 
-  if (!match) {throw new PortfolioPresentationError(`${parent.url} child ${order}`);}
+  if (!match) {
+    throw new PortfolioPresentationError(`${parent.url} child ${order}`);
+  }
 
   return match;
 }
@@ -67,12 +78,17 @@ function childAt(parent: PortfolioContentSource, order: number): PortfolioConten
 function projectBySlug(projects: PortfolioProjectSource[], slug: string): PortfolioProject {
   const project = projects.find((item) => item.slug === slug);
 
-  if (!project) {throw new PortfolioPresentationError(`project:${slug}`);}
+  if (!project) {
+    throw new PortfolioPresentationError(`project:${slug}`);
+  }
 
   return { ...project };
 }
 
-function collection(profile: PortfolioProfileSource, name: PortfolioProfileSource["iconCollections"][number]["collection"]) {
+function collection(
+  profile: PortfolioProfileSource,
+  name: PortfolioProfileSource["iconCollections"][number]["collection"],
+) {
   return byOrder(profile.iconCollections.filter((item) => item.collection === name)).map(
     ({ iconBlock }) => iconBlock,
   );
@@ -104,14 +120,22 @@ export function createHomePresentationData(source: {
       audience: collection(source.profile, "AUDIENCE"),
     },
     hero: section(rootAt(source.contentBlocks, "/")),
-    improve: { ...section(improve), customerJourney: section(childAt(improve, 1)), operationalWorkflow: section(childAt(improve, 2)) },
+    improve: {
+      ...section(improve),
+      customerJourney: section(childAt(improve, 1)),
+      operationalWorkflow: section(childAt(improve, 2)),
+    },
     relevantWork: section(rootAt(source.contentBlocks, "/#home-relevant-work-heading")),
     projects: {
       pay4Me: projectBySlug(source.projects, pay4MeSlug),
       portfolioAssistant: projectBySlug(source.projects, portfolioAssistantSlug),
       emailPa: projectBySlug(source.projects, emailPaSlug),
     },
-    audit: { ...section(audit), problem: section(childAt(audit, 1)), improvement: section(childAt(audit, 2)) },
+    audit: {
+      ...section(audit),
+      problem: section(childAt(audit, 1)),
+      improvement: section(childAt(audit, 2)),
+    },
     closing: section(rootAt(source.contentBlocks, "/#home-closing-heading")),
   };
 }
@@ -126,7 +150,11 @@ export function createWorkPresentationData(source: {
   const connects = rootAt(source.contentBlocks, "/work#work-connection-heading");
 
   return {
-    hero: { ...section(hero), focus: section(childAt(hero, 1)), approach: section(childAt(hero, 2)) },
+    hero: {
+      ...section(hero),
+      focus: section(childAt(hero, 1)),
+      approach: section(childAt(hero, 2)),
+    },
     relevantWork: section(rootAt(source.contentBlocks, "/work#case-studies-heading")),
     additionalWork: section(rootAt(source.contentBlocks, "/work#additional-work-heading")),
     projects: {
@@ -170,10 +198,18 @@ export function createAboutPresentationData(source: {
       processPrinciples: collection(source.profile, "PROCESS_PRINCIPLES"),
       controlPrinciples: collection(source.profile, "CONTROL_PRINCIPLES"),
     },
-    hero: { ...section(hero), customer: section(childAt(hero, 1)), system: section(childAt(hero, 2)) },
+    hero: {
+      ...section(hero),
+      customer: section(childAt(hero, 1)),
+      system: section(childAt(hero, 2)),
+    },
     journey: section(rootAt(source.contentBlocks, "/about#about-journey-heading")),
     experiences: byOrder(source.experiences).map(experience),
-    thinking: { ...section(thinking), customer: section(childAt(thinking, 1)), workflow: section(childAt(thinking, 2)) },
+    thinking: {
+      ...section(thinking),
+      customer: section(childAt(thinking, 1)),
+      workflow: section(childAt(thinking, 2)),
+    },
     process: section(rootAt(source.contentBlocks, "/about#work-process-heading")),
     exploration: section(rootAt(source.contentBlocks, "/about#exploration-heading")),
     outsideEngineering: section(rootAt(source.contentBlocks, "/about#outside-engineering-heading")),
@@ -196,11 +232,21 @@ export function createAuditPresentationData(source: {
     symptoms: section(rootAt(source.contentBlocks, "/audit#audit-symptoms-heading")),
     beforeAfter: {
       ...section(beforeAfter),
-      before: { ...section(before), customer: section(childAt(before, 1)), workflow: section(childAt(before, 2)) },
-      after: { ...section(after), customer: section(childAt(after, 1)), workflow: section(childAt(after, 2)) },
+      before: {
+        ...section(before),
+        customer: section(childAt(before, 1)),
+        workflow: section(childAt(before, 2)),
+      },
+      after: {
+        ...section(after),
+        customer: section(childAt(after, 1)),
+        workflow: section(childAt(after, 2)),
+      },
     },
     proof: section(rootAt(source.contentBlocks, "/audit#proof-heading")),
-    projects: [pay4MeSlug, portfolioAssistantSlug, emailPaSlug].map((slug) => projectBySlug(source.projects, slug)),
+    projects: [pay4MeSlug, portfolioAssistantSlug, emailPaSlug].map((slug) =>
+      projectBySlug(source.projects, slug),
+    ),
     closing: section(rootAt(source.contentBlocks, "/audit#audit-cta-heading")),
   };
 }

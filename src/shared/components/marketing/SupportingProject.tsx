@@ -18,7 +18,9 @@ export function SupportingProject({
   visual: ReactNode;
 }) {
   return (
-    <article className={cn("rounded-3xl border border-line bg-white p-5 shadow-soft sm:p-6", className)}>
+    <article
+      className={cn("rounded-3xl border border-line bg-white p-5 shadow-soft sm:p-6", className)}
+    >
       <div className="grid gap-5 sm:grid-cols-[minmax(0,1fr)_minmax(8rem,34%)] sm:items-stretch">
         <div className="order-2 flex min-w-0 flex-col sm:order-1">
           {badge}

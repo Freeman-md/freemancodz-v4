@@ -1,7 +1,10 @@
 import "server-only";
 import type { PrismaClient } from "@/generated/prisma/client";
 import type { IProfileAdministrationRepository } from "../interfaces/profile.repository.interface";
-import type { ProfileCollectionOrderInput, UpdateProfileInput } from "../models/portfolio-administration";
+import type {
+  ProfileCollectionOrderInput,
+  UpdateProfileInput,
+} from "../models/portfolio-administration";
 
 export class ProfileRepository implements IProfileAdministrationRepository {
   constructor(private readonly database: PrismaClient) {}

@@ -27,5 +27,5 @@ export async function refreshSupabaseAuth(request: NextRequest) {
 
   response.headers.set("Cache-Control", "private, no-store");
 
-  return { response, claims: error ? null : data?.claims ?? null };
+  return { response, claims: error ? null : (data?.claims ?? null) };
 }

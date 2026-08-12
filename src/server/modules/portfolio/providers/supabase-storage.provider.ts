@@ -67,11 +67,9 @@ export class SupabaseStorageProvider implements IPortfolioMediaStorageProvider {
   }
 
   async upload(asset: PortfolioMediaUpload) {
-    const result = await this.client.storage.from(PORTFOLIO_MEDIA_BUCKET).upload(
-      asset.objectPath,
-      asset.body,
-      { contentType: asset.contentType, upsert: false },
-    );
+    const result = await this.client.storage
+      .from(PORTFOLIO_MEDIA_BUCKET)
+      .upload(asset.objectPath, asset.body, { contentType: asset.contentType, upsert: false });
 
     if (result.error) {
       throw new PortfolioStorageError("Portfolio media upload failed.");

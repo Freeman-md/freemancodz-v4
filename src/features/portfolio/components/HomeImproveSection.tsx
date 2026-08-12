@@ -1,13 +1,10 @@
-import {
-  CheckCircle2,
-  MoveHorizontal,
-  MoveVertical,
-  Settings,
-  UsersRound,
-} from "lucide-react";
+import { CheckCircle2, MoveHorizontal, MoveVertical, Settings, UsersRound } from "lucide-react";
 
 import { MarketingSectionHeading } from "@/shared/components/marketing/MarketingSectionHeading";
-import type { HomePresentationData, PortfolioIcon as PortfolioIconModel } from "../models/portfolio-presentation";
+import type {
+  HomePresentationData,
+  PortfolioIcon as PortfolioIconModel,
+} from "../models/portfolio-presentation";
 import { PortfolioIcon } from "./PortfolioIcon";
 
 function JourneySteps({ steps }: { steps: PortfolioIconModel[] }) {
@@ -20,7 +17,12 @@ function JourneySteps({ steps }: { steps: PortfolioIconModel[] }) {
               index === steps.length - 1 ? "border-signal-500" : "border-signal-100"
             }`}
           >
-            <PortfolioIcon aria-hidden="true" className="size-8 text-signal-600 sm:size-10" name={iconName} strokeWidth={1.65} />
+            <PortfolioIcon
+              aria-hidden="true"
+              className="size-8 text-signal-600 sm:size-10"
+              name={iconName}
+              strokeWidth={1.65}
+            />
             <span className="text-sm font-medium text-slate-950 sm:text-base">{label}</span>
           </div>
           {index < steps.length - 1 ? (
@@ -49,7 +51,11 @@ function JourneyPanel({
   return (
     <div className="rounded-[2.25rem] border border-signal-100 bg-white/70 p-6 shadow-[0_26px_70px_-54px_rgba(67,56,202,0.42)] sm:p-8 lg:p-6 xl:p-8">
       <div className="mb-8 flex items-start gap-5 lg:mb-7 lg:flex-col lg:items-center lg:text-center xl:flex-row xl:items-start xl:text-left">
-        <Icon aria-hidden="true" className="mt-1 size-10 shrink-0 text-signal-600" strokeWidth={1.55} />
+        <Icon
+          aria-hidden="true"
+          className="mt-1 size-10 shrink-0 text-signal-600"
+          strokeWidth={1.55}
+        />
         <div>
           <h3 className="text-2xl font-semibold tracking-[-0.04em] text-signal-700">{title}</h3>
           <p className="mt-2 text-base leading-7 text-slate-600">{description}</p>
@@ -63,10 +69,21 @@ function JourneyPanel({
 function Handoff() {
   return (
     <div className="relative z-10 mx-auto flex w-full max-w-xl items-center justify-center py-8 lg:absolute lg:left-1/2 lg:top-1/2 lg:w-44 lg:-translate-x-1/2 lg:-translate-y-1/2 lg:py-0">
-      <span aria-hidden="true" className="absolute inset-y-0 left-1/2 border-l border-dashed border-signal-300 lg:inset-x-0 lg:inset-y-auto lg:top-1/2 lg:border-l-0 lg:border-t" />
+      <span
+        aria-hidden="true"
+        className="absolute inset-y-0 left-1/2 border-l border-dashed border-signal-300 lg:inset-x-0 lg:inset-y-auto lg:top-1/2 lg:border-l-0 lg:border-t"
+      />
       <div className="relative flex size-28 items-center justify-center rounded-full border border-signal-100 bg-white shadow-[0_0_0_14px_rgba(238,242,255,0.85),0_0_45px_rgba(79,70,229,0.2)] lg:size-24">
-        <MoveHorizontal aria-hidden="true" className="size-10 text-signal-600 hidden xl:block" strokeWidth={1.65} />
-        <MoveVertical aria-hidden="true" className="size-10 text-signal-600 block xl:hidden" strokeWidth={1.65} />
+        <MoveHorizontal
+          aria-hidden="true"
+          className="size-10 text-signal-600 hidden xl:block"
+          strokeWidth={1.65}
+        />
+        <MoveVertical
+          aria-hidden="true"
+          className="size-10 text-signal-600 block xl:hidden"
+          strokeWidth={1.65}
+        />
       </div>
     </div>
   );

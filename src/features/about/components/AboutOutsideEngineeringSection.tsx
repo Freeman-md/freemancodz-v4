@@ -1,7 +1,10 @@
 import { Container } from "@/shared/components/layout/Container";
 import { MarketingSectionHeading } from "@/shared/components/marketing/MarketingSectionHeading";
 import { PortfolioIcon } from "@/features/portfolio/components/PortfolioIcon";
-import type { AboutPresentationData, PortfolioMedia } from "@/features/portfolio/models/portfolio-presentation";
+import type {
+  AboutPresentationData,
+  PortfolioMedia,
+} from "@/features/portfolio/models/portfolio-presentation";
 
 function InterestCard({ interest }: { interest: PortfolioMedia }) {
   return (
@@ -15,14 +18,20 @@ function InterestCard({ interest }: { interest: PortfolioMedia }) {
         />
       </div>
       <div className="flex items-center gap-4 px-5 py-5 sm:px-6">
-        <PortfolioIcon aria-hidden="true" className="size-6 text-signal-600" name={interest.iconName} />
+        <PortfolioIcon
+          aria-hidden="true"
+          className="size-6 text-signal-600"
+          name={interest.iconName}
+        />
         <h3 className="text-lg font-medium text-ink sm:text-xl">{interest.label}</h3>
       </div>
     </article>
   );
 }
 
-export function AboutOutsideEngineeringSection({ outsideEngineering }: Pick<AboutPresentationData, "outsideEngineering">) {
+export function AboutOutsideEngineeringSection({
+  outsideEngineering,
+}: Pick<AboutPresentationData, "outsideEngineering">) {
   return (
     <section aria-labelledby="outside-engineering-heading" className="py-20 sm:py-28">
       <Container>

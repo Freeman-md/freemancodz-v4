@@ -39,7 +39,11 @@ import { SiteSearchService } from "./modules/search-index/services/site-search.s
 import type { ISearchIndexService } from "./modules/search-index/interfaces/search-index.service.interface";
 import type { ISiteSearchService } from "./modules/search-index/interfaces/site-search.service.interface";
 import { GoogleCalendarProvider } from "./infrastructure/google-calendar/google-calendar.provider";
-import { getAdminEmail, getGoogleCalendarConfig, getWorkflowSecret } from "./infrastructure/config/env";
+import {
+  getAdminEmail,
+  getGoogleCalendarConfig,
+  getWorkflowSecret,
+} from "./infrastructure/config/env";
 import { createSupabaseAuthClient } from "./infrastructure/supabase/supabase-auth.client";
 import { SupabaseAuthProvider } from "./modules/admin-auth/providers/supabase-auth.provider";
 import { AdminAuthService } from "./modules/admin-auth/services/admin-auth.service";

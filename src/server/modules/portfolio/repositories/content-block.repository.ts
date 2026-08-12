@@ -5,7 +5,10 @@ import type {
   PortfolioPagePath,
 } from "../interfaces/content-block.repository.interface";
 import type { ContentBlockNode } from "../models/portfolio-records";
-import type { OrderedRelationInput, UpdateContentBlockInput } from "../models/portfolio-administration";
+import type {
+  OrderedRelationInput,
+  UpdateContentBlockInput,
+} from "../models/portfolio-administration";
 
 const relations = {
   iconBlocks: { orderBy: { order: "asc" }, include: { iconBlock: true } },
@@ -116,7 +119,11 @@ export class ContentBlockRepository implements IContentBlockAdministrationReposi
         await transaction.contentBlockIconBlock.deleteMany({ where: { contentBlockId } });
         if (items.length > 0) {
           await transaction.contentBlockIconBlock.createMany({
-            data: items.map(({ id: iconBlockId, order }) => ({ contentBlockId, iconBlockId, order })),
+            data: items.map(({ id: iconBlockId, order }) => ({
+              contentBlockId,
+              iconBlockId,
+              order,
+            })),
           });
         }
 
@@ -127,7 +134,11 @@ export class ContentBlockRepository implements IContentBlockAdministrationReposi
         await transaction.contentBlockMediaBlock.deleteMany({ where: { contentBlockId } });
         if (items.length > 0) {
           await transaction.contentBlockMediaBlock.createMany({
-            data: items.map(({ id: mediaBlockId, order }) => ({ contentBlockId, mediaBlockId, order })),
+            data: items.map(({ id: mediaBlockId, order }) => ({
+              contentBlockId,
+              mediaBlockId,
+              order,
+            })),
           });
         }
 
@@ -137,7 +148,11 @@ export class ContentBlockRepository implements IContentBlockAdministrationReposi
       await transaction.contentBlockActionBlock.deleteMany({ where: { contentBlockId } });
       if (items.length > 0) {
         await transaction.contentBlockActionBlock.createMany({
-          data: items.map(({ id: actionBlockId, order }) => ({ contentBlockId, actionBlockId, order })),
+          data: items.map(({ id: actionBlockId, order }) => ({
+            contentBlockId,
+            actionBlockId,
+            order,
+          })),
         });
       }
     });

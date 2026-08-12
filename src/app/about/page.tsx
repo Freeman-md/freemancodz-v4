@@ -38,9 +38,15 @@ export default async function AboutPage() {
     <>
       <AboutHero hero={presentation.hero} profile={presentation.profile} />
       <AboutJourneySection experiences={presentation.experiences} journey={presentation.journey} />
-      <AboutProductThinkingSection profile={presentation.profile} thinking={presentation.thinking} />
+      <AboutProductThinkingSection
+        profile={presentation.profile}
+        thinking={presentation.thinking}
+      />
       <AboutWorkProcessSection process={presentation.process} profile={presentation.profile} />
-      <AboutExplorationSection exploration={presentation.exploration} profile={presentation.profile} />
+      <AboutExplorationSection
+        exploration={presentation.exploration}
+        profile={presentation.profile}
+      />
       <AboutOutsideEngineeringSection outsideEngineering={presentation.outsideEngineering} />
       <AboutClosingSection closing={presentation.closing} profile={presentation.profile} />
     </>

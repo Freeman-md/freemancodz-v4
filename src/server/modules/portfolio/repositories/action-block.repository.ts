@@ -10,7 +10,10 @@ export class ActionBlockRepository implements IActionBlockAdministrationReposito
   }
 
   findAll() {
-    return this.database.actionBlock.findMany({ include: { iconBlock: true }, orderBy: { id: "asc" } });
+    return this.database.actionBlock.findMany({
+      include: { iconBlock: true },
+      orderBy: { id: "asc" },
+    });
   }
 
   async create({ variant, url, assistantMessage, ...base }: UpsertActionBlockInput) {

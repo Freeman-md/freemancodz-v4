@@ -40,51 +40,89 @@ function setup(references = 0, project = canonicalProject) {
   const deletedIcons: string[] = [];
 
   const profiles: IProfileAdministrationRepository = {
-    findSingleton: async () => { throw new Error("unused"); },
+    findSingleton: async () => {
+      throw new Error("unused");
+    },
     updateSingleton: async () => undefined,
     updateCoverImage: async () => undefined,
     replaceCollection: async () => undefined,
   };
 
   const content: IContentBlockAdministrationRepository = {
-    findPageTree: async () => [], update: async () => undefined,
-    replaceChildren: async () => undefined, replaceIcons: async () => undefined,
-    replaceMedia: async () => undefined, replaceActions: async () => undefined,
+    findPageTree: async () => [],
+    update: async () => undefined,
+    replaceChildren: async () => undefined,
+    replaceIcons: async () => undefined,
+    replaceMedia: async () => undefined,
+    replaceActions: async () => undefined,
   };
 
   const icons: IIconBlockAdministrationRepository = {
-    findById: async () => null, findAll: async () => [], create: async () => "icon",
-    update: async () => undefined, delete: async (id) => { deletedIcons.push(id); },
-    countReferences: async () => ({ contentBlocks: references, profileCollections: 0, experiences: 0, projectCovers: 0 }),
+    findById: async () => null,
+    findAll: async () => [],
+    create: async () => "icon",
+    update: async () => undefined,
+    delete: async (id) => {
+      deletedIcons.push(id);
+    },
+    countReferences: async () => ({
+      contentBlocks: references,
+      profileCollections: 0,
+      experiences: 0,
+      projectCovers: 0,
+    }),
   };
 
   const actions: IActionBlockAdministrationRepository = {
-    findById: async () => null, findAll: async () => [], create: async () => "action",
-    update: async () => undefined, delete: async () => undefined,
+    findById: async () => null,
+    findAll: async () => [],
+    create: async () => "action",
+    update: async () => undefined,
+    delete: async () => undefined,
   };
 
   const media: IMediaBlockAdministrationRepository = {
-    findById: async () => null, findAll: async () => [], countSourceReferences: async () => 0,
+    findById: async () => null,
+    findAll: async () => [],
+    countSourceReferences: async () => 0,
     create: async () => "media",
-    update: async () => undefined, updateSource: async () => undefined, delete: async () => undefined,
+    update: async () => undefined,
+    updateSource: async () => undefined,
+    delete: async () => undefined,
   };
 
   const projects: IProjectAdministrationRepository = {
-    findAll: async () => [project], findById: async () => project,
-    findBySlug: async () => project, findBySlugs: async () => [project],
-    findFeatured: async () => [project], create: async () => "project",
-    update: async (id) => { updatedProjects.push(id); },
-    delete: async (id) => { deletedProjects.push(id); },
+    findAll: async () => [project],
+    findById: async () => project,
+    findBySlug: async () => project,
+    findBySlugs: async () => [project],
+    findFeatured: async () => [project],
+    create: async () => "project",
+    update: async (id) => {
+      updatedProjects.push(id);
+    },
+    delete: async (id) => {
+      deletedProjects.push(id);
+    },
   };
 
   const experiences: IExperienceAdministrationRepository = {
-    findAll: async () => [], create: async () => "experience", update: async () => undefined,
-    replaceIcons: async () => undefined, delete: async () => undefined,
+    findAll: async () => [],
+    create: async () => "experience",
+    update: async () => undefined,
+    replaceIcons: async () => undefined,
+    delete: async () => undefined,
   };
 
   return {
     service: new PortfolioAdministrationService(
-      profiles, content, icons, actions, media, projects, experiences,
+      profiles,
+      content,
+      icons,
+      actions,
+      media,
+      projects,
+      experiences,
     ),
     deletedProjects,
     updatedProjects,
@@ -96,10 +134,18 @@ test("project updates preserve immutable slug identity and report targeted cache
   const { service, updatedProjects, deletedProjects } = setup();
 
   const baseInput = {
-    slug: canonicalProject.slug, title: canonicalProject.title, category: canonicalProject.category,
-    problem: canonicalProject.problem, solution: canonicalProject.solution, outcome: null,
-    externalLinks: [], featured: canonicalProject.featured, order: canonicalProject.order,
-    markdown: null, visualBlock: "Pay4MeVisual" as const, visualText: null,
+    slug: canonicalProject.slug,
+    title: canonicalProject.title,
+    category: canonicalProject.category,
+    problem: canonicalProject.problem,
+    solution: canonicalProject.solution,
+    outcome: null,
+    externalLinks: [],
+    featured: canonicalProject.featured,
+    order: canonicalProject.order,
+    markdown: null,
+    visualBlock: "Pay4MeVisual" as const,
+    visualText: null,
   };
 
   assert.deepEqual(await service.updateProject(canonicalProject.id, baseInput), {
@@ -115,7 +161,11 @@ test("project updates preserve immutable slug identity and report targeted cache
   assert.deepEqual(updatedProjects, [canonicalProject.id]);
   await assert.rejects(() => service.deleteProject(canonicalProject.id), /required/);
   assert.deepEqual(deletedProjects, []);
-  assert.equal((await service.updateProject(canonicalProject.id, { ...baseInput, order: 2 })).collectionChanged, true);
+  assert.equal(
+    (await service.updateProject(canonicalProject.id, { ...baseInput, order: 2 }))
+      .collectionChanged,
+    true,
+  );
 });
 
 test("canonical project and referenced reusable deletion guards fail before repositories delete", async () => {

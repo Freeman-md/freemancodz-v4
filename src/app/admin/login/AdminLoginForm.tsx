@@ -22,7 +22,10 @@ export function AdminLoginForm() {
         {pending ? "Sending secure link…" : "Email me a sign-in link"}
       </Button>
       {state.message ? (
-        <p role="status" className={state.status === "error" ? "text-sm text-red-700" : "text-sm text-emerald-700"}>
+        <p
+          role="status"
+          className={state.status === "error" ? "text-sm text-red-700" : "text-sm text-emerald-700"}
+        >
           {state.message}
         </p>
       ) : null}

@@ -5,8 +5,8 @@ export function invalidateReusableBlockUpdate(
   id: string,
   invalidate: (tag: string) => void,
 ) {
-  invalidate(type === "action"
-    ? PortfolioCacheTag.actionBlock(id)
-    : PortfolioCacheTag.mediaBlock(id));
+  invalidate(
+    type === "action" ? PortfolioCacheTag.actionBlock(id) : PortfolioCacheTag.mediaBlock(id),
+  );
   invalidate(PortfolioCacheTag.iconBlock(id));
 }

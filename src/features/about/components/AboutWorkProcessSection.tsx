@@ -1,14 +1,12 @@
-import {
-  ArrowDown,
-  ArrowRight,
-  ArrowUp,
-  CircleCheck,
-} from "lucide-react";
+import { ArrowDown, ArrowRight, ArrowUp, CircleCheck } from "lucide-react";
 
 import { Container } from "@/shared/components/layout/Container";
 import { MarketingSectionHeading } from "@/shared/components/marketing/MarketingSectionHeading";
 import { PortfolioIcon } from "@/features/portfolio/components/PortfolioIcon";
-import type { AboutPresentationData, PortfolioIcon as PortfolioIconModel } from "@/features/portfolio/models/portfolio-presentation";
+import type {
+  AboutPresentationData,
+  PortfolioIcon as PortfolioIconModel,
+} from "@/features/portfolio/models/portfolio-presentation";
 
 type ProcessStep = {
   icon: PortfolioIconModel;
@@ -36,7 +34,11 @@ function ProcessNode({ step, index }: { step: ProcessStep; index: number }) {
             : "border-signal-200 bg-signal-50/50 text-signal-800"
         }`}
       >
-        <PortfolioIcon aria-hidden="true" className="size-9 stroke-[1.55] lg:size-10" name={step.icon.iconName} />
+        <PortfolioIcon
+          aria-hidden="true"
+          className="size-9 stroke-[1.55] lg:size-10"
+          name={step.icon.iconName}
+        />
       </div>
       <div>
         <h3 className="text-xl font-semibold tracking-[-0.03em] text-ink lg:mt-5 lg:text-2xl">
@@ -81,19 +83,23 @@ function ProductionFeedback() {
   );
 }
 
-export function AboutWorkProcessSection({ process, profile }: Pick<AboutPresentationData, "process" | "profile">) {
-  const processSteps: ProcessStep[] = process.icons.map((icon, index) => ({ icon, title: icon.label, copy: icon.copy ?? "", tone: index < 2 ? "success" : "signal" }));
+export function AboutWorkProcessSection({
+  process,
+  profile,
+}: Pick<AboutPresentationData, "process" | "profile">) {
+  const processSteps: ProcessStep[] = process.icons.map((icon, index) => ({
+    icon,
+    title: icon.label,
+    copy: icon.copy ?? "",
+    tone: index < 2 ? "success" : "signal",
+  }));
 
   return (
     <section aria-labelledby="work-process-heading" className="py-20 sm:py-28">
       <Container>
         <MarketingSectionHeading
           align="left"
-          copy={
-            <p>
-              {process.copy}
-            </p>
-          }
+          copy={<p>{process.copy}</p>}
           eyebrow={process.eyebrow}
           id="work-process-heading"
           title={process.title}
@@ -124,7 +130,9 @@ export function AboutWorkProcessSection({ process, profile }: Pick<AboutPresenta
               <div className="flex size-10 shrink-0 items-center justify-center rounded-full border border-success-200 bg-success-50/50 text-success-700">
                 <CircleCheck aria-hidden="true" className="size-5 stroke-[1.7]" />
               </div>
-              <p className="text-sm font-medium leading-5 text-ink sm:text-base">{principle.label}</p>
+              <p className="text-sm font-medium leading-5 text-ink sm:text-base">
+                {principle.label}
+              </p>
             </article>
           ))}
         </div>

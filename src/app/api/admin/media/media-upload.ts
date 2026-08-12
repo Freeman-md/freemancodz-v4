@@ -127,13 +127,19 @@ export async function handlePortfolioMediaUpload(
   } catch (error) {
     if (error instanceof AdminAuthenticationError) {
       return Response.json(
-        { message: error.code === "UNAUTHENTICATED" ? "Authentication required." : "Not authorised." },
+        {
+          message:
+            error.code === "UNAUTHENTICATED" ? "Authentication required." : "Not authorised.",
+        },
         { status: error.code === "UNAUTHENTICATED" ? 401 : 403 },
       );
     }
 
     if (error instanceof MediaRequestTooLargeError) {
-      return Response.json({ message: "Media request exceeds the 8 MB file boundary." }, { status: 413 });
+      return Response.json(
+        { message: "Media request exceeds the 8 MB file boundary." },
+        { status: 413 },
+      );
     }
 
     return Response.json({ message: "Media could not be updated." }, { status: 400 });
