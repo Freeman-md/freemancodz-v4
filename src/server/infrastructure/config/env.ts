@@ -43,6 +43,17 @@ export function getSupabaseStorageConfig() {
   };
 }
 
+export function getSupabaseAuthConfig() {
+  return {
+    url: requireEnvValue("NEXT_PUBLIC_SUPABASE_URL"),
+    publishableKey: requireEnvValue("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY"),
+  };
+}
+
+export function getAdminEmail() {
+  return (process.env.ADMIN_EMAIL || "freemanmadudili@gmail.com").trim().toLowerCase();
+}
+
 export function getGoogleCalendarConfig() {
   return {
     clientId: requireEnvValue("GOOGLE_CLIENT_ID"),

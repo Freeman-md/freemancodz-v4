@@ -12,90 +12,87 @@ import {
 import { Container } from "@/shared/components/layout/Container";
 import { MarketingSectionHeading } from "@/shared/components/marketing/MarketingSectionHeading";
 import { SupportingProject } from "@/shared/components/marketing/SupportingProject";
+import type { WorkPresentationData } from "../models/portfolio-presentation";
 
-export function WorkCaseStudiesSection() {
+export function WorkCaseStudiesSection({ projects, relevantWork }: Pick<WorkPresentationData, "projects" | "relevantWork">) {
+  const supporting = [projects.portfolioAssistant, projects.emailPa, projects.acrossTheHorizon];
+
   return (
     <section aria-labelledby="case-studies-heading" className="bg-[#fbf9f9] py-20 sm:py-28">
       <Container className="max-w-[1340px]">
         <MarketingSectionHeading
           copy={
             <p>
-              Selected case studies across customer-facing products, operational systems and practical AI.
+              {relevantWork.copy}
             </p>
           }
-          eyebrow="Relevant work"
+          eyebrow={relevantWork.eyebrow}
           id="case-studies-heading"
-          title="Relevant Work. Real Problems. Meaningful Impact"
+          title={relevantWork.title}
         />
 
         <div className="mt-12 space-y-6 sm:mt-16">
-          <Pay4MeFeaturedProject />
+          <Pay4MeFeaturedProject project={projects.pay4Me} />
 
           <div className="grid items-start gap-6 xl:grid-cols-3">
             <SupportingProject
               actions={[
-                { href: "https://github.com/Freeman-md/freemancodz-v4", label: "View Case Study" },
-                { href: "https://github.com/Freeman-md/freemancodz-v4", icon: Code2, label: "GitHub" },
+                { href: supporting[0].externalLinks[0] ?? "#", label: "View Case Study" },
+                { href: supporting[0].externalLinks[0] ?? "#", icon: Code2, label: "GitHub" },
               ].map((link) => <StudyLink {...link} key={link.label} />)}
-              badge={<CaseBadge>Customer guidance · AI product</CaseBadge>}
-              title="Portfolio Assistant"
+              badge={<CaseBadge>{supporting[0].category}</CaseBadge>}
+              title={supporting[0].title}
               visual={<PortfolioAssistantPreview />}
             >
               <StudyPoint compact icon={ShieldCheck} title="Problem">
-                Different visitors need different information and next steps, but traditional navigation
-                requires everyone to find those answers manually.
+                {supporting[0].problem}
               </StudyPoint>
               <StudyPoint compact icon={Wrench} title="Solution">
-                A customer-facing assistant that retrieves relevant information, answers with evidence and
-                supports appropriate next actions.
+                {supporting[0].solution}
               </StudyPoint>
             </SupportingProject>
 
             <SupportingProject
               actions={[
-                { href: "https://github.com/Freeman-md/email-pa", label: "View Case Study" },
-                { href: "https://github.com/Freeman-md/email-pa", icon: Code2, label: "GitHub" },
+                { href: supporting[1].externalLinks[0] ?? "#", label: "View Case Study" },
+                { href: supporting[1].externalLinks[0] ?? "#", icon: Code2, label: "GitHub" },
               ].map((link) => <StudyLink {...link} key={link.label} />)}
-              badge={<CaseBadge tone="success">Operational workflow</CaseBadge>}
-              title="Email PA"
+              badge={<CaseBadge tone="success">{supporting[1].category}</CaseBadge>}
+              title={supporting[1].title}
               visual={<EmailWorkflowPreview />}
             >
               <StudyPoint compact icon={ShieldCheck} title="Problem" tone="success">
-                Important changes buried in email require repeated checking and manually reconstructing what
-                has changed.
+                {supporting[1].problem}
               </StudyPoint>
               <StudyPoint compact icon={Wrench} title="Solution" tone="success">
-                A background workflow that detects relevant messages, understands changes and keeps important
-                state visible.
+                {supporting[1].solution}
               </StudyPoint>
             </SupportingProject>
 
             <SupportingProject
               actions={[
-                { href: "https://acrossthehorizon.net", label: "View Case Study" },
-                { href: "https://acrossthehorizon.net", label: "View Live" },
+                { href: supporting[2].externalLinks[0] ?? "#", label: "View Case Study" },
+                { href: supporting[2].externalLinks[0] ?? "#", label: "View Live" },
               ].map((link) => <StudyLink {...link} key={link.label} />)}
-              badge={<CaseBadge>Customer-facing product · Study abroad</CaseBadge>}
-              title="AcrossTheHorizon"
+              badge={<CaseBadge>{supporting[2].category}</CaseBadge>}
+              title={supporting[2].title}
               visual={
                 <div className="relative min-h-[13rem] overflow-hidden rounded-xl border border-line bg-white">
                   <Image
-                    alt="AcrossTheHorizon study-abroad platform"
+                    alt={supporting[2].cover?.altText ?? supporting[2].title}
                     className="object-cover object-top"
                     fill
                     sizes="(min-width: 1024px) 30vw, 100vw"
-                    src="/images/work/across-the-horizon.jpg"
+                    src={supporting[2].cover?.source ?? "/images/work/across-the-horizon.jpg"}
                   />
                 </div>
               }
             >
               <StudyPoint compact icon={ShieldCheck} title="Problem">
-                A study-abroad platform helping users access education and relocation resources, offers,
-                reviews and related services.
+                {supporting[2].problem}
               </StudyPoint>
               <StudyPoint compact icon={Wrench} title="Solution">
-                Freeman worked on production frontend experiences inside a Laravel application using Blade,
-                Vue.js and Tailwind CSS.
+                {supporting[2].solution}
               </StudyPoint>
             </SupportingProject>
           </div>

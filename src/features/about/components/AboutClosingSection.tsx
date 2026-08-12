@@ -1,14 +1,13 @@
-import { ArrowRight, BriefcaseBusiness, MessageCircle, ShieldCheck } from "lucide-react";
+import { BriefcaseBusiness, ShieldCheck } from "lucide-react";
 import { Allura } from "next/font/google";
-import Link from "next/link";
-
-import { AssistantTriggerButton } from "@/features/assistant/components/AssistantTriggerButton";
 import { Container } from "@/shared/components/layout/Container";
 import { MarketingSectionHeading } from "@/shared/components/marketing/MarketingSectionHeading";
+import { PortfolioAction } from "@/features/portfolio/components/PortfolioAction";
+import type { AboutPresentationData } from "@/features/portfolio/models/portfolio-presentation";
 
 const signatureFont = Allura({ subsets: ["latin"], weight: "400" });
 
-export function AboutClosingSection() {
+export function AboutClosingSection({ closing, profile }: Pick<AboutPresentationData, "closing" | "profile">) {
   return (
     <section aria-labelledby="about-closing-heading" className="pb-20 pt-16 sm:pb-28 sm:pt-20">
       <Container>
@@ -16,59 +15,40 @@ export function AboutClosingSection() {
           <MarketingSectionHeading
             copy={
               <p>
-                Send me the context. My assistant will gather what I need and make sure it reaches me
-                properly.
+                {closing.copy}
               </p>
             }
-            eyebrow="Let's talk"
+            eyebrow={closing.eyebrow}
             id="about-closing-heading"
-            title="Got a role, project, collaboration or event in mind?"
+            title={closing.title}
           />
 
-          <AssistantTriggerButton
-            detail={{
-              message: "I’d like to get in touch about something and share a bit of context.",
-            }}
-            variant="marketing"
-          >
-            <MessageCircle aria-hidden="true" className="size-7 stroke-[1.7]" />
-            <span>Send Me a Message</span>
-            <ArrowRight aria-hidden="true" className="size-6 stroke-[1.7]" />
-          </AssistantTriggerButton>
+          {closing.actions.map((action) => <PortfolioAction action={action} className="mx-auto mt-9 max-w-lg" key={action.label} />)}
           <p className="mt-6 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-sm text-slate-500 sm:text-base">
             <ShieldCheck aria-hidden="true" className="size-5 text-slate-500" />
             Roles · Projects · Collaborations · Speaking · Other enquiries
           </p>
 
           <div className="mx-auto mt-16 grid max-w-4xl gap-10 border-t border-line pt-10 text-left md:grid-cols-2 md:items-center">
-            <Link
-              className="group flex items-center gap-5 rounded-2xl border border-line p-5 transition hover:border-signal-200 hover:bg-signal-50/30"
-              href="/work"
-            >
+            <div className="group flex items-center gap-5 rounded-2xl border border-line p-5 transition hover:border-signal-200 hover:bg-signal-50/30">
               <div className="flex size-14 shrink-0 items-center justify-center rounded-full bg-signal-50 text-signal-700">
                 <BriefcaseBusiness aria-hidden="true" className="size-7 stroke-[1.6]" />
               </div>
               <div>
-                <p className="font-semibold text-slate-900">Want to see more of my work?</p>
-                <p className="mt-2 flex items-center gap-2 font-medium text-signal-700">
-                  View relevant work
-                  <ArrowRight
-                    aria-hidden="true"
-                    className="size-4 transition group-hover:translate-x-1"
-                  />
-                </p>
+                <p className="font-semibold text-slate-900">{closing.work.title}</p>
+                {closing.work.actions.map((action) => <PortfolioAction action={action} className="mt-2 h-auto p-0" key={action.label} />)}
               </div>
-            </Link>
+            </div>
 
             <div className="text-center md:text-left">
               <p className={`${signatureFont.className} text-5xl leading-none text-slate-950 sm:text-6xl`}>
-                Freeman Madudili
+                {profile.name}
               </p>
               <p className="mt-4 font-mono text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                Software engineer
+                {profile.title}
               </p>
               <p className="mt-2 text-sm text-slate-600">
-                Customer-Facing Products · Reliable Workflows
+                {profile.positioning}
               </p>
             </div>
           </div>

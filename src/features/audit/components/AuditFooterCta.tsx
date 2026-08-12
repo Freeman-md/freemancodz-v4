@@ -4,19 +4,19 @@ import { MarketingVisualCta } from "@/shared/components/marketing/MarketingVisua
 
 import { AuditButton } from "./AuditButton";
 import { SignalVisual } from "./SignalVisual";
+import type { AuditPresentationData } from "@/features/portfolio/models/portfolio-presentation";
 
-export function AuditFooterCta() {
+export function AuditFooterCta({ closing }: Pick<AuditPresentationData, "closing">) {
   return (
     <MarketingVisualCta
-      action={<AuditButton className="mt-0 w-full max-w-lg text-base" label="Start My Free Audit" />}
+      action={closing.actions.map((action) => <AuditButton action={action} className="mt-0 w-full max-w-lg text-base" key={action.label} />)}
       align="left"
       copy={
         <p>
-          Share one customer journey or operational workflow. My assistant will help you provide the
-          relevant context.
+          {closing.copy}
         </p>
       }
-      eyebrow="Let's fix what's getting in the way"
+      eyebrow={closing.eyebrow}
       helper={
         <p className="mt-5 flex items-center gap-2 text-sm text-slate-500">
           <ShieldCheck aria-hidden="true" className="size-5 text-slate-500" />
@@ -24,7 +24,7 @@ export function AuditFooterCta() {
         </p>
       }
       id="audit-cta-heading"
-      title="Show me one part of your business that isn't running as smoothly as it should."
+      title={closing.title}
       visual={<SignalVisual />}
     />
   );

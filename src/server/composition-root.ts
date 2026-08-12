@@ -25,6 +25,12 @@ import type { IHomeService } from "./modules/portfolio/interfaces/home.service.i
 import type { IWorkService } from "./modules/portfolio/interfaces/work.service.interface";
 import type { IAboutService } from "./modules/portfolio/interfaces/about.service.interface";
 import type { IAuditService } from "./modules/portfolio/interfaces/audit.service.interface";
+import { PortfolioAdministrationService } from "./modules/portfolio/services/portfolio-administration.service";
+import type { IPortfolioAdministrationService } from "./modules/portfolio/interfaces/portfolio-administration.service.interface";
+import { PortfolioMediaService } from "./modules/portfolio/services/portfolio-media.service";
+import type { IPortfolioMediaService } from "./modules/portfolio/interfaces/portfolio-media.service.interface";
+import { SupabaseStorageProvider } from "./modules/portfolio/providers/supabase-storage.provider";
+import { createSupabaseStorageClient } from "./infrastructure/supabase/supabase-storage.client";
 import { SourceRecordRepository } from "./modules/search-index/repositories/source-record.repository";
 import { SearchIndexJobRepository } from "./modules/search-index/repositories/search-index-job.repository";
 import { SiteChunkRepository } from "./modules/search-index/repositories/site-chunk.repository";
@@ -33,7 +39,11 @@ import { SiteSearchService } from "./modules/search-index/services/site-search.s
 import type { ISearchIndexService } from "./modules/search-index/interfaces/search-index.service.interface";
 import type { ISiteSearchService } from "./modules/search-index/interfaces/site-search.service.interface";
 import { GoogleCalendarProvider } from "./infrastructure/google-calendar/google-calendar.provider";
-import { getGoogleCalendarConfig, getWorkflowSecret } from "./infrastructure/config/env";
+import { getAdminEmail, getGoogleCalendarConfig, getWorkflowSecret } from "./infrastructure/config/env";
+import { createSupabaseAuthClient } from "./infrastructure/supabase/supabase-auth.client";
+import { SupabaseAuthProvider } from "./modules/admin-auth/providers/supabase-auth.provider";
+import { AdminAuthService } from "./modules/admin-auth/services/admin-auth.service";
+import type { IAdminAuthService } from "./modules/admin-auth/interfaces/admin-auth.service.interface";
 import { MeetingRepository } from "./modules/meeting/repositories/meeting.repository";
 import { MeetingService } from "./modules/meeting/services/meeting.service";
 import type { IMeetingService } from "./modules/meeting/interfaces/meeting.service.interface";
@@ -66,6 +76,8 @@ const googleCalendar = new GoogleCalendarProvider(getGoogleCalendarConfig);
 
 const workflow: IWorkflowService = new WorkflowService(getWorkflowSecret);
 
+const adminAuthProvider = new SupabaseAuthProvider(createSupabaseAuthClient);
+
 export const logger: ILogger = new ConsoleLogger();
 
 export const searchIndexService: ISearchIndexService = new SearchIndexService(
@@ -92,3 +104,23 @@ export const homeService: IHomeService = new HomeService(profiles, contentBlocks
 export const workService: IWorkService = new WorkService(profiles, contentBlocks, projects);
 export const aboutService: IAboutService = new AboutService(profiles, contentBlocks, experiences);
 export const auditService: IAuditService = new AuditService(contentBlocks, projects);
+export const adminAuthService: IAdminAuthService = new AdminAuthService(
+  adminAuthProvider,
+  getAdminEmail(),
+);
+export const portfolioAdministrationService: IPortfolioAdministrationService =
+  new PortfolioAdministrationService(
+    profiles,
+    contentBlocks,
+    iconBlockRepository,
+    actionBlockRepository,
+    mediaBlockRepository,
+    projects,
+    experiences,
+  );
+export const portfolioMediaService: IPortfolioMediaService = new PortfolioMediaService(
+  new SupabaseStorageProvider(createSupabaseStorageClient),
+  profiles,
+  mediaBlockRepository,
+  logger,
+);

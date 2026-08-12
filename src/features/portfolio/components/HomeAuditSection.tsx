@@ -3,43 +3,23 @@ import {
   ArrowDown,
   ArrowRight,
   Check,
-  CheckCircle2,
   FileText,
-  Mail,
-  Search,
-  Send,
-  Share2,
-  Sparkles,
-  UserRound,
-  Zap,
 } from "lucide-react";
 
-import { MarketingCtaLink } from "@/shared/components/marketing/MarketingCtaLink";
 import { MarketingSectionHeading } from "@/shared/components/marketing/MarketingSectionHeading";
+import type { HomePresentationData, PortfolioIcon as PortfolioIconModel, PortfolioSection } from "../models/portfolio-presentation";
+import { PortfolioAction } from "./PortfolioAction";
+import { PortfolioIcon } from "./PortfolioIcon";
 
-const problemSteps = [
-  { icon: UserRound, label: "Customer submits enquiry" },
-  { icon: Mail, label: "Enquiry reaches inbox" },
-  { icon: Search, label: "Manual check", emphasis: true },
-  { icon: FileText, label: "Information copied elsewhere" },
-  { icon: Send, label: "Follow-up happens" },
-];
-
-const improvementSteps = [
-  { icon: UserRound, label: "Customer submits enquiry" },
-  { icon: Mail, label: "Information captured automatically" },
-  { icon: Share2, label: "Routed to the right person or system" },
-  { icon: CheckCircle2, label: "Follow-up happens faster" },
-];
-
-type AuditStep = (typeof problemSteps)[number];
-
-function AuditFlow({ steps, tone }: { steps: AuditStep[]; tone: "problem" | "improvement" }) {
+function AuditFlow({ steps, tone }: { steps: PortfolioIconModel[]; tone: "problem" | "improvement" }) {
   const isProblem = tone === "problem";
 
   return (
     <div className="mt-7 grid gap-3 md:grid-cols-[repeat(var(--steps),minmax(0,1fr))] md:gap-0" style={{ "--steps": steps.length } as React.CSSProperties}>
-      {steps.map(({ emphasis, icon: Icon, label }, index) => (
+      {steps.map(({ iconName, label }, index) => {
+        const emphasis = tone === "problem" && label === "Manual check";
+
+        return (
         <div className="relative grid grid-cols-[3.5rem_1fr] items-center gap-3 md:flex md:flex-col md:text-center" key={label}>
           {index > 0 ? (
             <span
@@ -56,18 +36,18 @@ function AuditFlow({ steps, tone }: { steps: AuditStep[]; tone: "problem" | "imp
                   : "border-success-100 text-success-700"
             }`}
           >
-            <Icon aria-hidden="true" className="size-6" strokeWidth={1.7} />
+            <PortfolioIcon aria-hidden="true" className="size-6" name={iconName} strokeWidth={1.7} />
           </span>
           <span className={`text-sm font-medium leading-5 ${emphasis ? "text-red-600" : "text-slate-950"}`}>
             {label}
           </span>
         </div>
-      ))}
+      );})}
     </div>
   );
 }
 
-function AuditDiagram() {
+function AuditDiagram({ improvement, problem }: Pick<HomePresentationData["audit"], "improvement" | "problem">) {
   return (
     <div className="relative overflow-hidden rounded-3xl border border-line bg-white shadow-soft lg:row-span-2">
       <div className="border-b border-line p-6 sm:p-8 lg:p-10">
@@ -75,13 +55,13 @@ function AuditDiagram() {
           The problem
         </span>
         <h3 className="mt-4 max-w-md text-2xl font-semibold tracking-[-0.04em] text-slate-950">
-          Unnecessary friction in the current process
+          {problem.title}
         </h3>
-        <AuditFlow steps={problemSteps} tone="problem" />
+        <AuditFlow steps={problem.icons} tone="problem" />
         <div className="mt-7 rounded-xl border border-red-200 bg-red-50/45 p-5 md:ml-auto md:max-w-sm">
           <p className="text-xs font-bold uppercase text-red-600">Main friction</p>
           <p className="mt-2 text-sm leading-6 text-slate-800">
-            Follow-up depends on someone noticing and manually moving the information.
+            {problem.copy}
           </p>
         </div>
       </div>
@@ -95,13 +75,13 @@ function AuditDiagram() {
           The improvement
         </span>
         <h3 className="mt-4 max-w-md text-2xl font-semibold tracking-[-0.04em] text-slate-950">
-          A smoother handoff and faster follow-up
+          {improvement.title}
         </h3>
-        <AuditFlow steps={improvementSteps} tone="improvement" />
+        <AuditFlow steps={improvement.icons} tone="improvement" />
         <div className="mt-7 rounded-xl border border-success-100 bg-success-50/45 p-5 md:ml-auto md:max-w-sm">
           <p className="text-xs font-bold uppercase text-success-700">First improvement</p>
           <p className="mt-2 text-sm leading-6 text-slate-800">
-            Capture the information once and route it directly to the correct next step.
+            {improvement.copy}
           </p>
         </div>
       </div>
@@ -109,34 +89,23 @@ function AuditDiagram() {
   );
 }
 
-function AuditAction() {
+function AuditAction({ audit }: { audit: PortfolioSection }) {
   return (
     <div className="flex flex-col justify-end">
       <div className="hidden space-y-6 lg:block">
-        <div className="flex gap-5">
-          <Search aria-hidden="true" className="mt-1 size-8 shrink-0 text-signal-600" />
-          <p className="text-base leading-7 text-slate-700">
-            <strong className="text-slate-950">We identify the gaps and friction</strong> in the customer experience and the work behind it.
-          </p>
-        </div>
-        <div className="flex gap-5">
-          <Sparkles aria-hidden="true" className="mt-1 size-8 shrink-0 text-signal-600" />
-          <p className="text-base leading-7 text-slate-700">
-            <strong className="text-slate-950">You receive a clear, actionable view</strong> of what to fix first and why.
-          </p>
-        </div>
-        <div className="flex gap-5">
-          <Zap aria-hidden="true" className="mt-1 size-8 shrink-0 text-signal-600" />
-          <p className="text-base leading-7 text-slate-700">
-            <strong className="text-slate-950">It’s free and personally reviewed</strong> by Freeman.
-          </p>
-        </div>
+        {audit.icons.map((item) => (
+          <div className="flex gap-5" key={item.label}>
+            <PortfolioIcon aria-hidden="true" className="mt-1 size-8 shrink-0 text-signal-600" name={item.iconName} />
+            <p className="text-base leading-7 text-slate-700">
+              <strong className="text-slate-950">{item.label}</strong>{item.copy ? ` ${item.copy}` : ""}
+            </p>
+          </div>
+        ))}
       </div>
 
-      <MarketingCtaLink className="mt-8 max-w-none lg:mt-10" href="/audit">
-        Get a Free Audit
-        <ArrowRight aria-hidden="true" className="ml-auto size-6" />
-      </MarketingCtaLink>
+      {audit.actions.map((action) => (
+        <PortfolioAction action={action} className="mt-8 max-w-none lg:mt-10" key={action.label} />
+      ))}
       <p className="mt-5 flex items-center justify-center gap-2 text-center text-sm text-slate-600 lg:justify-start">
         <Check aria-hidden="true" className="size-5 rounded-full bg-signal-50 p-1 text-signal-700" />
         Personally reviewed · Delivered within 48 hours
@@ -156,18 +125,18 @@ function AuditAction() {
   );
 }
 
-export function HomeAuditSection() {
+export function HomeAuditSection({ audit }: Pick<HomePresentationData, "audit">) {
   return (
     <section className="bg-white px-5 py-24 sm:px-8 lg:py-32">
       <div className="mx-auto grid max-w-[1360px] gap-10 lg:grid-cols-[0.38fr_0.62fr] lg:grid-rows-[auto_1fr] lg:gap-x-16">
         <MarketingSectionHeading
           align="left"
-          eyebrow="Free customer journey & workflow audit"
+          eyebrow={audit.eyebrow}
           id="home-audit-heading"
-          title="Find where customers get stuck or work falls back to manual effort."
+          title={audit.title}
         />
-        <AuditDiagram />
-        <AuditAction />
+        <AuditDiagram improvement={audit.improvement} problem={audit.problem} />
+        <AuditAction audit={audit} />
       </div>
     </section>
   );

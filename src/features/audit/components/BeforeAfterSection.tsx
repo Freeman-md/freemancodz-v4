@@ -1,49 +1,12 @@
-import type { LucideIcon } from "lucide-react";
-import {
-  CircleCheck,
-  Clock3,
-  Folder,
-  Inbox,
-  MessageCircleQuestion,
-  MessageSquareCheck,
-  NotebookPen,
-  Send,
-  UserRound,
-} from "lucide-react";
-
 import { Container } from "@/shared/components/layout/Container";
 import { MarketingSectionHeading } from "@/shared/components/marketing/MarketingSectionHeading";
+import { PortfolioIcon } from "@/features/portfolio/components/PortfolioIcon";
+import type { AuditPresentationData, PortfolioIcon as PortfolioIconModel, PortfolioSection } from "@/features/portfolio/models/portfolio-presentation";
 
-type WorkflowNodeData = {
-  icon: LucideIcon;
-  label: string;
-};
-
-const beforeCustomerJourney: WorkflowNodeData[] = [
-  { icon: Send, label: "Enquiry sent" },
-  { icon: Clock3, label: "Waits" },
-  { icon: MessageCircleQuestion, label: "Unclear next step" },
-];
-
-const beforeOperationalWorkflow: WorkflowNodeData[] = [
-  { icon: Inbox, label: "Shared inbox" },
-  { icon: UserRound, label: "Manual handoff" },
-  { icon: Clock3, label: "Delayed follow-up" },
-];
-
-const afterCustomerJourney: WorkflowNodeData[] = [
-  { icon: NotebookPen, label: "Right info once" },
-  { icon: MessageSquareCheck, label: "Knows what happens next" },
-];
-
-const afterOperationalWorkflow: WorkflowNodeData[] = [
-  { icon: Folder, label: "Right place" },
-  { icon: UserRound, label: "Clear owner" },
-  { icon: CircleCheck, label: "Timely update" },
-];
+type WorkflowNodeData = PortfolioIconModel;
 
 function WorkflowNode({
-  icon: Icon,
+  iconName,
   label,
   tone,
 }: WorkflowNodeData & { tone: "before" | "after" }) {
@@ -58,7 +21,7 @@ function WorkflowNode({
             : "border-red-300 text-ink motion-safe:animate-alert-glow"
         }`}
       >
-        <Icon aria-hidden="true" className="size-7 stroke-[1.75] sm:size-8" />
+        <PortfolioIcon aria-hidden="true" className="size-7 stroke-[1.75] sm:size-8" name={iconName} />
       </div>
       <p className="mt-3 max-w-[10rem] text-sm font-medium leading-5 text-ink sm:text-base">{label}</p>
     </div>
@@ -108,12 +71,12 @@ function WorkflowPanel({
   );
 }
 
-function ComparisonCard({ tone }: { tone: "before" | "after" }) {
+function ComparisonCard({ data, tone }: { data: PortfolioSection & { customer: PortfolioSection; workflow: PortfolioSection }; tone: "before" | "after" }) {
   const isAfter = tone === "after";
 
-  const customerJourney = isAfter ? afterCustomerJourney : beforeCustomerJourney;
+  const customerJourney = data.customer.icons;
 
-  const operationalWorkflow = isAfter ? afterOperationalWorkflow : beforeOperationalWorkflow;
+  const operationalWorkflow = data.workflow.icons;
 
   return (
     <article
@@ -129,10 +92,10 @@ function ComparisonCard({ tone }: { tone: "before" | "after" }) {
             isAfter ? "bg-success-50 text-success-700" : "bg-red-50 text-red-600"
           }`}
         >
-          {isAfter ? "After" : "Before"}
+          {data.title}
         </p>
         <p className="text-base font-medium text-ink sm:text-lg">
-          {isAfter ? "Clear. Connected. Reliable." : "Slow. Unclear. Manual."}
+          {data.copy}
         </p>
       </div>
 
@@ -144,14 +107,14 @@ function ComparisonCard({ tone }: { tone: "before" | "after" }) {
         <div className="p-5 sm:p-6">
           <WorkflowPanel
             nodes={customerJourney}
-            title="Customer-facing journey"
+            title={data.customer.title}
             tone={tone}
           />
         </div>
         <div className={`border-t p-5 sm:p-6 ${isAfter ? "border-success-100" : "border-line"}`}>
           <WorkflowPanel
             nodes={operationalWorkflow}
-            title="Operational workflow"
+            title={data.workflow.title}
             tone={tone}
           />
         </div>
@@ -160,20 +123,20 @@ function ComparisonCard({ tone }: { tone: "before" | "after" }) {
   );
 }
 
-export function BeforeAfterSection() {
+export function BeforeAfterSection({ beforeAfter }: Pick<AuditPresentationData, "beforeAfter">) {
   return (
     <section aria-labelledby="friction-heading" className="py-16 sm:py-20">
       <Container>
         <MarketingSectionHeading
-          copy={<p>Same customer action. Very different experience behind the scenes.</p>}
-          eyebrow="Before & after"
+          copy={<p>{beforeAfter.copy}</p>}
+          eyebrow={beforeAfter.eyebrow}
           id="friction-heading"
-          title="Where the friction hides"
+          title={beforeAfter.title}
         />
 
         <div className="mt-12 grid gap-7 lg:grid-cols-2 lg:gap-8">
-          <ComparisonCard tone="before" />
-          <ComparisonCard tone="after" />
+          <ComparisonCard data={beforeAfter.before} tone="before" />
+          <ComparisonCard data={beforeAfter.after} tone="after" />
         </div>
       </Container>
     </section>

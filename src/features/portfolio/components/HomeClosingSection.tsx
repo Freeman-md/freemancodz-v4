@@ -1,7 +1,8 @@
-import { ArrowRight, Check, CircleAlert } from "lucide-react";
+import { Check, CircleAlert } from "lucide-react";
 
-import { MarketingCtaLink } from "@/shared/components/marketing/MarketingCtaLink";
 import { MarketingVisualCta } from "@/shared/components/marketing/MarketingVisualCta";
+import type { HomePresentationData } from "../models/portfolio-presentation";
+import { PortfolioAction } from "./PortfolioAction";
 
 function FrictionResolutionVisual() {
   return (
@@ -45,24 +46,22 @@ function FrictionResolutionVisual() {
   );
 }
 
-export function HomeClosingSection() {
+export function HomeClosingSection({ closing }: Pick<HomePresentationData, "closing">) {
   return (
     <MarketingVisualCta
       action={
-        <MarketingCtaLink className="mx-0 mt-0 max-w-md" href="/audit">
-          Start My Free Audit
-          <ArrowRight aria-hidden="true" className="ml-auto size-6" />
-        </MarketingCtaLink>
+        closing.actions.map((action) => (
+          <PortfolioAction action={action} className="mx-0 mt-0 max-w-md" key={action.label} />
+        ))
       }
       align="left"
       className="border-t border-line bg-[#fbf9f9]"
       copy={
         <p>
-          You don’t need to know whether the answer is software, automation or AI. Start with what is
-          happening now.
+          {closing.copy}
         </p>
       }
-      eyebrow="Not sure where the friction is?"
+      eyebrow={closing.eyebrow}
       helper={
         <p className="mt-6 flex items-center gap-3 text-sm leading-6 text-slate-700 sm:text-base">
           <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-signal-50 text-signal-700">
@@ -72,7 +71,7 @@ export function HomeClosingSection() {
         </p>
       }
       id="home-closing-heading"
-      title="Show me one part of the journey that isn’t working as smoothly as it should."
+      title={closing.title}
       visual={<FrictionResolutionVisual />}
     />
   );

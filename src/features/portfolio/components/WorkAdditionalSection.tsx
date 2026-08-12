@@ -14,6 +14,7 @@ import {
 
 import { Container } from "@/shared/components/layout/Container";
 import { MarketingSectionHeading } from "@/shared/components/marketing/MarketingSectionHeading";
+import type { PortfolioProject, WorkPresentationData } from "../models/portfolio-presentation";
 
 type SupportingProject = {
   title: string;
@@ -24,24 +25,21 @@ type SupportingProject = {
   href: string;
 };
 
-const supportingProjects: SupportingProject[] = [
-  {
-    title: "Shifty",
-    category: "Hackathon · Voice AI",
-    description: "Voice assistant that helps teams fill open shifts faster through natural conversation.",
-    tone: "violet",
-    visual: "voice",
-    href: "https://github.com/Freeman-md",
-  },
-  {
-    title: "Self-Healing Backend Operations System",
-    category: "MSc Research · Systems",
-    description: "Detects incidents, diagnoses the likely cause and recovers automatically with safeguards.",
-    tone: "success",
-    visual: "recovery",
-    href: "https://github.com/Freeman-md",
-  },
-];
+function toSupportingProject(
+  project: PortfolioProject,
+  description: string,
+  tone: SupportingProject["tone"],
+  visual: SupportingProject["visual"],
+): SupportingProject {
+  return {
+    title: project.title,
+    category: project.category,
+    description,
+    tone,
+    visual,
+    href: project.externalLinks[0] ?? "#",
+  };
+}
 
 const badgeClasses: Record<SupportingProject["tone"], string> = {
   success: "bg-success-50 text-success-700",
@@ -138,14 +136,19 @@ function SupportingProjectCard({ project }: { project: SupportingProject }) {
   );
 }
 
-export function WorkAdditionalSection() {
+export function WorkAdditionalSection({ additionalWork, projects }: Pick<WorkPresentationData, "additionalWork" | "projects">) {
+  const supportingProjects: SupportingProject[] = [
+    toSupportingProject(projects.shifty, "Voice assistant that helps teams fill open shifts faster through natural conversation.", "violet", "voice"),
+    toSupportingProject(projects.selfHealing, "Detects incidents, diagnoses the likely cause and recovers automatically with safeguards.", "success", "recovery"),
+  ];
+
   return (
     <section aria-labelledby="additional-work-heading" className="bg-white py-20 sm:py-28">
       <Container className="max-w-[1340px]">
         <MarketingSectionHeading
-          eyebrow="Supporting work"
+          eyebrow={additionalWork.eyebrow}
           id="additional-work-heading"
-          title="Additional Work & Experiments"
+          title={additionalWork.title}
         />
 
         <div className="mt-12 grid gap-5 lg:grid-cols-2 xl:grid-cols-3">

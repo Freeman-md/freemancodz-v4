@@ -3,15 +3,19 @@ import { HomeClosingSection } from "@/features/portfolio/components/HomeClosingS
 import { HomeHero } from "@/features/portfolio/components/HomeHero";
 import { HomeImproveSection } from "@/features/portfolio/components/HomeImproveSection";
 import { HomeRelevantWorkSection } from "@/features/portfolio/components/HomeRelevantWorkSection";
+import { createHomePresentationData } from "@/features/portfolio/models/presentation-adapters";
+import { getCachedHomePageData } from "./_portfolio/portfolio-page-cache";
 
-export default function HomePage() {
+export default async function HomePage() {
+  const presentation = createHomePresentationData(await getCachedHomePageData());
+
   return (
     <>
-      <HomeHero />
-      <HomeImproveSection />
-      <HomeRelevantWorkSection />
-      <HomeAuditSection />
-      <HomeClosingSection />
+      <HomeHero hero={presentation.hero} profile={presentation.profile} />
+      <HomeImproveSection improve={presentation.improve} />
+      <HomeRelevantWorkSection projects={presentation.projects} relevantWork={presentation.relevantWork} />
+      <HomeAuditSection audit={presentation.audit} />
+      <HomeClosingSection closing={presentation.closing} />
     </>
   );
 }

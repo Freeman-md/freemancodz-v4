@@ -2,6 +2,8 @@
 
 This is a Next.js App Router portfolio. The current pages remain component-driven while the portfolio content backend is stored in PostgreSQL through Prisma. The floating assistant streams answers from OpenAI with existing search-index context.
 
+See [Portfolio Content System](docs/portfolio-content-system.md) for the completed content architecture, admin, authentication, caching, media and operations guide.
+
 ## Structure
 
 - `src/app` contains routes, pages, layouts, and thin HTTP adapters.

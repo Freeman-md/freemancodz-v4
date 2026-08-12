@@ -1,4 +1,5 @@
 import type { LucideIcon } from "lucide-react";
+import type { ComponentType } from "react";
 import {
   Archive,
   ArrowUpRight,
@@ -15,6 +16,8 @@ import {
 import { Container } from "@/shared/components/layout/Container";
 import { MarketingSectionHeading } from "@/shared/components/marketing/MarketingSectionHeading";
 import { buttonVariants } from "@/shared/components/ui/Button";
+import { projectVisualNameSchema, type ProjectVisualName } from "@/contracts/portfolio-presentation.contract";
+import type { AuditPresentationData } from "@/features/portfolio/models/portfolio-presentation";
 
 type ProofNodeData = {
   icon: LucideIcon;
@@ -134,6 +137,18 @@ function EmailWorkflowVisual() {
   );
 }
 
+export const projectVisualRegistry = {
+  EmailWorkflowVisual,
+  Pay4MeVisual,
+  PortfolioAssistantVisual,
+} satisfies Record<ProjectVisualName, ComponentType>;
+
+export function resolveProjectVisual(value: string | null): ComponentType | null {
+  const parsed = projectVisualNameSchema.safeParse(value);
+
+  return parsed.success ? projectVisualRegistry[parsed.data] : null;
+}
+
 function ProofLink({ href, label }: { href: string; label: string }) {
   return (
     <a
@@ -152,51 +167,31 @@ function ProofLink({ href, label }: { href: string; label: string }) {
   );
 }
 
-export function AuditProofSection() {
+export function AuditProofSection({ projects, proof }: Pick<AuditPresentationData, "projects" | "proof">) {
   return (
     <section aria-labelledby="proof-heading" className="py-16 sm:py-20">
       <Container>
         <MarketingSectionHeading
-          copy={<p>Real work across customer-facing journeys and operational workflows.</p>}
-          eyebrow="Proof"
+          copy={<p>{proof.copy}</p>}
+          eyebrow={proof.eyebrow}
           id="proof-heading"
-          title="Customer-Facing. Operationally Sound."
+          title={proof.title}
         />
 
         <div className="mt-12 overflow-hidden rounded-3xl border border-line bg-white shadow-soft lg:grid lg:grid-cols-3 lg:divide-x lg:divide-line">
-          <article className="relative p-6 sm:p-8">
-            <ProofLink href="https://pay4me.app" label="Pay4Me" />
-            <ProofBadge>Customer-facing product</ProofBadge>
-            <h3 className="mt-6 font-display text-3xl tracking-[-0.035em] text-signal-900">
-              Pay4Me / WithRadius
-            </h3>
-            <p className="mt-3 max-w-xs text-base leading-6 text-slate-700">
-              Payment experiences supporting complex international journeys.
-            </p>
-            <Pay4MeVisual />
-          </article>
+          {projects.map((project, index) => {
+            const Visual = resolveProjectVisual(project.visualBlock);
 
-          <article className="relative border-t border-line p-6 sm:p-8 lg:border-t-0">
-            <ProofLink href="https://github.com/Freeman-md/freemancodz-v4" label="Portfolio Assistant" />
-            <ProofBadge>Customer guidance</ProofBadge>
-            <h3 className="mt-6 font-display text-3xl tracking-[-0.035em] text-signal-900">
-              Portfolio Assistant
-            </h3>
-            <p className="mt-3 max-w-xs text-base leading-6 text-slate-700">
-              Guided answers that help visitors find clarity and take the next step.
-            </p>
-            <PortfolioAssistantVisual />
-          </article>
-
-          <article className="relative border-t border-line p-6 sm:p-8 lg:border-t-0">
-            <ProofLink href="https://github.com/Freeman-md/email-pa" label="Email PA" />
-            <ProofBadge>Operational workflow</ProofBadge>
-            <h3 className="mt-6 font-display text-3xl tracking-[-0.035em] text-signal-900">Email PA</h3>
-            <p className="mt-3 max-w-xs text-base leading-6 text-slate-700">
-              Workflow system that reduces repetitive inbox handling.
-            </p>
-            <EmailWorkflowVisual />
-          </article>
+            return (
+              <article className={index === 0 ? "relative p-6 sm:p-8" : "relative border-t border-line p-6 sm:p-8 lg:border-t-0"} key={project.slug}>
+                <ProofLink href={project.externalLinks[0] ?? "#"} label={project.title} />
+                <ProofBadge>{project.category}</ProofBadge>
+                <h3 className="mt-6 font-display text-3xl tracking-[-0.035em] text-signal-900">{project.title}</h3>
+                <p className="mt-3 max-w-xs text-base leading-6 text-slate-700">{project.visualText}</p>
+                {Visual ? <Visual /> : null}
+              </article>
+            );
+          })}
         </div>
       </Container>
     </section>

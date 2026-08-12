@@ -4,6 +4,7 @@ import { resolvePublicSupabaseUrl } from "./src/shared/config/public-supabase-ur
 const supabaseUrl = resolvePublicSupabaseUrl();
 
 const nextConfig: NextConfig = {
+  cacheComponents: true,
   images: {
     remotePatterns: [new URL("/storage/v1/object/public/portfolio-media/**", supabaseUrl)],
   },

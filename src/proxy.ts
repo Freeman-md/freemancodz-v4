@@ -1,4 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
+import { getAdminEmail } from "@/server/infrastructure/config/env";
+import { refreshSupabaseAuth } from "@/server/infrastructure/supabase/refresh-supabase-auth";
 
 const allowedPageRoutes = new Set(["/", "/work", "/about", "/audit"]);
 
@@ -12,7 +14,7 @@ function normalizePagePath(path: string) {
   return path !== "/" ? path.replace(/\/$/, "") : path;
 }
 
-export function proxy(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const path = req.nextUrl.pathname;
 
   const normalizedPath = normalizePagePath(path);
@@ -26,22 +28,34 @@ export function proxy(req: NextRequest) {
 
   const isApiRoute = path.startsWith("/api");
 
+  const isAdminRoute = normalizedPath === "/admin" || normalizedPath.startsWith("/admin/");
+
+  const isAuthRoute = normalizedPath.startsWith("/auth/");
+
+  if (isAdminRoute || isAuthRoute) {
+    const { response, claims } = await refreshSupabaseAuth(req);
+
+    const isApprovedAdmin =
+      typeof claims?.email === "string" && claims.email.toLowerCase() === getAdminEmail();
+
+    if (isAdminRoute && normalizedPath !== "/admin/login" && !isApprovedAdmin) {
+      return NextResponse.redirect(new URL("/admin/login", req.url), {
+        headers: response.headers,
+      });
+    }
+
+    if (normalizedPath === "/admin/login" && isApprovedAdmin) {
+      return NextResponse.redirect(new URL("/admin", req.url), { headers: response.headers });
+    }
+
+    return response;
+  }
+
   const isAllowedRoute = allowedPageRoutes.has(normalizedPath) || allowedGeneratedRoutes.has(path);
 
   if (isAsset || isApiRoute || isAllowedRoute) {
     return NextResponse.next();
   }
-
-  console.log({
-    blocked: true,
-    path,
-    country: req.headers.get("x-vercel-ip-country"),
-    city: req.headers.get("x-vercel-ip-city"),
-    userAgent: req.headers.get("user-agent"),
-    referer: req.headers.get("referer"),
-    ip: req.headers.get("x-forwarded-for"),
-    time: new Date().toISOString(),
-  });
 
   return new NextResponse("Not found", { status: 404 });
 }

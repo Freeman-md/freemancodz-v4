@@ -1,6 +1,6 @@
 # Milestone 15: Portfolio Content Backend Rebuild
 
-**Status:** Frozen
+**Status:** Archived
 **Version:** 1.0.0  
 **Last Updated:** 2026-08-12  
 **Depends On:** Milestone 14  
