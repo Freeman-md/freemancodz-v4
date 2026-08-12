@@ -1,5 +1,6 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
+import { MAX_PORTFOLIO_MEDIA_BYTES } from "@/contracts/portfolio-admin.contract";
 import type { ILogger } from "@/server/infrastructure/logging/logger.interface";
 import type { IMediaBlockAdministrationRepository } from "../interfaces/media-block.repository.interface";
 import type {
@@ -7,6 +8,7 @@ import type {
   ReplacePortfolioMediaInput,
 } from "../interfaces/portfolio-media.service.interface";
 import type { IProfileAdministrationRepository } from "../interfaces/profile.repository.interface";
+import type { IProjectAdministrationRepository } from "../interfaces/project.repository.interface";
 import type { IPortfolioMediaStorageProvider } from "../interfaces/supabase-storage.provider.interface";
 
 const ALLOWED_MEDIA_TYPES = new Set([
@@ -17,8 +19,6 @@ const ALLOWED_MEDIA_TYPES = new Set([
   "video/mp4",
   "video/webm",
 ]);
-
-export const MAX_PORTFOLIO_MEDIA_BYTES = 8 * 1024 * 1024;
 
 export class PortfolioMediaError extends Error {
   constructor(message: string) {
@@ -32,12 +32,13 @@ export class PortfolioMediaService implements IPortfolioMediaService {
     private readonly storage: IPortfolioMediaStorageProvider,
     private readonly profiles: IProfileAdministrationRepository,
     private readonly media: IMediaBlockAdministrationRepository,
+    private readonly projects: IProjectAdministrationRepository,
     private readonly logger: ILogger,
   ) {}
 
   async replaceMedia(input: ReplacePortfolioMediaInput) {
     this.validate(input);
-    const previousSource = await this.getPreviousSource(input.owner);
+    const ownership = await this.getOwnership(input.owner);
 
     const folder = input.owner.type === "profile" ? "images/profile" : "media";
 
@@ -52,15 +53,19 @@ export class PortfolioMediaService implements IPortfolioMediaService {
     try {
       if (input.owner.type === "profile") {
         await this.profiles.updateCoverImage(source);
+      } else if (ownership.mediaBlockId) {
+        await this.media.updateSource(ownership.mediaBlockId, source);
       } else {
-        await this.media.updateSource(input.owner.id, source);
+        throw new PortfolioMediaError("Media ownership could not be resolved.");
       }
     } catch {
       await this.removeCompensatingObject(objectPath);
       throw new PortfolioMediaError("Media metadata could not be updated.");
     }
 
-    const oldObjectPath = previousSource ? this.storage.getObjectPath(previousSource) : null;
+    const oldObjectPath = ownership.previousSource
+      ? this.storage.getObjectPath(ownership.previousSource)
+      : null;
 
     let cleanupWarning = false;
 
@@ -76,7 +81,7 @@ export class PortfolioMediaService implements IPortfolioMediaService {
       }
     }
 
-    return { source, cleanupWarning };
+    return { source, cleanupWarning, projectSlug: ownership.projectSlug };
   }
 
   private validate(input: ReplacePortfolioMediaInput) {
@@ -93,9 +98,23 @@ export class PortfolioMediaService implements IPortfolioMediaService {
     }
   }
 
-  private async getPreviousSource(owner: ReplacePortfolioMediaInput["owner"]) {
+  private async getOwnership(owner: ReplacePortfolioMediaInput["owner"]) {
     if (owner.type === "profile") {
-      return (await this.profiles.findSingleton()).coverImage;
+      return { previousSource: (await this.profiles.findSingleton()).coverImage };
+    }
+
+    if (owner.type === "project-cover") {
+      const project = await this.projects.findById(owner.id);
+
+      if (!project?.cover) {
+        throw new PortfolioMediaError("Project does not have a replaceable cover.");
+      }
+
+      return {
+        previousSource: project.cover.source,
+        mediaBlockId: project.cover.id,
+        projectSlug: project.slug,
+      };
     }
 
     const record = await this.media.findById(owner.id);
@@ -104,7 +123,7 @@ export class PortfolioMediaService implements IPortfolioMediaService {
       throw new PortfolioMediaError("Media record was not found.");
     }
 
-    return record.source;
+    return { previousSource: record.source, mediaBlockId: record.id };
   }
 
   private async removeCompensatingObject(objectPath: string) {

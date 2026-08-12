@@ -30,4 +30,10 @@ export type ReusableBlockReferences = {
 
 export type MediaOwner =
   | { type: "profile" }
-  | { type: "media-block"; id: string };
+  | { type: "media-block"; id: string }
+  | { type: "project-cover"; id: string };
+
+export type ProjectUpdateResult = {
+  slug: string;
+  collectionChanged: boolean;
+};

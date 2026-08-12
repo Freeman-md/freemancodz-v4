@@ -17,6 +17,7 @@ import type {
   UpsertIconBlockInput,
   UpsertMediaBlockInput,
   UpsertProjectInput,
+  ProjectUpdateResult,
 } from "../models/portfolio-administration";
 
 const PROTECTED_PROJECT_SLUGS = new Set([
@@ -130,8 +131,23 @@ export class PortfolioAdministrationService implements IPortfolioAdministrationS
     return this.projects.create(input);
   }
 
-  async updateProject(id: string, input: UpsertProjectInput) {
+  async updateProject(id: string, input: UpsertProjectInput): Promise<ProjectUpdateResult> {
+    const existing = await this.projects.findById(id);
+
+    if (!existing) {
+      throw new PortfolioAdministrationError("Project was not found.");
+    }
+
+    if (input.slug !== existing.slug) {
+      throw new PortfolioAdministrationError("Project slugs are immutable after creation.");
+    }
+
     await this.projects.update(id, input);
+
+    return {
+      slug: existing.slug,
+      collectionChanged: input.order !== existing.order || input.featured !== existing.featured,
+    };
   }
 
   async deleteProject(id: string) {

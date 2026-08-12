@@ -1,0 +1,141 @@
+import {
+  MAX_PORTFOLIO_MEDIA_REQUEST_BYTES,
+  mediaOwnerSchema,
+} from "@/contracts/portfolio-admin.contract";
+import type { IAdminAuthService } from "@/server/modules/admin-auth/public";
+import { AdminAuthenticationError } from "@/server/modules/admin-auth/public";
+import { type IPortfolioMediaService, PortfolioCacheTag } from "@/server/modules/portfolio/public";
+
+const mediaExtensions: Record<string, string> = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+  "image/gif": "gif",
+  "video/mp4": "mp4",
+  "video/webm": "webm",
+};
+
+class MediaRequestTooLargeError extends Error {}
+
+export type MediaUploadDependencies = {
+  auth: Pick<IAdminAuthService, "requireAdmin">;
+  media: IPortfolioMediaService;
+  revalidate: (tag: string) => void;
+};
+
+function getOwnerCacheTag(
+  owner: Parameters<IPortfolioMediaService["replaceMedia"]>[0]["owner"],
+  projectSlug?: string,
+) {
+  if (projectSlug) {
+    return PortfolioCacheTag.project(projectSlug);
+  }
+
+  if (owner.type === "profile") {
+    return PortfolioCacheTag.profile;
+  }
+
+  return PortfolioCacheTag.mediaBlock(owner.id);
+}
+
+async function readBoundedMultipart(request: Request) {
+  const contentType = request.headers.get("content-type");
+
+  if (!contentType?.toLowerCase().startsWith("multipart/form-data;")) {
+    throw new Error("Invalid media request.");
+  }
+
+  const contentLength = Number(request.headers.get("content-length"));
+
+  if (Number.isFinite(contentLength) && contentLength > MAX_PORTFOLIO_MEDIA_REQUEST_BYTES) {
+    throw new MediaRequestTooLargeError();
+  }
+
+  if (!request.body) {
+    throw new Error("Invalid media request.");
+  }
+
+  const reader = request.body.getReader();
+
+  const chunks: Uint8Array[] = [];
+
+  let totalBytes = 0;
+
+  while (true) {
+    const { done, value } = await reader.read();
+
+    if (done) {
+      break;
+    }
+
+    totalBytes += value.byteLength;
+
+    if (totalBytes > MAX_PORTFOLIO_MEDIA_REQUEST_BYTES) {
+      await reader.cancel();
+      throw new MediaRequestTooLargeError();
+    }
+
+    chunks.push(value);
+  }
+
+  const body = new Uint8Array(totalBytes);
+
+  let offset = 0;
+
+  for (const chunk of chunks) {
+    body.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+
+  return new Response(body, { headers: { "content-type": contentType } }).formData();
+}
+
+export async function handlePortfolioMediaUpload(
+  request: Request,
+  dependencies: MediaUploadDependencies,
+) {
+  try {
+    await dependencies.auth.requireAdmin();
+    const formData = await readBoundedMultipart(request);
+
+    const file = formData.get("file");
+
+    const ownerValue = formData.get("owner");
+
+    if (!(file instanceof File) || typeof ownerValue !== "string") {
+      return Response.json({ message: "Choose a media file and destination." }, { status: 400 });
+    }
+
+    const owner = mediaOwnerSchema.parse(JSON.parse(ownerValue));
+
+    const fileExtension = mediaExtensions[file.type];
+
+    if (!fileExtension) {
+      return Response.json({ message: "This media type is not supported." }, { status: 400 });
+    }
+
+    const result = await dependencies.media.replaceMedia({
+      owner,
+      body: new Uint8Array(await file.arrayBuffer()),
+      contentType: file.type,
+      fileExtension,
+    });
+
+    dependencies.revalidate(getOwnerCacheTag(owner, result.projectSlug));
+
+    return Response.json(result, { headers: { "Cache-Control": "private, no-store" } });
+  } catch (error) {
+    if (error instanceof AdminAuthenticationError) {
+      return Response.json(
+        { message: error.code === "UNAUTHENTICATED" ? "Authentication required." : "Not authorised." },
+        { status: error.code === "UNAUTHENTICATED" ? 401 : 403 },
+      );
+    }
+
+    if (error instanceof MediaRequestTooLargeError) {
+      return Response.json({ message: "Media request exceeds the 8 MB file boundary." }, { status: 413 });
+    }
+
+    return Response.json({ message: "Media could not be updated." }, { status: 400 });
+  }
+}

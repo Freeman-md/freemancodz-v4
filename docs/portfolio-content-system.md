@@ -48,7 +48,7 @@ Provider errors are normalized before reaching a client. Request correctness doe
 
 There is one Profile. ContentBlocks form URL-identified page trees and relate explicitly to reusable IconBlocks, ActionBlocks and MediaBlocks. ActionBlock and MediaBlock are typed extensions of IconBlock. Projects and Experiences are independent ordered collections; Experience has ordered icon relations and Project may point to one MediaBlock cover.
 
-Key invariants: no generic page builder, no executable JSX stored in content, no arbitrary visual identifiers, no duplicate page-specific Profiles, no unsafe reusable-block deletion, and no deletion of the three canonical project slugs used by curated public selectors. Creating a Project does not automatically add it to Home or Audit.
+Key invariants: no generic page builder, no executable JSX stored in content, no arbitrary visual identifiers, no duplicate page-specific Profiles, no unsafe reusable-block deletion, and no deletion of the three canonical project slugs used by curated public selectors. Project slugs are immutable after creation because selectors and cache identity depend on them. Creating a Project does not automatically add it to Home or Audit.
 
 The approved sources define no colour token palette, so the admin preserves the default `null` colour only. Profile deletion is deliberately absent.
 
@@ -62,11 +62,11 @@ The approved sources define no colour token palette, so the admin preserves the 
 
 `PortfolioCacheTag` centrally names page, profile, projects/project slug, experiences/experience ID, content-block, icon-block, media-block and action-block tags. Each cached page registers its page tag plus every entity dependency discovered in its composed result. A shared Pay4Me Project therefore registers on Home, Work and Audit without broad site invalidation.
 
-Server Actions call `updateTag()` only after a successful database write for immediate read-your-own-write behaviour. The media Route Handler calls `revalidateTag(tag, "max")` after storage and metadata succeed. Profile and collection changes invalidate `portfolio:profile`; Project collection changes invalidate `portfolio:projects`; reusable and section edits invalidate their entity tag. Failed writes do not invalidate caches.
+Server Actions call `updateTag()` only after a successful database write for immediate read-your-own-write behaviour. The media Route Handler calls `revalidateTag(tag, "max")` after storage and metadata succeed. Profile and collection changes invalidate `portfolio:profile`. Ordinary Project field edits invalidate only `portfolio:project:<slug>`; create/delete and membership/order changes additionally invalidate `portfolio:projects`. Reusable and section edits invalidate their entity tag. Failed writes do not invalidate caches.
 
 ## 8. Admin
 
-Open `/admin`. The information architecture is Overview, Pages, Profile, Projects, Experience, Media and Reusable blocks. Editors expose domain fields, controlled icon/visual selectors, explicit relation selection/order, guarded deletion and confirmation. Projects and Experiences support create/update/delete; reusable records refuse deletion while referenced; the Profile is update-only.
+Open `/admin`. The information architecture is Overview, Pages, Profile, Projects, Experience, Media and Reusable blocks. Editors expose domain fields, controlled icon/visual selectors, child/reusable relation ordering, Project markdown, guarded deletion and confirmation. Action destinations accept canonical site-relative paths such as `/work` and `/audit`, or safe HTTP(S) URLs. Projects and Experiences support create/update/delete; reusable records refuse deletion while referenced; the Profile is update-only.
 
 The admin is intentionally not a schema editor, arbitrary component builder, CSS editor, generic database console or indexing console. Public selection rules and static mapping exceptions remain application-defined.
 
@@ -88,7 +88,9 @@ Required Auth configuration:
 
 The public `portfolio-media` bucket remains the managed asset store. Bootstrap paths remain stable; admin replacements use unique versioned paths under `images/profile/<uuid>.<ext>` or `media/<uuid>.<ext>`. Allowed uploads are JPEG, PNG, WebP, GIF, MP4 and WebM, from 1 byte through 8 MB.
 
-Replacement order is upload new object → update database source → delete the previous managed object. If the database write fails, the new object is removed. If old-object cleanup fails after a successful database write, the new source remains canonical and the UI reports a cleanup warning. Only public URLs from the managed bucket are interpreted as removable object paths. `SUPABASE_SERVICE_ROLE_KEY` is server-only.
+Replacement order is upload new object → update database source → delete the previous managed object. If the database write fails, the new object is removed. If old-object cleanup fails after a successful database write, the new source remains canonical and the UI reports a cleanup warning. Existing Project covers are selectable as owned upload targets; Projects without covers are not given invented ones. Only public URLs from the managed bucket are interpreted as removable object paths. `SUPABASE_SERVICE_ROLE_KEY` is server-only.
+
+The 8 MB rule is enforced before unbounded multipart parsing. Requests with a declared `Content-Length` above 8 MB plus 64 KiB of multipart overhead are rejected with `413`; requests without a trustworthy length are read incrementally and cancelled at that same hard raw-request bound before `formData()` is called. The decoded file is independently limited to exactly 8 MB by the media service. Next.js Proxy cloning is also capped with the supported `experimental.proxyClientMaxBodySize: "9mb"`; that platform setting bounds Proxy buffering, while the Route Handler provides the authoritative rejection.
 
 The CV remains the fixed `documents/cv` bucket object established by Milestone 15; replace it through the guarded bootstrap/storage operation. No CV database model was added.
 

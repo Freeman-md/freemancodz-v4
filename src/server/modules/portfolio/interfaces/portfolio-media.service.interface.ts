@@ -10,6 +10,7 @@ export type ReplacePortfolioMediaInput = {
 export type ReplacePortfolioMediaResult = {
   source: string;
   cleanupWarning: boolean;
+  projectSlug?: string;
 };
 
 export interface IPortfolioMediaService {

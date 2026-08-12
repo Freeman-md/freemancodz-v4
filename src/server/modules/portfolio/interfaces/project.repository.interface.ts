@@ -7,6 +7,7 @@ export interface IProjectRepository {
   findFeatured(): Promise<ProjectWithCover[]>;
 }
 export interface IProjectAdministrationRepository extends IProjectRepository {
+  findById(id: string): Promise<ProjectWithCover | null>;
   create(input: UpsertProjectInput): Promise<string>;
   update(id: string, input: UpsertProjectInput): Promise<void>;
   delete(id: string): Promise<void>;

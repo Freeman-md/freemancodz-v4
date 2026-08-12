@@ -15,6 +15,10 @@ export class ProjectRepository implements IProjectAdministrationRepository {
     return this.database.project.findUnique({ where: { slug }, include });
   }
 
+  findById(id: string) {
+    return this.database.project.findUnique({ where: { id }, include });
+  }
+
   findBySlugs(slugs: string[]) {
     return this.database.project.findMany({
       where: { slug: { in: slugs } },

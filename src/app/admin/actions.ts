@@ -20,6 +20,8 @@ import {
   PortfolioAdministrationError,
   PortfolioCacheTag,
 } from "@/server/modules/portfolio/public";
+import { invalidateProjectUpdate } from "./project-cache-invalidation";
+import { runAuthorizedAdminMutation } from "./admin-action-boundary";
 
 export type AdminActionResult = {
   status: "idle" | "success" | "error";
@@ -49,12 +51,16 @@ function failure(error: unknown): AdminActionResult {
 }
 
 async function run(operation: () => Promise<AdminActionResult>) {
-  await adminAuthService.requireAdmin();
-  try {
-    return await operation();
-  } catch (error) {
-    return failure(error);
-  }
+  return runAuthorizedAdminMutation(
+    () => adminAuthService.requireAdmin(),
+    async () => {
+      try {
+        return await operation();
+      } catch (error) {
+        return failure(error);
+      }
+    },
+  );
 }
 
 export async function updateProfileAction(input: unknown) {
@@ -218,8 +224,9 @@ export async function updateProjectAction(input: unknown) {
 
     const parsed = upsertProjectSchema.parse(input);
 
-    await portfolioAdministrationService.updateProject(id, parsed);
-    updateTag(PortfolioCacheTag.projects);
+    const result = await portfolioAdministrationService.updateProject(id, parsed);
+
+    invalidateProjectUpdate(result, updateTag);
 
     return success("Project saved.", id);
   });

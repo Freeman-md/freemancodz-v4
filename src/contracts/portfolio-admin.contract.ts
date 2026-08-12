@@ -1,6 +1,9 @@
 import { z } from "zod";
 import { portfolioIconNameSchema, projectVisualNameSchema } from "./portfolio-presentation.contract";
 
+export const MAX_PORTFOLIO_MEDIA_BYTES = 8 * 1024 * 1024;
+export const MAX_PORTFOLIO_MEDIA_REQUEST_BYTES = MAX_PORTFOLIO_MEDIA_BYTES + 64 * 1024;
+
 const requiredText = (label: string, maximum = 4_000) =>
   z.string().trim().min(1, `${label} is required.`).max(maximum, `${label} is too long.`);
 
@@ -61,10 +64,24 @@ const reusableIconFields = {
 
 export const upsertIconBlockSchema = z.object(reusableIconFields);
 
+export const actionDestinationSchema = z.string().trim().max(2_000).refine((value) => {
+  if (/^\/(?!\/)[^\s\\]*$/.test(value)) {
+    return true;
+  }
+
+  try {
+    const destination = new URL(value);
+
+    return destination.protocol === "https:" || destination.protocol === "http:";
+  } catch {
+    return false;
+  }
+}, "Use a safe site path or HTTP(S) URL.");
+
 export const upsertActionBlockSchema = z.object({
   ...reusableIconFields,
   variant: actionVariantSchema,
-  url: z.string().url().max(2_000).nullable(),
+  url: actionDestinationSchema.nullable(),
   assistantMessage: nullableText(4_000),
 }).refine(({ url, assistantMessage }) => Boolean(url || assistantMessage), {
   message: "Provide a destination URL or an assistant message.",
@@ -120,6 +137,7 @@ export const experienceIconsMutationSchema = z.object({ id: idSchema, items: ord
 export const mediaOwnerSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("profile") }),
   z.object({ type: z.literal("media-block"), id: idSchema }),
+  z.object({ type: z.literal("project-cover"), id: idSchema }),
 ]);
 
 export type PortfolioAdminPage = z.infer<typeof portfolioPageSchema>;

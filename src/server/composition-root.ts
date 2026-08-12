@@ -122,5 +122,6 @@ export const portfolioMediaService: IPortfolioMediaService = new PortfolioMediaS
   new SupabaseStorageProvider(createSupabaseStorageClient),
   profiles,
   mediaBlockRepository,
+  projects,
   logger,
 );

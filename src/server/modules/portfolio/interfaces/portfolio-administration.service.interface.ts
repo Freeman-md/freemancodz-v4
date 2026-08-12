@@ -8,6 +8,7 @@ import type {
   UpsertIconBlockInput,
   UpsertMediaBlockInput,
   UpsertProjectInput,
+  ProjectUpdateResult,
 } from "../models/portfolio-administration";
 import type { PortfolioPagePath } from "./content-block.repository.interface";
 import type {
@@ -45,7 +46,7 @@ export interface IPortfolioAdministrationService {
   updateMediaBlock(id: string, input: UpsertMediaBlockInput): Promise<void>;
   deleteMediaBlock(id: string): Promise<void>;
   createProject(input: UpsertProjectInput): Promise<string>;
-  updateProject(id: string, input: UpsertProjectInput): Promise<void>;
+  updateProject(id: string, input: UpsertProjectInput): Promise<ProjectUpdateResult>;
   deleteProject(id: string): Promise<void>;
   createExperience(input: UpsertExperienceInput): Promise<string>;
   updateExperience(id: string, input: UpsertExperienceInput): Promise<void>;

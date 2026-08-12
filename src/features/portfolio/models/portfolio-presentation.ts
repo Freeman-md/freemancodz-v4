@@ -10,6 +10,18 @@ export type PortfolioAction = PortfolioIcon & {
   assistantMessage: string | null;
 };
 
+export function getPortfolioActionMode(action: PortfolioAction) {
+  if (action.assistantMessage) {
+    return "assistant" as const;
+  }
+
+  if (action.url) {
+    return "link" as const;
+  }
+
+  return "hidden" as const;
+}
+
 export type PortfolioMedia = PortfolioIcon & {
   source: string;
   altText: string;
