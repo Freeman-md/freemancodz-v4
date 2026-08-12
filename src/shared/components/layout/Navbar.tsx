@@ -20,19 +20,13 @@ export function Navbar() {
 
   return (
     <header className="sticky top-0 z-50 border-b border-line bg-white/95 backdrop-blur">
-      <nav className={`mx-auto flex h-16 items-center justify-between px-5 md:px-6 ${isHome ? "max-w-[1440px] lg:px-20" : "max-w-[1200px]"}`}>
-        <Link
-          href="/"
-          aria-label="Freemancodz home"
-          className="group block shrink-0"
-        >
+      <nav
+        className={`mx-auto flex h-16 items-center justify-between px-5 md:px-6 ${isHome ? "max-w-[1440px] lg:px-20" : "max-w-[1200px]"}`}
+      >
+        <Link href="/" aria-label="Freemancodz home" className="group block shrink-0">
           <span className="relative block">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              alt="Freemancodz"
-              className="block h-6 w-auto md:h-7"
-              src="/images/logo.svg"
-            />
+            <img alt="Freemancodz" className="block h-6 w-auto md:h-7" src="/images/logo.svg" />
             <span
               aria-hidden="true"
               className="pointer-events-none absolute inset-0 bg-violet-600 opacity-0 transition-opacity duration-200 [clip-path:inset(0_0_0_91%)] [mask-image:url('/images/logo.svg')] [mask-position:center] [mask-repeat:no-repeat] [mask-size:contain] group-hover:opacity-100"
@@ -85,8 +79,7 @@ export function Navbar() {
                 window.dispatchEvent(
                   new CustomEvent(assistantTriggerEvent, {
                     detail: {
-                      message:
-                        "I would like to claim my free customer journey and workflow audit.",
+                      message: "I would like to claim my free customer journey and workflow audit.",
                     },
                   }),
                 );

@@ -1,6 +1,6 @@
 # Milestone 16: Portfolio Frontend Integration & Content Admin
 
-**Status:** Draft  
+**Status:** Frozen
 **Version:** 1.0.0  
 **Last Updated:** 2026-08-12  
 **Depends On:** Milestone 15  

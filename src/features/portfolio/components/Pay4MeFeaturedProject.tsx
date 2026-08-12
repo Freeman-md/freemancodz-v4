@@ -8,22 +8,25 @@ import {
 } from "@/features/portfolio/components/PortfolioProjectElements";
 import { FeaturedProject } from "@/shared/components/marketing/FeaturedProject";
 import { buttonVariants } from "@/shared/components/ui/Button";
+import type { PortfolioProject } from "../models/portfolio-presentation";
 
-export function Pay4MeFeaturedProject() {
+export function Pay4MeFeaturedProject({ project }: { project: PortfolioProject }) {
+  const href = project.externalLinks[0] ?? "#";
+
   return (
     <FeaturedProject
       actions={
         <>
           <a
             className={buttonVariants({ size: "lg", variant: "signal" })}
-            href="https://withradius.com"
+            href={href}
             rel="noreferrer"
             target="_blank"
           >
             View Case Study
             <ArrowUpRight aria-hidden="true" className="size-4" />
           </a>
-          <StudyLink href="https://withradius.com" label="View Live" />
+          <StudyLink href={href} label="View Live" />
         </>
       }
       meta={
@@ -31,31 +34,28 @@ export function Pay4MeFeaturedProject() {
           <CaseBadge>
             <Star aria-hidden="true" className="size-3 fill-current" /> Featured
           </CaseBadge>
-          <CaseBadge>Customer-facing product · Fintech</CaseBadge>
+          <CaseBadge>{project.category}</CaseBadge>
         </>
       }
-      title="Pay4Me / WithRadius"
+      title={project.title}
       visual={
         <Image
-          alt="WithRadius homepage showing its international payment experience"
+          alt={project.cover?.altText ?? project.title}
           className="object-cover object-top"
           fill
           sizes="(min-width: 1024px) 55vw, 100vw"
-          src="/images/work/withradius-hero.jpg"
+          src={project.cover?.source ?? "/images/work/withradius-hero.jpg"}
         />
       }
     >
       <StudyPoint icon={ShieldCheck} title="Problem">
-        International users needed clear, dependable experiences for important onboarding and payment
-        journeys.
+        {project.problem}
       </StudyPoint>
       <StudyPoint icon={Wrench} title="Solution">
-        Freeman built and supported production customer-facing functionality across interfaces, onboarding,
-        payments and backend API integrations.
+        {project.solution}
       </StudyPoint>
       <StudyPoint icon={TrendingUp} title="Outcome">
-        More than <strong className="text-signal-700">US$500K</strong> processed through production payment
-        workflows.
+        {project.outcome}
       </StudyPoint>
     </FeaturedProject>
   );

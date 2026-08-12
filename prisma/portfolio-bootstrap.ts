@@ -12,35 +12,6 @@ import {
   projectSeeds,
 } from "./portfolio-seed-data";
 
-export const MANAGED_PORTFOLIO_ASSETS = [
-  { objectPath: "images/me", filename: "me", contentType: "image/jpeg" },
-  {
-    objectPath: "images/strength-training",
-    filename: "strength-training",
-    contentType: "image/jpeg",
-  },
-  { objectPath: "images/running", filename: "running", contentType: "image/jpeg" },
-  { objectPath: "images/community", filename: "community", contentType: "image/jpeg" },
-  { objectPath: "images/learning", filename: "learning", contentType: "image/jpeg" },
-  { objectPath: "documents/cv", filename: "cv", contentType: "application/pdf" },
-] as const;
-
-export async function bootstrapMedia(
-  storage: ISupabaseStorageProvider,
-  load: (filename: string) => Promise<Uint8Array>,
-) {
-  await storage.ensurePublicBucket();
-  for (const asset of MANAGED_PORTFOLIO_ASSETS) {
-    if (!(await storage.hasObject(asset.objectPath))) {
-      await storage.uploadIfMissing({
-        objectPath: asset.objectPath,
-        body: await load(asset.filename),
-        contentType: asset.contentType,
-      });
-    }
-  }
-}
-
 export async function portfolioIsInitialised(database: PrismaClient) {
   const counts = await Promise.all([
     database.profile.count(),

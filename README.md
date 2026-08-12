@@ -2,6 +2,8 @@
 
 This is a Next.js App Router portfolio. The current pages remain component-driven while the portfolio content backend is stored in PostgreSQL through Prisma. The floating assistant streams answers from OpenAI with existing search-index context.
 
+See [Portfolio Content System](docs/portfolio-content-system.md) for the completed content architecture, admin, authentication, caching, media and operations guide.
+
 ## Structure
 
 - `src/app` contains routes, pages, layouts, and thin HTTP adapters.
@@ -23,7 +25,7 @@ npm run prisma:generate
 npm run dev
 ```
 
-Provide `DATABASE_URL` for Prisma. Portfolio storage requires `NEXT_PUBLIC_SUPABASE_URL`, server-only `SUPABASE_SERVICE_ROLE_KEY`, and `PORTFOLIO_MEDIA_SOURCE_DIR` containing the six approved extensionless files (`me`, `strength-training`, `running`, `community`, `learning`, and `cv`). `NEXT_PUBLIC_SUPABASE_URL` must be a valid HTTP(S) project URL outside local development; only an explicit development runtime may fall back to local Supabase at `127.0.0.1:54321`. Assistant operations additionally require `OPENAI_API_KEY`.
+Provide `DATABASE_URL` for Prisma. Portfolio storage requires `NEXT_PUBLIC_SUPABASE_URL` and server-only `SUPABASE_SERVICE_ROLE_KEY`. Bootstrap creates or verifies the public `portfolio-media` bucket but does not require or upload local media files; media can be added later through the protected admin. `NEXT_PUBLIC_SUPABASE_URL` must be a valid HTTP(S) project URL outside local development; only an explicit development runtime may fall back to local Supabase at `127.0.0.1:54321`. Assistant operations additionally require `OPENAI_API_KEY`.
 
 Prisma migrations in `prisma/migrations` are the only migration source of truth. The Supabase JavaScript client is server-only and used solely for the public `portfolio-media` Object Storage bucket.
 
@@ -41,7 +43,7 @@ The disposable PostgreSQL regression suite requires an admin connection to a non
 PORTFOLIO_TEST_DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54332/postgres npm run test:portfolio:database
 ```
 
-Production is deliberately two guarded operations: `npm run prisma:migrate:production`, then `npm run portfolio:bootstrap:production -- --confirm-production`. The confirmation argument must be supplied by the operator; it is not built into the package script. The production bootstrap prints database/storage targets, uploads only missing media objects, and refuses to overwrite any initialized portfolio-domain table.
+Production is deliberately two guarded operations: `npm run prisma:migrate:production`, then `npm run portfolio:bootstrap:production -- --confirm-production`. The confirmation argument must be supplied by the operator; it is not built into the package script. The production bootstrap prints database/storage targets, creates or verifies the public media bucket, and refuses to overwrite any initialized portfolio-domain table. It does not require or upload media objects.
 
 Managed Profile and Outside Engineering values are stored as environment-correct public Supabase URLs. The CV is not a database entity; the live site resolves `documents/cv` through the same public bucket. Repo-public Project covers remain `/images/work/*` paths.
 

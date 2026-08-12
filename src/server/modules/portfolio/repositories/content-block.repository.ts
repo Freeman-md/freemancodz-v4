@@ -1,10 +1,14 @@
 import "server-only";
 import type { Prisma, PrismaClient } from "@/generated/prisma/client";
 import type {
-  IContentBlockRepository,
+  IContentBlockAdministrationRepository,
   PortfolioPagePath,
 } from "../interfaces/content-block.repository.interface";
 import type { ContentBlockNode } from "../models/portfolio-records";
+import type {
+  OrderedRelationInput,
+  UpdateContentBlockInput,
+} from "../models/portfolio-administration";
 
 const relations = {
   iconBlocks: { orderBy: { order: "asc" }, include: { iconBlock: true } },
@@ -18,7 +22,7 @@ const relations = {
   },
 } satisfies Prisma.ContentBlockInclude;
 
-export class ContentBlockRepository implements IContentBlockRepository {
+export class ContentBlockRepository implements IContentBlockAdministrationRepository {
   constructor(private readonly database: PrismaClient) {}
 
   async findPageTree(page: PortfolioPagePath): Promise<ContentBlockNode[]> {
@@ -63,5 +67,94 @@ export class ContentBlockRepository implements IContentBlockRepository {
     }
 
     return roots.sort((left, right) => (left.order ?? 0) - (right.order ?? 0));
+  }
+
+  async update(id: string, input: UpdateContentBlockInput) {
+    await this.database.contentBlock.update({ where: { id }, data: input });
+  }
+
+  async replaceChildren(id: string, children: OrderedRelationInput[]) {
+    await this.database.$transaction(async (transaction) => {
+      const existing = await transaction.contentBlockChild.findMany({
+        where: { parentId: id },
+        select: { childId: true },
+      });
+
+      const existingIds = existing.map(({ childId }) => childId).toSorted();
+
+      const requestedIds = children.map(({ id: childId }) => childId).toSorted();
+
+      if (existingIds.join("\0") !== requestedIds.join("\0")) {
+        throw new Error("Known content-block children may be reordered but not replaced.");
+      }
+
+      await transaction.contentBlockChild.deleteMany({ where: { parentId: id } });
+      if (children.length > 0) {
+        await transaction.contentBlockChild.createMany({
+          data: children.map(({ id: childId, order }) => ({ parentId: id, childId, order })),
+        });
+      }
+    });
+  }
+
+  replaceIcons(id: string, icons: OrderedRelationInput[]) {
+    return this.replaceRelations("icon", id, icons);
+  }
+
+  replaceMedia(id: string, media: OrderedRelationInput[]) {
+    return this.replaceRelations("media", id, media);
+  }
+
+  replaceActions(id: string, actions: OrderedRelationInput[]) {
+    return this.replaceRelations("action", id, actions);
+  }
+
+  private async replaceRelations(
+    type: "icon" | "media" | "action",
+    contentBlockId: string,
+    items: OrderedRelationInput[],
+  ) {
+    await this.database.$transaction(async (transaction) => {
+      if (type === "icon") {
+        await transaction.contentBlockIconBlock.deleteMany({ where: { contentBlockId } });
+        if (items.length > 0) {
+          await transaction.contentBlockIconBlock.createMany({
+            data: items.map(({ id: iconBlockId, order }) => ({
+              contentBlockId,
+              iconBlockId,
+              order,
+            })),
+          });
+        }
+
+        return;
+      }
+
+      if (type === "media") {
+        await transaction.contentBlockMediaBlock.deleteMany({ where: { contentBlockId } });
+        if (items.length > 0) {
+          await transaction.contentBlockMediaBlock.createMany({
+            data: items.map(({ id: mediaBlockId, order }) => ({
+              contentBlockId,
+              mediaBlockId,
+              order,
+            })),
+          });
+        }
+
+        return;
+      }
+
+      await transaction.contentBlockActionBlock.deleteMany({ where: { contentBlockId } });
+      if (items.length > 0) {
+        await transaction.contentBlockActionBlock.createMany({
+          data: items.map(({ id: actionBlockId, order }) => ({
+            contentBlockId,
+            actionBlockId,
+            order,
+          })),
+        });
+      }
+    });
   }
 }

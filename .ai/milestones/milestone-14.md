@@ -101,7 +101,7 @@ Until then, the Audit page must not claim that a request has been saved, that Fr
 
 The page strategy is informed by:
 
-- Alex Hormozi’s *$100M Leads*, especially the lead-magnet principle of delivering real value and using the free material to demonstrate the value of the paid implementation;
+- Alex Hormozi’s _$100M Leads_, especially the lead-magnet principle of delivering real value and using the free material to demonstrate the value of the paid implementation;
 - Acquisition.com’s Lead Magnet Mastery and First 5 Clients material;
 - CXL guidance on clear value propositions, singular landing-page goals, customer language, necessary form friction and hypothesis-led optimisation;
 - Baymard form-usability research on reducing unnecessary fields, using clear persistent labels, explicitly marking optional fields and avoiding complex multi-column form layouts;

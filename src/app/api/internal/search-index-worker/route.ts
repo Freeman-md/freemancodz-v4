@@ -10,8 +10,6 @@ import {
 import type { ILogger } from "@/server/infrastructure/logging/logger.interface";
 import type { ISearchIndexService } from "@/server/modules/search-index/public";
 
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
 const DEFAULT_BATCH_LIMIT = 5;
 
 const MAX_BATCH_LIMIT = 20;

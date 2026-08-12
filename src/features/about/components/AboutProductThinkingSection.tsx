@@ -1,46 +1,14 @@
-import type { LucideIcon } from "lucide-react";
-import {
-  ArrowDown,
-  ArrowRight,
-  CircleCheck,
-  Download,
-  GitBranch,
-  Lightbulb,
-  Scale,
-  Search,
-  MousePointer2,
-  ShieldCheck,
-  SlidersHorizontal,
-  Target,
-} from "lucide-react";
+import { ArrowDown, ArrowRight } from "lucide-react";
 
 import { Container } from "@/shared/components/layout/Container";
 import { MarketingSectionHeading } from "@/shared/components/marketing/MarketingSectionHeading";
+import { PortfolioIcon } from "@/features/portfolio/components/PortfolioIcon";
+import type {
+  AboutPresentationData,
+  PortfolioIcon as PortfolioIconModel,
+} from "@/features/portfolio/models/portfolio-presentation";
 
-type FlowStep = {
-  icon: LucideIcon;
-  label: string;
-};
-
-const customerFlow: FlowStep[] = [
-  { icon: Search, label: "Find" },
-  { icon: Lightbulb, label: "Understand" },
-  { icon: Scale, label: "Decide" },
-  { icon: MousePointer2, label: "Act" },
-];
-
-const operationalFlow: FlowStep[] = [
-  { icon: Download, label: "Capture" },
-  { icon: GitBranch, label: "Route" },
-  { icon: Scale, label: "Decide" },
-  { icon: CircleCheck, label: "Complete" },
-];
-
-const principles: FlowStep[] = [
-  { icon: Target, label: "Understand the real problem first" },
-  { icon: SlidersHorizontal, label: "Automate the routine, keep judgement where it matters" },
-  { icon: ShieldCheck, label: "Reliability is part of the product" },
-];
+type FlowStep = PortfolioIconModel;
 
 function ProductFlow({
   title,
@@ -67,7 +35,7 @@ function ProductFlow({
         {title}
       </h3>
       <div className="mt-6 grid grid-cols-[auto_1fr_auto_1fr_auto_1fr_auto] items-start lg:mt-0">
-        {steps.map(({ icon: Icon, label }, index) => (
+        {steps.map(({ iconName, label }, index) => (
           <div className="contents" key={label}>
             <div className="flex min-w-0 flex-col items-center text-center">
               <div
@@ -77,7 +45,11 @@ function ProductFlow({
                     : "border-success-200 text-success-700"
                 }`}
               >
-                <Icon aria-hidden="true" className="size-6 stroke-[1.7] sm:size-7" />
+                <PortfolioIcon
+                  aria-hidden="true"
+                  className="size-6 stroke-[1.7] sm:size-7"
+                  name={iconName}
+                />
               </div>
               <p className="mt-3 text-xs font-medium leading-4 text-ink sm:text-sm">{label}</p>
             </div>
@@ -117,37 +89,43 @@ function Handoff() {
   );
 }
 
-export function AboutProductThinkingSection() {
+export function AboutProductThinkingSection({
+  profile,
+  thinking,
+}: Pick<AboutPresentationData, "profile" | "thinking">) {
   return (
     <section aria-labelledby="product-thinking-heading" className="py-20 sm:py-28">
       <Container>
         <MarketingSectionHeading
           align="left"
-          copy={
-            <p>
-              A product only works when the customer-facing experience and the operational workflow behind it
-              work together.
-            </p>
-          }
-          eyebrow="How I think about products"
+          copy={<p>{thinking.copy}</p>}
+          eyebrow={thinking.eyebrow}
           id="product-thinking-heading"
-          title="The interface is only half the product"
+          title={thinking.title}
         />
 
         <div className="mt-12 rounded-3xl border border-line bg-white p-4 shadow-soft sm:p-6">
-          <ProductFlow title="Customer-facing experience" steps={customerFlow} tone="signal" />
+          <ProductFlow
+            title={thinking.customer.title}
+            steps={thinking.customer.icons}
+            tone="signal"
+          />
           <Handoff />
-          <ProductFlow title="Operational workflow" steps={operationalFlow} tone="success" />
+          <ProductFlow
+            title={thinking.workflow.title}
+            steps={thinking.workflow.icons}
+            tone="success"
+          />
         </div>
 
         <div className="mt-10 grid gap-4 lg:grid-cols-3">
-          {principles.map(({ icon: Icon, label }) => (
+          {profile.thinkingPrinciples.map(({ iconName, label }) => (
             <article
               className="flex items-center gap-4 rounded-2xl border border-line bg-white p-4 shadow-soft sm:p-5"
               key={label}
             >
               <div className="flex size-12 shrink-0 items-center justify-center rounded-full border border-signal-100 bg-signal-50/50 text-signal-700">
-                <Icon aria-hidden="true" className="size-5 stroke-[1.7]" />
+                <PortfolioIcon aria-hidden="true" className="size-5 stroke-[1.7]" name={iconName} />
               </div>
               <p className="text-sm font-semibold leading-5 text-ink sm:text-base">{label}</p>
             </article>

@@ -1,24 +1,12 @@
-import {
-  ArrowRight,
-  Code2,
-  Layers3,
-  MessageCircleMore,
-  UserRound,
-  UsersRound,
-} from "lucide-react";
+import { Sparkles } from "lucide-react";
 
-import { AssistantTriggerButton } from "@/features/assistant/components/AssistantTriggerButton";
 import { Container } from "@/shared/components/layout/Container";
 import { MarketingSectionHeading } from "@/shared/components/marketing/MarketingSectionHeading";
+import type { WorkPresentationData } from "../models/portfolio-presentation";
+import { PortfolioAction } from "./PortfolioAction";
+import { PortfolioIcon } from "./PortfolioIcon";
 
-const conversationTopics = [
-  { icon: Layers3, label: "Projects" },
-  { icon: UserRound, label: "Roles" },
-  { icon: UsersRound, label: "Collaborations" },
-  { icon: Code2, label: "Product & engineering enquiries" },
-];
-
-export function WorkCtaSection() {
+export function WorkCtaSection({ closing }: Pick<WorkPresentationData, "closing">) {
   return (
     <section className="bg-white py-10 sm:py-16" id="work-cta">
       <Container className="max-w-[1440px]">
@@ -34,33 +22,31 @@ export function WorkCtaSection() {
 
           <div className="relative z-10 mx-auto max-w-4xl text-center">
             <MarketingSectionHeading
-              copy={
-                <p>
-                  Tell me what you&apos;re building, hiring for or trying to improve. My assistant will help
-                  get the right context across.
-                </p>
-              }
-              eyebrow="What's next?"
+              copy={<p>{closing.copy}</p>}
+              eyebrow={closing.eyebrow}
               id="work-cta-heading"
-              title="Seen something here that maps to what you're working on?"
+              title={closing.title}
             />
 
-            <AssistantTriggerButton
-              detail={{
-                message:
-                  "I’ve been looking through your work and I’d like to talk about something I’m working on.",
-              }}
-              variant="marketing"
-            >
-              <MessageCircleMore aria-hidden="true" className="size-7 sm:size-8" />
-              Start a Conversation
-              <ArrowRight aria-hidden="true" className="size-7 sm:size-8" />
-            </AssistantTriggerButton>
+            {closing.actions.map((action) => (
+              <PortfolioAction
+                action={action}
+                className="mx-auto mt-9 max-w-lg"
+                key={action.label}
+              />
+            ))}
 
             <ul className="mx-auto mt-12 max-w-4xl divide-y divide-line text-left sm:grid sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-4">
-              {conversationTopics.map(({ icon: Icon, label }) => (
-                <li className="flex items-center gap-4 px-4 py-5 text-base font-medium text-slate-900 sm:justify-center sm:px-6 sm:text-center" key={label}>
-                  <Icon aria-hidden="true" className="size-6 shrink-0 text-signal-600" />
+              {closing.icons.map(({ iconName, label }) => (
+                <li
+                  className="flex items-center gap-4 px-4 py-5 text-base font-medium text-slate-900 sm:justify-center sm:px-6 sm:text-center"
+                  key={label}
+                >
+                  <PortfolioIcon
+                    aria-hidden="true"
+                    className="size-6 shrink-0 text-signal-600"
+                    name={iconName}
+                  />
                   {label}
                 </li>
               ))}
@@ -74,9 +60,21 @@ export function WorkCtaSection() {
             preserveAspectRatio="none"
             viewBox="0 0 1400 260"
           >
-            <path d="M0 190C190 20 360 70 560 130C780 196 1010 210 1400 25" opacity=".75" stroke="currentColor" />
-            <path d="M0 210C210 46 400 92 590 148C825 218 1050 221 1400 58" opacity=".45" stroke="currentColor" />
-            <path d="M0 230C235 78 430 112 625 166C875 234 1100 230 1400 91" opacity=".25" stroke="currentColor" />
+            <path
+              d="M0 190C190 20 360 70 560 130C780 196 1010 210 1400 25"
+              opacity=".75"
+              stroke="currentColor"
+            />
+            <path
+              d="M0 210C210 46 400 92 590 148C825 218 1050 221 1400 58"
+              opacity=".45"
+              stroke="currentColor"
+            />
+            <path
+              d="M0 230C235 78 430 112 625 166C875 234 1100 230 1400 91"
+              opacity=".25"
+              stroke="currentColor"
+            />
             <circle cx="90" cy="132" fill="#2563eb" r="7" />
           </svg>
         </div>

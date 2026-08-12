@@ -9,7 +9,11 @@ export function SignalVisual() {
         fill="none"
         viewBox="0 0 620 400"
       >
-        <path d="M-20 240C100 166 132 304 255 236C380 167 397 61 645 121" stroke="currentColor" strokeWidth="1.25" />
+        <path
+          d="M-20 240C100 166 132 304 255 236C380 167 397 61 645 121"
+          stroke="currentColor"
+          strokeWidth="1.25"
+        />
         <path
           className="motion-safe:animate-signal-flow"
           d="M-8 108C134 164 172 76 302 126C420 170 463 337 648 270"

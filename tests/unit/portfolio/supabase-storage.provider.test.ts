@@ -11,7 +11,6 @@ function client(
   options: {
     bucket?: { public: boolean } | null;
     bucketError?: string;
-    downloadError?: string;
     uploadError?: string;
   } = {},
 ) {
@@ -24,9 +23,6 @@ function client(
     }),
     createBucket: async () => ({ error: null }),
     from: (bucket: string) => ({
-      download: async () => ({
-        error: options.downloadError ? { message: options.downloadError } : null,
-      }),
       upload: async (...args: unknown[]) => {
         uploads.push(args);
 
@@ -53,15 +49,14 @@ test("storage provider verifies the public bucket and produces public URLs", asy
     provider.getPublicUrl("images/me"),
     `https://project.supabase.co/storage/v1/object/public/${PORTFOLIO_MEDIA_BUCKET}/images/me`,
   );
-  assert.equal(await provider.hasObject("images/me"), true);
 });
 
-test("storage provider uploads missing typed assets and normalizes errors", async () => {
-  const fake = client({ downloadError: "not found" });
+test("storage provider uploads typed admin assets and normalizes errors", async () => {
+  const fake = client();
 
   const provider = new SupabaseStorageProvider(fake.client);
 
-  await provider.uploadIfMissing({
+  await provider.upload({
     objectPath: "documents/cv",
     body: new Uint8Array([1]),
     contentType: "application/pdf",
@@ -72,9 +67,7 @@ test("storage provider uploads missing typed assets and normalizes errors", asyn
     PortfolioStorageError,
   );
   await assert.rejects(
-    new SupabaseStorageProvider(
-      client({ downloadError: "not found", uploadError: "secret provider detail" }).client,
-    ).uploadIfMissing({
+    new SupabaseStorageProvider(client({ uploadError: "secret provider detail" }).client).upload({
       objectPath: "images/me",
       body: new Uint8Array([1]),
       contentType: "image/jpeg",

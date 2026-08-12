@@ -10,9 +10,7 @@ import {
   projectSeeds,
 } from "../../../prisma/portfolio-seed-data";
 import {
-  MANAGED_PORTFOLIO_ASSETS,
   assertProductionPortfolioIsUninitialised,
-  bootstrapMedia,
   portfolioIsInitialised,
   seedPortfolio,
 } from "../../../prisma/portfolio-bootstrap";
@@ -51,43 +49,6 @@ test("canonical seed values and relationship allocation match the approved artif
     actionSeeds.find(({ key }) => key === "action.work.conversation")?.assistantMessage,
     "I’ve been looking through your work and I’d like to talk about something I’m working on.",
   );
-});
-
-test("media bootstrap uses the six stable paths and skips existing objects", async () => {
-  const uploaded: string[] = [];
-
-  const loaded: string[] = [];
-
-  const storage: ISupabaseStorageProvider = {
-    ensurePublicBucket: async () => undefined,
-    hasObject: async (path) => path === "images/me",
-    uploadIfMissing: async ({ objectPath, contentType }) => {
-      uploaded.push(`${objectPath}:${contentType}`);
-
-      return `https://example.test/${objectPath}`;
-    },
-    getPublicUrl: (path) => `https://example.test/${path}`,
-  };
-
-  await bootstrapMedia(storage, async (filename) => {
-    loaded.push(filename);
-
-    return new Uint8Array([1]);
-  });
-  assert.deepEqual(
-    MANAGED_PORTFOLIO_ASSETS.map(({ objectPath }) => objectPath),
-    [
-      "images/me",
-      "images/strength-training",
-      "images/running",
-      "images/community",
-      "images/learning",
-      "documents/cv",
-    ],
-  );
-  assert.equal(uploaded.length, 5);
-  assert.equal(loaded.includes("me"), false);
-  assert.match(uploaded.at(-1)!, /^documents\/cv:application\/pdf$/);
 });
 
 test("production bootstrap refuses every independently initialised portfolio table", async () => {
@@ -162,8 +123,6 @@ test("a failed database seed transaction does not leave an initialised portfolio
 
   const storage: ISupabaseStorageProvider = {
     ensurePublicBucket: async () => undefined,
-    hasObject: async () => true,
-    uploadIfMissing: async ({ objectPath }) => `https://example.test/${objectPath}`,
     getPublicUrl: (objectPath) => `https://example.test/${objectPath}`,
   };
 

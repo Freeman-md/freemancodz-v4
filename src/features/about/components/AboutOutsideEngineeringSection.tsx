@@ -1,49 +1,37 @@
-import type { LucideIcon } from "lucide-react";
-import { BookOpen, Dumbbell, PersonStanding, Users } from "lucide-react";
-
 import { Container } from "@/shared/components/layout/Container";
 import { MarketingSectionHeading } from "@/shared/components/marketing/MarketingSectionHeading";
-import { siteAssetLinks } from "@/shared/config/links";
+import { PortfolioIcon } from "@/features/portfolio/components/PortfolioIcon";
+import type {
+  AboutPresentationData,
+  PortfolioMedia,
+} from "@/features/portfolio/models/portfolio-presentation";
 
-type OutsideInterest = {
-  icon: LucideIcon;
-  label: string;
-  src: string;
-};
-
-const outsideInterests: OutsideInterest[] = [
-  { icon: Dumbbell, label: "Strength", src: siteAssetLinks.outsideImages.Strength },
-  { icon: PersonStanding, label: "Endurance", src: siteAssetLinks.outsideImages.Endurance },
-  { icon: Users, label: "Community", src: siteAssetLinks.outsideImages.Community },
-  {
-    icon: BookOpen,
-    label: "Always Learning",
-    src: siteAssetLinks.outsideImages["Continuous Learning"],
-  },
-];
-
-function InterestCard({ interest }: { interest: OutsideInterest }) {
-  const Icon = interest.icon;
-
+function InterestCard({ interest }: { interest: PortfolioMedia }) {
   return (
     <article className="overflow-hidden rounded-2xl border border-line bg-white shadow-soft">
       <div className="aspect-[1.18] overflow-hidden bg-surface">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          alt={interest.label}
+          alt={interest.altText}
           className="size-full object-cover transition duration-500 hover:scale-[1.025]"
-          src={interest.src}
+          src={interest.source}
         />
       </div>
       <div className="flex items-center gap-4 px-5 py-5 sm:px-6">
-        <Icon aria-hidden="true" className="size-6 text-signal-600" />
+        <PortfolioIcon
+          aria-hidden="true"
+          className="size-6 text-signal-600"
+          name={interest.iconName}
+        />
         <h3 className="text-lg font-medium text-ink sm:text-xl">{interest.label}</h3>
       </div>
     </article>
   );
 }
 
-export function AboutOutsideEngineeringSection() {
+export function AboutOutsideEngineeringSection({
+  outsideEngineering,
+}: Pick<AboutPresentationData, "outsideEngineering">) {
   return (
     <section aria-labelledby="outside-engineering-heading" className="py-20 sm:py-28">
       <Container>
@@ -51,15 +39,15 @@ export function AboutOutsideEngineeringSection() {
           <div className="flex flex-col justify-center lg:pr-4">
             <MarketingSectionHeading
               align="left"
-              copy={<p>A few things that keep me grounded outside the work.</p>}
-              eyebrow="About me"
+              copy={<p>{outsideEngineering.copy}</p>}
+              eyebrow={outsideEngineering.eyebrow}
               id="outside-engineering-heading"
-              title="Outside Engineering"
+              title={outsideEngineering.title}
             />
           </div>
 
           <div className="mt-10 grid grid-cols-2 gap-4 lg:mt-0">
-            {outsideInterests.map((interest) => (
+            {outsideEngineering.media.map((interest) => (
               <InterestCard interest={interest} key={interest.label} />
             ))}
           </div>

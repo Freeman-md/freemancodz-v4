@@ -47,11 +47,14 @@ export function MarketingVisualCta({
             />
           </div>
 
-          <div className="mt-10 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:mt-0">
-            {visual}
-          </div>
+          <div className="mt-10 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:mt-0">{visual}</div>
 
-          <div className={cn("mt-10 flex min-w-0 flex-col lg:col-start-1 lg:row-start-2", actionAlignment)}>
+          <div
+            className={cn(
+              "mt-10 flex min-w-0 flex-col lg:col-start-1 lg:row-start-2",
+              actionAlignment,
+            )}
+          >
             {action}
             {helper}
           </div>

@@ -1,9 +1,6 @@
 import "server-only";
-import { readFile } from "node:fs/promises";
-import { resolve } from "node:path";
 import {
   assertProductionPortfolioIsUninitialised,
-  bootstrapMedia,
   resetPortfolio,
   seedPortfolio,
   verifyPortfolio,
@@ -29,19 +26,7 @@ async function main() {
   );
   console.info(`Storage target: ${storageTarget}/storage/v1/object/public/portfolio-media`);
 
-  const sourceDirectory = process.env.PORTFOLIO_MEDIA_SOURCE_DIR;
-
   const storage = new SupabaseStorageProvider(createSupabaseStorageClient());
-
-  await bootstrapMedia(storage, async (filename) => {
-    if (!sourceDirectory) {
-      throw new Error(
-        `Missing portfolio binary ${filename}. Set PORTFOLIO_MEDIA_SOURCE_DIR to the approved six source files.`,
-      );
-    }
-
-    return readFile(resolve(sourceDirectory, filename));
-  });
 
   if (production) {
     await assertProductionPortfolioIsUninitialised(prisma);
@@ -51,6 +36,7 @@ async function main() {
     await resetPortfolio(prisma);
   }
 
+  await storage.ensurePublicBucket();
   await seedPortfolio(prisma, storage);
   console.info("Portfolio bootstrap verified:", await verifyPortfolio(prisma));
   await prisma.$disconnect();
