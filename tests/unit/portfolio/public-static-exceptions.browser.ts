@@ -14,6 +14,7 @@ import {
 } from "@/features/audit/components/AuditProofSection";
 import { OPEN_PORTFOLIO_CHAT_EVENT } from "@/features/assistant/assistant.events";
 import { HomeImproveSection } from "@/features/portfolio/components/HomeImproveSection";
+import { HomeHero } from "@/features/portfolio/components/HomeHero";
 import { PortfolioAction } from "@/features/portfolio/components/PortfolioAction";
 import { WorkConnectionSection } from "@/features/portfolio/components/WorkConnectionSection";
 import {
@@ -22,6 +23,7 @@ import {
 } from "@/features/portfolio/portfolio-icon.registry";
 import type {
   AboutPresentationData,
+  HomePresentationData,
   PortfolioAction as PortfolioActionModel,
   PortfolioProject,
   PortfolioSection,
@@ -295,4 +297,27 @@ test("Audit preserves its mapped static timing and privacy guidance", () => {
   assert.match(text, /Dynamic audit hero/);
   assert.match(text, /Takes 2 - 3 minutes/);
   assert.match(text, /Free\. No obligation\. Your information is never shared\./);
+});
+
+test("HomeHero keeps a stable visual stage when the Profile portrait is unavailable", () => {
+  const profile: HomePresentationData["profile"] = {
+    name: "Freeman",
+    coverImage: null,
+    audience: [],
+  };
+
+  const withoutPortrait = renderToStaticMarkup(HomeHero({ hero: section("Home hero"), profile }));
+
+  assert.match(withoutPortrait, /min-h-\[30rem\]/);
+  assert.doesNotMatch(withoutPortrait, /<img/);
+
+  const withPortrait = renderToStaticMarkup(
+    HomeHero({
+      hero: section("Home hero"),
+      profile: { ...profile, coverImage: "/images/work/withradius-hero.jpg" },
+    }),
+  );
+
+  assert.match(withPortrait, /alt="Freeman"/);
+  assert.match(withPortrait, /_next\/image/);
 });

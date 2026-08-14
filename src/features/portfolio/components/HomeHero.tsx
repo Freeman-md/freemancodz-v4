@@ -28,8 +28,8 @@ function HeroSignalCards() {
 export function HomeHero({ hero, profile }: Pick<HomePresentationData, "hero" | "profile">) {
   return (
     <section className="relative overflow-hidden border-b border-line bg-[#fbf9f9]">
-      <Container className="grid min-h-[calc(100svh-4rem)] lg:grid-cols-[minmax(0,1.02fr)_minmax(32rem,0.98fr)]">
-        <div className="relative z-20 flex flex-col pb-10 pt-12 text-center lg:justify-center lg:pb-20 lg:pt-16 lg:text-left">
+      <Container className="grid min-h-[calc(100svh-4rem)] lg:gap-x-8 xl:gap-x-12 lg:grid-cols-[minmax(0,1.02fr)_minmax(32rem,0.98fr)]">
+        <div className="relative z-20 flex flex-col pb-5 pt-12 text-center sm:pb-6 lg:justify-center lg:pb-20 lg:pt-16 lg:text-left">
           <div className="mx-auto max-w-3xl lg:mx-0">
             <h1 className="mt-7 text-[clamp(1.9rem,8.4vw,2.2rem)] font-semibold leading-[1.08] tracking-[-0.05em] text-slate-950 lg:mt-8 lg:text-[clamp(3.25rem,3.8vw,3.75rem)] lg:leading-[1.04] lg:tracking-[-0.06em]">
               {hero.title}
@@ -81,15 +81,15 @@ export function HomeHero({ hero, profile }: Pick<HomePresentationData, "hero" | 
           </svg>
           <HeroSignalCards />
           {profile.coverImage ? (
-            <div className="absolute inset-x-0 bottom-0 top-[8%] z-10 lg:top-[6%]">
-            <Image
-              alt={profile.name}
-              className="object-contain object-bottom [mask-image:linear-gradient(to_bottom,black_84%,transparent_100%)]"
-              fill
-              priority
-              sizes="(min-width: 1024px) 50vw, 100vw"
-              src={profile.coverImage}
-            />
+            <div className="absolute inset-x-0 bottom-0 top-[8%] z-10 lg:left-[8%] lg:right-[8%] lg:top-[6%] xl:left-[10%] xl:right-[10%]">
+              <Image
+                alt={profile.name}
+                className="object-contain object-bottom [mask-image:linear-gradient(to_bottom,black_84%,transparent_100%)]"
+                fill
+                priority
+                sizes="(min-width: 1280px) 40vw, (min-width: 1024px) 42vw, 100vw"
+                src={profile.coverImage}
+              />
             </div>
           ) : null}
         </div>
