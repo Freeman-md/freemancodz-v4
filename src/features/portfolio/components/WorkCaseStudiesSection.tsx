@@ -22,7 +22,7 @@ export function WorkCaseStudiesSection({
 
   return (
     <section aria-labelledby="case-studies-heading" className="bg-[#fbf9f9] py-20 sm:py-28">
-      <Container className="max-w-[1340px]">
+      <Container>
         <MarketingSectionHeading
           copy={<p>{relevantWork.copy}</p>}
           eyebrow={relevantWork.eyebrow}

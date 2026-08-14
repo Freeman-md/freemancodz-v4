@@ -1,6 +1,7 @@
 import { CheckCircle2, MoveHorizontal, MoveVertical, Settings, UsersRound } from "lucide-react";
 
 import { MarketingSectionHeading } from "@/shared/components/marketing/MarketingSectionHeading";
+import { Container } from "@/shared/components/layout/Container";
 import type { PortfolioIcon as PortfolioIconModel } from "../models/portfolio-presentation";
 import type { HomePresentationData } from "../models/portfolio-presentation";
 import { PortfolioIcon } from "./PortfolioIcon";
@@ -88,8 +89,8 @@ function Handoff() {
 
 export function HomeImproveSection({ improve }: Pick<HomePresentationData, "improve">) {
   return (
-    <section className="border-b border-line bg-white px-5 py-24 sm:px-8 lg:py-32">
-      <div className="mx-auto max-w-[1360px]">
+    <section className="border-b border-line bg-white py-24 lg:py-32">
+      <Container>
         <MarketingSectionHeading
           copy={<p>{improve.copy}</p>}
           eyebrow={improve.eyebrow}
@@ -121,7 +122,7 @@ export function HomeImproveSection({ improve }: Pick<HomePresentationData, "impr
             Right action. Right next step.
           </div>
         </div>
-      </div>
+      </Container>
     </section>
   );
 }

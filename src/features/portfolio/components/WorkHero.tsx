@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { Container } from "@/shared/components/layout/Container";
 import type { WorkPresentationData } from "../models/portfolio-presentation";
 
 export function WorkHero({
@@ -10,7 +11,7 @@ export function WorkHero({
 }) {
   return (
     <section className="relative hidden lg:block overflow-hidden border-b border-line bg-[#fbf9f9]">
-      <div className="relative mx-auto sm:min-h-[calc(100svh-4rem)] max-w-[1440px] px-5 pb-10 pt-10 sm:px-8 sm:pt-20 lg:min-h-[780px] lg:px-20 lg:pb-32 lg:pt-24">
+      <Container className="relative pb-10 pt-10 sm:min-h-[calc(100svh-4rem)] sm:pt-20 lg:min-h-[780px] lg:pb-32 lg:pt-24">
         <div className="relative z-10 max-w-5xl lg:w-[75%]">
           <span aria-hidden="true" className="block h-1 w-16 rounded-full bg-signal-600" />
           <h1 className="mt-7 text-[clamp(2.9rem,11.5vw,5rem)] font-semibold leading-[0.95] tracking-[-0.06em] text-slate-950 sm:mt-10 sm:text-7xl lg:text-[clamp(4.75rem,6.7vw,6rem)]">
@@ -51,7 +52,7 @@ export function WorkHero({
             />
           </div>
         </div>
-      </div>
+      </Container>
     </section>
   );
 }

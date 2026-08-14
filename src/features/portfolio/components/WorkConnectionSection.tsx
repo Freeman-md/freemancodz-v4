@@ -159,7 +159,7 @@ export function WorkConnectionSection({
 
   return (
     <section aria-labelledby="work-connection-heading" className="bg-[#fbf9f9] py-20 sm:py-28">
-      <Container className="max-w-[1340px]">
+      <Container>
         <div className="rounded-[2rem] border border-line bg-white px-5 py-16 shadow-soft sm:px-10 lg:px-14 lg:py-20">
           <MarketingSectionHeading
             eyebrow={connects.eyebrow}

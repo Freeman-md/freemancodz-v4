@@ -1,11 +1,12 @@
 import { LinkButton as Button } from "@/shared/components/ui/LinkButton";
+import { Container } from "@/shared/components/layout/Container";
 import { externalLinks } from "@/shared/config/links";
 import Link from "next/link";
 
 export function Footer({ cvUrl }: { cvUrl?: string }) {
   return (
     <footer className="border-t border-line bg-white">
-      <div className="mx-auto flex max-w-[1200px] flex-col gap-5 px-5 py-12 md:flex-row md:items-center md:justify-between md:px-6">
+      <Container className="flex flex-col gap-5 py-12 md:flex-row md:items-center md:justify-between">
         <p className="font-mono text-[11px] font-semibold text-muted">
           © 2026 Freeman Madudili. Built with technical precision.
         </p>
@@ -40,7 +41,7 @@ export function Footer({ cvUrl }: { cvUrl?: string }) {
             </a>
           ) : null}
         </div>
-      </div>
+      </Container>
     </footer>
   );
 }

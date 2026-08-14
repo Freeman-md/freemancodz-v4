@@ -9,7 +9,7 @@ import { PortfolioIcon } from "./PortfolioIcon";
 export function WorkCtaSection({ closing }: Pick<WorkPresentationData, "closing">) {
   return (
     <section className="bg-white py-10 sm:py-16" id="work-cta">
-      <Container className="max-w-[1440px]">
+      <Container>
         <div className="relative isolate overflow-hidden rounded-[2rem] border border-signal-100 bg-[linear-gradient(145deg,#ffffff_0%,#ffffff_52%,#f5f7ff_100%)] px-6 py-20 shadow-soft sm:px-10 lg:min-h-[780px] lg:px-16 lg:py-24">
           <div
             aria-hidden="true"

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowDown, ArrowRight, Check, FileText } from "lucide-react";
 
 import { MarketingSectionHeading } from "@/shared/components/marketing/MarketingSectionHeading";
+import { Container } from "@/shared/components/layout/Container";
 import type { PortfolioIcon as PortfolioIconModel } from "../models/portfolio-presentation";
 import type {
   HomePresentationData,
@@ -155,8 +156,8 @@ function AuditAction({ audit }: { audit: PortfolioSection }) {
 
 export function HomeAuditSection({ audit }: Pick<HomePresentationData, "audit">) {
   return (
-    <section className="bg-white px-5 py-24 sm:px-8 lg:py-32">
-      <div className="mx-auto grid max-w-[1360px] gap-10 lg:grid-cols-[0.38fr_0.62fr] lg:grid-rows-[auto_1fr] lg:gap-x-16">
+    <section className="bg-white py-24 lg:py-32">
+      <Container className="grid gap-10 lg:grid-cols-[0.38fr_0.62fr] lg:grid-rows-[auto_1fr] lg:gap-x-16">
         <MarketingSectionHeading
           align="left"
           eyebrow={audit.eyebrow}
@@ -165,7 +166,7 @@ export function HomeAuditSection({ audit }: Pick<HomePresentationData, "audit">)
         />
         <AuditDiagram improvement={audit.improvement} problem={audit.problem} />
         <AuditAction audit={audit} />
-      </div>
+      </Container>
     </section>
   );
 }

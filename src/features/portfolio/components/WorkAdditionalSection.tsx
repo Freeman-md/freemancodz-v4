@@ -178,7 +178,7 @@ export function WorkAdditionalSection({
 
   return (
     <section aria-labelledby="additional-work-heading" className="bg-white py-20 sm:py-28">
-      <Container className="max-w-[1340px]">
+      <Container>
         <MarketingSectionHeading
           eyebrow={additionalWork.eyebrow}
           id="additional-work-heading"
