@@ -1,4 +1,5 @@
 import { Container } from "@/shared/components/layout/Container";
+import Image from "next/image";
 import { PortfolioIcon } from "@/features/portfolio/components/PortfolioIcon";
 import type {
   AboutPresentationData,
@@ -55,11 +56,13 @@ function PortraitSignal({ image, name }: { image: string | null; name: string })
   return (
     <div className="flex flex-col items-center">
       <div className="relative flex size-44 items-center justify-center rounded-full border border-signal-300 bg-signal-50/50 p-3 motion-safe:animate-signal-glow sm:size-52 lg:size-60">
-        <div className="size-full overflow-hidden rounded-full border-4 border-white bg-surface shadow-[0_14px_34px_-22px_rgba(55,48,163,0.8)]">
-          {image ? <img
+        <div className="relative size-full overflow-hidden rounded-full border-4 border-white bg-surface shadow-[0_14px_34px_-22px_rgba(55,48,163,0.8)]">
+          {image ? <Image
             alt={name}
             className="size-full object-cover grayscale transition duration-500 hover:grayscale-0"
             src={image}
+            fill
+            sizes="(min-width: 1024px) 15rem, 13rem"
           /> : null}
         </div>
       </div>

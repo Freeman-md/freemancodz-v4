@@ -10,6 +10,7 @@ type SourceAction = {
 };
 
 type SourceMedia = {
+  type: "IMAGE" | "VIDEO";
   source: string;
   altText: string;
   iconBlock: SourceIcon;

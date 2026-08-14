@@ -25,6 +25,7 @@ export function getPortfolioActionMode(action: PortfolioAction) {
 export type PortfolioMedia = PortfolioIcon & {
   source: string;
   altText: string;
+  type: "IMAGE" | "VIDEO";
 };
 
 export type PortfolioSection = {

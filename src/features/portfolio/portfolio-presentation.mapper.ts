@@ -45,6 +45,7 @@ function section(source: PortfolioContentSource): PortfolioSection {
       ...mediaBlock.iconBlock,
       source: mediaBlock.source,
       altText: mediaBlock.altText,
+      type: mediaBlock.type,
     })),
     actions: byOrder(source.actionBlocks).map(({ actionBlock }) => ({
       ...actionBlock.iconBlock,

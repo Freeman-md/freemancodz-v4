@@ -1,4 +1,5 @@
 import { Container } from "@/shared/components/layout/Container";
+import Image from "next/image";
 import { MarketingSectionHeading } from "@/shared/components/marketing/MarketingSectionHeading";
 import { PortfolioIcon } from "@/features/portfolio/components/PortfolioIcon";
 import type {
@@ -9,13 +10,14 @@ import type {
 function InterestCard({ interest }: { interest: PortfolioMedia }) {
   return (
     <article className="overflow-hidden rounded-2xl border border-line bg-white shadow-soft">
-      <div className="aspect-[1.18] overflow-hidden bg-surface">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
+      <div className="relative aspect-[1.18] overflow-hidden bg-surface">
+        {interest.type === "VIDEO" ? <video className="size-full object-cover" controls src={interest.source} /> : <Image
           alt={interest.altText}
           className="size-full object-cover transition duration-500 hover:scale-[1.025]"
           src={interest.source}
-        />
+          fill
+          sizes="(min-width: 1024px) 25vw, 50vw"
+        />}
       </div>
       <div className="flex items-center gap-4 px-5 py-5 sm:px-6">
         <PortfolioIcon
