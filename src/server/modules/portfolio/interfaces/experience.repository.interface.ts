@@ -2,7 +2,7 @@ import type { ExperienceWithIcons } from "../models/portfolio-records";
 import type {
   OrderedRelationInput,
   UpsertExperienceInput,
-} from "../models/portfolio-administration";
+} from "@/contracts/portfolio-admin.contract";
 export interface IExperienceRepository {
   findAll(): Promise<ExperienceWithIcons[]>;
 }

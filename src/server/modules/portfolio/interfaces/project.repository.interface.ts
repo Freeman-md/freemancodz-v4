@@ -1,5 +1,5 @@
 import type { ProjectWithCover } from "../models/portfolio-records";
-import type { UpsertProjectInput } from "../models/portfolio-administration";
+import type { UpsertProjectInput } from "@/contracts/portfolio-admin.contract";
 export interface IProjectRepository {
   findAll(): Promise<ProjectWithCover[]>;
   findBySlug(slug: string): Promise<ProjectWithCover | null>;

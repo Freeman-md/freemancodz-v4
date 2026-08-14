@@ -13,7 +13,7 @@ import {
   getHomePageCacheTags,
   getWorkPageCacheTags,
   PortfolioCacheTag,
-} from "@/server/modules/portfolio/models/portfolio-cache-tag";
+} from "@/server/modules/portfolio/portfolio-cache";
 
 const now = new Date("2026-08-12T00:00:00.000Z");
 

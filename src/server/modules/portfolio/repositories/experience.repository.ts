@@ -1,10 +1,10 @@
 import "server-only";
-import type { PrismaClient } from "@/generated/prisma/client";
-import type { IExperienceAdministrationRepository } from "../interfaces/experience.repository.interface";
 import type {
   OrderedRelationInput,
   UpsertExperienceInput,
-} from "../models/portfolio-administration";
+} from "@/contracts/portfolio-admin.contract";
+import type { PrismaClient } from "@/generated/prisma/client";
+import type { IExperienceAdministrationRepository } from "../interfaces/experience.repository.interface";
 export class ExperienceRepository implements IExperienceAdministrationRepository {
   constructor(private readonly database: PrismaClient) {}
 

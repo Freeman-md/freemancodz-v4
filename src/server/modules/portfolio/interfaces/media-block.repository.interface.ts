@@ -1,5 +1,5 @@
 import type { MediaBlockWithBase } from "../models/portfolio-records";
-import type { UpsertMediaBlockInput } from "../models/portfolio-administration";
+import type { UpsertMediaBlockInput } from "@/contracts/portfolio-admin.contract";
 export interface IMediaBlockRepository {
   findById(id: string): Promise<MediaBlockWithBase | null>;
   findAll(): Promise<MediaBlockWithBase[]>;

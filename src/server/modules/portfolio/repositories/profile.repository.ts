@@ -1,10 +1,10 @@
 import "server-only";
+import type {
+  UpdateProfileCollectionInput,
+  UpdateProfileInput,
+} from "@/contracts/portfolio-admin.contract";
 import type { PrismaClient } from "@/generated/prisma/client";
 import type { IProfileAdministrationRepository } from "../interfaces/profile.repository.interface";
-import type {
-  ProfileCollectionOrderInput,
-  UpdateProfileInput,
-} from "../models/portfolio-administration";
 
 export class ProfileRepository implements IProfileAdministrationRepository {
   constructor(private readonly database: PrismaClient) {}
@@ -35,7 +35,7 @@ export class ProfileRepository implements IProfileAdministrationRepository {
     await this.database.profile.update({ where: { id: "global" }, data: { coverImage: source } });
   }
 
-  async replaceCollection({ collection, items }: ProfileCollectionOrderInput) {
+  async replaceCollection({ collection, items }: UpdateProfileCollectionInput) {
     await this.database.$transaction(async (transaction) => {
       await transaction.profileIconBlock.deleteMany({ where: { profileId: "global", collection } });
       if (items.length > 0) {

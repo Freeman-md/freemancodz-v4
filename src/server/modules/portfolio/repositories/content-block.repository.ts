@@ -1,14 +1,12 @@
 import "server-only";
+import type { OrderedRelationInput } from "@/contracts/portfolio-admin.contract";
 import type { Prisma, PrismaClient } from "@/generated/prisma/client";
 import type {
   IContentBlockAdministrationRepository,
   PortfolioPagePath,
 } from "../interfaces/content-block.repository.interface";
 import type { ContentBlockNode } from "../models/portfolio-records";
-import type {
-  OrderedRelationInput,
-  UpdateContentBlockInput,
-} from "../models/portfolio-administration";
+import type { UpdateContentBlockInput } from "../models/portfolio-administration";
 
 const relations = {
   iconBlocks: { orderBy: { order: "asc" }, include: { iconBlock: true } },

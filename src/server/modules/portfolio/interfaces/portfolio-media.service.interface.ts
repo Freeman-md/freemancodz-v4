@@ -1,7 +1,7 @@
-import type { MediaOwner } from "../models/portfolio-administration";
+import type { MediaOwnerInput } from "@/contracts/portfolio-admin.contract";
 
 export type ReplacePortfolioMediaInput = {
-  owner: MediaOwner;
+  owner: MediaOwnerInput;
   body: Uint8Array;
   contentType: string;
   fileExtension: string;

@@ -1,7 +1,7 @@
 import "server-only";
+import type { UpsertActionBlockInput } from "@/contracts/portfolio-admin.contract";
 import type { PrismaClient } from "@/generated/prisma/client";
 import type { IActionBlockAdministrationRepository } from "../interfaces/action-block.repository.interface";
-import type { UpsertActionBlockInput } from "../models/portfolio-administration";
 export class ActionBlockRepository implements IActionBlockAdministrationRepository {
   constructor(private readonly database: PrismaClient) {}
 
