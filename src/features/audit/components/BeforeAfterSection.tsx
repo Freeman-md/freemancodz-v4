@@ -1,9 +1,9 @@
 import { Container } from "@/shared/components/layout/Container";
 import { MarketingSectionHeading } from "@/shared/components/marketing/MarketingSectionHeading";
 import { PortfolioIcon } from "@/features/portfolio/components/PortfolioIcon";
+import type { PortfolioIcon as PortfolioIconModel } from "@/features/portfolio/models/portfolio-presentation";
 import type {
   AuditPresentationData,
-  PortfolioIcon as PortfolioIconModel,
   PortfolioSection,
 } from "@/features/portfolio/models/portfolio-presentation";
 
@@ -15,11 +15,10 @@ function WorkflowNode({ iconName, label, tone }: WorkflowNodeData & { tone: "bef
   return (
     <div className="relative z-10 flex min-w-0 flex-1 flex-col items-center text-center">
       <div
-        className={`flex size-16 items-center justify-center rounded-full border bg-white sm:size-[72px] ${
-          isAfter
-            ? "border-success-300 text-success-700 motion-safe:animate-success-glow"
-            : "border-red-300 text-ink motion-safe:animate-alert-glow"
-        }`}
+        className={`flex size-16 items-center justify-center rounded-full border bg-white sm:size-[72px] ${isAfter
+          ? "border-success-300 text-success-700 motion-safe:animate-success-glow"
+          : "border-red-300 text-ink motion-safe:animate-alert-glow"
+          }`}
       >
         <PortfolioIcon
           aria-hidden="true"
@@ -53,9 +52,8 @@ function WorkflowPanel({
         {title}
       </h3>
       <div
-        className={`mt-7 flex items-start gap-3 sm:gap-4 ${
-          tone === "after" && nodes.length === 3 ? "md:gap-7" : ""
-        }`}
+        className={`mt-7 flex items-start gap-3 sm:gap-4 ${tone === "after" && nodes.length === 3 ? "md:gap-7" : ""
+          }`}
       >
         {nodes.map((node, index) => (
           <div className="contents" key={node.label}>
@@ -63,9 +61,8 @@ function WorkflowPanel({
             {index < nodes.length - 1 ? (
               <div
                 aria-hidden="true"
-                className={`relative top-8 hidden min-w-6 flex-1 border-t-2 sm:block ${
-                  tone === "after" && nodes.length === 3 ? "md:min-w-10" : ""
-                } ${connectorClass} ${connectorStyle}`}
+                className={`relative top-8 hidden min-w-6 flex-1 border-t-2 sm:block ${tone === "after" && nodes.length === 3 ? "md:min-w-10" : ""
+                  } ${connectorClass} ${connectorStyle}`}
               >
                 {tone === "after" ? (
                   <span className="absolute -right-1.5 -top-1.5 size-3 rounded-full bg-success-600" />
@@ -94,17 +91,15 @@ function ComparisonCard({
 
   return (
     <article
-      className={`rounded-3xl border bg-white p-5 shadow-soft transition duration-300 motion-safe:hover:-translate-y-1 sm:p-6 ${
-        isAfter
-          ? "border-success-100 shadow-[0_16px_42px_-30px_rgba(4,120,87,0.42)] motion-safe:hover:shadow-[0_20px_48px_-28px_rgba(4,120,87,0.34)]"
-          : "border-line motion-safe:hover:shadow-[0_20px_48px_-28px_rgba(185,28,28,0.22)]"
-      }`}
+      className={`rounded-3xl border bg-white p-5 shadow-soft transition duration-300 motion-safe:hover:-translate-y-1 sm:p-6 ${isAfter
+        ? "border-success-100 shadow-[0_16px_42px_-30px_rgba(4,120,87,0.42)] motion-safe:hover:shadow-[0_20px_48px_-28px_rgba(4,120,87,0.34)]"
+        : "border-line motion-safe:hover:shadow-[0_20px_48px_-28px_rgba(185,28,28,0.22)]"
+        }`}
     >
       <div className="flex flex-wrap items-center gap-x-5 gap-y-3 px-2 pb-6">
         <p
-          className={`rounded-full px-5 py-2 font-mono text-base font-semibold uppercase tracking-[0.16em] sm:text-lg ${
-            isAfter ? "bg-success-50 text-success-700" : "bg-red-50 text-red-600"
-          }`}
+          className={`rounded-full px-5 py-2 font-mono text-base font-semibold uppercase tracking-[0.16em] sm:text-lg ${isAfter ? "bg-success-50 text-success-700" : "bg-red-50 text-red-600"
+            }`}
         >
           {data.title}
         </p>
@@ -112,9 +107,8 @@ function ComparisonCard({
       </div>
 
       <div
-        className={`overflow-hidden rounded-2xl border ${
-          isAfter ? "border-success-100" : "border-line"
-        }`}
+        className={`overflow-hidden rounded-2xl border ${isAfter ? "border-success-100" : "border-line"
+          }`}
       >
         <div className="p-5 sm:p-6">
           <WorkflowPanel nodes={customerJourney} title={data.customer.title} tone={tone} />

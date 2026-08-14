@@ -1,8 +1,6 @@
 import type { IconBlock } from "@/generated/prisma/client";
-import type {
-  ReusableBlockReferences,
-  UpsertIconBlockInput,
-} from "../models/portfolio-administration";
+import type { UpsertIconBlockInput } from "@/contracts/portfolio-admin.contract";
+import type { ReusableBlockReferences } from "../models/portfolio-administration";
 export interface IIconBlockRepository {
   findById(id: string): Promise<IconBlock | null>;
   findAll(): Promise<IconBlock[]>;

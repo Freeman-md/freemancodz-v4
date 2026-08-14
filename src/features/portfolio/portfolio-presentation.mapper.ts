@@ -1,3 +1,4 @@
+import { requiredPortfolioProjectSlugs } from "@/contracts/portfolio-presentation.contract";
 import type {
   AboutPresentationData,
   AuditPresentationData,
@@ -6,14 +7,13 @@ import type {
   PortfolioProject,
   PortfolioSection,
   WorkPresentationData,
-} from "./portfolio-presentation";
+} from "./models/portfolio-presentation";
 import type {
   PortfolioContentSource,
   PortfolioExperienceSource,
   PortfolioProfileSource,
   PortfolioProjectSource,
-} from "./portfolio-source";
-import { requiredPortfolioProjectSlugs } from "@/contracts/portfolio-presentation.contract";
+} from "./models/portfolio-presentation-source";
 
 const [
   pay4MeSlug,

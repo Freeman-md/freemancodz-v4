@@ -3,7 +3,7 @@ import { HomeClosingSection } from "@/features/portfolio/components/HomeClosingS
 import { HomeHero } from "@/features/portfolio/components/HomeHero";
 import { HomeImproveSection } from "@/features/portfolio/components/HomeImproveSection";
 import { HomeRelevantWorkSection } from "@/features/portfolio/components/HomeRelevantWorkSection";
-import { createHomePresentationData } from "@/features/portfolio/models/presentation-adapters";
+import { createHomePresentationData } from "@/features/portfolio/portfolio-presentation.mapper";
 import { getCachedHomePageData } from "./_portfolio/portfolio-page-cache";
 
 export default async function HomePage() {

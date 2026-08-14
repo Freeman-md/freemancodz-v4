@@ -4,7 +4,7 @@ import { AuditProofSection } from "@/features/audit/components/AuditProofSection
 import { AuditSymptomsSection } from "@/features/audit/components/AuditSymptomsSection";
 import { BeforeAfterSection } from "@/features/audit/components/BeforeAfterSection";
 import type { Metadata } from "next";
-import { createAuditPresentationData } from "@/features/portfolio/models/presentation-adapters";
+import { createAuditPresentationData } from "@/features/portfolio/portfolio-presentation.mapper";
 import { getCachedAuditPageData } from "../_portfolio/portfolio-page-cache";
 
 export const metadata: Metadata = {

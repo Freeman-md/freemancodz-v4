@@ -19,7 +19,7 @@ import { WorkConnectionSection } from "@/features/portfolio/components/WorkConne
 import {
   portfolioIconRegistry,
   resolvePortfolioIcon,
-} from "@/features/portfolio/models/icon-registry";
+} from "@/features/portfolio/portfolio-icon.registry";
 import type {
   AboutPresentationData,
   PortfolioAction as PortfolioActionModel,

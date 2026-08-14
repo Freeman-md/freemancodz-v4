@@ -1,14 +1,16 @@
 import type {
   OrderedRelationInput,
-  ProfileCollectionOrderInput,
-  UpdateContentBlockInput,
   UpdateProfileInput,
+  UpdateProfileCollectionInput,
   UpsertActionBlockInput,
   UpsertExperienceInput,
   UpsertIconBlockInput,
   UpsertMediaBlockInput,
   UpsertProjectInput,
+} from "@/contracts/portfolio-admin.contract";
+import type {
   ProjectUpdateResult,
+  UpdateContentBlockInput,
 } from "../models/portfolio-administration";
 import type { PortfolioPagePath } from "./content-block.repository.interface";
 import type {
@@ -30,7 +32,7 @@ export interface IPortfolioAdministrationService {
   getProjects(): Promise<ProjectWithCover[]>;
   getExperiences(): Promise<ExperienceWithIcons[]>;
   updateProfile(input: UpdateProfileInput): Promise<void>;
-  updateProfileCollection(input: ProfileCollectionOrderInput): Promise<void>;
+  updateProfileCollection(input: UpdateProfileCollectionInput): Promise<void>;
   updateContentBlock(id: string, input: UpdateContentBlockInput): Promise<void>;
   updateContentBlockChildren(id: string, children: OrderedRelationInput[]): Promise<void>;
   updateContentBlockIcons(id: string, icons: OrderedRelationInput[]): Promise<void>;

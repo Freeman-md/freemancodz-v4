@@ -42,10 +42,10 @@ export class SupabaseAuthProvider implements IAdminAuthProvider {
     }
   }
 
-  async confirmMagicLink(tokenHash: string, type: "email" | "magiclink") {
+  async confirmMagicLink(tokenHash: string) {
     const client = await this.createClient();
 
-    const { error } = await client.auth.verifyOtp({ token_hash: tokenHash, type });
+    const { error } = await client.auth.verifyOtp({ token_hash: tokenHash, type: "email" });
 
     if (error) {
       throw new AdminAuthenticationProviderError("The sign-in link is invalid or expired.");

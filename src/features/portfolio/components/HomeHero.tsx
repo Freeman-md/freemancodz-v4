@@ -2,6 +2,7 @@ import Image from "next/image";
 import { Check, Database, LineChart, ListChecks } from "lucide-react";
 
 import { siteAssetLinks } from "@/shared/config/links";
+import { Container } from "@/shared/components/layout/Container";
 import type { HomePresentationData } from "../models/portfolio-presentation";
 import { PortfolioAction } from "./PortfolioAction";
 import { PortfolioIcon } from "./PortfolioIcon";
@@ -28,8 +29,8 @@ function HeroSignalCards() {
 export function HomeHero({ hero, profile }: Pick<HomePresentationData, "hero" | "profile">) {
   return (
     <section className="relative overflow-hidden border-b border-line bg-[#fbf9f9]">
-      <div className="mx-auto grid min-h-[calc(100svh-4rem)] max-w-[1440px] lg:grid-cols-[minmax(0,1.02fr)_minmax(32rem,0.98fr)]">
-        <div className="relative z-20 flex flex-col px-6 pb-10 pt-12 text-center sm:px-10 lg:justify-center lg:px-20 lg:pb-20 lg:pt-16 lg:text-left">
+      <Container className="grid min-h-[calc(100svh-4rem)] lg:grid-cols-[minmax(0,1.02fr)_minmax(32rem,0.98fr)]">
+        <div className="relative z-20 flex flex-col pb-10 pt-12 text-center lg:justify-center lg:pb-20 lg:pt-16 lg:text-left">
           <div className="mx-auto max-w-3xl lg:mx-0">
             <h1 className="mt-7 text-[clamp(1.9rem,8.4vw,2.2rem)] font-semibold leading-[1.08] tracking-[-0.05em] text-slate-950 lg:mt-8 lg:text-[clamp(3.25rem,3.8vw,3.75rem)] lg:leading-[1.04] lg:tracking-[-0.06em]">
               {hero.title}
@@ -91,7 +92,7 @@ export function HomeHero({ hero, profile }: Pick<HomePresentationData, "hero" | 
             />
           </div>
         </div>
-      </div>
+      </Container>
     </section>
   );
 }

@@ -1,9 +1,9 @@
 import type { LucideIcon } from "lucide-react";
 import {
   portfolioIconNameSchema,
-  portfolioIconNames,
   type PortfolioIconName,
 } from "@/contracts/portfolio-presentation.contract";
+
 import {
   ArrowLeftRight,
   Bell,
@@ -117,11 +117,6 @@ export const portfolioIconRegistry = {
 export function isPortfolioIconName(value: string | null | undefined): value is PortfolioIconName {
   return portfolioIconNameSchema.safeParse(value).success;
 }
-
-export {
-  portfolioIconNames,
-  type PortfolioIconName,
-} from "@/contracts/portfolio-presentation.contract";
 
 export function resolvePortfolioIcon(value: string | null | undefined): LucideIcon | null {
   return isPortfolioIconName(value) ? portfolioIconRegistry[value] : null;

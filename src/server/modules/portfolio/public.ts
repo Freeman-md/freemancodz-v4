@@ -8,10 +8,10 @@ export type { IPortfolioMediaService } from "./interfaces/portfolio-media.servic
 export type { ProjectUpdateResult } from "./models/portfolio-administration";
 export type { HomePageData, WorkPageData, AboutPageData, AuditPageData } from "./models/page-data";
 export { PortfolioAdministrationError } from "./services/portfolio-administration.service";
-export { PortfolioCacheTag } from "./models/portfolio-cache-tag";
+export { PortfolioCacheTag } from "./portfolio-cache";
 export {
   getAboutPageCacheTags,
   getAuditPageCacheTags,
   getHomePageCacheTags,
   getWorkPageCacheTags,
-} from "./models/portfolio-cache-tag";
+} from "./portfolio-cache";

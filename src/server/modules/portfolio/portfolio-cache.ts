@@ -1,5 +1,5 @@
-import type { AboutPageData, AuditPageData, HomePageData, WorkPageData } from "./page-data";
-import type { ContentBlockNode } from "./portfolio-records";
+import type { AboutPageData, AuditPageData, HomePageData, WorkPageData } from "./models/page-data";
+import type { ContentBlockNode } from "./models/portfolio-records";
 
 export const PortfolioCacheTag = {
   page: (page: "home" | "work" | "about" | "audit") => `portfolio:page:${page}`,

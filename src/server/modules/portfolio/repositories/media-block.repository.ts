@@ -1,7 +1,7 @@
 import "server-only";
+import type { UpsertMediaBlockInput } from "@/contracts/portfolio-admin.contract";
 import type { PrismaClient } from "@/generated/prisma/client";
 import type { IMediaBlockAdministrationRepository } from "../interfaces/media-block.repository.interface";
-import type { UpsertMediaBlockInput } from "../models/portfolio-administration";
 export class MediaBlockRepository implements IMediaBlockAdministrationRepository {
   constructor(private readonly database: PrismaClient) {}
 

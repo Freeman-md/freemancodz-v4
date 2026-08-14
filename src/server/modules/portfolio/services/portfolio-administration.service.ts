@@ -1,4 +1,14 @@
 import "server-only";
+import type {
+  OrderedRelationInput,
+  UpdateProfileCollectionInput,
+  UpdateProfileInput,
+  UpsertActionBlockInput,
+  UpsertExperienceInput,
+  UpsertIconBlockInput,
+  UpsertMediaBlockInput,
+  UpsertProjectInput,
+} from "@/contracts/portfolio-admin.contract";
 import { requiredPortfolioProjectSlugs } from "@/contracts/portfolio-presentation.contract";
 import type { IActionBlockAdministrationRepository } from "../interfaces/action-block.repository.interface";
 import type { IContentBlockAdministrationRepository } from "../interfaces/content-block.repository.interface";
@@ -9,16 +19,8 @@ import type { IPortfolioAdministrationService } from "../interfaces/portfolio-ad
 import type { IProfileAdministrationRepository } from "../interfaces/profile.repository.interface";
 import type { IProjectAdministrationRepository } from "../interfaces/project.repository.interface";
 import type {
-  OrderedRelationInput,
-  ProfileCollectionOrderInput,
-  UpdateContentBlockInput,
-  UpdateProfileInput,
-  UpsertActionBlockInput,
-  UpsertExperienceInput,
-  UpsertIconBlockInput,
-  UpsertMediaBlockInput,
-  UpsertProjectInput,
   ProjectUpdateResult,
+  UpdateContentBlockInput,
 } from "../models/portfolio-administration";
 
 const PROTECTED_PROJECT_SLUGS = new Set<string>(requiredPortfolioProjectSlugs);
@@ -73,7 +75,7 @@ export class PortfolioAdministrationService implements IPortfolioAdministrationS
     await this.profiles.updateSingleton(input);
   }
 
-  async updateProfileCollection(input: ProfileCollectionOrderInput) {
+  async updateProfileCollection(input: UpdateProfileCollectionInput) {
     await this.profiles.replaceCollection(input);
   }
 

@@ -10,14 +10,14 @@ import {
   createAuditPresentationData,
   createHomePresentationData,
   createWorkPresentationData,
-} from "@/features/portfolio/models/presentation-adapters";
+} from "@/features/portfolio/portfolio-presentation.mapper";
 import { getPortfolioActionMode } from "@/features/portfolio/models/portfolio-presentation";
 import type {
   PortfolioContentSource,
   PortfolioExperienceSource,
   PortfolioProfileSource,
   PortfolioProjectSource,
-} from "@/features/portfolio/models/portfolio-source";
+} from "@/features/portfolio/models/portfolio-presentation-source";
 import {
   experienceSeeds,
   iconSeeds,

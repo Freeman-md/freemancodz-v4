@@ -9,6 +9,7 @@ import {
   StudyPoint,
 } from "@/features/portfolio/components/PortfolioProjectElements";
 import { MarketingSectionHeading } from "@/shared/components/marketing/MarketingSectionHeading";
+import { Container } from "@/shared/components/layout/Container";
 import { SupportingProject } from "@/shared/components/marketing/SupportingProject";
 import type { HomePresentationData } from "../models/portfolio-presentation";
 import { PortfolioAction } from "./PortfolioAction";
@@ -22,8 +23,8 @@ export function HomeRelevantWorkSection({
   const emailHref = projects.emailPa.externalLinks[0] ?? "#";
 
   return (
-    <section className="bg-[#fbf9f9] px-5 py-24 sm:px-8 lg:py-32">
-      <div className="mx-auto max-w-[1340px]">
+    <section className="bg-[#fbf9f9] py-24 lg:py-32">
+      <Container>
         <MarketingSectionHeading
           copy={<p>{relevantWork.copy}</p>}
           eyebrow={relevantWork.eyebrow}
@@ -81,7 +82,7 @@ export function HomeRelevantWorkSection({
             key={action.label}
           />
         ))}
-      </div>
+      </Container>
     </section>
   );
 }

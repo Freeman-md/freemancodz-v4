@@ -5,7 +5,7 @@ import { getSupabaseStorageConfig } from "../config/env";
 export function createSupabaseStorageClient() {
   const config = getSupabaseStorageConfig();
 
-  return createClient(config.url, config.serviceRoleKey, {
+  return createClient(config.url, config.secretKey, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 }

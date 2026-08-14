@@ -21,18 +21,16 @@ function ProcessNode({ step, index }: { step: ProcessStep; index: number }) {
   return (
     <div className="grid grid-cols-[2rem_5rem_1fr] items-center gap-4 lg:flex lg:flex-col lg:text-center">
       <span
-        className={`font-mono text-sm font-semibold lg:mb-4 lg:text-base ${
-          isSuccess ? "text-success-700" : "text-signal-700"
-        }`}
+        className={`font-mono text-sm font-semibold lg:mb-4 lg:text-base ${isSuccess ? "text-success-700" : "text-signal-700"
+          }`}
       >
         {String(index + 1).padStart(2, "0")}
       </span>
       <div
-        className={`flex size-20 items-center justify-center rounded-full border shadow-[0_12px_28px_-20px_rgba(55,48,163,0.65)] lg:size-24 ${
-          isSuccess
-            ? "border-success-200 bg-success-50/50 text-success-800"
-            : "border-signal-200 bg-signal-50/50 text-signal-800"
-        }`}
+        className={`flex size-20 items-center justify-center rounded-full border shadow-[0_12px_28px_-20px_rgba(55,48,163,0.65)] lg:size-24 ${isSuccess
+          ? "border-success-200 bg-success-50/50 text-success-800"
+          : "border-signal-200 bg-signal-50/50 text-signal-800"
+          }`}
       >
         <PortfolioIcon
           aria-hidden="true"

@@ -5,7 +5,7 @@ import { WorkCaseStudiesSection } from "@/features/portfolio/components/WorkCase
 import { WorkConnectionSection } from "@/features/portfolio/components/WorkConnectionSection";
 import { WorkCtaSection } from "@/features/portfolio/components/WorkCtaSection";
 import { WorkHero } from "@/features/portfolio/components/WorkHero";
-import { createWorkPresentationData } from "@/features/portfolio/models/presentation-adapters";
+import { createWorkPresentationData } from "@/features/portfolio/portfolio-presentation.mapper";
 import { siteConfig } from "@/shared/config/site-metadata";
 import { getCachedWorkPageData } from "../_portfolio/portfolio-page-cache";
 

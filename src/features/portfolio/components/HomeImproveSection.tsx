@@ -1,10 +1,9 @@
 import { CheckCircle2, MoveHorizontal, MoveVertical, Settings, UsersRound } from "lucide-react";
 
 import { MarketingSectionHeading } from "@/shared/components/marketing/MarketingSectionHeading";
-import type {
-  HomePresentationData,
-  PortfolioIcon as PortfolioIconModel,
-} from "../models/portfolio-presentation";
+import { Container } from "@/shared/components/layout/Container";
+import type { PortfolioIcon as PortfolioIconModel } from "../models/portfolio-presentation";
+import type { HomePresentationData } from "../models/portfolio-presentation";
 import { PortfolioIcon } from "./PortfolioIcon";
 
 function JourneySteps({ steps }: { steps: PortfolioIconModel[] }) {
@@ -13,9 +12,8 @@ function JourneySteps({ steps }: { steps: PortfolioIconModel[] }) {
       {steps.map(({ iconName, label }, index) => (
         <div className="contents" key={label}>
           <div
-            className={`flex min-h-32 flex-col items-center justify-center gap-4 rounded-2xl border bg-white px-2 text-center shadow-[0_18px_38px_-30px_rgba(30,64,175,0.55)] sm:min-h-36 ${
-              index === steps.length - 1 ? "border-signal-500" : "border-signal-100"
-            }`}
+            className={`flex min-h-32 flex-col items-center justify-center gap-4 rounded-2xl border bg-white px-2 text-center shadow-[0_18px_38px_-30px_rgba(30,64,175,0.55)] sm:min-h-36 ${index === steps.length - 1 ? "border-signal-500" : "border-signal-100"
+              }`}
           >
             <PortfolioIcon
               aria-hidden="true"
@@ -91,8 +89,8 @@ function Handoff() {
 
 export function HomeImproveSection({ improve }: Pick<HomePresentationData, "improve">) {
   return (
-    <section className="border-b border-line bg-white px-5 py-24 sm:px-8 lg:py-32">
-      <div className="mx-auto max-w-[1360px]">
+    <section className="border-b border-line bg-white py-24 lg:py-32">
+      <Container>
         <MarketingSectionHeading
           copy={<p>{improve.copy}</p>}
           eyebrow={improve.eyebrow}
@@ -124,7 +122,7 @@ export function HomeImproveSection({ improve }: Pick<HomePresentationData, "impr
             Right action. Right next step.
           </div>
         </div>
-      </div>
+      </Container>
     </section>
   );
 }

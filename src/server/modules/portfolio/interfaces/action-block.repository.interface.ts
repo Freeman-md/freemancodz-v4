@@ -1,5 +1,5 @@
 import type { ActionBlockWithBase } from "../models/portfolio-records";
-import type { UpsertActionBlockInput } from "../models/portfolio-administration";
+import type { UpsertActionBlockInput } from "@/contracts/portfolio-admin.contract";
 export interface IActionBlockRepository {
   findById(id: string): Promise<ActionBlockWithBase | null>;
   findAll(): Promise<ActionBlockWithBase[]>;

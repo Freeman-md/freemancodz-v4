@@ -35,7 +35,7 @@ Provider errors are normalized before reaching a client. Request correctness doe
 ## 4. Important Folders / Files
 
 - `src/app/_portfolio/portfolio-page-cache.ts`: four cached public reads.
-- `src/features/portfolio/models/presentation-adapters.ts`: deterministic backend-to-view adapters.
+- `src/features/portfolio/portfolio-presentation.mapper.ts`: deterministic backend-to-view adapters.
 - `src/contracts/portfolio-presentation.contract.ts`: closed icon and project-visual identifiers.
 - `src/contracts/portfolio-admin.contract.ts`: admin trust-boundary schemas and inferred types.
 - `src/app/admin`: login, protected semantic editors and Server Actions.
@@ -74,7 +74,7 @@ The admin is intentionally not a schema editor, arbitrary component builder, CSS
 
 ## 9. Authentication
 
-The login form requests a Supabase email OTP with `shouldCreateUser: false`. The approved user must already exist. Supabase emails a PKCE magic link to `/auth/confirm`; the route verifies `token_hash`, and the server checks verified claims with `getClaims()`. Authentication establishes identity; `AdminAuthService` separately requires the normalized email to equal `ADMIN_EMAIL` (expected `freemanmadudili@gmail.com`). Every write and admin data read repeats authorization server-side. Proxy refresh is limited to `/admin` and `/auth`; protected layouts remain authoritative. Auth responses use private/no-store semantics.
+The login form requests a Supabase magic link with `shouldCreateUser: false`. Provision the approved user first with `npm run admin-auth:provision:local`. The local email template links directly to `/auth/confirm?token_hash=...&type=email`; the Route Handler verifies the hash, writes SSR session cookies, and redirects to `/admin` only after `AdminAuthService` checks the normalized approved email. Restart local Supabase after changing `supabase/config.toml` or `supabase/templates/magic-link.html`: `npx supabase stop && npx supabase start`. For production, run `npm run admin-auth:provision:production -- --confirm-production`, then configure the hosted Site URL and exact `https://<production-domain>/auth/confirm` redirect in Supabase Dashboard → Authentication → URL Configuration. In Email Templates → Magic Link, use `<a href="{{ .RedirectTo }}?token_hash={{ .TokenHash }}&type=email">Sign in to the portfolio admin</a>`; configure SMTP as needed and disable tracking that rewrites authentication links. Verify by requesting a new link, opening it once, reaching `/admin`, refreshing, then signing out and confirming `/admin` is protected again.
 
 Required Auth configuration:
 
