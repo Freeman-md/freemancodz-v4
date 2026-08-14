@@ -3,10 +3,8 @@ import { CircleAlert, Folder, Sparkles, UserRound } from "lucide-react";
 import { Container } from "@/shared/components/layout/Container";
 import { MarketingSectionHeading } from "@/shared/components/marketing/MarketingSectionHeading";
 import { PortfolioIcon } from "@/features/portfolio/components/PortfolioIcon";
-import type {
-  AuditPresentationData,
-  PortfolioIcon as PortfolioIconModel,
-} from "@/features/portfolio/models/portfolio-presentation";
+import type { PortfolioIcon as PortfolioIconModel } from "@/features/portfolio/models/portfolio-presentation";
+import type { AuditPresentationData } from "@/features/portfolio/models/portfolio-presentation";
 
 function Symptom({
   iconName,
@@ -19,11 +17,9 @@ function Symptom({
 }) {
   return (
     <div
-      className={`flex min-h-28 flex-col items-center justify-center px-2 text-center sm:min-h-36 sm:px-3 ${
-        index < 4 ? "border-b border-line" : ""
-      } ${index % 2 === 0 ? "border-r border-line" : ""} lg:border-r-0 lg:border-b-0 ${
-        index % 3 === 2 ? "" : "lg:border-r lg:border-line"
-      } ${index < 3 ? "lg:border-b lg:border-line" : ""}`}
+      className={`flex min-h-28 flex-col items-center justify-center px-2 text-center sm:min-h-36 sm:px-3 ${index < 4 ? "border-b border-line" : ""
+        } ${index % 2 === 0 ? "border-r border-line" : ""} lg:border-r-0 lg:border-b-0 ${index % 3 === 2 ? "" : "lg:border-r lg:border-line"
+        } ${index < 3 ? "lg:border-b lg:border-line" : ""}`}
     >
       <div className="flex size-11 items-center justify-center rounded-full border border-red-100 bg-red-50/60 text-red-500 shadow-[0_8px_20px_-14px_rgba(220,38,38,0.6)]">
         <PortfolioIcon aria-hidden="true" className="size-5 stroke-[1.8]" name={iconName} />

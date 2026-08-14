@@ -1,5 +1,5 @@
 import { createElement, type ComponentProps } from "react";
-import { resolvePortfolioIcon } from "../models/icon-registry";
+import { resolvePortfolioIcon } from "../portfolio-icon.registry";
 
 export function PortfolioIcon({
   name,

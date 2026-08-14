@@ -39,9 +39,8 @@ function StageNodes({ nodes, tone }: { nodes: JourneyNode[]; tone: JourneyStage[
           {index < nodes.length - 1 ? (
             <span
               aria-hidden="true"
-              className={`relative top-7 min-w-3 border-t border-dashed ${
-                tone === "signal" ? "border-signal-400" : "border-success-400"
-              }`}
+              className={`relative top-7 min-w-3 border-t border-dashed ${tone === "signal" ? "border-signal-400" : "border-success-400"
+                }`}
             />
           ) : null}
         </div>
@@ -57,20 +56,18 @@ function JourneyCard({ stage, index }: { stage: JourneyStage; index: number }) {
     <article className="rounded-3xl border border-line bg-white p-6 shadow-soft sm:p-7">
       <div className="flex items-center gap-3">
         <span
-          className={`flex size-9 shrink-0 items-center justify-center rounded-full border bg-white font-mono text-sm font-semibold ${
-            isSignal ? "border-signal-200 text-signal-700" : "border-success-200 text-success-700"
-          }`}
+          className={`flex size-9 shrink-0 items-center justify-center rounded-full border bg-white font-mono text-sm font-semibold ${isSignal ? "border-signal-200 text-signal-700" : "border-success-200 text-success-700"
+            }`}
         >
           {index + 1}
         </span>
         <h3 className="text-2xl font-semibold tracking-[-0.04em] text-ink">{stage.title}</h3>
       </div>
       <p
-        className={`mt-3 inline-flex rounded-full border px-3 py-1 text-xs font-medium ${
-          isSignal
-            ? "border-signal-100 bg-signal-50/60 text-signal-700"
-            : "border-success-100 bg-success-50/70 text-success-700"
-        }`}
+        className={`mt-3 inline-flex rounded-full border px-3 py-1 text-xs font-medium ${isSignal
+          ? "border-signal-100 bg-signal-50/60 text-signal-700"
+          : "border-success-100 bg-success-50/70 text-success-700"
+          }`}
       >
         {stage.tag}
       </p>
@@ -79,9 +76,8 @@ function JourneyCard({ stage, index }: { stage: JourneyStage; index: number }) {
         {stage.copy}
       </p>
       <p
-        className={`mt-6 border-l-2 px-3 text-sm leading-5 ${
-          isSignal ? "border-signal-500 text-slate-700" : "border-success-500 text-slate-700"
-        }`}
+        className={`mt-6 border-l-2 px-3 text-sm leading-5 ${isSignal ? "border-signal-500 text-slate-700" : "border-success-500 text-slate-700"
+          }`}
       >
         {stage.note}
       </p>

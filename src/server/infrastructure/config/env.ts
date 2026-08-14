@@ -39,7 +39,7 @@ export function getWorkflowSecret() {
 export function getSupabaseStorageConfig() {
   return {
     url: requireEnvValue("NEXT_PUBLIC_SUPABASE_URL"),
-    serviceRoleKey: requireEnvValue("SUPABASE_SERVICE_ROLE_KEY"),
+    secretKey: requireEnvValue("SUPABASE_SECRET_KEY"),
   };
 }
 

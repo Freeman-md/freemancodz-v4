@@ -7,7 +7,7 @@ import { AboutExplorationSection } from "@/features/about/components/AboutExplor
 import { AboutOutsideEngineeringSection } from "@/features/about/components/AboutOutsideEngineeringSection";
 import { AboutProductThinkingSection } from "@/features/about/components/AboutProductThinkingSection";
 import { AboutWorkProcessSection } from "@/features/about/components/AboutWorkProcessSection";
-import { createAboutPresentationData } from "@/features/portfolio/models/presentation-adapters";
+import { createAboutPresentationData } from "@/features/portfolio/portfolio-presentation.mapper";
 import { siteConfig } from "@/shared/config/site-metadata";
 import { getCachedAboutPageData } from "../_portfolio/portfolio-page-cache";
 

@@ -35,9 +35,8 @@ function JourneyRail({
             {index > 0 ? (
               <span
                 aria-hidden="true"
-                className={`absolute -left-1/2 top-7 hidden h-px w-full lg:-top-5 lg:left-1/2 lg:block lg:h-5 lg:w-px ${
-                  tone === "signal" ? "bg-signal-200" : "bg-success-200"
-                }`}
+                className={`absolute -left-1/2 top-7 hidden h-px w-full lg:-top-5 lg:left-1/2 lg:block lg:h-5 lg:w-px ${tone === "signal" ? "bg-signal-200" : "bg-success-200"
+                  }`}
               />
             ) : null}
             <div
@@ -107,11 +106,10 @@ export function AboutHero({ hero, profile }: Pick<AboutPresentationData, "hero" 
         <div className="mt-14 grid overflow-hidden rounded-3xl border border-line bg-white shadow-soft grid-cols-2 lg:mt-20 lg:grid-cols-4">
           {profile.principles.map(({ iconName, label }, index) => (
             <article
-              className={`flex items-center gap-4 p-5 sm:p-6 ${
-                index < profile.principles.length - 1
-                  ? "border-b border-line lg:border-b-0 lg:border-r"
-                  : ""
-              } ${index === 1 ? "sm:border-b sm:border-r lg:border-r" : ""}`}
+              className={`flex items-center gap-4 p-5 sm:p-6 ${index < profile.principles.length - 1
+                ? "border-b border-line lg:border-b-0 lg:border-r"
+                : ""
+                } ${index === 1 ? "sm:border-b sm:border-r lg:border-r" : ""}`}
               key={label}
             >
               <div className="flex size-11 shrink-0 items-center justify-center rounded-full border border-signal-100 bg-signal-50/50 text-signal-700">

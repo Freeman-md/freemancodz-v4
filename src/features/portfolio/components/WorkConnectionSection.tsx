@@ -192,9 +192,8 @@ export function WorkConnectionSection({
             <ul className="mt-7 grid grid-cols-2 gap-y-7 sm:grid-cols-4">
               {connects.outcomes.map((outcome, index) => (
                 <li
-                  className={`flex flex-col items-center px-3 text-center text-sm leading-5 text-slate-700 ${
-                    index > 0 ? "sm:border-l sm:border-line" : ""
-                  }`}
+                  className={`flex flex-col items-center px-3 text-center text-sm leading-5 text-slate-700 ${index > 0 ? "sm:border-l sm:border-line" : ""
+                    }`}
                   key={outcome.label}
                 >
                   <CheckCircle2 aria-hidden="true" className="mb-3 size-5 text-signal-600" />

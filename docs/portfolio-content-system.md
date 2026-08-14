@@ -35,7 +35,7 @@ Provider errors are normalized before reaching a client. Request correctness doe
 ## 4. Important Folders / Files
 
 - `src/app/_portfolio/portfolio-page-cache.ts`: four cached public reads.
-- `src/features/portfolio/models/presentation-adapters.ts`: deterministic backend-to-view adapters.
+- `src/features/portfolio/portfolio-presentation.mapper.ts`: deterministic backend-to-view adapters.
 - `src/contracts/portfolio-presentation.contract.ts`: closed icon and project-visual identifiers.
 - `src/contracts/portfolio-admin.contract.ts`: admin trust-boundary schemas and inferred types.
 - `src/app/admin`: login, protected semantic editors and Server Actions.

@@ -55,14 +55,14 @@ export const portfolioIconNames = [
   "Zap",
 ] as const;
 
-export const portfolioIconNameSchema = z.enum(portfolioIconNames);
-export type PortfolioIconName = z.infer<typeof portfolioIconNameSchema>;
-
 export const projectVisualNames = [
   "Pay4MeVisual",
   "PortfolioAssistantVisual",
   "EmailWorkflowVisual",
 ] as const;
+
+export const portfolioIconNameSchema = z.enum(portfolioIconNames);
+export type PortfolioIconName = z.infer<typeof portfolioIconNameSchema>;
 
 export const projectVisualNameSchema = z.enum(projectVisualNames);
 export type ProjectVisualName = z.infer<typeof projectVisualNameSchema>;

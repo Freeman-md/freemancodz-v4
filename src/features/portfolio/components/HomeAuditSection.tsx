@@ -2,9 +2,9 @@ import Link from "next/link";
 import { ArrowDown, ArrowRight, Check, FileText } from "lucide-react";
 
 import { MarketingSectionHeading } from "@/shared/components/marketing/MarketingSectionHeading";
+import type { PortfolioIcon as PortfolioIconModel } from "../models/portfolio-presentation";
 import type {
   HomePresentationData,
-  PortfolioIcon as PortfolioIconModel,
   PortfolioSection,
 } from "../models/portfolio-presentation";
 import { PortfolioAction } from "./PortfolioAction";
@@ -39,13 +39,12 @@ function AuditFlow({
               />
             ) : null}
             <span
-              className={`relative z-10 flex size-14 items-center justify-center rounded-xl border bg-white shadow-soft ${
-                emphasis
-                  ? "border-red-300 text-red-600 shadow-[0_0_30px_rgba(239,68,68,0.16)]"
-                  : isProblem
-                    ? "border-signal-100 text-signal-600"
-                    : "border-success-100 text-success-700"
-              }`}
+              className={`relative z-10 flex size-14 items-center justify-center rounded-xl border bg-white shadow-soft ${emphasis
+                ? "border-red-300 text-red-600 shadow-[0_0_30px_rgba(239,68,68,0.16)]"
+                : isProblem
+                  ? "border-signal-100 text-signal-600"
+                  : "border-success-100 text-success-700"
+                }`}
             >
               <PortfolioIcon
                 aria-hidden="true"
