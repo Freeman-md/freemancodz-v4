@@ -5,7 +5,7 @@ import type {
   UpsertActionBlockInput,
   UpsertExperienceInput,
   UpsertIconBlockInput,
-  UpsertMediaBlockInput,
+  MediaMetadataInput,
   UpsertProjectInput,
 } from "@/contracts/portfolio-admin.contract";
 import type {
@@ -44,8 +44,7 @@ export interface IPortfolioAdministrationService {
   createActionBlock(input: UpsertActionBlockInput): Promise<string>;
   updateActionBlock(id: string, input: UpsertActionBlockInput): Promise<void>;
   deleteActionBlock(id: string): Promise<void>;
-  createMediaBlock(input: UpsertMediaBlockInput): Promise<string>;
-  updateMediaBlock(id: string, input: UpsertMediaBlockInput): Promise<void>;
+  updateMediaBlock(id: string, input: MediaMetadataInput): Promise<void>;
   deleteMediaBlock(id: string): Promise<void>;
   createProject(input: UpsertProjectInput): Promise<string>;
   updateProject(id: string, input: UpsertProjectInput): Promise<ProjectUpdateResult>;

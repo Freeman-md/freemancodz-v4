@@ -1,5 +1,6 @@
 import { adminAuthService, portfolioAdministrationService } from "@/server/composition-root";
 import { ProfileEditor, RelationEditor } from "../../_components/AdminEditors";
+import { MediaUploader } from "../../_components/MediaUploader";
 
 const collections = [
   "AUDIENCE",
@@ -28,6 +29,12 @@ export default async function AdminProfilePage() {
         </p>
       </div>
       <ProfileEditor profile={profile} />
+      <MediaUploader
+        owner={{ type: "profile" }}
+        source={profile.coverImage}
+        type="IMAGE"
+        title="Profile cover image"
+      />
       <div className="space-y-4">
         {collections.map((collection) => (
           <RelationEditor

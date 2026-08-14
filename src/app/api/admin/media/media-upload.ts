@@ -1,5 +1,6 @@
 import {
   MAX_PORTFOLIO_MEDIA_REQUEST_BYTES,
+  mediaMetadataSchema,
   mediaOwnerSchema,
 } from "@/contracts/portfolio-admin.contract";
 import type { IAdminAuthService } from "@/server/modules/admin-auth/public";
@@ -102,11 +103,14 @@ export async function handlePortfolioMediaUpload(
 
     const ownerValue = formData.get("owner");
 
-    if (!(file instanceof File) || typeof ownerValue !== "string") {
+    const metadataValue = formData.get("metadata");
+
+    if (
+      !(file instanceof File) ||
+      (typeof ownerValue !== "string" && typeof metadataValue !== "string")
+    ) {
       return Response.json({ message: "Choose a media file and destination." }, { status: 400 });
     }
-
-    const owner = mediaOwnerSchema.parse(JSON.parse(ownerValue));
 
     const fileExtension = mediaExtensions[file.type];
 
@@ -114,12 +118,26 @@ export async function handlePortfolioMediaUpload(
       return Response.json({ message: "This media type is not supported." }, { status: 400 });
     }
 
-    const result = await dependencies.media.replaceMedia({
-      owner,
+    const upload = {
       body: new Uint8Array(await file.arrayBuffer()),
       contentType: file.type,
       fileExtension,
-    });
+    };
+
+    if (typeof metadataValue === "string") {
+      const result = await dependencies.media.createMediaBlock({
+        ...upload,
+        metadata: mediaMetadataSchema.parse(JSON.parse(metadataValue)),
+      });
+
+      dependencies.revalidate(PortfolioCacheTag.mediaBlock(result.id));
+
+      return Response.json(result, { headers: { "Cache-Control": "private, no-store" } });
+    }
+
+    const owner = mediaOwnerSchema.parse(JSON.parse(String(ownerValue)));
+
+    const result = await dependencies.media.replaceMedia({ owner, ...upload });
 
     dependencies.revalidate(getOwnerCacheTag(owner, result.projectSlug));
 

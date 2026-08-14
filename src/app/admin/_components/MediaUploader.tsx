@@ -2,34 +2,35 @@
 
 import Image from "next/image";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/shared/components/ui/Button";
 import { Input } from "@/shared/components/ui/Input";
 import { Label } from "@/shared/components/ui/Label";
+import { Textarea } from "@/shared/components/ui/Textarea";
 import { Select } from "@/shared/components/ui/Select";
+import { portfolioIconNames } from "@/contracts/portfolio-presentation.contract";
 
-type MediaOption = { id: string; label: string; source: string; type: "IMAGE" | "VIDEO" };
-type ProjectCoverOption = { id: string; label: string };
+type MediaOwner =
+  | { type: "profile" }
+  | { type: "media-block"; id: string }
+  | { type: "project-cover"; id: string };
 
-function getUploadOwner(destination: string) {
-  if (destination === "profile") {
-    return { type: "profile" } as const;
-  }
+const ALL_MEDIA_TYPES = "image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm";
 
-  if (destination.startsWith("project:")) {
-    return { type: "project-cover", id: destination.slice("project:".length) } as const;
-  }
-
-  return { type: "media-block", id: destination } as const;
-}
+const IMAGE_TYPES = "image/jpeg,image/png,image/webp,image/gif";
 
 export function MediaUploader({
-  media,
-  projectCovers,
+  owner,
+  source,
+  type,
+  title,
 }: {
-  media: MediaOption[];
-  projectCovers: ProjectCoverOption[];
+  owner: MediaOwner;
+  source: string | null;
+  type: "IMAGE" | "VIDEO";
+  title: string;
 }) {
-  const [destination, setDestination] = useState("profile");
+  const router = useRouter();
 
   const [file, setFile] = useState<File | null>(null);
 
@@ -39,11 +40,11 @@ export function MediaUploader({
 
   const [message, setMessage] = useState("");
 
+  const acceptsImagesOnly = owner.type === "profile" || owner.type === "project-cover";
+
   useEffect(
     () => () => {
-      if (preview) {
-        URL.revokeObjectURL(preview);
-      }
+      if (preview) {URL.revokeObjectURL(preview);}
     },
     [preview],
   );
@@ -52,107 +53,126 @@ export function MediaUploader({
     setFile(selected);
     setPreview(selected ? URL.createObjectURL(selected) : null);
     setProgress("idle");
+    setMessage("");
   }
 
   async function upload() {
-    if (!file) {
-      return;
-    }
+    if (!file) {return;}
 
     setProgress("uploading");
     const body = new FormData();
 
     body.set("file", file);
-    body.set("owner", JSON.stringify(getUploadOwner(destination)));
+    body.set("owner", JSON.stringify(owner));
+
     try {
       const response = await fetch("/api/admin/media", { method: "POST", body });
 
-      const payload = (await response.json()) as { message?: string; cleanupWarning?: boolean };
+      const payload = (await response.json()) as { cleanupWarning?: boolean; message?: string };
 
-      if (!response.ok) {
-        throw new Error(payload.message || "Upload failed.");
-      }
+      if (!response.ok) {throw new Error(payload.message);}
 
       setProgress("success");
-      setMessage(
-        payload.cleanupWarning
-          ? "Published. The previous object needs manual cleanup."
-          : "Published and the previous managed object was removed.",
-      );
+      setMessage(payload.cleanupWarning ? "Published. The previous object needs manual cleanup." : "Published.");
+      router.refresh();
     } catch {
       setProgress("error");
       setMessage("The media replacement could not be published. The existing media is unchanged.");
     }
   }
 
+  const previewSource = preview ?? source;
+
+  const previewType = preview ? (file?.type.startsWith("video/") ? "VIDEO" : "IMAGE") : type;
+
   return (
-    <div className="space-y-5 rounded-2xl border border-line bg-white p-5">
+    <section className="space-y-3 rounded-xl border border-line bg-slate-50 p-4">
       <div>
-        <h2 className="font-semibold">Protected replacement upload</h2>
-        <p className="mt-1 text-sm text-muted">
-          JPEG, PNG, WebP, GIF, MP4 or WebM up to 8 MB. New objects use versioned paths.
+        <h3 className="text-sm font-semibold">{title}</h3>
+        <p className="mt-1 text-xs text-muted">
+          {acceptsImagesOnly ? "JPEG, PNG, WebP or GIF" : "JPEG, PNG, WebP, GIF, MP4 or WebM"} up to 8 MB.
         </p>
       </div>
-      <div className="grid gap-4 md:grid-cols-2">
-        <div className="space-y-2">
-          <Label htmlFor="media-destination">Destination</Label>
-          <Select
-            id="media-destination"
-            value={destination}
-            onChange={(event) => setDestination(event.target.value)}
-          >
-            <option value="profile">Profile cover image</option>
-            {projectCovers.map((item) => (
-              <option key={item.id} value={`project:${item.id}`}>
-                Project cover · {item.label}
-              </option>
-            ))}
-            {media.map((item) => (
-              <option key={item.id} value={item.id}>
-                Media · {item.label}
-              </option>
-            ))}
-          </Select>
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="media-file">Media file</Label>
-          <Input
-            id="media-file"
-            type="file"
-            accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm"
-            onChange={(event) => chooseFile(event.target.files?.[0] || null)}
-          />
-        </div>
-      </div>
-      {preview ? (
-        <div className="overflow-hidden rounded-xl border border-line bg-slate-100 p-3">
-          {file?.type.startsWith("video/") ? (
-            <video src={preview} controls className="max-h-72 w-full object-contain" />
+      {previewSource ? (
+        <div className="relative aspect-video overflow-hidden rounded-lg border border-line bg-white">
+          {previewType === "VIDEO" ? (
+            <video className="size-full object-contain" controls src={previewSource} />
+          ) : preview ? (
+            <Image alt="Selected upload preview" className="object-contain" fill sizes="(max-width: 768px) 100vw, 42rem" src={previewSource} unoptimized />
           ) : (
-            <Image
-              src={preview}
-              alt="Selected upload preview"
-              width={960}
-              height={540}
-              unoptimized
-              className="max-h-72 w-full object-contain"
-            />
+            <Image alt={`${title} preview`} className="object-contain" fill sizes="(max-width: 768px) 100vw, 42rem" src={previewSource} />
           )}
         </div>
       ) : null}
-      <div className="flex items-center gap-4">
+      <div className="flex flex-wrap items-end gap-3">
+        <div className="space-y-1.5">
+          <Label htmlFor={`media-file-${owner.type}-${"id" in owner ? owner.id : "profile"}`}>Replacement file</Label>
+          <Input id={`media-file-${owner.type}-${"id" in owner ? owner.id : "profile"}`} type="file" accept={acceptsImagesOnly ? IMAGE_TYPES : ALL_MEDIA_TYPES} onChange={(event) => chooseFile(event.target.files?.[0] ?? null)} />
+        </div>
         <Button type="button" onClick={upload} disabled={!file || progress === "uploading"}>
           {progress === "uploading" ? "Publishing…" : "Publish replacement"}
         </Button>
-        {message ? (
-          <p
-            role="status"
-            className={progress === "error" ? "text-sm text-red-700" : "text-sm text-emerald-700"}
-          >
-            {message}
-          </p>
-        ) : null}
       </div>
-    </div>
+      {message ? <p role="status" className={progress === "error" ? "text-sm text-red-700" : "text-sm text-emerald-700"}>{message}</p> : null}
+    </section>
+  );
+}
+
+export function NewMediaBlockUploader() {
+  const router = useRouter();
+
+  const [file, setFile] = useState<File | null>(null);
+
+  const [progress, setProgress] = useState<"idle" | "uploading" | "success" | "error">("idle");
+
+  const [message, setMessage] = useState("");
+
+  async function create(form: FormData) {
+    if (!file) {return;}
+
+    setProgress("uploading");
+    form.set("file", file);
+    form.set(
+      "metadata",
+      JSON.stringify({
+        label: String(form.get("label") ?? ""),
+        altText: String(form.get("altText") ?? ""),
+        copy: String(form.get("copy") ?? "") || null,
+        iconName: String(form.get("iconName") ?? "") || null,
+        colour: null,
+      }),
+    );
+    try {
+      const response = await fetch("/api/admin/media", { method: "POST", body: form });
+
+      const payload = (await response.json()) as { message?: string };
+
+      if (!response.ok) {throw new Error(payload.message);}
+
+      setProgress("success");
+      setMessage("Managed media created.");
+      router.refresh();
+    } catch {
+      setProgress("error");
+      setMessage("The media could not be created.");
+    }
+  }
+
+  return (
+    <form action={create} className="space-y-4 rounded-2xl border border-line bg-white p-5">
+      <div>
+        <h2 className="font-semibold">New managed media</h2>
+        <p className="mt-1 text-sm text-muted">Upload the file; its stored media type and canonical source are set by the protected backend.</p>
+      </div>
+      <div className="grid gap-4 md:grid-cols-2">
+        <div className="space-y-1.5"><Label htmlFor="new-media-label">Label</Label><Input id="new-media-label" name="label" required /></div>
+        <div className="space-y-1.5"><Label htmlFor="new-media-alt">Alternative text</Label><Input id="new-media-alt" name="altText" required /></div>
+        <div className="space-y-1.5"><Label htmlFor="new-media-file">File</Label><Input id="new-media-file" type="file" accept={ALL_MEDIA_TYPES} required onChange={(event) => setFile(event.target.files?.[0] ?? null)} /></div>
+        <div className="space-y-1.5"><Label htmlFor="new-media-icon">Approved icon</Label><Select id="new-media-icon" name="iconName" defaultValue=""><option value="">None</option>{portfolioIconNames.map((name) => <option key={name}>{name}</option>)}</Select></div>
+      </div>
+      <div className="space-y-1.5"><Label htmlFor="new-media-copy">Supporting copy</Label><Textarea id="new-media-copy" name="copy" /></div>
+      <Button type="submit" disabled={!file || progress === "uploading"}>{progress === "uploading" ? "Publishing…" : "Create managed media"}</Button>
+      {message ? <p role="status" className={progress === "error" ? "text-sm text-red-700" : "text-sm text-emerald-700"}>{message}</p> : null}
+    </form>
   );
 }

@@ -32,6 +32,8 @@ function setup(
 
   const updatedMedia: Array<{ id: string; source: string }> = [];
 
+  const createdMedia: Array<{ source: string; type: "IMAGE" | "VIDEO" }> = [];
+
   const storage: IPortfolioMediaStorageProvider = {
     ensurePublicBucket: async () => undefined,
     getPublicUrl: (path) => `https://storage.test/storage/v1/object/public/portfolio-media/${path}`,
@@ -67,9 +69,16 @@ function setup(
 
       return remainingSourceReferences;
     },
-    create: async () => "",
+    create: async (input) => {
+      if (databaseFails) {
+        throw new Error("database");
+      }
+
+      createdMedia.push({ source: input.source, type: input.type });
+      return "new-media-id";
+    },
     update: async () => undefined,
-    updateSource: async (id, source) => {
+    updateManagedMedia: async (id, source) => {
       if (databaseFails) {
         throw new Error("database");
       }
@@ -138,6 +147,7 @@ function setup(
     removed,
     errors,
     updatedMedia,
+    createdMedia,
   };
 }
 
@@ -156,6 +166,21 @@ test("failed database metadata writes compensate by removing the newly uploaded 
   );
   assert.equal(removed.length, 1);
   assert.equal(removed[0].startsWith("images/profile/"), true);
+});
+
+test("file-backed MediaBlock creation stores the canonical source and derives its type from MIME", async () => {
+  const { service, createdMedia } = setup();
+
+  const result = await service.createMediaBlock({
+    body: new Uint8Array([1]),
+    contentType: "video/webm",
+    fileExtension: "webm",
+    metadata: { iconName: null, label: "Demo", copy: null, colour: null, altText: "Demo video" },
+  });
+
+  assert.equal(result.id, "new-media-id");
+  assert.equal(createdMedia[0]?.source, result.source);
+  assert.equal(createdMedia[0]?.type, "VIDEO");
 });
 
 test("old-object cleanup failure preserves the successful new source and reports a warning", async () => {

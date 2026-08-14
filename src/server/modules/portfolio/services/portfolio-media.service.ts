@@ -5,6 +5,7 @@ import type { ILogger } from "@/server/infrastructure/logging/logger.interface";
 import type { IMediaBlockAdministrationRepository } from "../interfaces/media-block.repository.interface";
 import type {
   IPortfolioMediaService,
+  CreatePortfolioMediaInput,
   ReplacePortfolioMediaInput,
 } from "../interfaces/portfolio-media.service.interface";
 import type { IProfileAdministrationRepository } from "../interfaces/profile.repository.interface";
@@ -38,6 +39,10 @@ export class PortfolioMediaService implements IPortfolioMediaService {
 
   async replaceMedia(input: ReplacePortfolioMediaInput) {
     this.validate(input);
+    if (input.owner.type !== "media-block" && !input.contentType.startsWith("image/")) {
+      throw new PortfolioMediaError("Profile and Project covers must be images.");
+    }
+
     const ownership = await this.getOwnership(input.owner);
 
     const folder = input.owner.type === "profile" ? "images/profile" : "media";
@@ -54,7 +59,11 @@ export class PortfolioMediaService implements IPortfolioMediaService {
       if (input.owner.type === "profile") {
         await this.profiles.updateCoverImage(source);
       } else if (ownership.mediaBlockId) {
-        await this.media.updateSource(ownership.mediaBlockId, source);
+        await this.media.updateManagedMedia(
+          ownership.mediaBlockId,
+          source,
+          this.mediaTypeFor(input.contentType),
+        );
       } else {
         throw new PortfolioMediaError("Media ownership could not be resolved.");
       }
@@ -88,7 +97,27 @@ export class PortfolioMediaService implements IPortfolioMediaService {
     return { source, cleanupWarning, projectSlug: ownership.projectSlug };
   }
 
-  private validate(input: ReplacePortfolioMediaInput) {
+  async createMediaBlock(input: CreatePortfolioMediaInput) {
+    this.validate(input);
+    const objectPath = `media/${randomUUID()}.${input.fileExtension}`;
+
+    const source = await this.storage.upload({ objectPath, body: input.body, contentType: input.contentType });
+
+    try {
+      const id = await this.media.create({
+        ...input.metadata,
+        source,
+        type: this.mediaTypeFor(input.contentType),
+      });
+
+      return { id, source, cleanupWarning: false };
+    } catch {
+      await this.removeCompensatingObject(objectPath);
+      throw new PortfolioMediaError("Media metadata could not be created.");
+    }
+  }
+
+  private validate(input: Pick<ReplacePortfolioMediaInput, "body" | "contentType" | "fileExtension">) {
     if (!ALLOWED_MEDIA_TYPES.has(input.contentType)) {
       throw new PortfolioMediaError("Unsupported media type.");
     }
@@ -100,6 +129,10 @@ export class PortfolioMediaService implements IPortfolioMediaService {
     if (!/^[a-z0-9]+$/.test(input.fileExtension)) {
       throw new PortfolioMediaError("Invalid media file extension.");
     }
+  }
+
+  private mediaTypeFor(contentType: string) {
+    return contentType.startsWith("image/") ? ("IMAGE" as const) : ("VIDEO" as const);
   }
 
   private async getOwnership(owner: ReplacePortfolioMediaInput["owner"]) {

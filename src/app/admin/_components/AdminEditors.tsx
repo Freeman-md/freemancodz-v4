@@ -10,7 +10,7 @@ import {
   upsertActionBlockSchema,
   upsertExperienceSchema,
   upsertIconBlockSchema,
-  upsertMediaBlockSchema,
+  mediaMetadataSchema,
   upsertProjectSchema,
 } from "@/contracts/portfolio-admin.contract";
 import {
@@ -35,7 +35,6 @@ import {
   createActionBlockAction,
   createExperienceAction,
   createIconBlockAction,
-  createMediaBlockAction,
   createProjectAction,
   updateActionBlockAction,
   updateContentBlockAction,
@@ -53,13 +52,14 @@ import {
   deleteMediaBlockAction,
   deleteProjectAction,
 } from "../actions";
+import { MediaUploader } from "./MediaUploader";
 
 type ProfileValues = z.input<typeof updateProfileSchema>;
 type ProjectValues = z.input<typeof upsertProjectSchema>;
 type ExperienceValues = z.input<typeof upsertExperienceSchema>;
 type IconValues = z.input<typeof upsertIconBlockSchema>;
 type ActionValues = z.input<typeof upsertActionBlockSchema>;
-type MediaValues = z.input<typeof upsertMediaBlockSchema>;
+type MediaValues = z.input<typeof mediaMetadataSchema>;
 type ContentValues = z.input<typeof updateContentBlockSchema>;
 type Submitter<T> = (input: T) => Promise<AdminActionResult>;
 type RelationOption = { id: string; label: string };
@@ -533,7 +533,13 @@ export function IconEditor({ item }: { item?: IconValues & { id: string } }) {
   );
 }
 
-export function ProjectEditor({ item }: { item?: ProjectValues & { id: string } }) {
+export function ProjectEditor({
+  item,
+  cover,
+}: {
+  item?: ProjectValues & { id: string };
+  cover?: { source: string; type: "IMAGE" | "VIDEO" } | null;
+}) {
   const [result, setResult] = useState<AdminActionResult | null>(null);
 
   const defaults: ProjectValues = item || {
@@ -562,6 +568,14 @@ export function ProjectEditor({ item }: { item?: ProjectValues & { id: string } 
 
   return (
     <FormCard title={item ? item.title : "New project"} description={item?.slug}>
+      {item && cover ? (
+        <MediaUploader
+          owner={{ type: "project-cover", id: item.id }}
+          source={cover.source}
+          type={cover.type}
+          title="Project cover image"
+        />
+      ) : null}
       <form
         className="grid gap-4 md:grid-cols-2"
         onSubmit={form.handleSubmit(async (values) => setResult(await submit(values)))}
@@ -798,50 +812,37 @@ export function ActionEditor({ item }: { item?: ActionValues & { id: string } })
   );
 }
 
-export function MediaMetadataEditor({ item }: { item?: MediaValues & { id: string } }) {
+export function MediaMetadataEditor({
+  item,
+}: {
+  item: MediaValues & { id: string; source: string; type: "IMAGE" | "VIDEO" };
+}) {
   const [result, setResult] = useState<AdminActionResult | null>(null);
 
-  const defaults: MediaValues = item || {
-    iconName: null,
-    label: "",
-    copy: null,
-    colour: null,
-    type: "IMAGE",
-    source: "",
-    altText: "",
-  };
-
   const form = useForm<MediaValues>({
-    resolver: zodResolver(upsertMediaBlockSchema),
-    defaultValues: defaults,
+    resolver: zodResolver(mediaMetadataSchema),
+    defaultValues: item,
   });
 
   const selectedIcon = useWatch({ control: form.control, name: "iconName" });
 
-  const submit = item
-    ? (values: MediaValues) => updateMediaBlockAction({ ...values, id: item.id })
-    : createMediaBlockAction;
-
   return (
-    <FormCard title={item ? item.label : "New media reference"}>
+    <FormCard title={item.label}>
+      <MediaUploader
+        owner={{ type: "media-block", id: item.id }}
+        source={item.source}
+        type={item.type}
+        title="Managed media file"
+      />
       <form
         className="grid gap-4 md:grid-cols-2"
-        onSubmit={form.handleSubmit(async (values) => setResult(await submit(values)))}
+        onSubmit={form.handleSubmit(async (values) =>
+          setResult(await updateMediaBlockAction({ ...values, id: item.id })),
+        )}
       >
         <Field label="Label">
           <Input {...form.register("label")} />
         </Field>
-        <Field label="Type">
-          <Select {...form.register("type")}>
-            <option>IMAGE</option>
-            <option>VIDEO</option>
-          </Select>
-        </Field>
-        <div className="md:col-span-2">
-          <Field label="Public source URL">
-            <Input type="url" {...form.register("source")} />
-          </Field>
-        </div>
         <div className="md:col-span-2">
           <Field label="Alternative text">
             <Input {...form.register("altText")} />
@@ -860,10 +861,8 @@ export function MediaMetadataEditor({ item }: { item?: MediaValues & { id: strin
             />
           </Field>
         </div>
-        <Button type="submit">{item ? "Save metadata" : "Create reference"}</Button>
-        {item ? (
-          <DeleteButton id={item.id} label={item.label} action={deleteMediaBlockAction} />
-        ) : null}
+        <Button type="submit">Save metadata</Button>
+        <DeleteButton id={item.id} label={item.label} action={deleteMediaBlockAction} />
         <Result result={result} />
       </form>
     </FormCard>

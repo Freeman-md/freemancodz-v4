@@ -82,6 +82,7 @@ test("media route boundary rejects unauthorised and over-limit requests before m
   let writes = 0;
 
   const media: IPortfolioMediaService = {
+    createMediaBlock: async () => ({ id: "media-id", source: "https://storage.test/new.webp", cleanupWarning: false }),
     replaceMedia: async () => {
       writes += 1;
 
@@ -180,6 +181,7 @@ test("authorised media route writes once and revalidates the owning Project slug
     {
       auth: { requireAdmin: async () => ({ id: "admin", email: "freemanmadudili@gmail.com" }) },
       media: {
+        createMediaBlock: async () => ({ id: "media-id", source: "https://storage.test/new.webp", cleanupWarning: false }),
         replaceMedia: async () => {
           writes += 1;
 

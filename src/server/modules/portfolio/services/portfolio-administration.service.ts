@@ -6,7 +6,7 @@ import type {
   UpsertActionBlockInput,
   UpsertExperienceInput,
   UpsertIconBlockInput,
-  UpsertMediaBlockInput,
+  MediaMetadataInput,
   UpsertProjectInput,
 } from "@/contracts/portfolio-admin.contract";
 import { requiredPortfolioProjectSlugs } from "@/contracts/portfolio-presentation.contract";
@@ -125,11 +125,7 @@ export class PortfolioAdministrationService implements IPortfolioAdministrationS
     await this.actions.delete(id);
   }
 
-  createMediaBlock(input: UpsertMediaBlockInput) {
-    return this.media.create(input);
-  }
-
-  async updateMediaBlock(id: string, input: UpsertMediaBlockInput) {
+  async updateMediaBlock(id: string, input: MediaMetadataInput) {
     await this.media.update(id, input);
   }
 

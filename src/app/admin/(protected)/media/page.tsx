@@ -1,16 +1,13 @@
 import { portfolioIconNameSchema } from "@/contracts/portfolio-presentation.contract";
 import { adminAuthService, portfolioAdministrationService } from "@/server/composition-root";
 import { MediaMetadataEditor } from "../../_components/AdminEditors";
-import { MediaUploader } from "../../_components/MediaUploader";
+import { NewMediaBlockUploader } from "../../_components/MediaUploader";
 
 const iconName = (value: string | null) => portfolioIconNameSchema.safeParse(value).data || null;
 
 export default async function AdminMediaPage() {
   await adminAuthService.requireAdmin();
-  const [media, projects] = await Promise.all([
-    portfolioAdministrationService.getMediaBlocks(),
-    portfolioAdministrationService.getProjects(),
-  ]);
+  const media = await portfolioAdministrationService.getMediaBlocks();
 
   return (
     <section className="space-y-8">
@@ -21,19 +18,8 @@ export default async function AdminMediaPage() {
           text.
         </p>
       </div>
-      <MediaUploader
-        media={media.map((item) => ({
-          id: item.id,
-          label: item.iconBlock.label,
-          source: item.source,
-          type: item.type,
-        }))}
-        projectCovers={projects
-          .filter((project) => project.cover)
-          .map((project) => ({ id: project.id, label: project.title }))}
-      />
+      <NewMediaBlockUploader />
       <div className="space-y-4">
-        <MediaMetadataEditor />
         {media.map((item) => (
           <MediaMetadataEditor
             key={item.id}
@@ -43,8 +29,8 @@ export default async function AdminMediaPage() {
               label: item.iconBlock.label,
               copy: item.iconBlock.copy,
               colour: null,
-              type: item.type,
               source: item.source,
+              type: item.type,
               altText: item.altText,
             }}
           />

@@ -87,7 +87,7 @@ function setup(references = 0, project = canonicalProject) {
     countSourceReferences: async () => 0,
     create: async () => "media",
     update: async () => undefined,
-    updateSource: async () => undefined,
+    updateManagedMedia: async () => undefined,
     delete: async () => undefined,
   };
 

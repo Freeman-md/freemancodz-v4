@@ -104,10 +104,8 @@ export const upsertActionBlockSchema = z
     path: ["url"],
   });
 
-export const upsertMediaBlockSchema = z.object({
+export const mediaMetadataSchema = z.object({
   ...reusableIconFields,
-  type: mediaTypeSchema,
-  source: z.string().url().max(4_000),
   altText: requiredText("Alternative text", 500),
 });
 
@@ -173,7 +171,7 @@ export type OrderedRelationInput = z.infer<typeof orderedRelationSchema>;
 export type UpdateProfileCollectionInput = z.infer<typeof updateProfileCollectionSchema>;
 export type UpsertIconBlockInput = z.infer<typeof upsertIconBlockSchema>;
 export type UpsertActionBlockInput = z.infer<typeof upsertActionBlockSchema>;
-export type UpsertMediaBlockInput = z.infer<typeof upsertMediaBlockSchema>;
+export type MediaMetadataInput = z.infer<typeof mediaMetadataSchema>;
 export type UpsertProjectInput = z.infer<typeof upsertProjectSchema>;
 export type UpsertExperienceInput = z.infer<typeof upsertExperienceSchema>;
 export type MediaOwnerInput = z.infer<typeof mediaOwnerSchema>;

@@ -12,7 +12,7 @@ import {
   upsertActionBlockSchema,
   upsertExperienceSchema,
   upsertIconBlockSchema,
-  upsertMediaBlockSchema,
+  mediaMetadataSchema,
   upsertProjectSchema,
 } from "@/contracts/portfolio-admin.contract";
 import { adminAuthService, portfolioAdministrationService } from "@/server/composition-root";
@@ -191,21 +191,11 @@ export async function deleteActionBlockAction(input: unknown) {
   });
 }
 
-export async function createMediaBlockAction(input: unknown) {
-  return run(async () => {
-    const id = await portfolioAdministrationService.createMediaBlock(
-      upsertMediaBlockSchema.parse(input),
-    );
-
-    return success("Media reference created.", id);
-  });
-}
-
 export async function updateMediaBlockAction(input: unknown) {
   return run(async () => {
     const { id } = entityMutationSchema.parse(input);
 
-    await portfolioAdministrationService.updateMediaBlock(id, upsertMediaBlockSchema.parse(input));
+    await portfolioAdministrationService.updateMediaBlock(id, mediaMetadataSchema.parse(input));
     invalidateReusableBlockUpdate("media", id, updateTag);
 
     return success("Media reference saved.", id);

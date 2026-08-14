@@ -38,6 +38,7 @@ export default async function AdminProjectsPage() {
                 : null,
             visualText: project.visualText,
           }}
+          cover={project.cover ? { source: project.cover.source, type: project.cover.type } : null}
         />
       ))}
     </section>
