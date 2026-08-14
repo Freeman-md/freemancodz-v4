@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 import { adminAuthService } from "@/server/composition-root";
+import { Container } from "@/shared/components/layout/Container";
 import { Button } from "@/shared/components/ui/Button";
 import { signOutAdmin } from "../login/actions";
 
@@ -23,7 +24,7 @@ export default async function ProtectedAdminLayout({ children }: { children: Rea
   }
 
   return (
-    <div className="mx-auto grid min-h-[80vh] max-w-[1500px] lg:grid-cols-[260px_1fr]">
+    <Container className="grid min-h-[80vh] lg:grid-cols-[260px_1fr]">
       <aside className="border-b border-line bg-white p-5 lg:border-r lg:border-b-0 lg:p-7">
         <p className="font-mono text-xs font-semibold tracking-[0.16em] text-signal-700 uppercase">
           Portfolio content
@@ -49,6 +50,6 @@ export default async function ProtectedAdminLayout({ children }: { children: Rea
         </form>
       </aside>
       <main className="min-w-0 p-5 sm:p-8 lg:p-10">{children}</main>
-    </div>
+    </Container>
   );
 }
