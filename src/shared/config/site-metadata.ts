@@ -1,4 +1,3 @@
-import { externalLinks } from "@/shared/config/links";
 
 export const SITE_OWNER_NAME = "Freeman Madudili";
 
@@ -22,10 +21,6 @@ export const siteConfig = {
     "Building customer-facing products and reliable operational workflows that help businesses improve customer journeys and reduce repetitive work.",
   url: getSiteUrl(),
   ogImage: "/opengraph-image",
-  links: {
-    linkedin: externalLinks.linkedin,
-    github: externalLinks.github,
-  },
   keywords: [
     "Freeman Madudili",
     "Software Engineer",

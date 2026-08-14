@@ -13,6 +13,8 @@ import type { IAssistantService } from "./modules/assistant/interfaces/assistant
 import { ContentBlockRepository } from "./modules/portfolio/repositories/content-block.repository";
 import { ExperienceRepository } from "./modules/portfolio/repositories/experience.repository";
 import { ProfileRepository } from "./modules/portfolio/repositories/profile.repository";
+import { ProfileService } from "./modules/portfolio/services/profile.service";
+import type { IProfileService } from "./modules/portfolio/interfaces/profile.service.interface";
 import { ProjectRepository } from "./modules/portfolio/repositories/project.repository";
 import { IconBlockRepository } from "./modules/portfolio/repositories/icon-block.repository";
 import { MediaBlockRepository } from "./modules/portfolio/repositories/media-block.repository";
@@ -39,15 +41,8 @@ import { SiteSearchService } from "./modules/search-index/services/site-search.s
 import type { ISearchIndexService } from "./modules/search-index/interfaces/search-index.service.interface";
 import type { ISiteSearchService } from "./modules/search-index/interfaces/site-search.service.interface";
 import { GoogleCalendarProvider } from "./infrastructure/google-calendar/google-calendar.provider";
-import {
-  getAdminEmail,
-  getGoogleCalendarConfig,
-  getWorkflowSecret,
-} from "./infrastructure/config/env";
-import { createSupabaseAuthClient } from "./infrastructure/supabase/supabase-auth.client";
-import { SupabaseAuthProvider } from "./modules/admin-auth/providers/supabase-auth.provider";
-import { AdminAuthService } from "./modules/admin-auth/services/admin-auth.service";
-import type { IAdminAuthService } from "./modules/admin-auth/interfaces/admin-auth.service.interface";
+import { getGoogleCalendarConfig, getWorkflowSecret } from "./infrastructure/config/env";
+import { adminAuthService } from "./composition/admin-auth.composition";
 import { MeetingRepository } from "./modules/meeting/repositories/meeting.repository";
 import { MeetingService } from "./modules/meeting/services/meeting.service";
 import type { IMeetingService } from "./modules/meeting/interfaces/meeting.service.interface";
@@ -80,7 +75,6 @@ const googleCalendar = new GoogleCalendarProvider(getGoogleCalendarConfig);
 
 const workflow: IWorkflowService = new WorkflowService(getWorkflowSecret);
 
-const adminAuthProvider = new SupabaseAuthProvider(createSupabaseAuthClient);
 
 export const logger: ILogger = new ConsoleLogger();
 
@@ -107,11 +101,9 @@ export const assistantService: IAssistantService = new AssistantService(
 export const homeService: IHomeService = new HomeService(profiles, contentBlocks, projects);
 export const workService: IWorkService = new WorkService(profiles, contentBlocks, projects);
 export const aboutService: IAboutService = new AboutService(profiles, contentBlocks, experiences);
+export const profileService: IProfileService = new ProfileService(profiles);
 export const auditService: IAuditService = new AuditService(contentBlocks, projects);
-export const adminAuthService: IAdminAuthService = new AdminAuthService(
-  adminAuthProvider,
-  getAdminEmail(),
-);
+export { adminAuthService };
 export const portfolioAdministrationService: IPortfolioAdministrationService =
   new PortfolioAdministrationService(
     profiles,

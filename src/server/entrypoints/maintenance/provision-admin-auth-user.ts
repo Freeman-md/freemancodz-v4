@@ -1,6 +1,6 @@
 import "server-only";
 import { getAdminEmail, getSupabaseAdminAuthConfig } from "../../infrastructure/config/env";
-import { adminAuthProvisioningService } from "../../composition/admin-auth.composition";
+import { adminAuthService } from "../../composition-root";
 
 function isLoopback(hostname: string) {
   return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1";
@@ -37,7 +37,7 @@ async function main() {
   }
 
   try {
-    const result = await adminAuthProvisioningService.provisionApprovedAdmin();
+    const result = await adminAuthService.provisionApprovedAdmin();
 
     console.info(result.status);
   } catch {

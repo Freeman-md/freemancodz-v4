@@ -45,7 +45,7 @@ PORTFOLIO_TEST_DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54332/postg
 
 Production is deliberately two guarded operations: `npm run prisma:migrate:production`, then `npm run portfolio:bootstrap:production -- --confirm-production`. The confirmation argument must be supplied by the operator; it is not built into the package script. The production bootstrap prints database/storage targets, creates or verifies the public media bucket, and refuses to overwrite any initialized portfolio-domain table. It does not require or upload media objects.
 
-Managed Profile and Outside Engineering values are stored as environment-correct public Supabase URLs. The CV is not a database entity; the live site resolves `documents/cv` through the same public bucket. Repo-public Project covers remain `/images/work/*` paths.
+Managed Profile and Outside Engineering values are stored as environment-correct public Supabase URLs. Repo-public Project covers remain `/images/work/*` paths.
 
 Search-index adapters are:
 

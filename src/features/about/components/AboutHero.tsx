@@ -1,5 +1,4 @@
 import { Container } from "@/shared/components/layout/Container";
-import { siteAssetLinks } from "@/shared/config/links";
 import { PortfolioIcon } from "@/features/portfolio/components/PortfolioIcon";
 import type {
   AboutPresentationData,
@@ -52,17 +51,16 @@ function JourneyRail({
   );
 }
 
-function PortraitSignal({ image, name }: { image: string; name: string }) {
+function PortraitSignal({ image, name }: { image: string | null; name: string }) {
   return (
     <div className="flex flex-col items-center">
       <div className="relative flex size-44 items-center justify-center rounded-full border border-signal-300 bg-signal-50/50 p-3 motion-safe:animate-signal-glow sm:size-52 lg:size-60">
         <div className="size-full overflow-hidden rounded-full border-4 border-white bg-surface shadow-[0_14px_34px_-22px_rgba(55,48,163,0.8)]">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
+          {image ? <img
             alt={name}
             className="size-full object-cover grayscale transition duration-500 hover:grayscale-0"
             src={image}
-          />
+          /> : null}
         </div>
       </div>
     </div>
@@ -95,7 +93,7 @@ export function AboutHero({ hero, profile }: Pick<AboutPresentationData, "hero" 
             <JourneyRail label={hero.customer.title} steps={hero.customer.icons} tone="signal" />
             <div className="flex justify-center py-2 lg:py-0">
               <PortraitSignal
-                image={profile.coverImage ?? siteAssetLinks.heroImage}
+                image={profile.coverImage}
                 name={profile.name}
               />
             </div>

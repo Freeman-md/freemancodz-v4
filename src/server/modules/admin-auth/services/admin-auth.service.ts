@@ -2,6 +2,8 @@ import "server-only";
 import type { IAdminAuthProvider } from "../interfaces/admin-auth.provider.interface";
 import type { IAdminAuthService } from "../interfaces/admin-auth.service.interface";
 
+export class AdminAuthProvisioningError extends Error { constructor() { super("Administrator provisioning could not be completed."); this.name = "AdminAuthProvisioningError"; } }
+
 export class AdminAuthenticationError extends Error {
   constructor(
     message: string,
@@ -49,5 +51,34 @@ export class AdminAuthService implements IAdminAuthService {
 
   async signOut() {
     await this.provider.signOut();
+  }
+
+  async provisionApprovedAdmin() {
+    const email = this.approvedEmail.trim().toLowerCase();
+
+    try {
+      const existing = await this.provider.findUserByEmail(email);
+
+      if (existing) {return this.verifyProvisionedIdentity(existing, "existing", email);}
+
+      try { return this.verifyProvisionedIdentity(await this.provider.createConfirmedUser(email), "created", email); }
+      catch {
+        const raced = await this.provider.findUserByEmail(email);
+
+        if (raced) {return this.verifyProvisionedIdentity(raced, "existing", email);}
+
+        throw new AdminAuthProvisioningError();
+      }
+    } catch (error) {
+      if (error instanceof AdminAuthProvisioningError) {throw error;}
+
+      throw new AdminAuthProvisioningError();
+    }
+  }
+
+  private verifyProvisionedIdentity(identity: { id: string; email: string }, status: "created" | "existing", email: string) {
+    if (!identity.id || identity.email.trim().toLowerCase() !== email) {throw new AdminAuthProvisioningError();}
+
+    return { status, userId: identity.id, email };
   }
 }

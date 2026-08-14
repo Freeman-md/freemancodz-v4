@@ -1,12 +1,13 @@
 import "server-only";
 import { cacheLife, cacheTag } from "next/cache";
-import { aboutService, auditService, homeService, workService } from "@/server/composition-root";
+import { aboutService, auditService, homeService, profileService, workService } from "@/server/composition-root";
 import {
   getAboutPageCacheTags,
   getAuditPageCacheTags,
   getHomePageCacheTags,
   getWorkPageCacheTags,
 } from "@/server/modules/portfolio/public";
+import { PortfolioCacheTag } from "@/server/modules/portfolio/public";
 import { registerPortfolioCacheTags } from "./register-portfolio-cache-tags";
 
 export async function getCachedHomePageData() {
@@ -47,4 +48,14 @@ export async function getCachedAuditPageData() {
   registerPortfolioCacheTags(getAuditPageCacheTags(data), cacheTag);
 
   return data;
+}
+
+export async function getCachedPublicProfile() {
+  "use cache";
+  cacheLife("max");
+  const profile = await profileService.getPublicProfile();
+
+  cacheTag(PortfolioCacheTag.profile);
+
+  return profile;
 }

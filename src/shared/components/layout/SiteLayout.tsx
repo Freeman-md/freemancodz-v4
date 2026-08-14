@@ -1,14 +1,13 @@
 import type { ReactNode } from "react";
 import { Footer } from "./Footer";
 import { Navbar } from "./Navbar";
-import { siteAssetLinks } from "@/shared/config/links";
 
-export function SiteLayout({ children }: { children: ReactNode }) {
+export function SiteLayout({ children, linkedInUrl, githubUrl }: { children: ReactNode; linkedInUrl: string; githubUrl: string }) {
   return (
     <>
-      <Navbar />
+      <Navbar linkedInUrl={linkedInUrl} />
       <main>{children}</main>
-      <Footer cvUrl={siteAssetLinks.cv} />
+      <Footer linkedInUrl={linkedInUrl} githubUrl={githubUrl} />
     </>
   );
 }

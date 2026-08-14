@@ -57,7 +57,7 @@ test("storage provider uploads typed admin assets and normalizes errors", async 
   const provider = new SupabaseStorageProvider(fake.client);
 
   await provider.upload({
-    objectPath: "documents/cv",
+    objectPath: "documents/example",
     body: new Uint8Array([1]),
     contentType: "application/pdf",
   });

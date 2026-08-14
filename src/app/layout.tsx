@@ -5,6 +5,7 @@ import { SiteLayout } from "@/shared/components/layout/SiteLayout";
 import { FloatingPortfolioChat } from "@/features/assistant/components/FloatingPortfolioChat";
 import { Analytics } from "@vercel/analytics/next";
 import { siteConfig } from "@/shared/config/site-metadata";
+import { getCachedPublicProfile } from "./_portfolio/portfolio-page-cache";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
@@ -78,14 +79,16 @@ export const metadata: Metadata = {
   },
   category: "technology",
 };
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const profile = await getCachedPublicProfile();
+
   return (
     <html
       lang="en"
       className={`${inter.variable} ${jetbrains.variable} ${playfairDisplay.variable}`}
     >
       <body className="font-sans antialiased">
-        <SiteLayout>{children}</SiteLayout>
+        <SiteLayout linkedInUrl={profile.linkedInUrl} githubUrl={profile.githubUrl}>{children}</SiteLayout>
         <FloatingPortfolioChat />
         <Analytics />
       </body>

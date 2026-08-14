@@ -1,5 +1,5 @@
 import "server-only";
 export type { IAdminAuthService } from "./interfaces/admin-auth.service.interface";
-export type { IAdminAuthProvisioningService } from "./interfaces/admin-auth-provisioning.service.interface";
+export type { AdminAuthProvisioningResult } from "./interfaces/admin-auth.service.interface";
 export type { AdminIdentity } from "./interfaces/admin-auth.provider.interface";
-export { AdminAuthenticationError } from "./services/admin-auth.service";
+export { AdminAuthenticationError, AdminAuthProvisioningError } from "./services/admin-auth.service";

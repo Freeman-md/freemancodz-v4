@@ -16,6 +16,8 @@ function provider(
   return {
     requested,
     getIdentity: async () => identity,
+    findUserByEmail: async () => null,
+    createConfirmedUser: async (email) => ({ id: "created", email }),
     requestMagicLink: async (email) => {
       requested.push(email);
     },

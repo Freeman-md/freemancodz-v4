@@ -94,7 +94,7 @@ Replacement order is upload new object → update database source → check rema
 
 The 8 MB rule is enforced before unbounded multipart parsing. Requests with a declared `Content-Length` above 8 MB plus 64 KiB of multipart overhead are rejected with `413`; requests without a trustworthy length are read incrementally and cancelled at that same hard raw-request bound before `formData()` is called. The decoded file is independently limited to exactly 8 MB by the media service. Next.js Proxy cloning is also capped with the supported `experimental.proxyClientMaxBodySize: "9mb"`; that platform setting bounds Proxy buffering, while the Route Handler provides the authoritative rejection.
 
-The CV remains the fixed `documents/cv` bucket object established by Milestone 15; replace it through the guarded bootstrap/storage operation. No CV database model was added.
+No CV database model is managed by the portfolio content system.
 
 ## 11. Local Development
 

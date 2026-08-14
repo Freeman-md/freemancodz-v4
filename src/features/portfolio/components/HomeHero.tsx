@@ -1,7 +1,6 @@
 import Image from "next/image";
 import { Check, Database, LineChart, ListChecks } from "lucide-react";
 
-import { siteAssetLinks } from "@/shared/config/links";
 import { Container } from "@/shared/components/layout/Container";
 import type { HomePresentationData } from "../models/portfolio-presentation";
 import { PortfolioAction } from "./PortfolioAction";
@@ -81,16 +80,18 @@ export function HomeHero({ hero, profile }: Pick<HomePresentationData, "hero" | 
             <circle cx="213" cy="525" fill="currentColor" r="5" />
           </svg>
           <HeroSignalCards />
-          <div className="absolute inset-x-0 bottom-0 top-[8%] z-10 lg:top-[6%]">
+          {profile.coverImage ? (
+            <div className="absolute inset-x-0 bottom-0 top-[8%] z-10 lg:top-[6%]">
             <Image
               alt={profile.name}
               className="object-contain object-bottom [mask-image:linear-gradient(to_bottom,black_84%,transparent_100%)]"
               fill
               priority
               sizes="(min-width: 1024px) 50vw, 100vw"
-              src={profile.coverImage ?? siteAssetLinks.heroImage}
+              src={profile.coverImage}
             />
-          </div>
+            </div>
+          ) : null}
         </div>
       </Container>
     </section>

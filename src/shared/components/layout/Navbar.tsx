@@ -6,7 +6,6 @@ import { ArrowRight, Bot, Menu, X } from "lucide-react";
 import { assistantTriggerEvent } from "@/contracts/assistant.contract";
 import { Container } from "@/shared/components/layout/Container";
 import { Button, buttonVariants } from "@/shared/components/ui/Button";
-import { externalLinks } from "@/shared/config/links";
 
 const navigation = [
   { label: "Work", href: "/work" },
@@ -14,7 +13,7 @@ const navigation = [
   { label: "Audit", href: "/audit" },
 ] as const;
 
-export function Navbar() {
+export function Navbar({ linkedInUrl }: { linkedInUrl: string }) {
   const pathname = usePathname();
 
   const isHome = pathname === "/";
@@ -95,7 +94,7 @@ export function Navbar() {
               </Button>
             ) : (
               <a
-                href={externalLinks.linkedin}
+                href={linkedInUrl}
                 target="_blank"
                 rel="noreferrer"
                 className={buttonVariants({

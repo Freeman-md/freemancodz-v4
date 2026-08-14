@@ -1,9 +1,8 @@
 import { LinkButton as Button } from "@/shared/components/ui/LinkButton";
 import { Container } from "@/shared/components/layout/Container";
-import { externalLinks } from "@/shared/config/links";
 import Link from "next/link";
 
-export function Footer({ cvUrl }: { cvUrl?: string }) {
+export function Footer({ linkedInUrl, githubUrl }: { linkedInUrl: string; githubUrl: string }) {
   return (
     <footer className="border-t border-line bg-white">
       <Container className="flex flex-col gap-5 py-12 md:flex-row md:items-center md:justify-between">
@@ -15,7 +14,7 @@ export function Footer({ cvUrl }: { cvUrl?: string }) {
             View My Work
           </Link>
           <a
-            href={externalLinks.linkedin}
+            href={linkedInUrl}
             target="_blank"
             rel="noreferrer"
             className="transition hover:text-accent"
@@ -23,23 +22,13 @@ export function Footer({ cvUrl }: { cvUrl?: string }) {
             LinkedIn
           </a>
           <a
-            href={externalLinks.github}
+            href={githubUrl}
             target="_blank"
             rel="noreferrer"
             className="transition hover:text-accent"
           >
             GitHub
           </a>
-          {cvUrl ? (
-            <a
-              href={cvUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="transition hover:text-accent"
-            >
-              CV
-            </a>
-          ) : null}
         </div>
       </Container>
     </footer>
