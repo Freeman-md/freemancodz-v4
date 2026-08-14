@@ -43,6 +43,13 @@ export function getSupabaseStorageConfig() {
   };
 }
 
+export function getSupabaseAdminAuthConfig() {
+  return {
+    url: requireEnvValue("NEXT_PUBLIC_SUPABASE_URL"),
+    secretKey: requireEnvValue("SUPABASE_SECRET_KEY"),
+  };
+}
+
 export function getSupabaseAuthConfig() {
   return {
     url: requireEnvValue("NEXT_PUBLIC_SUPABASE_URL"),

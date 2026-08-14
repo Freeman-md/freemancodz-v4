@@ -6,12 +6,12 @@ export async function GET(request: NextRequest) {
 
   const type = request.nextUrl.searchParams.get("type");
 
-  if (!tokenHash || (type !== "email" && type !== "magiclink")) {
+  if (!tokenHash || type !== "email") {
     return NextResponse.redirect(new URL("/admin/login?error=invalid-link", request.url));
   }
 
   try {
-    await adminAuthService.confirmMagicLink(tokenHash, type);
+    await adminAuthService.confirmMagicLink(tokenHash);
 
     return NextResponse.redirect(new URL("/admin", request.url));
   } catch {

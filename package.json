@@ -23,6 +23,8 @@
     "eval:assistant": "NODE_OPTIONS='--conditions=react-server' tsx tests/evals/assistant/assistant.eval.ts",
     "portfolio:bootstrap:local": "NODE_OPTIONS='--conditions=react-server' tsx --env-file=.env src/server/entrypoints/maintenance/bootstrap-portfolio.ts",
     "portfolio:bootstrap:production": "NODE_OPTIONS='--conditions=react-server' tsx --env-file=.env.production.local src/server/entrypoints/maintenance/bootstrap-portfolio.ts --production",
+    "admin-auth:provision:local": "NODE_OPTIONS='--conditions=react-server' tsx --env-file=.env src/server/entrypoints/maintenance/provision-admin-auth-user.ts",
+    "admin-auth:provision:production": "NODE_OPTIONS='--conditions=react-server' tsx --env-file=.env.production.local src/server/entrypoints/maintenance/provision-admin-auth-user.ts --production",
     "index:source": "NODE_OPTIONS='--conditions=react-server' tsx --env-file=.env src/server/entrypoints/maintenance/index-source-record.ts",
     "index:worker": "NODE_OPTIONS='--conditions=react-server' tsx --env-file=.env src/server/entrypoints/jobs/run-search-index-worker.ts",
     "index:worker:production": "NODE_OPTIONS='--conditions=react-server' tsx --env-file=.env.production.local src/server/entrypoints/jobs/run-search-index-worker.ts",

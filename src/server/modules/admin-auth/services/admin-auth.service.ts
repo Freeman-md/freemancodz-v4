@@ -42,8 +42,8 @@ export class AdminAuthService implements IAdminAuthService {
     await this.provider.requestMagicLink(normalizedEmail, redirectTo);
   }
 
-  async confirmMagicLink(tokenHash: string, type: "email" | "magiclink") {
-    await this.provider.confirmMagicLink(tokenHash, type);
+  async confirmMagicLink(tokenHash: string) {
+    await this.provider.confirmMagicLink(tokenHash);
     await this.requireAdmin();
   }
 
