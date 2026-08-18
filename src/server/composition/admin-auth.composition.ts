@@ -10,3 +10,5 @@ export const adminAuthService: IAdminAuthService = new AdminAuthService(
   new SupabaseAuthProvider(createSupabaseAuthClient, createSupabaseAdminAuthClient),
   getAdminEmail(),
 );
+
+
