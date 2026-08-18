@@ -635,7 +635,7 @@ test(
       });
 
       await context.test(
-        "atomically replaces all chunks and rolls back a failed replacement",
+        "atomically replaces large batched snapshots, preserves values, and rolls back failures",
         async () => {
           const current = embeddedChunk("current-chunk");
 
@@ -651,16 +651,117 @@ test(
             [{ id: "current-chunk" }],
           );
 
-          const duplicateIdentity = [
-            embeddedChunk("replacement-one", { sourceType: "project", sourceId: PROJECT_ID }),
-            embeddedChunk("replacement-two", { sourceType: "project", sourceId: PROJECT_ID }),
-          ];
+          const snapshot = Array.from({ length: 105 }, (_, index) => {
+            const secondBatch = index >= 100;
 
-          await assert.rejects(chunks.replacePortfolioSnapshot(duplicateIdentity, claim.claimedAt));
+            return embeddedChunk(`batch-chunk-${index}`, {
+              sourceType: "project",
+              sourceId: `batch-project-${index}`,
+              chunkIndex: index,
+              title: `Batch title ${index}`,
+              category: `Batch category ${index}`,
+              url: `/work/batch-project-${index}`,
+              keywords: [`batch-${index}`, "portfolio"],
+              content: `Batch content ${index}`,
+              embeddingInput: `Batch embedding input ${index}`,
+              contentHash: `batch-hash-${index}`,
+              embedding: Array<number>(1_536).fill(secondBatch ? 0.02 : 0.01),
+              embeddingModel: secondBatch ? "batch-model-two" : "batch-model-one",
+              embeddedAt: new Date(Date.UTC(2026, 7, 18, 9, 0, index)),
+            });
+          });
+
+          await chunks.replacePortfolioSnapshot(snapshot, claim.claimedAt);
+
+          const storedCount = await database!.query<{ count: string }>(
+            `SELECT COUNT(*) AS count FROM public.site_chunks`,
+          );
+
+          assert.equal(storedCount.rows[0]!.count, "105");
+
+          const samples = await database!.query<{
+            id: string;
+            sourceType: string;
+            sourceId: string;
+            chunkIndex: number;
+            title: string;
+            category: string;
+            url: string;
+            content: string;
+            keywords: string[];
+            contentHash: string;
+            embeddingModel: string;
+            embeddedAt: string;
+            embeddingDimensions: number;
+            embeddingText: string;
+          }>(
+            `
+              SELECT
+                id,
+                source_type AS "sourceType",
+                source_id AS "sourceId",
+                chunk_index AS "chunkIndex",
+                title,
+                category,
+                url,
+                content,
+                keywords,
+                content_hash AS "contentHash",
+                embedding_model AS "embeddingModel",
+                to_char(embedded_at, 'YYYY-MM-DD"T"HH24:MI:SS.MS') AS "embeddedAt",
+                vector_dims(embedding) AS "embeddingDimensions",
+                embedding::text AS "embeddingText"
+              FROM public.site_chunks
+              WHERE id = ANY($1::text[])
+              ORDER BY chunk_index
+            `,
+            [["batch-chunk-0", "batch-chunk-99", "batch-chunk-104"]],
+          );
+
+          assert.equal(samples.rows.length, 3);
+
+          for (const [sampleIndex, expectedIndex] of [0, 99, 104].entries()) {
+            const sample = samples.rows[sampleIndex]!;
+
+            const { embeddingText, ...storedValues } = sample;
+
+            const secondBatch = expectedIndex >= 100;
+
+            assert.deepEqual(storedValues, {
+              id: `batch-chunk-${expectedIndex}`,
+              sourceType: "project",
+              sourceId: `batch-project-${expectedIndex}`,
+              chunkIndex: expectedIndex,
+              title: `Batch title ${expectedIndex}`,
+              category: `Batch category ${expectedIndex}`,
+              url: `/work/batch-project-${expectedIndex}`,
+              content: `Batch content ${expectedIndex}`,
+              keywords: [`batch-${expectedIndex}`, "portfolio"],
+              contentHash: `batch-hash-${expectedIndex}`,
+              embeddingModel: secondBatch ? "batch-model-two" : "batch-model-one",
+              embeddedAt: new Date(Date.UTC(2026, 7, 18, 9, 0, expectedIndex))
+                .toISOString()
+                .slice(0, 23),
+              embeddingDimensions: 1_536,
+            });
+            assert.match(embeddingText, secondBatch ? /^\[0\.02,/ : /^\[0\.01,/);
+          }
+
+          const failedSnapshot = Array.from({ length: 105 }, (_, index) =>
+            embeddedChunk(`failed-batch-chunk-${index}`, {
+              sourceType: "experience",
+              sourceId: index === 104 ? "failed-source-0" : `failed-source-${index}`,
+              chunkIndex: 0,
+            }),
+          );
+
+          await assert.rejects(chunks.replacePortfolioSnapshot(failedSnapshot, claim.claimedAt));
           assert.deepEqual(
             (await database!.query<{ id: string }>(`SELECT id FROM public.site_chunks ORDER BY id`))
               .rows,
-            [{ id: "current-chunk" }],
+            snapshot
+              .map(({ id }) => ({ id }))
+              .sort((left, right) => left.id.localeCompare(right.id)),
           );
 
           await assert.rejects(
@@ -677,7 +778,9 @@ test(
           assert.deepEqual(
             (await database!.query<{ id: string }>(`SELECT id FROM public.site_chunks ORDER BY id`))
               .rows,
-            [{ id: "current-chunk" }],
+            snapshot
+              .map(({ id }) => ({ id }))
+              .sort((left, right) => left.id.localeCompare(right.id)),
           );
 
           await jobs.complete(claim.claimedAt);

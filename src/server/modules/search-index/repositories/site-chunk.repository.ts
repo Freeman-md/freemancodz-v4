@@ -1,14 +1,35 @@
 import "server-only";
 
-import type { PrismaClient } from "@/generated/prisma/client";
+import { Prisma, type PrismaClient } from "@/generated/prisma/client";
 import type { ISiteChunkRepository } from "../interfaces/site-chunk.repository.interface";
 import type { EmbeddedSiteChunk } from "../models/site-chunk";
 import type { SiteSearchResult } from "../models/site-search-result";
 
 const EMBEDDING_DIMENSIONS = 1_536;
 
+// The current portfolio fits in one batch; the cap bounds larger SQL and parameter payloads.
+const SITE_CHUNK_INSERT_BATCH_SIZE = 100;
+
 function toVectorLiteral(embedding: number[]): string {
   return `[${embedding.join(",")}]`;
+}
+
+function toInsertValues(chunk: EmbeddedSiteChunk): Prisma.Sql {
+  return Prisma.sql`(
+    ${chunk.id},
+    ${chunk.sourceType},
+    ${chunk.sourceId},
+    ${chunk.chunkIndex},
+    ${chunk.title},
+    ${chunk.category},
+    ${chunk.url},
+    ${chunk.content},
+    ${chunk.keywords},
+    ${toVectorLiteral(chunk.embedding)}::vector,
+    ${chunk.contentHash},
+    ${chunk.embeddingModel},
+    ${chunk.embeddedAt}
+  )`;
 }
 
 function validateSnapshot(chunks: EmbeddedSiteChunk[]): void {
@@ -48,8 +69,11 @@ export class SiteChunkRepository implements ISiteChunkRepository {
 
       await transaction.siteChunk.deleteMany();
 
-      for (const chunk of chunks) {
-        await transaction.$executeRaw`
+      for (let start = 0; start < chunks.length; start += SITE_CHUNK_INSERT_BATCH_SIZE) {
+        const batch = chunks.slice(start, start + SITE_CHUNK_INSERT_BATCH_SIZE);
+
+        await transaction.$executeRaw(
+          Prisma.sql`
           INSERT INTO public.site_chunks (
             id,
             source_type,
@@ -65,22 +89,9 @@ export class SiteChunkRepository implements ISiteChunkRepository {
             embedding_model,
             embedded_at
           )
-          VALUES (
-            ${chunk.id},
-            ${chunk.sourceType},
-            ${chunk.sourceId},
-            ${chunk.chunkIndex},
-            ${chunk.title},
-            ${chunk.category},
-            ${chunk.url},
-            ${chunk.content},
-            ${chunk.keywords},
-            ${toVectorLiteral(chunk.embedding)}::vector,
-            ${chunk.contentHash},
-            ${chunk.embeddingModel},
-            ${chunk.embeddedAt}
-          )
-        `;
+          VALUES ${Prisma.join(batch.map(toInsertValues))}
+        `,
+        );
       }
     });
   }
