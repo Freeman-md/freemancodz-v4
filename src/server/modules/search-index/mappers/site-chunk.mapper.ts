@@ -1,23 +1,10 @@
 import { createHash } from "node:crypto";
-import type { IndexDocument } from "../mappers/source-document.mapper";
+import type { IndexDocument } from "../models/index-document";
+import type { PreparedSiteChunk } from "../models/site-chunk";
 
 const MAX_CHUNK_CHARACTERS = 1_200;
 
-const INDEX_FORMAT_VERSION = "search-index-v2";
-
-export type PreparedSiteChunk = {
-  id: string;
-  sourceType: IndexDocument["sourceType"];
-  sourceId: string;
-  chunkIndex: number;
-  title: string;
-  category: string;
-  url: string;
-  keywords: string[];
-  content: string;
-  embeddingInput: string;
-  contentHash: string;
-};
+const INDEX_FORMAT_VERSION = "search-index-v3";
 
 function splitOversizedParagraph(paragraph: string): string[] {
   const sentences = paragraph.match(/[^.!?]+[.!?]+|[^.!?]+$/g) ?? [paragraph];
@@ -101,7 +88,7 @@ export function chunkText(paragraphs: string[]): string[] {
 export function prepareSiteChunks(document: IndexDocument): PreparedSiteChunk[] {
   const keywords = [
     ...new Set(document.keywords.map((keyword) => keyword.trim()).filter(Boolean)),
-  ].sort();
+  ].sort((left, right) => left.localeCompare(right));
 
   return chunkText(document.paragraphs).map((content, chunkIndex) => {
     const embeddingInput = [

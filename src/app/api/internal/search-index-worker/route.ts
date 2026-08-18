@@ -3,48 +3,31 @@ import {
   searchIndexWorkerErrorSchema,
   searchIndexWorkerResultSchema,
 } from "@/contracts/search-index-worker.contract";
-import {
-  getSearchIndexWorkerBatchLimit,
-  getSearchIndexWorkerSecret,
-} from "@/server/infrastructure/config/env";
+import { logger } from "@/server/composition/logging.composition";
+import { getCronSecret } from "@/server/infrastructure/config/env";
 import type { ILogger } from "@/server/infrastructure/logging/logger.interface";
 import type { ISearchIndexService } from "@/server/modules/search-index/public";
 
-const DEFAULT_BATCH_LIMIT = 5;
-
-const MAX_BATCH_LIMIT = 20;
-
-function parseBatchLimit(value: string | undefined): number {
-  if (!value || !/^\d+$/.test(value)) {
-    return DEFAULT_BATCH_LIMIT;
-  }
-
-  const limit = Number(value);
-
-  return !Number.isSafeInteger(limit) || limit < 1
-    ? DEFAULT_BATCH_LIMIT
-    : Math.min(limit, MAX_BATCH_LIMIT);
-}
+type SearchIndexWorkerService = Pick<ISearchIndexService, "processPendingJob">;
 
 type SearchIndexWorkerRouteDependencies = {
-  getBatchLimit: () => string | undefined;
   getSecret: () => string | undefined;
+  loadWorkerService: () => Promise<SearchIndexWorkerService>;
   logger: ILogger;
-  workerService: Pick<ISearchIndexService, "processPendingJobs">;
 };
 
 export function createSearchIndexWorkerGetHandler({
-  getBatchLimit,
   getSecret,
+  loadWorkerService,
   logger: routeLogger,
-  workerService,
 }: SearchIndexWorkerRouteDependencies) {
   return async function GET(request: Request) {
     const secret = getSecret();
 
     if (!secret) {
       routeLogger.error("Search index worker route is not configured", {
-        event: "search_index_worker.configuration_error",
+        event: "search_index.worker_failed",
+        reason: "missing_cron_secret",
       });
 
       return NextResponse.json(
@@ -59,31 +42,38 @@ export function createSearchIndexWorkerGetHandler({
       });
     }
 
-    const batchLimit = parseBatchLimit(getBatchLimit());
-
     const startedAt = Date.now();
 
-    routeLogger.info("Search index worker batch started", {
-      event: "search_index_worker.started",
-      batchLimit,
+    routeLogger.info("Search index worker started", {
+      event: "search_index.worker_started",
     });
+
     try {
-      const result = await workerService.processPendingJobs(batchLimit);
+      const workerService = await loadWorkerService();
 
-      routeLogger.info("Search index worker batch completed", {
-        event: "search_index_worker.completed",
-        batchLimit,
-        ...result,
-        duration: Date.now() - startedAt,
-      });
+      const result = searchIndexWorkerResultSchema.parse(await workerService.processPendingJob());
 
-      return NextResponse.json(searchIndexWorkerResultSchema.parse(result));
-    } catch (error) {
-      routeLogger.error("Search index worker batch failed", {
-        event: "search_index_worker.error",
-        batchLimit,
-        duration: Date.now() - startedAt,
-        error: error instanceof Error ? error.message : "Unknown error",
+      if (result.outcome === "skipped") {
+        routeLogger.info("Search index worker skipped", {
+          event: "search_index.worker_skipped",
+          durationMs: Date.now() - startedAt,
+        });
+      } else {
+        routeLogger.info("Search index worker completed", {
+          event: "search_index.worker_completed",
+          attempt: result.attempt,
+          documentCount: result.documentCount,
+          chunkCount: result.chunkCount,
+          finalState: result.finalState,
+          durationMs: Date.now() - startedAt,
+        });
+      }
+
+      return NextResponse.json(result);
+    } catch {
+      routeLogger.error("Search index worker failed", {
+        event: "search_index.worker_failed",
+        durationMs: Date.now() - startedAt,
       });
 
       return NextResponse.json(
@@ -94,13 +84,16 @@ export function createSearchIndexWorkerGetHandler({
   };
 }
 
-export async function GET(request: Request) {
-  const { logger, searchIndexService } = await import("@/server/composition-root");
+const handleGet = createSearchIndexWorkerGetHandler({
+  getSecret: getCronSecret,
+  loadWorkerService: async () => {
+    const { searchIndexService } = await import("@/server/composition-root");
 
-  return createSearchIndexWorkerGetHandler({
-    getBatchLimit: getSearchIndexWorkerBatchLimit,
-    getSecret: getSearchIndexWorkerSecret,
-    logger,
-    workerService: searchIndexService,
-  })(request);
+    return searchIndexService;
+  },
+  logger,
+});
+
+export async function GET(request: Request) {
+  return handleGet(request);
 }

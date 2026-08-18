@@ -1,4 +1,4 @@
-import type { MatchSiteChunksRow } from "./site-chunk.repository.interface";
+import type { SiteSearchResult } from "../models/site-search-result";
 export interface ISiteSearchService {
-  search(queryEmbedding: number[]): Promise<MatchSiteChunksRow[]>;
+  search(queryEmbedding: number[]): Promise<SiteSearchResult[]>;
 }

@@ -18,6 +18,8 @@ import { ProjectRepository } from "@/server/modules/portfolio/repositories/proje
 
 const adminConnectionUrl = process.env.PORTFOLIO_TEST_DATABASE_URL;
 
+const MILESTONE_15_MIGRATION = "20260812090000_rebuild_portfolio_content";
+
 function hasPostgresCode(code: string) {
   return (error: unknown) =>
     typeof error === "object" && error !== null && "code" in error && error.code === code;
@@ -83,9 +85,11 @@ test(
         .filter((directory) => /^\d+_/.test(directory))
         .sort();
 
-      const milestoneMigration = migrationDirectories.at(-1)!;
+      const milestoneMigrationIndex = migrationDirectories.indexOf(MILESTONE_15_MIGRATION);
 
-      for (const directory of migrationDirectories.slice(0, -1)) {
+      assert.notEqual(milestoneMigrationIndex, -1, "Expected the Milestone 15 migration.");
+
+      for (const directory of migrationDirectories.slice(0, milestoneMigrationIndex)) {
         await applyMigration(database, directory);
       }
 
@@ -111,7 +115,7 @@ test(
         );
       `);
 
-      await applyMigration(database, milestoneMigration);
+      await applyMigration(database, MILESTONE_15_MIGRATION);
 
       await context.test("preserves protected rows and retrieval infrastructure", async () => {
         const result = await database!.query<{

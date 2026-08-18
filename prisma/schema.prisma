@@ -29,20 +29,16 @@ model SiteChunk {
 }
 
 model SearchIndexJob {
-  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  operation   String
-  sourceType  String    @map("source_type")
-  sourceId    String    @map("source_id")
-  status      String    @default("pending")
-  attempts    Int       @default(0)
-  availableAt DateTime  @default(now()) @map("available_at") @db.Timestamptz(6)
-  claimedAt   DateTime? @map("claimed_at") @db.Timestamptz(6)
-  lastError   String?   @map("last_error")
-  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  processedAt DateTime? @map("processed_at") @db.Timestamptz(6)
+  jobKey         String    @id @default("portfolio") @map("job_key")
+  status         String    @default("pending")
+  rerunRequested Boolean   @default(false) @map("rerun_requested")
+  attempts       Int       @default(0)
+  availableAt    DateTime  @default(now()) @map("available_at") @db.Timestamptz(6)
+  requestedAt    DateTime  @default(now()) @map("requested_at") @db.Timestamptz(6)
+  claimedAt      DateTime? @map("claimed_at") @db.Timestamptz(6)
+  processedAt    DateTime? @map("processed_at") @db.Timestamptz(6)
+  lastError      String?   @map("last_error")
 
-  @@index([status, availableAt])
-  @@index([sourceType, sourceId])
   @@map("search_index_jobs")
 }
 
