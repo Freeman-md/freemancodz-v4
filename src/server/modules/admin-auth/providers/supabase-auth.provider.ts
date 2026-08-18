@@ -1,89 +1,154 @@
 import "server-only";
-import type { SupabaseClient } from "@supabase/supabase-js";
+import { isAuthApiError, type SupabaseClient } from "@supabase/supabase-js";
 import type {
+  AdminAuthProviderOperation,
   AdminIdentity,
   IAdminAuthProvider,
 } from "../interfaces/admin-auth.provider.interface";
+import { AdminAuthProviderError } from "../interfaces/admin-auth.provider.interface";
 
 type SupabaseAuthClientFactory = () => Promise<SupabaseClient>;
 type SupabaseAdminAuthClientFactory = () => SupabaseClient;
 
-export class AdminAuthenticationProviderError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "AdminAuthenticationProviderError";
-  }
-}
-
 export class SupabaseAuthProvider implements IAdminAuthProvider {
-  constructor(private readonly createClient: SupabaseAuthClientFactory, private readonly createAdminClient: SupabaseAdminAuthClientFactory) {}
+  constructor(
+    private readonly createClient: SupabaseAuthClientFactory,
+    private readonly createAdminClient: SupabaseAdminAuthClientFactory,
+  ) {}
 
   async findUserByEmail(email: string): Promise<AdminIdentity | null> {
-    const client = this.createAdminClient();
+    return this.execute("find_user_by_email", async () => {
+      const client = this.createAdminClient();
 
-    for (let page = 1; ; page += 1) {
-      const { data, error } = await client.auth.admin.listUsers({ page, perPage: 100 });
+      for (let page = 1; ; page += 1) {
+        const { data, error } = await client.auth.admin.listUsers({ page, perPage: 100 });
 
-      if (error) {throw new AdminAuthenticationProviderError("Administrator provisioning could not be completed.");}
+        if (error) {
+          throw this.toProviderError("find_user_by_email", error);
+        }
 
-      const user = data.users.find((candidate) => candidate.email?.trim().toLowerCase() === email);
+        const user = data.users.find((candidate) => candidate.email?.trim().toLowerCase() === email);
 
-      if (user?.email) {return { id: user.id, email: user.email.trim().toLowerCase() };}
+        if (user?.email) {
+          return { id: user.id, email: user.email.trim().toLowerCase() };
+        }
 
-      if (data.users.length < 100) {return null;}
-    }
+        if (data.users.length < 100) {
+          return null;
+        }
+      }
+    });
   }
 
   async createConfirmedUser(email: string): Promise<AdminIdentity> {
-    const { data, error } = await this.createAdminClient().auth.admin.createUser({ email, email_confirm: true });
+    return this.execute("create_confirmed_user", async () => {
+      const { data, error } = await this.createAdminClient().auth.admin.createUser({
+        email,
+        email_confirm: true,
+      });
 
-    if (error || !data.user?.email) {throw new AdminAuthenticationProviderError("Administrator provisioning could not be completed.");}
+      if (error) {
+        throw this.toProviderError("create_confirmed_user", error);
+      }
 
-    return { id: data.user.id, email: data.user.email.trim().toLowerCase() };
+      if (!data.user?.email) {
+        throw this.toProviderError("create_confirmed_user");
+      }
+
+      return { id: data.user.id, email: data.user.email.trim().toLowerCase() };
+    });
   }
 
   async getIdentity(): Promise<AdminIdentity | null> {
-    const client = await this.createClient();
+    return this.execute("get_identity", async () => {
+      const client = await this.createClient();
 
-    const { data, error } = await client.auth.getClaims();
+      const { data, error } = await client.auth.getClaims();
 
-    if (error || !data?.claims.sub || typeof data.claims.email !== "string") {
-      return null;
-    }
+      if (error) {
+        throw this.toProviderError("get_identity", error);
+      }
 
-    return { id: data.claims.sub, email: data.claims.email.toLowerCase() };
-  }
+      if (!data?.claims.sub || typeof data.claims.email !== "string") {
+        return null;
+      }
 
-  async requestMagicLink(email: string, redirectTo: string) {
-    const client = await this.createClient();
-
-    const { error } = await client.auth.signInWithOtp({
-      email,
-      options: { shouldCreateUser: false, emailRedirectTo: redirectTo },
+      return { id: data.claims.sub, email: data.claims.email.toLowerCase() };
     });
+  }
 
-    if (error) {
-      throw new AdminAuthenticationProviderError("The sign-in link could not be sent.");
+  async requestMagicLink(email: string, redirectTo: string): Promise<void> {
+    return this.execute("request_magic_link", async () => {
+      const client = await this.createClient();
+
+      const { error } = await client.auth.signInWithOtp({
+        email,
+        options: { shouldCreateUser: false, emailRedirectTo: redirectTo },
+      });
+
+      if (error) {
+        throw this.toProviderError("request_magic_link", error);
+      }
+    });
+  }
+
+  async confirmMagicLink(tokenHash: string): Promise<void> {
+    return this.execute("confirm_magic_link", async () => {
+      const client = await this.createClient();
+
+      const { error } = await client.auth.verifyOtp({ token_hash: tokenHash, type: "email" });
+
+      if (error) {
+        throw this.toProviderError("confirm_magic_link", error);
+      }
+    });
+  }
+
+  async signOut(): Promise<void> {
+    return this.execute("sign_out", async () => {
+      const client = await this.createClient();
+
+      const { error } = await client.auth.signOut();
+
+      if (error) {
+        throw this.toProviderError("sign_out", error);
+      }
+    });
+  }
+
+  private async execute<T>(
+    operation: AdminAuthProviderOperation,
+    callback: () => Promise<T>,
+  ): Promise<T> {
+    try {
+      return await callback();
+    } catch (error) {
+      if (error instanceof AdminAuthProviderError) {
+        throw error;
+      }
+
+      throw this.toProviderError(operation, error);
     }
   }
 
-  async confirmMagicLink(tokenHash: string) {
-    const client = await this.createClient();
-
-    const { error } = await client.auth.verifyOtp({ token_hash: tokenHash, type: "email" });
-
-    if (error) {
-      throw new AdminAuthenticationProviderError("The sign-in link is invalid or expired.");
+  private toProviderError(
+    operation: AdminAuthProviderOperation,
+    error?: unknown,
+  ): AdminAuthProviderError {
+    if (isAuthApiError(error)) {
+      return new AdminAuthProviderError({
+        provider: "supabase",
+        operation,
+        code: error.code ?? "auth_api_error",
+        status: error.status,
+      });
     }
-  }
 
-  async signOut() {
-    const client = await this.createClient();
-
-    const { error } = await client.auth.signOut();
-
-    if (error) {
-      throw new AdminAuthenticationProviderError("Sign out failed.");
-    }
+    return new AdminAuthProviderError({
+      provider: "supabase",
+      operation,
+      code: "auth_client_error",
+      status: null,
+    });
   }
 }

@@ -3,7 +3,7 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { adminAuthService } from "@/server/composition-root";
+import { adminAuthService, logger } from "@/server/composition-root";
 
 const emailSchema = z.string().trim().email().max(320);
 
@@ -23,6 +23,8 @@ export async function requestAdminMagicLink(
     const origin = requestHeaders.get("origin");
 
     if (!origin) {
+      logger.error("admin_auth.magic_link_request_rejected", { reason: "missing_origin" });
+
       return { status: "error" as const, message: "Sign-in could not be started." };
     }
 
