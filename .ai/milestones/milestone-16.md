@@ -1,10 +1,10 @@
 # Milestone 16: Portfolio Frontend Integration & Content Admin
 
-**Status:** Frozen
+**Status:** Archived
 **Version:** 1.0.0  
-**Last Updated:** 2026-08-12  
+**Last Updated:** 2026-08-18
 **Depends On:** Milestone 15  
-**Target Pull Request:** —  
+**Target Pull Request:** [#17](https://github.com/Freeman-md/freemancodz-v4/pull/17)
 **Target Branch:** `feat/milestone-16-portfolio-frontend-content-admin`  
 **Superseded By:** —
 
