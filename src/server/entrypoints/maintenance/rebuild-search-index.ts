@@ -1,40 +1,61 @@
+import type { SearchIndexWorkerResult } from "@/contracts/search-index-worker.contract";
 import { requireProductionConfirmation } from "../helpers/require-production-confirmation";
 
-const isProductionRun = process.argv.includes("--production");
+type SearchIndexRebuildService = {
+  processPendingJob(): Promise<SearchIndexWorkerResult>;
+  requestRebuild(): Promise<void>;
+};
 
-const clean = process.argv.includes("--clean");
+export async function requestAndRunSearchIndexRebuild(
+  service: SearchIndexRebuildService,
+): Promise<SearchIndexWorkerResult> {
+  await service.requestRebuild();
 
-async function main() {
-  if (isProductionRun) {
-    requireProductionConfirmation();
-  }
-
-  const { searchIndexService } = await import("@/server/composition-root");
-
-  console.log(
-    `Rebuilding the ${isProductionRun ? "production" : "local"} search index${clean ? " from a clean state" : ""}.`,
-  );
-  const { results, summary } = await searchIndexService.rebuild({ clean });
-
-  for (const item of results) {
-    console.log(`${item.sourceType}:${item.sourceId}`, item.result);
-  }
-
-  console.log("\nRebuild complete");
-  console.table(summary);
+  return service.processPendingJob();
 }
 
-main().catch((error) => {
-  if (
-    error &&
-    typeof error === "object" &&
-    "summary" in error &&
-    error.summary &&
-    typeof error.summary === "object"
-  ) {
-    console.table(error.summary);
+function reportResult(result: SearchIndexWorkerResult) {
+  if (result.outcome === "skipped") {
+    console.log("The rebuild request was recorded, but no job was available to process.");
+
+    return;
   }
 
-  console.error(error);
-  process.exitCode = 1;
-});
+  console.log(
+    `Attempt ${result.attempt} rebuilt ${result.documentCount} documents into ${result.chunkCount} chunks; job is ${result.finalState}.`,
+  );
+}
+
+async function main() {
+  const { searchIndexService } = await import("@/server/composition-root");
+
+  const { prisma } = await import("@/server/infrastructure/database/prisma");
+
+  try {
+    reportResult(await requestAndRunSearchIndexRebuild(searchIndexService));
+  } finally {
+    await prisma.$disconnect();
+  }
+}
+
+function start() {
+  if (process.argv.includes("--production")) {
+    try {
+      requireProductionConfirmation();
+    } catch (error) {
+      console.error(error instanceof Error ? error.message : "Production confirmation failed.");
+      process.exitCode = 1;
+
+      return;
+    }
+  }
+
+  void main().catch(() => {
+    console.error("Search index rebuild failed.");
+    process.exitCode = 1;
+  });
+}
+
+if (process.argv[1]?.endsWith("rebuild-search-index.ts")) {
+  start();
+}

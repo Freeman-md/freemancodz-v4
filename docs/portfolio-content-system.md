@@ -2,7 +2,7 @@
 
 ## 1. What Milestone 15 Built
 
-Milestone 15 established PostgreSQL as the canonical runtime content source. Prisma migrations define Profile, ContentBlock, reusable Icon/Action/Media blocks, Projects, Experiences and their ordered relationships. `prisma/portfolio-seed-data.ts` is the one-time canonical seed input; repositories and four page services compose runtime reads. A guarded bootstrap uploads the approved public assets to Supabase Storage, seeds only an empty portfolio domain, and leaves existing search data intact. Legacy portfolio-source indexing fails closed pending a dedicated redesign.
+Milestone 15 established PostgreSQL as the canonical runtime content source. Prisma migrations define Profile, ContentBlock, reusable Icon/Action/Media blocks, Projects, Experiences and their ordered relationships. `prisma/portfolio-seed-data.ts` is the one-time canonical seed input; repositories and four page services compose runtime reads. A guarded bootstrap creates the public Storage bucket and seeds only an empty portfolio domain. The current database-driven search index consumes those same page services and no longer depends on the retired source-specific portfolio schema.
 
 ## 2. What Milestone 16 Built
 
@@ -30,6 +30,17 @@ Admin
 → targeted cache invalidation after success
 ```
 
+```text
+Committed portfolio mutation
+→ PostgreSQL statement trigger
+→ one coalesced portfolio rebuild job
+→ one-shot daily or manual worker
+→ Home + Work + About + Audit snapshot
+→ deterministic chunks + OpenAI embeddings
+→ atomic replacement of site_chunks
+→ existing assistant retrieval
+```
+
 Provider errors are normalized before reaching a client. Request correctness does not depend on module-level memory.
 
 ## 4. Important Folders / Files
@@ -42,6 +53,9 @@ Provider errors are normalized before reaching a client. Request correctness doe
 - `src/app/api/admin/media/route.ts`: protected upload boundary.
 - `src/server/modules/admin-auth`: auth provider and authorization service.
 - `src/server/modules/portfolio`: read/write repositories, administration/media services and cache tags.
+- `src/server/modules/search-index`: singleton job lifecycle, current-portfolio mapping, deterministic chunking and whole-snapshot replacement.
+- `src/app/api/internal/search-index-worker/route.ts`: `CRON_SECRET`-protected one-shot scheduled adapter.
+- `src/server/entrypoints/jobs/run-search-index-worker.ts`: shared local/production one-shot command.
 - `prisma/migrations` and `prisma/portfolio-seed-data.ts`: migration and bootstrap sources of truth.
 
 ## 5. Domain Model Summary
@@ -52,11 +66,15 @@ Key invariants: no generic page builder, no executable JSX stored in content, no
 
 The approved sources define no colour token palette, so the admin preserves the default `null` colour only. Profile deletion is deliberately absent.
 
+`SearchIndexJob` is one internal singleton row keyed by `portfolio`. It records only current operational state: `pending`, `processing`, `completed`, or `failed`, whether a rerun arrived during processing, attempts and safe timestamps/error summary. It is protected with Row Level Security and revoked from public, anonymous and authenticated roles. `SiteChunk` remains the assistant knowledge store and is replaced only by one short transaction after every new embedding has been prepared and validated.
+
 ## 6. Public Rendering & Cache Flow
 
 `cacheComponents: true` enables Cache Components. Each public route is a Server Component that obtains one cached, composed page payload and converts it into semantic presentation data. A cache miss or invalidation performs the Prisma reads; a normal cache hit does not issue a fresh page-service query for each visitor.
 
 `next build` may execute database-backed cached reads while prerendering public routes, so the build environment requires a reachable migrated and bootstrapped `DATABASE_URL`. After deployment, cached entries serve static-like output until their dependency tags are invalidated; they are not build-only content requiring redeployment. Admin/auth data is outside these cached functions and is private and dynamic.
+
+Search indexing deliberately calls the configured page services directly instead of reading these app-level caches. This gives each worker attempt the current database-backed portfolio snapshot while keeping the public rendering cache independent.
 
 ## 7. Cache Tags / Revalidation
 
@@ -66,11 +84,13 @@ Dependency tags are deduplicated in discovery order and registered in chunks of 
 
 Server Actions call `updateTag()` only after a successful database write for immediate read-your-own-write behaviour. The media Route Handler calls `revalidateTag(tag, "max")` after storage and metadata succeed. Profile and collection changes invalidate `portfolio:profile`. Ordinary Project field edits invalidate only `portfolio:project:<slug>`; create/delete and membership/order changes additionally invalidate `portfolio:projects`. ActionBlock and MediaBlock metadata edits invalidate both their subtype tag and their shared IconBlock identity; other reusable and section edits invalidate their entity tag. Failed writes do not invalidate caches.
 
+Cache invalidation does not enqueue indexing. The PostgreSQL trigger observes the committed database mutation independently, including writes from admin actions, bootstrap transactions, direct SQL, or a future backend.
+
 ## 8. Admin
 
 Open `/admin`. The information architecture is Overview, Pages, Profile, Projects, Experience, Media and Reusable blocks. Editors expose domain fields, controlled icon/visual selectors, child/reusable relation ordering, Project markdown, guarded deletion and confirmation. Action destinations accept canonical site-relative paths such as `/work` and `/audit`, or safe HTTP(S) URLs. Projects and Experiences support create/update/delete; reusable records refuse deletion while referenced; the Profile is update-only.
 
-The admin is intentionally not a schema editor, arbitrary component builder, CSS editor, generic database console or indexing console. Public selection rules and static mapping exceptions remain application-defined.
+The admin is intentionally not a schema editor, arbitrary component builder, CSS editor, generic database console or indexing console. It performs ordinary portfolio CRUD and never calls the search-index service. Public selection rules and static mapping exceptions remain application-defined.
 
 ## 9. Authentication
 
@@ -104,22 +124,29 @@ Do not commit environment files. Configure the documented variables in the local
 npm install
 npm run prisma:validate
 npm run prisma:generate
+npx prisma migrate deploy
 npm run portfolio:bootstrap:local
+npm run index:run
 npm run dev
 ```
 
-The app requires `DATABASE_URL`. Admin/auth requires the public Supabase URL and publishable key plus `ADMIN_EMAIL`; Storage writes require `SUPABASE_SERVICE_ROLE_KEY`. Bootstrap creates or verifies the public `portfolio-media` bucket but does not require local media files or pre-upload objects. Media can be uploaded or replaced later through the protected admin. Assistant functionality separately requires `OPENAI_API_KEY`.
+The app requires `DATABASE_URL`. Admin/auth requires the public Supabase URL and publishable key plus `ADMIN_EMAIL`; Storage writes require the server-only Supabase secret documented in `.env.example`. Bootstrap creates or verifies the public `portfolio-media` bucket but does not require local media files or pre-upload objects. Media can be uploaded or replaced later through the protected admin. Assistant and indexing functionality requires `OPENAI_API_KEY` and `OPENAI_EMBEDDING_MODEL`. The deployed cron route requires `CRON_SECRET`.
+
+During this sequence, the database trigger coalesces the bootstrap writes into one pending job and `index:run` processes it once before exiting.
+
+Use `npm run index:rebuild` when an explicit full refresh or recovery is required. It requests the same singleton work and then runs the same one-shot processing path; it never clears the current chunks first.
 
 Focused verification:
 
 ```bash
 npm run test:portfolio:admin
 PORTFOLIO_TEST_DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54332/postgres npm run test:portfolio:database
+PORTFOLIO_TEST_DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54332/postgres npm run test:search-index
 ```
 
 ## 12. Database / Initial Bootstrap
 
-Apply `prisma/migrations` first. `npm run portfolio:bootstrap:local` recreates only the local portfolio domain, creates or verifies the public media bucket, and seeds the canonical payload transactionally. It does not require or upload media binaries. Production is deliberately separate: apply migrations, then run `npm run portfolio:bootstrap:production -- --confirm-production`. The production bootstrap prints its targets and refuses any independently initialized portfolio table; it does not overwrite content. Objects referenced by seeded media URLs may remain absent from Storage until their files are uploaded through the admin.
+Apply `prisma/migrations` first. `npm run portfolio:bootstrap:local` recreates only the local portfolio domain, creates or verifies the public media bucket, and seeds the canonical payload transactionally. Its ordinary inserts request one pending rebuild through the database triggers; bootstrap contains no indexing hook. It does not require or upload media binaries. For a new empty production environment, apply migrations and then run `npm run portfolio:bootstrap:production -- --confirm-production`. The production bootstrap prints its targets and refuses any independently initialized portfolio table; it does not overwrite content. Objects referenced by seeded media URLs may remain absent from Storage until their files are uploaded through the admin.
 
 ## 13. Production Setup
 
@@ -127,13 +154,24 @@ These are human-only operations:
 
 1. Provision the approved Supabase Auth user without enabling public self-registration.
 2. Configure Auth Site URL, production/local confirmation redirects and the documented token-hash email template.
-3. Configure `DATABASE_URL`, public Supabase URL/publishable key, server-only Storage service-role key and `ADMIN_EMAIL` in the deployment environment.
+3. Configure `DATABASE_URL`, `OPENAI_API_KEY`, `OPENAI_EMBEDDING_MODEL`, `CRON_SECRET`, public Supabase URL/publishable key, the server-only Storage secret and `ADMIN_EMAIL` in the deployment environment.
 4. Confirm the public `portfolio-media` bucket; no local media source directory is required.
-5. Apply the production migration and guarded bootstrap commands above.
+5. Apply migrations and use the guarded bootstrap only when the portfolio domain is genuinely empty.
 6. Deploy with database access available during `next build` and at runtime for cache misses/invalidation.
 7. Exercise the manual verification checklist before treating admin operations as live.
 
 No production Auth, Storage or deployment configuration is changed by repository code.
+
+For the database-driven indexing rollout on an existing deployment:
+
+1. Pause the Vercel search-index cron.
+2. Deploy the reviewed application while the cron remains paused.
+3. Apply the forward Prisma migration and confirm the singleton `portfolio` row is `pending`.
+4. Run `npm run index:run:production -- --confirm-production`.
+5. Confirm the job completed, current portfolio chunks are searchable and legacy chunks are gone.
+6. Re-enable the cron and confirm its schedule remains `0 8 * * *`.
+
+The operator-supplied confirmation flag is deliberately absent from `package.json`. The production rebuild command has the same guard: `npm run index:rebuild:production -- --confirm-production`.
 
 ## 14. Manual Verification Checklist
 
@@ -142,6 +180,9 @@ No production Auth, Storage or deployment configuration is changed by repository
 - Edit Home Hero copy and confirm Home updates without redeployment.
 - Edit a shared Pay4Me field and confirm the relevant Home, Work and Audit consumers refresh.
 - Edit an About-only Experience and confirm unrelated Work/Audit content is unchanged.
+- Confirm the edit moves the singleton search-index job to `pending` without an application indexing call.
+- Run `npm run index:run`, then confirm the assistant can retrieve the updated content.
+- Delete an optional test record, rebuild successfully and confirm its content is no longer searchable.
 - Reorder a relation and verify its public semantic order.
 - Attempt to delete a referenced reusable record and confirm the reason is shown.
 - Upload an allowed image/video; verify preview, source change and old-object cleanup behaviour.
@@ -150,8 +191,30 @@ No production Auth, Storage or deployment configuration is changed by repository
 
 ## 15. Known Limitations
 
-Real magic-link delivery depends on external Supabase email configuration and cannot be proven by unit tests. Production redirect, cookie and deployment behaviour requires the intended environment. The default Cache Components runtime cache can have platform-specific persistence characteristics; deployment verification must confirm the host’s cache behaviour. The approved content source defines only the default colour. The CV has no semantic admin editor. Project selection for Home/Audit remains curated code by design.
+Real magic-link delivery depends on external Supabase email configuration and cannot be proven by unit tests. Production redirect, cookie and deployment behaviour requires the intended environment. The default Cache Components runtime cache can have platform-specific persistence characteristics; deployment verification must confirm the host’s cache behaviour. The approved content source defines only the default colour. The CV has no semantic admin editor. Project selection for Home/Audit remains curated code by design. Production indexing is intentionally daily rather than real time, so a committed content change waits until the next cron run unless an operator invokes a manual one-shot command.
 
-## 16. Deferred Work
+## 16. Search-Index Operations and Recovery
 
-Portfolio-domain indexing redesign, embedding regeneration, assistant knowledge migration and any full re-index remain deferred to their dedicated future milestone. Admin writes deliberately do not create indexing jobs in this milestone.
+The approved operational surface is exactly:
+
+```bash
+npm run index:run
+npm run index:run:production -- --confirm-production
+npm run index:rebuild
+npm run index:rebuild:production -- --confirm-production
+```
+
+One invocation claims at most one job and exits; no command polls or sleeps. Every rebuild embeds the complete small portfolio. A failed attempt below three returns to immediately available pending state for a later one-shot invocation; the third failed attempt becomes terminal. With only the daily cron, retries therefore wait for later scheduled runs unless an operator runs a manual command. Processing older than ten minutes is recovered while still obeying the same attempt limit. A later portfolio mutation or explicit rebuild resets terminal failure to fresh pending work. A request arriving during processing sets `rerun_requested`, so settlement preserves it as a new pending run.
+
+The old searchable snapshot remains available until a fully prepared replacement commits. Mapping, chunking, OpenAI, validation, deletion, insertion, or commit failure must therefore leave the previous snapshot intact.
+
+Inspect the singleton safely with a read-only query:
+
+```sql
+SELECT job_key, status, rerun_requested, attempts, available_at, requested_at,
+       claimed_at, processed_at, last_error
+FROM public.search_index_jobs
+WHERE job_key = 'portfolio';
+```
+
+Vercel Runtime Logs record `search_index.worker_started`, `search_index.worker_skipped`, `search_index.worker_completed`, `search_index.worker_failed`, and `search_index.stale_job_recovered`. Safe context includes attempt, duration, document/chunk counts, model name, and final state. Credentials, embeddings, raw provider responses, content bodies, and stack traces are excluded.

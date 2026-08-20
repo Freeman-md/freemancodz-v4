@@ -5,7 +5,7 @@ import { createChatPostHandler } from "@/app/api/chat/route";
 import type { ILogger } from "@/server/infrastructure/logging/logger.interface";
 import type { IOpenAIProvider } from "@/server/infrastructure/openai/interfaces/openai.provider.interface";
 import type { OpenAIResponseRequest } from "@/server/infrastructure/openai/models/openai-response-request";
-import type { ISiteSearchService, MatchSiteChunksRow } from "@/server/modules/search-index/public";
+import type { ISiteSearchService, SiteSearchResult } from "@/server/modules/search-index/public";
 import { AssistantService } from "@/server/modules/assistant/services/assistant.service";
 import { WorkflowService } from "@/server/modules/assistant/services/workflow.service";
 
@@ -17,7 +17,7 @@ const source = {
   category: "AI engineering",
   keywords: ["TypeScript", "Next.js"],
   similarity: 0.9,
-} satisfies MatchSiteChunksRow;
+} satisfies SiteSearchResult;
 
 async function read(stream: ReadableStream<Uint8Array>) {
   const reader = stream.getReader();
@@ -53,7 +53,7 @@ function createAssistant({
       { type: "response.completed", response: { id: "resp_current" } },
     ),
 }: {
-  chunks?: MatchSiteChunksRow[];
+  chunks?: SiteSearchResult[];
   embedding?: IOpenAIProvider["createEmbedding"];
   response?: (request: OpenAIResponseRequest) => ReturnType<IOpenAIProvider["streamResponse"]>;
 } = {}) {

@@ -1,266 +1,265 @@
 import "server-only";
+
+import type { SearchIndexWorkerResult } from "@/contracts/search-index-worker.contract";
 import type { ILogger } from "@/server/infrastructure/logging/logger.interface";
 import type { IOpenAIProvider } from "@/server/infrastructure/openai/interfaces/openai.provider.interface";
-import { prepareSiteChunks } from "../chunking/text-chunker";
 import type {
-  ISearchIndexJobRepository,
-  SearchIndexJob,
-} from "../interfaces/search-index-job.repository.interface";
-import type { ISourceRecordRepository } from "../interfaces/source-record.repository.interface";
-import type {
-  ISearchIndexService,
-  IndexSourceResult,
-  RebuildSummary,
-} from "../interfaces/search-index.service.interface";
+  IAboutService,
+  IAuditService,
+  IHomeService,
+  IWorkService,
+} from "@/server/modules/portfolio/public";
+import type { ISearchIndexJobRepository } from "../interfaces/search-index-job.repository.interface";
+import type { ISearchIndexService } from "../interfaces/search-index.service.interface";
 import type { ISiteChunkRepository } from "../interfaces/site-chunk.repository.interface";
-import { mapSourceDocument } from "../mappers/source-document.mapper";
-import type { IndexSourceInput } from "../schemas/index-source-input.schema";
+import { mapPortfolioSnapshot } from "../mappers/portfolio-snapshot.mapper";
+import { prepareSiteChunks } from "../mappers/site-chunk.mapper";
+import type { ClaimedSearchIndexJob } from "../models/search-index-job";
+import type { EmbeddedSiteChunk, PreparedSiteChunk } from "../models/site-chunk";
 
-function sameChunks(
-  existing: Awaited<ReturnType<ISiteChunkRepository["findBySource"]>>,
-  prepared: ReturnType<typeof prepareSiteChunks>,
-  model: string,
-) {
-  return (
-    existing.length === prepared.length &&
-    existing.every(
-      (chunk, index) =>
-        chunk.chunkIndex === prepared[index]?.chunkIndex &&
-        chunk.contentHash === prepared[index]?.contentHash &&
-        chunk.embeddingModel === model,
-    )
-  );
+const EMBEDDING_DIMENSIONS = 1_536;
+
+type PortfolioPageServices = {
+  home: Pick<IHomeService, "getPageData">;
+  work: Pick<IWorkService, "getPageData">;
+  about: Pick<IAboutService, "getPageData">;
+  audit: Pick<IAuditService, "getPageData">;
+};
+
+type ProcessingStage = "claim" | "snapshot" | "embedding" | "replacement" | "settlement";
+
+const SAFE_FAILURE_SUMMARIES: Record<Exclude<ProcessingStage, "claim">, string> = {
+  snapshot: "Portfolio search documents could not be prepared.",
+  embedding: "Portfolio search embeddings could not be prepared.",
+  replacement: "The portfolio search snapshot could not be replaced.",
+  settlement: "Portfolio search processing could not be settled.",
+};
+
+class SearchIndexProcessingError extends Error {
+  constructor() {
+    super("Search index processing failed.");
+    this.name = "SearchIndexProcessingError";
+  }
+}
+
+function safeErrorKind(error: unknown): "Error" | "UnknownError" {
+  return error instanceof Error ? "Error" : "UnknownError";
+}
+
+function validatePreparedChunks(chunks: PreparedSiteChunk[]): void {
+  if (!chunks.length) {
+    throw new Error("Portfolio indexing produced an empty chunk snapshot.");
+  }
+
+  const identities = new Set<string>();
+
+  for (const chunk of chunks) {
+    if (
+      !chunk.id.trim() ||
+      !chunk.sourceId.trim() ||
+      !chunk.title.trim() ||
+      !chunk.category.trim() ||
+      !chunk.url.trim() ||
+      !chunk.content.trim() ||
+      !chunk.embeddingInput.trim() ||
+      !chunk.contentHash.trim()
+    ) {
+      throw new Error("Portfolio indexing produced invalid chunk metadata.");
+    }
+
+    if (identities.has(chunk.id)) {
+      throw new Error("Portfolio indexing produced duplicate chunk identities.");
+    }
+
+    identities.add(chunk.id);
+  }
+}
+
+function buildEmbeddedChunks(
+  prepared: PreparedSiteChunk[],
+  generated: Awaited<ReturnType<IOpenAIProvider["createEmbeddings"]>>,
+  expectedModel: string,
+): EmbeddedSiteChunk[] {
+  if (!expectedModel.trim() || generated.length !== prepared.length) {
+    throw new Error("The embedding response did not match the prepared snapshot.");
+  }
+
+  const embeddedAt = new Date();
+
+  return prepared.map((chunk, index) => {
+    const generatedEmbedding = generated[index];
+
+    if (
+      !generatedEmbedding ||
+      generatedEmbedding.embeddingModel !== expectedModel ||
+      !Array.isArray(generatedEmbedding.embedding) ||
+      generatedEmbedding.embedding.length !== EMBEDDING_DIMENSIONS ||
+      generatedEmbedding.embedding.some(
+        (value) => typeof value !== "number" || !Number.isFinite(value),
+      )
+    ) {
+      throw new Error("The embedding response contained invalid metadata or values.");
+    }
+
+    return {
+      ...chunk,
+      embedding: generatedEmbedding.embedding,
+      embeddingModel: generatedEmbedding.embeddingModel,
+      embeddedAt,
+    };
+  });
 }
 
 export class SearchIndexService implements ISearchIndexService {
   constructor(
-    private readonly sources: ISourceRecordRepository,
+    private readonly portfolio: PortfolioPageServices,
     private readonly chunks: ISiteChunkRepository,
     private readonly jobs: ISearchIndexJobRepository,
     private readonly openai: IOpenAIProvider,
     private readonly logger: ILogger,
   ) {}
 
-  async indexSource(input: IndexSourceInput): Promise<IndexSourceResult> {
-    const source = await this.sources.findById(input.sourceType, input.sourceId);
-
-    if (!source) {
-      return this.removeSource(input);
-    }
-
-    const document = mapSourceDocument(source);
-
-    const prepared = prepareSiteChunks(document);
-
-    if (!prepared.length) {
-      throw new Error(`Indexing produced no chunks for ${input.sourceType}:${input.sourceId}.`);
-    }
-
-    const existing = await this.chunks.findBySource(input.sourceType, input.sourceId);
-
-    const model = this.openai.getEmbeddingModel();
-
-    if (sameChunks(existing, prepared, model)) {
-      return { created: 0, changed: 0, unchanged: prepared.length, deleted: 0 };
-    }
-
-    const embeddings = await this.openai.createEmbeddings(
-      prepared.map((chunk) => chunk.embeddingInput),
-    );
-
-    if (embeddings.length !== prepared.length) {
-      throw new Error(
-        `Embedding provider returned ${embeddings.length} embeddings for ${prepared.length} chunks.`,
-      );
-    }
-
-    const embeddedAt = new Date();
-
-    const embedded = prepared.map((chunk, index) => {
-      const embedding = embeddings[index];
-
-      if (!embedding || embedding.embedding.length !== 1536) {
-        throw new Error(`Invalid embedding for ${chunk.id}.`);
-      }
-
-      return {
-        ...chunk,
-        embedding: embedding.embedding,
-        embeddingModel: embedding.embeddingModel,
-        embeddedAt,
-      };
-    });
-
-    await this.chunks.replaceSource(input.sourceType, input.sourceId, embedded);
-
-    return {
-      created: existing.length ? 0 : prepared.length,
-      changed: existing.length ? prepared.length : 0,
-      unchanged: 0,
-      deleted: 0,
-    };
+  requestRebuild(): Promise<void> {
+    return this.jobs.requestRebuild();
   }
 
-  async removeSource(input: IndexSourceInput): Promise<IndexSourceResult> {
-    throw new Error(
-      `Portfolio source removal is unavailable until the deferred search-index milestone (${input.sourceType}:${input.sourceId}).`,
-    );
-  }
+  async processPendingJob(): Promise<SearchIndexWorkerResult> {
+    const startedAt = Date.now();
 
-  async preview(
-    input: IndexSourceInput,
-  ): Promise<Awaited<ReturnType<ISearchIndexService["preview"]>>> {
-    const source = await this.sources.findById(input.sourceType, input.sourceId);
+    this.logger.info("search_index.worker_started");
 
-    if (!source) {
-      throw new Error(`Source not found: ${input.sourceType}:${input.sourceId}`);
-    }
-
-    const document = mapSourceDocument(source);
-
-    const chunks = prepareSiteChunks(document);
-
-    const existing = await this.chunks.findBySource(input.sourceType, input.sourceId);
-
-    const model = this.openai.getEmbeddingModel();
-
-    return {
-      input,
-      document,
-      chunks,
-      expectedAction: sameChunks(existing, chunks, model) ? "unchanged" : "replace",
-    };
-  }
-
-  async rebuild(options: { clean?: boolean } = {}) {
-    let sourceRecordsForReporting: number | null = null;
-
-    if (options.clean) {
-      sourceRecordsForReporting = (await this.sources.findAll()).length;
-      this.logger.info("Clean search index rebuild started", {
-        sourceRecords: sourceRecordsForReporting,
-      });
-      await this.chunks.clear();
-      await this.jobs.clear();
-    }
-
-    const sources = await this.sources.findAll();
-
-    const summary: RebuildSummary = {
-      sourceRecords: sourceRecordsForReporting ?? sources.length,
-      sourcesIndexed: 0,
-      sourcesSkipped: 0,
-      chunksCreated: 0,
-      embeddingsGenerated: 0,
-      sourcesFailed: 0,
-    };
-
-    const results: Array<{ sourceType: string; sourceId: string; result: IndexSourceResult }> = [];
-
-    for (const source of sources) {
-      try {
-        const result = await this.indexSource({
-          sourceType: source.sourceType,
-          sourceId: source.record.id,
-        });
-
-        results.push({ sourceType: source.sourceType, sourceId: source.record.id, result });
-        if (result.unchanged) {
-          summary.sourcesSkipped += 1;
-        } else {
-          summary.sourcesIndexed += 1;
-        }
-
-        summary.chunksCreated += result.created + result.changed;
-        summary.embeddingsGenerated += result.created + result.changed;
-      } catch (error) {
-        summary.sourcesFailed += 1;
-        this.logger.error("Search index rebuild source failed", {
-          sourceType: source.sourceType,
-          sourceId: source.record.id,
-          error: error instanceof Error ? error.message : "Unknown error",
-        });
-      }
-    }
-
-    if (summary.sourcesFailed) {
-      throw Object.assign(
-        new Error(`Search index rebuild failed for ${summary.sourcesFailed} source(s).`),
-        { summary, results },
-      );
-    }
-
-    return { summary, results };
-  }
-
-  getJobStatus() {
-    return this.jobs.getStatus();
-  }
-
-  async processPendingJobs(limit = 5) {
-    const jobs = await this.jobs.claim(limit);
-
-    const result = { claimed: jobs.length, completed: 0, retried: 0, failed: 0 };
-
-    for (const job of jobs) {
-      const outcome = await this.processJob(job);
-
-      if (outcome === "completed") {
-        result.completed += 1;
-      }
-
-      if (outcome === "retried") {
-        result.retried += 1;
-      }
-
-      if (outcome === "failed") {
-        result.failed += 1;
-      }
-    }
-
-    return result;
-  }
-
-  private async processJob(
-    job: SearchIndexJob,
-  ): Promise<"completed" | "retried" | "failed" | "unsettled"> {
-    const details = {
-      jobId: job.id,
-      operation: job.operation,
-      sourceType: job.sourceType,
-      sourceId: job.sourceId,
-    };
+    let claim: Awaited<ReturnType<ISearchIndexJobRepository["claim"]>>;
 
     try {
-      const result =
-        job.operation === "upsert"
-          ? await this.indexSource({ sourceType: job.sourceType, sourceId: job.sourceId })
-          : await this.removeSource({ sourceType: job.sourceType, sourceId: job.sourceId });
-
-      if (!(await this.jobs.complete(job.id))) {
-        return "unsettled";
-      }
-
-      this.logger.info("Search index job completed", { ...details, result });
-
-      return "completed";
+      claim = await this.jobs.claim();
     } catch (error) {
-      const failed = await this.jobs.fail(job.id, error);
+      this.logFailure("claim", null, startedAt, error);
+      throw new SearchIndexProcessingError();
+    }
 
-      const outcome =
-        failed?.status === "pending"
-          ? "retried"
-          : failed?.status === "failed"
-            ? "failed"
-            : "unsettled";
+    if (claim.staleJobRecovered) {
+      this.logger.info("search_index.stale_job_recovered");
+    }
 
-      this.logger.error("Search index job failed", {
-        ...details,
-        error: error instanceof Error ? error.message : "Unknown error",
-        outcome,
+    if (!claim.job) {
+      this.logger.info("search_index.worker_skipped", { durationMs: Date.now() - startedAt });
+
+      return { outcome: "skipped" };
+    }
+
+    const job = claim.job;
+
+    if (job.attempts < 1) {
+      await this.failClaim(job, "snapshot", startedAt, new Error("Invalid claimed attempt."));
+    }
+
+    let stage: Exclude<ProcessingStage, "claim"> = "snapshot";
+
+    try {
+      const [home, work, about, audit] = await Promise.all([
+        this.portfolio.home.getPageData(),
+        this.portfolio.work.getPageData(),
+        this.portfolio.about.getPageData(),
+        this.portfolio.audit.getPageData(),
+      ]);
+
+      const documents = mapPortfolioSnapshot({ home, work, about, audit });
+
+      const prepared = documents.flatMap((document) => {
+        const documentChunks = prepareSiteChunks(document);
+
+        if (!documentChunks.length) {
+          throw new Error("Portfolio indexing produced a document without chunks.");
+        }
+
+        return documentChunks;
       });
 
-      return outcome;
+      validatePreparedChunks(prepared);
+
+      stage = "embedding";
+
+      const embeddingModel = this.openai.getEmbeddingModel();
+
+      const generated = await this.openai.createEmbeddings(
+        prepared.map((chunk) => chunk.embeddingInput),
+      );
+
+      const embedded = buildEmbeddedChunks(prepared, generated, embeddingModel);
+
+      stage = "replacement";
+      await this.chunks.replacePortfolioSnapshot(embedded, job.claimedAt);
+
+      stage = "settlement";
+
+      const completed = await this.jobs.complete(job.claimedAt);
+
+      if (!completed || (completed.status !== "completed" && completed.status !== "pending")) {
+        throw new Error("Search index completion did not settle the claimed job.");
+      }
+
+      const result: SearchIndexWorkerResult = {
+        outcome: "processed",
+        attempt: job.attempts,
+        documentCount: documents.length,
+        chunkCount: embedded.length,
+        finalState: completed.status,
+      };
+
+      this.logger.info("search_index.worker_completed", {
+        attempt: job.attempts,
+        documentCount: documents.length,
+        chunkCount: embedded.length,
+        embeddingModel,
+        finalState: completed.status,
+        durationMs: Date.now() - startedAt,
+      });
+
+      return result;
+    } catch (error) {
+      return this.failClaim(job, stage, startedAt, error);
     }
+  }
+
+  private async failClaim(
+    job: ClaimedSearchIndexJob,
+    stage: Exclude<ProcessingStage, "claim">,
+    startedAt: number,
+    error: unknown,
+  ): Promise<never> {
+    let finalState: string | null = null;
+
+    try {
+      const failed = await this.jobs.fail(job.claimedAt, SAFE_FAILURE_SUMMARIES[stage]);
+
+      finalState = failed?.status ?? null;
+    } catch {
+      finalState = null;
+    }
+
+    this.logger.error("search_index.worker_failed", {
+      attempt: job.attempts,
+      stage,
+      finalState,
+      durationMs: Date.now() - startedAt,
+      errorKind: safeErrorKind(error),
+    });
+
+    throw new SearchIndexProcessingError();
+  }
+
+  private logFailure(
+    stage: ProcessingStage,
+    attempt: number | null,
+    startedAt: number,
+    error: unknown,
+  ): void {
+    this.logger.error("search_index.worker_failed", {
+      attempt,
+      stage,
+      finalState: null,
+      durationMs: Date.now() - startedAt,
+      errorKind: safeErrorKind(error),
+    });
   }
 }

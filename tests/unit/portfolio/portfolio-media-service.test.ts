@@ -75,6 +75,7 @@ function setup(
       }
 
       createdMedia.push({ source: input.source, type: input.type });
+
       return "new-media-id";
     },
     update: async () => undefined,

@@ -1,121 +1,112 @@
 import "server-only";
 
-import type { PrismaClient } from "@/generated/prisma/client";
+import { Prisma, type PrismaClient } from "@/generated/prisma/client";
 import type { ISiteChunkRepository } from "../interfaces/site-chunk.repository.interface";
-import type {
-  EmbeddedSiteChunk,
-  ExistingSiteChunk,
-  MatchSiteChunksRow,
-} from "../interfaces/site-chunk.repository.interface";
-import type { IndexableSourceType } from "../mappers/source-document.mapper";
+import type { EmbeddedSiteChunk } from "../models/site-chunk";
+import type { SiteSearchResult } from "../models/site-search-result";
+
+const EMBEDDING_DIMENSIONS = 1_536;
+
+// The current portfolio fits in one batch; the cap bounds larger SQL and parameter payloads.
+const SITE_CHUNK_INSERT_BATCH_SIZE = 100;
 
 function toVectorLiteral(embedding: number[]): string {
   return `[${embedding.join(",")}]`;
 }
 
+function toInsertValues(chunk: EmbeddedSiteChunk): Prisma.Sql {
+  return Prisma.sql`(
+    ${chunk.id},
+    ${chunk.sourceType},
+    ${chunk.sourceId},
+    ${chunk.chunkIndex},
+    ${chunk.title},
+    ${chunk.category},
+    ${chunk.url},
+    ${chunk.content},
+    ${chunk.keywords},
+    ${toVectorLiteral(chunk.embedding)}::vector,
+    ${chunk.contentHash},
+    ${chunk.embeddingModel},
+    ${chunk.embeddedAt}
+  )`;
+}
+
+function validateSnapshot(chunks: EmbeddedSiteChunk[]): void {
+  if (!chunks.length) {
+    throw new Error("A portfolio search snapshot must contain at least one chunk.");
+  }
+
+  for (const chunk of chunks) {
+    if (
+      chunk.embedding.length !== EMBEDDING_DIMENSIONS ||
+      chunk.embedding.some((value) => !Number.isFinite(value))
+    ) {
+      throw new Error(`Search chunk ${chunk.id} has an invalid embedding.`);
+    }
+  }
+}
+
 export class SiteChunkRepository implements ISiteChunkRepository {
   constructor(private readonly database: PrismaClient) {}
 
-  findBySource(sourceType: IndexableSourceType, sourceId: string): Promise<ExistingSiteChunk[]> {
-    return this.database.siteChunk.findMany({
-      where: {
-        sourceType,
-        sourceId,
-      },
-      select: {
-        chunkIndex: true,
-        contentHash: true,
-        embeddingModel: true,
-      },
-      orderBy: {
-        chunkIndex: "asc",
-      },
-    });
-  }
+  async replacePortfolioSnapshot(chunks: EmbeddedSiteChunk[], claimedAt: Date): Promise<void> {
+    validateSnapshot(chunks);
 
-  async replaceSource(
-    sourceType: IndexableSourceType,
-    sourceId: string,
-    chunks: EmbeddedSiteChunk[],
-  ): Promise<void> {
     await this.database.$transaction(async (transaction) => {
-      await transaction.siteChunk.deleteMany({ where: { sourceType, sourceId } });
-      for (const chunk of chunks) {
-        await transaction.$executeRaw`
-        INSERT INTO site_chunks (
-          id,
-          source_type,
-          source_id,
-          chunk_index,
-          title,
-          category,
-          url,
-          content,
-          keywords,
-          embedding,
-          content_hash,
-          embedding_model,
-          embedded_at
-        )
-        VALUES (
-          ${chunk.id},
-          ${chunk.sourceType},
-          ${chunk.sourceId},
-          ${chunk.chunkIndex},
-          ${chunk.title},
-          ${chunk.category},
-          ${chunk.url},
-          ${chunk.content},
-          ${chunk.keywords},
-          ${toVectorLiteral(chunk.embedding)}::vector,
-          ${chunk.contentHash},
-          ${chunk.embeddingModel},
-          ${chunk.embeddedAt}
-        )
-        ON CONFLICT (source_type, source_id, chunk_index)
-        DO UPDATE SET
-          id = EXCLUDED.id,
-          title = EXCLUDED.title,
-          category = EXCLUDED.category,
-          url = EXCLUDED.url,
-          content = EXCLUDED.content,
-          keywords = EXCLUDED.keywords,
-          embedding = EXCLUDED.embedding,
-          content_hash = EXCLUDED.content_hash,
-          embedding_model = EXCLUDED.embedding_model,
-          embedded_at = EXCLUDED.embedded_at,
-          updated_at = NOW()
+      const currentClaim = await transaction.$queryRaw<Array<{ jobKey: string }>>`
+        SELECT job_key AS "jobKey"
+        FROM public.search_index_jobs
+        WHERE job_key = 'portfolio'
+          AND status = 'processing'
+          AND claimed_at = ${claimedAt}
+        FOR UPDATE
       `;
+
+      if (!currentClaim.length) {
+        throw new Error("The search index claim is no longer current.");
+      }
+
+      await transaction.siteChunk.deleteMany();
+
+      for (let start = 0; start < chunks.length; start += SITE_CHUNK_INSERT_BATCH_SIZE) {
+        const batch = chunks.slice(start, start + SITE_CHUNK_INSERT_BATCH_SIZE);
+
+        await transaction.$executeRaw(
+          Prisma.sql`
+          INSERT INTO public.site_chunks (
+            id,
+            source_type,
+            source_id,
+            chunk_index,
+            title,
+            category,
+            url,
+            content,
+            keywords,
+            embedding,
+            content_hash,
+            embedding_model,
+            embedded_at
+          )
+          VALUES ${Prisma.join(batch.map(toInsertValues))}
+        `,
+        );
       }
     });
   }
 
-  async clear(): Promise<void> {
-    await this.database.siteChunk.deleteMany();
-  }
-
-  async deleteSource(sourceType: IndexableSourceType, sourceId: string): Promise<number> {
-    const result = await this.database.siteChunk.deleteMany({
-      where: {
-        sourceType,
-        sourceId,
-      },
-    });
-
-    return result.count;
-  }
-
   async match(queryEmbedding: number[], matchCount = 6, matchThreshold = 0.25) {
-    if (queryEmbedding.length !== 1536) {
+    if (queryEmbedding.length !== EMBEDDING_DIMENSIONS) {
       throw new Error(
-        `matchSiteChunks expected a 1536-length embedding, received ${queryEmbedding.length}.`,
+        `matchSiteChunks expected a ${EMBEDDING_DIMENSIONS}-length embedding, received ${queryEmbedding.length}.`,
       );
     }
 
-    const vector = `[${queryEmbedding.join(",")}]`;
+    const vector = toVectorLiteral(queryEmbedding);
 
     return this.database.$queryRaw<
-      MatchSiteChunksRow[]
-    >`SELECT * FROM match_site_chunks(${vector}::vector, ${matchCount}, ${matchThreshold});`;
+      SiteSearchResult[]
+    >`SELECT * FROM public.match_site_chunks(${vector}::vector, ${matchCount}, ${matchThreshold});`;
   }
 }

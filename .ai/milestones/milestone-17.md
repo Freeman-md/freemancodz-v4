@@ -1,6 +1,6 @@
 # Milestone 17: Database-Driven Assistant Search Indexing
 
-**Status:** Active
+**Status:** Frozen
 **Version:** 1.0.0
 **Last Updated:** 2026-08-18
 **Depends On:** Milestone 16

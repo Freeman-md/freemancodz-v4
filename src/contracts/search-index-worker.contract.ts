@@ -1,10 +1,22 @@
 import { z } from "zod";
 
-export const searchIndexWorkerResultSchema = z.object({
-  claimed: z.number().int().nonnegative(),
-  completed: z.number().int().nonnegative(),
-  retried: z.number().int().nonnegative(),
-  failed: z.number().int().nonnegative(),
+const skippedSearchIndexWorkerResultSchema = z.object({
+  outcome: z.literal("skipped"),
 });
 
+const processedSearchIndexWorkerResultSchema = z.object({
+  outcome: z.literal("processed"),
+  attempt: z.number().int().positive(),
+  documentCount: z.number().int().nonnegative(),
+  chunkCount: z.number().int().nonnegative(),
+  finalState: z.enum(["completed", "pending"]),
+});
+
+export const searchIndexWorkerResultSchema = z.discriminatedUnion("outcome", [
+  skippedSearchIndexWorkerResultSchema,
+  processedSearchIndexWorkerResultSchema,
+]);
+
 export const searchIndexWorkerErrorSchema = z.object({ error: z.string() });
+
+export type SearchIndexWorkerResult = z.infer<typeof searchIndexWorkerResultSchema>;

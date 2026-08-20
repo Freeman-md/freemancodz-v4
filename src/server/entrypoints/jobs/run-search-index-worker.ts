@@ -1,54 +1,58 @@
-import type { IndexWorkerBatchResult } from "@/server/modules/search-index/interfaces/search-index-job.repository.interface";
-import { searchIndexService } from "@/server/composition-root";
+import type { SearchIndexWorkerResult } from "@/contracts/search-index-worker.contract";
+import { requireProductionConfirmation } from "../helpers/require-production-confirmation";
 
-const POLLING_DELAY_MS = 2_000;
+type OneShotSearchIndexService = {
+  processPendingJob(): Promise<SearchIndexWorkerResult>;
+};
 
-function wait(milliseconds: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, milliseconds));
+export function runSearchIndexWorkerOnce(
+  service: OneShotSearchIndexService,
+): Promise<SearchIndexWorkerResult> {
+  return service.processPendingJob();
 }
 
-export async function runIndexWorkerLoop({
-  runBatch,
-  isStopping,
-}: {
-  runBatch: () => Promise<IndexWorkerBatchResult>;
-  isStopping: () => boolean;
-}): Promise<void> {
-  while (!isStopping()) {
-    const result = await runBatch();
+function reportResult(result: SearchIndexWorkerResult) {
+  if (result.outcome === "skipped") {
+    console.log("No pending portfolio search-index job was available.");
 
-    if (result.claimed === 0 && !isStopping()) {
-      await wait(POLLING_DELAY_MS);
-    }
+    return;
   }
+
+  console.log(
+    `Attempt ${result.attempt} processed ${result.documentCount} documents into ${result.chunkCount} chunks; job is ${result.finalState}.`,
+  );
 }
 
 async function main() {
+  const { searchIndexService } = await import("@/server/composition-root");
+
   const { prisma } = await import("@/server/infrastructure/database/prisma");
 
-  let stopping = false;
-
-  const stop = () => {
-    stopping = true;
-    console.log("Stopping search index worker after the current job.");
-  };
-
-  process.once("SIGINT", stop);
-  process.once("SIGTERM", stop);
-
   try {
-    await runIndexWorkerLoop({
-      runBatch: () => searchIndexService.processPendingJobs(),
-      isStopping: () => stopping,
-    });
+    reportResult(await runSearchIndexWorkerOnce(searchIndexService));
   } finally {
     await prisma.$disconnect();
   }
 }
 
-if (process.argv[1]?.endsWith("index-worker.ts")) {
-  main().catch((error) => {
-    console.error(error);
+function start() {
+  if (process.argv.includes("--production")) {
+    try {
+      requireProductionConfirmation();
+    } catch (error) {
+      console.error(error instanceof Error ? error.message : "Production confirmation failed.");
+      process.exitCode = 1;
+
+      return;
+    }
+  }
+
+  void main().catch(() => {
+    console.error("Search index worker failed.");
     process.exitCode = 1;
   });
+}
+
+if (process.argv[1]?.endsWith("run-search-index-worker.ts")) {
+  start();
 }
