@@ -1,0 +1,121 @@
+import "server-only";
+
+import type { PrismaClient } from "@/generated/prisma/client";
+import {
+  WorkflowInstanceRepositoryError,
+  type IWorkflowInstanceRepository,
+} from "../interfaces/workflow-instance.repository.interface";
+import { mapWorkflowInstance, toWorkflowStateInput } from "../mappers/workflow-instance.mapper";
+import type {
+  CreateWorkflowInstanceInput,
+  SaveWorkflowInstanceInput,
+  WorkflowInstance,
+} from "../models/workflow-instance";
+
+export class WorkflowInstanceRepository implements IWorkflowInstanceRepository {
+  constructor(private readonly database: PrismaClient) {}
+
+  async create(input: CreateWorkflowInstanceInput): Promise<WorkflowInstance> {
+    try {
+      const record = await this.database.workflowInstance.create({
+        data: {
+          workflowId: input.workflowId,
+          workflowVersion: input.workflowVersion,
+          status: "active",
+          state: toWorkflowStateInput(input.state),
+          originChannel: input.originChannel,
+          originPage: input.originPage,
+          originEntry: input.originEntry,
+        },
+      });
+
+      return mapWorkflowInstance(record);
+    } catch (error) {
+      throw normalizePersistenceError(error);
+    }
+  }
+
+  async findById(id: string): Promise<WorkflowInstance | null> {
+    try {
+      const record = await this.database.workflowInstance.findUnique({ where: { id } });
+
+      return record ? mapWorkflowInstance(record) : null;
+    } catch (error) {
+      throw normalizePersistenceError(error);
+    }
+  }
+
+  async save(input: SaveWorkflowInstanceInput): Promise<WorkflowInstance> {
+    validateCompletedAt(input);
+
+    try {
+      return await this.database.$transaction(async (transaction) => {
+        const update = await transaction.workflowInstance.updateMany({
+          where: { id: input.id, status: "active" },
+          data: {
+            status: input.status,
+            state: toWorkflowStateInput(input.state),
+            completedAt: input.completedAt,
+          },
+        });
+
+        if (update.count === 0) {
+          const existing = await transaction.workflowInstance.findUnique({
+            where: { id: input.id },
+            select: { status: true },
+          });
+
+          if (!existing) {
+            throw new WorkflowInstanceRepositoryError(
+              "not_found",
+              "The workflow instance was not found.",
+            );
+          }
+
+          throw new WorkflowInstanceRepositoryError(
+            "terminal",
+            "The workflow instance is already terminal.",
+          );
+        }
+
+        const record = await transaction.workflowInstance.findUnique({ where: { id: input.id } });
+
+        if (!record) {
+          throw new WorkflowInstanceRepositoryError(
+            "not_found",
+            "The workflow instance was not found after persistence.",
+          );
+        }
+
+        return mapWorkflowInstance(record);
+      });
+    } catch (error) {
+      throw normalizePersistenceError(error);
+    }
+  }
+}
+
+function validateCompletedAt(input: SaveWorkflowInstanceInput): void {
+  const completionTimestampIsValid =
+    (input.status === "completed" && input.completedAt !== null) ||
+    (input.status !== "completed" && input.completedAt === null);
+
+  if (!completionTimestampIsValid) {
+    throw new WorkflowInstanceRepositoryError(
+      "unavailable",
+      "The workflow lifecycle update is invalid.",
+    );
+  }
+}
+
+function normalizePersistenceError(error: unknown): WorkflowInstanceRepositoryError {
+  if (error instanceof WorkflowInstanceRepositoryError) {
+    return error;
+  }
+
+  return new WorkflowInstanceRepositoryError(
+    "unavailable",
+    "Workflow persistence is unavailable.",
+    { cause: error },
+  );
+}

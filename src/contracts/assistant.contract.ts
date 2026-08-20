@@ -8,30 +8,24 @@ const sourceSchema = z.object({
   id: z.string(),
   title: z.string(),
   url: z.string(),
-});
+}).strict();
 
-const meetingSlotSchema = z.object({
-  start: z.string().datetime(),
-  end: z.string().datetime(),
-  timezone: z.string().min(1).max(100),
-});
+const workflowInstanceSchema = z
+  .object({
+    id: z.string().uuid(),
+    workflowId: z.string().min(1),
+    workflowVersion: z.number().int().positive(),
+    status: z.enum(["active", "completed", "cancelled"]),
+  })
+  .strict();
 
-const workflowPublicStateSchema = z.object({
-  name: z.string().nullable(),
-  email: z.string().nullable(),
-  timezone: z.string().nullable(),
-  reason: z.string().nullable(),
-  availableSlots: z.array(meetingSlotSchema),
-  availabilityCheckedAt: z.string().datetime().nullable(),
-  selectedSlot: meetingSlotSchema.nullable(),
-  confirmed: z.boolean(),
-});
-
-export const assistantRequestSchema = z.object({
-  message: z.string().trim().min(1, "Message is required.").max(MAX_MESSAGE_LENGTH),
-  previousResponseId: z.string().nullable().optional().transform(normalizePreviousResponseId),
-  workflowToken: z.string().min(1).max(10_000).nullable().optional(),
-});
+export const assistantRequestSchema = z
+  .object({
+    message: z.string().trim().min(1, "Message is required.").max(MAX_MESSAGE_LENGTH),
+    previousResponseId: z.string().nullable().optional().transform(normalizePreviousResponseId),
+    workflowInstanceId: z.string().uuid().nullable().optional(),
+  })
+  .strict();
 
 function normalizePreviousResponseId(value: string | null | undefined) {
   if (!value) {
@@ -46,16 +40,17 @@ function normalizePreviousResponseId(value: string | null | undefined) {
 }
 
 export const assistantStreamEventSchema = z.discriminatedUnion("type", [
-  z.object({ type: z.literal("delta"), delta: z.string() }),
-  z.object({ type: z.literal("sources"), sources: z.array(sourceSchema) }),
-  z.object({ type: z.literal("response_id"), responseId: z.string() }),
-  z.object({
-    type: z.literal("meeting_workflow"),
-    token: z.string(),
-    state: workflowPublicStateSchema,
-  }),
-  z.object({ type: z.literal("done") }),
-  z.object({ type: z.literal("error"), error: z.string() }),
+  z.object({ type: z.literal("delta"), delta: z.string() }).strict(),
+  z.object({ type: z.literal("sources"), sources: z.array(sourceSchema) }).strict(),
+  z.object({ type: z.literal("response_id"), responseId: z.string() }).strict(),
+  z
+    .object({
+      type: z.literal("workflow_instance"),
+      instance: workflowInstanceSchema,
+    })
+    .strict(),
+  z.object({ type: z.literal("done") }).strict(),
+  z.object({ type: z.literal("error"), error: z.string() }).strict(),
 ]);
 
 export const assistantTriggerDetailSchema = z.object({
@@ -66,5 +61,4 @@ export type AssistantRequest = z.infer<typeof assistantRequestSchema>;
 export type AssistantStreamEvent = z.infer<typeof assistantStreamEventSchema>;
 export type AssistantSource = z.infer<typeof sourceSchema>;
 export type AssistantTriggerDetail = z.infer<typeof assistantTriggerDetailSchema>;
-export type MeetingSlot = z.infer<typeof meetingSlotSchema>;
-export type WorkflowPublicState = z.infer<typeof workflowPublicStateSchema>;
+export type WorkflowPublicInstance = z.infer<typeof workflowInstanceSchema>;

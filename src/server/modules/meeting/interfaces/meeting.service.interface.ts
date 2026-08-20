@@ -1,4 +1,4 @@
-import type { MeetingSlot } from "@/contracts/assistant.contract";
+import type { MeetingSlot } from "../models/meeting-slot";
 export type PendingCalendarEvent = {
   googleEventId: string;
   googleEventUrl: string | null;

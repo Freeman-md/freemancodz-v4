@@ -1,6 +1,6 @@
 import "server-only";
 
-type RequiredEnvName = "DATABASE_URL" | "OPENAI_API_KEY" | "MEETING_WORKFLOW_SECRET";
+type RequiredEnvName = "DATABASE_URL" | "OPENAI_API_KEY";
 
 function requireEnv(name: RequiredEnvName) {
   const value = process.env[name];
@@ -26,10 +26,6 @@ export function getOpenAIConfig() {
 
 export function getCronSecret() {
   return process.env.CRON_SECRET;
-}
-
-export function getWorkflowSecret() {
-  return requireEnv("MEETING_WORKFLOW_SECRET");
 }
 
 export function getSupabaseStorageConfig() {

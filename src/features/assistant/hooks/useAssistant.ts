@@ -10,6 +10,7 @@ import {
 } from "../state/assistant-conversation";
 import { MAX_MESSAGE_LENGTH } from "../constants";
 import type { ChatMessage } from "../models/chat-message";
+import { activeWorkflowInstanceId } from "../state/active-workflow-instance";
 
 const REVEAL_INTERVAL_MS = 16;
 
@@ -36,7 +37,7 @@ export function useAssistant() {
 
   const [previousResponseId, setPreviousResponseId] = useState<string | null>(null);
 
-  const [workflowToken, setWorkflowToken] = useState<string | null>(null);
+  const [workflowInstanceId, setWorkflowInstanceId] = useState<string | null>(null);
 
   const shouldReduceMotion = useReducedMotion();
 
@@ -157,7 +158,7 @@ export function useAssistant() {
       setErrorMessage(null);
 
       try {
-        await streamChatResponse(message, previousResponseId, workflowToken, {
+        await streamChatResponse(message, previousResponseId, workflowInstanceId, {
           onDelta(delta) {
             if (!isMountedRef.current || activeRequestIdRef.current !== requestId) {
               return;
@@ -179,9 +180,9 @@ export function useAssistant() {
 
             setPreviousResponseId(responseId);
           },
-          onWorkflow(token) {
+          onWorkflow(instance) {
             if (isMountedRef.current && activeRequestIdRef.current === requestId) {
-              setWorkflowToken(token);
+              setWorkflowInstanceId(activeWorkflowInstanceId(instance));
             }
           },
           onSources(sources) {
@@ -222,7 +223,13 @@ export function useAssistant() {
         }
       }
     },
-    [cancelPendingRequest, isLoading, previousResponseId, reduceMotionImmediately, workflowToken],
+    [
+      cancelPendingRequest,
+      isLoading,
+      previousResponseId,
+      reduceMotionImmediately,
+      workflowInstanceId,
+    ],
   );
 
   const clearError = useCallback(() => setErrorMessage(null), []);

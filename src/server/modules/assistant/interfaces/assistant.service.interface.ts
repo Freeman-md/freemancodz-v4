@@ -3,7 +3,7 @@ import type { ReadableStream } from "node:stream/web";
 export type AssistantResponseInput = {
   message: string;
   previousResponseId: string | null;
-  workflowToken: string | null;
+  workflowInstanceId: string | null;
   signal: AbortSignal;
 };
 export type AssistantRateLimitResult =

@@ -14,16 +14,18 @@ import type {
 } from "../interfaces/assistant.service.interface";
 import { encodeStreamEvent } from "../mappers/assistant-stream.mapper";
 import { CHAT_SYSTEM_PROMPT } from "../prompts/portfolio-assistant.prompt";
-import { ASSISTANT_TOOLS } from "../tools/assistant-tools";
-import { executeAssistantTool } from "../tools/execute-assistant-tool";
+import { GLOBAL_ASSISTANT_TOOLS } from "../tools/assistant-tools";
+import { executeGlobalAssistantTool } from "../tools/execute-assistant-tool";
 import type { IOpenAIProvider } from "@/server/infrastructure/openai/interfaces/openai.provider.interface";
 import type { OpenAIResponseInputItem } from "@/server/infrastructure/openai/models/openai-response-request";
 import type { ISiteSearchService } from "@/server/modules/search-index/public";
 import type { ILogger } from "@/server/infrastructure/logging/logger.interface";
 import type { AssistantSource, AssistantStreamEvent } from "@/contracts/assistant.contract";
-import type { IMeetingService } from "@/server/modules/meeting/public";
-import type { IWorkflowService } from "../interfaces/workflow.service.interface";
-import type { WorkflowState } from "../workflow.state";
+import type {
+  IWorkflowService,
+  WorkflowAssistantContext,
+  WorkflowPublicInstance,
+} from "@/server/modules/workflow/public";
 type WindowCounter = { count: number; resetAt: number };
 
 export class AssistantService implements IAssistantService {
@@ -35,7 +37,6 @@ export class AssistantService implements IAssistantService {
     private readonly openai: IOpenAIProvider,
     private readonly siteSearch: ISiteSearchService,
     private readonly logger: ILogger,
-    private readonly meetingService: IMeetingService,
     private readonly workflow: IWorkflowService,
   ) {}
 
@@ -84,7 +85,12 @@ export class AssistantService implements IAssistantService {
     return { allowed: true };
   }
 
-  createResponse({ message, previousResponseId, workflowToken, signal }: AssistantResponseInput) {
+  createResponse({
+    message,
+    previousResponseId,
+    workflowInstanceId,
+    signal,
+  }: AssistantResponseInput) {
     const encoder = new TextEncoder();
 
     return new ReadableStream<Uint8Array>({
@@ -96,10 +102,9 @@ export class AssistantService implements IAssistantService {
 
         let responseId = previousResponseId;
 
-        let workflowState = this.workflow.recordConfirmation(
-          this.workflow.decode(workflowToken),
-          message,
-        );
+        let activeWorkflowInstanceId = workflowInstanceId;
+
+        let latestWorkflowInstance: WorkflowPublicInstance | null = null;
 
         const sources = new Map<string, AssistantSource>();
 
@@ -109,10 +114,15 @@ export class AssistantService implements IAssistantService {
           for (let iteration = 0; iteration < MAX_TOOL_CALL_ITERATIONS; iteration += 1) {
             const toolCalls: Array<{ callId: string; name: string; arguments: string }> = [];
 
+            const workflowContext =
+              await this.workflow.getAssistantContext(activeWorkflowInstanceId);
+
+            latestWorkflowInstance = workflowContext.instance ?? latestWorkflowInstance;
+
             const response = await this.openai.streamResponse({
               input,
-              instructions: CHAT_SYSTEM_PROMPT,
-              tools: ASSISTANT_TOOLS,
+              instructions: combineInstructions(CHAT_SYSTEM_PROMPT, workflowContext.instructions),
+              tools: [...GLOBAL_ASSISTANT_TOOLS, ...workflowContext.tools],
               previousResponseId: responseId,
               signal,
             });
@@ -163,10 +173,12 @@ export class AssistantService implements IAssistantService {
               toolCalls,
               sources,
               signal,
-              workflowState,
+              activeWorkflowInstanceId,
+              workflowContext,
             );
 
-            workflowState = toolResult.workflowState;
+            activeWorkflowInstanceId = toolResult.activeWorkflowInstanceId;
+            latestWorkflowInstance = toolResult.workflowInstance ?? latestWorkflowInstance;
             input = toolResult.output;
           }
 
@@ -179,16 +191,17 @@ export class AssistantService implements IAssistantService {
             write({ type: "response_id", responseId });
           }
 
-          write({
-            type: "meeting_workflow",
-            token: this.workflow.encode(workflowState),
-            state: this.workflow.publicState(workflowState),
-          });
+          if (latestWorkflowInstance) {
+            write({ type: "workflow_instance", instance: latestWorkflowInstance });
+          }
 
           write({ type: "done" });
         } catch (error) {
           if (!signal.aborted) {
-            this.logger.error("Assistant response failed", error);
+            this.logger.error("assistant.response_failed", {
+              category: "assistant_request_failed",
+              workflowInstanceId: activeWorkflowInstanceId,
+            });
             write({ type: "error", error: "The assistant could not respond. Please try again." });
           }
         } finally {
@@ -229,33 +242,70 @@ export class AssistantService implements IAssistantService {
     toolCalls: Array<{ callId: string; name: string; arguments: string }>,
     sources: Map<string, AssistantSource>,
     signal: AbortSignal,
-    state: WorkflowState,
+    instanceId: string | null,
+    workflowContext: WorkflowAssistantContext,
   ): Promise<{
     output: OpenAIResponseInputItem[];
-    workflowState: WorkflowState;
+    activeWorkflowInstanceId: string | null;
+    workflowInstance: WorkflowPublicInstance | null;
   }> {
     const outputs: OpenAIResponseInputItem[] = [];
 
-    let workflowState = state;
+    let activeWorkflowInstanceId = instanceId;
+
+    let workflowInstance = workflowContext.instance;
+
+    const availableWorkflowTools = new Set(workflowContext.tools.map(({ name }) => name));
+
+    const globalToolNames = new Set(GLOBAL_ASSISTANT_TOOLS.map(({ name }) => name));
 
     for (const toolCall of toolCalls) {
       if (signal.aborted) {
-        return { output: [], workflowState };
+        return { output: [], activeWorkflowInstanceId, workflowInstance };
       }
 
-      const result = await executeAssistantTool(toolCall.name, toolCall.arguments, {
-        openai: this.openai,
-        siteSearch: this.siteSearch,
-        meetingService: this.meetingService,
-        workflow: this.workflow,
-        state: workflowState,
+      if (globalToolNames.has(toolCall.name)) {
+        const result = await executeGlobalAssistantTool(toolCall.name, toolCall.arguments, {
+          openai: this.openai,
+          siteSearch: this.siteSearch,
+        });
+
+        for (const source of result.sources) {
+          sources.set(source.id, source);
+        }
+
+        outputs.push({
+          type: "function_call_output",
+          callId: toolCall.callId,
+          output: JSON.stringify(result.output),
+        });
+
+        continue;
+      }
+
+      if (!availableWorkflowTools.has(toolCall.name)) {
+        outputs.push({
+          type: "function_call_output",
+          callId: toolCall.callId,
+          output: JSON.stringify({
+            error: "unknown_tool",
+            message: "The requested tool is not available in the current workflow step.",
+          }),
+        });
+
+        continue;
+      }
+
+      const result = await this.workflow.executeTool(activeWorkflowInstanceId, {
+        name: toolCall.name,
+        rawArguments: toolCall.arguments,
+        startContext: activeWorkflowInstanceId
+          ? undefined
+          : { originChannel: "web", originPage: null, originEntry: null },
       });
 
-      workflowState = result.state;
-
-      for (const source of result.sources) {
-        sources.set(source.id, source);
-      }
+      workflowInstance = result.instance;
+      activeWorkflowInstanceId = result.instance.status === "active" ? result.instance.id : null;
 
       outputs.push({
         type: "function_call_output",
@@ -264,6 +314,10 @@ export class AssistantService implements IAssistantService {
       });
     }
 
-    return { output: outputs, workflowState };
+    return { output: outputs, activeWorkflowInstanceId, workflowInstance };
   }
+}
+
+function combineInstructions(base: string, workflowInstructions: string) {
+  return workflowInstructions ? `${base}\n\n${workflowInstructions}` : base;
 }

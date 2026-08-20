@@ -57,7 +57,13 @@ export class ProjectRepository implements IProjectAdministrationRepository {
         select: { id: true },
       });
 
-      await transaction.project.update({ where: { id }, data: { order: -2_147_483_648 } });
+      const highestOrder = await transaction.project.aggregate({
+        _max: { order: true },
+      });
+
+      const temporaryOrder = (highestOrder._max.order ?? 0) + 1;
+
+      await transaction.project.update({ where: { id }, data: { order: temporaryOrder } });
       if (occupant) {
         await transaction.project.update({
           where: { id: occupant.id },

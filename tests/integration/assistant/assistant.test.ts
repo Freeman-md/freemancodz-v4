@@ -7,7 +7,15 @@ import type { IOpenAIProvider } from "@/server/infrastructure/openai/interfaces/
 import type { OpenAIResponseRequest } from "@/server/infrastructure/openai/models/openai-response-request";
 import type { ISiteSearchService, SiteSearchResult } from "@/server/modules/search-index/public";
 import { AssistantService } from "@/server/modules/assistant/services/assistant.service";
-import { WorkflowService } from "@/server/modules/assistant/services/workflow.service";
+import type { IWorkflowInstanceRepository } from "@/server/modules/workflow/interfaces/workflow-instance.repository.interface";
+import { MeetingBookingWorkflowDefinition } from "@/server/modules/workflow/definitions/meeting-booking/meeting-booking-definition";
+import { WorkflowDefinitionRegistry } from "@/server/modules/workflow/models/workflow-definition-registry";
+import type {
+  CreateWorkflowInstanceInput,
+  SaveWorkflowInstanceInput,
+  WorkflowInstance,
+} from "@/server/modules/workflow/models/workflow-instance";
+import { WorkflowService } from "@/server/modules/workflow/services/workflow.service";
 
 const source = {
   id: "project-1",
@@ -18,6 +26,12 @@ const source = {
   keywords: ["TypeScript", "Next.js"],
   similarity: 0.9,
 } satisfies SiteSearchResult;
+
+const meetingSlot = {
+  start: "2099-09-15T11:00:00.000Z",
+  end: "2099-09-15T11:30:00.000Z",
+  timezone: "Europe/London",
+};
 
 async function read(stream: ReadableStream<Uint8Array>) {
   const reader = stream.getReader();
@@ -59,7 +73,12 @@ function createAssistant({
 } = {}) {
   const inputs: OpenAIResponseRequest[] = [];
 
-  const logger: ILogger = { info: () => undefined, error: () => undefined };
+  const errors: Array<{ message: string; context: unknown }> = [];
+
+  const logger: ILogger = {
+    info: () => undefined,
+    error: (message, context) => errors.push({ message, context }),
+  };
 
   const openai: IOpenAIProvider = {
     getEmbeddingModel: () => "test-model",
@@ -77,21 +96,29 @@ function createAssistant({
   };
 
   const meetingService = {
-    findAvailableSlots: async () => [],
+    findAvailableSlots: async () => [meetingSlot],
     isSlotAvailable: async () => true,
     bookMeeting: async () => ({ googleEventId: "event_test", googleEventUrl: null }),
     reconcileMeeting: async () => ({ googleEventId: "event_test", googleEventUrl: null }),
   };
 
-  const assistantService = new AssistantService(
-    openai,
-    siteSearch,
-    logger,
-    meetingService,
-    new WorkflowService(() => "test-secret"),
+  const workflowRepository = new MemoryWorkflowInstanceRepository();
+
+  const workflowService = new WorkflowService(
+    new WorkflowDefinitionRegistry([new MeetingBookingWorkflowDefinition(meetingService)]),
+    workflowRepository,
+    ["search_website"],
   );
 
-  return { inputs, post: createChatPostHandler({ assistantService }) };
+  const assistantService = new AssistantService(openai, siteSearch, logger, workflowService);
+
+  return {
+    errors,
+    inputs,
+    meetingService,
+    post: createChatPostHandler({ assistantService }),
+    workflowService,
+  };
 }
 
 function chatRequest(body: unknown, signal?: AbortSignal) {
@@ -186,6 +213,120 @@ test("website tool results are accumulated and supplied to the next response", a
   assert.match(output, /A grounded answer\./);
 });
 
+test("starting a workflow changes instructions and tools on the next iteration in one request", async () => {
+  const { inputs, post } = createAssistant({
+    response: async (request) =>
+      request.input[0]?.type === "function_call_output"
+        ? events(
+            { type: "response.created", response: { id: "resp_workflow_active" } },
+            { type: "response.output_text.delta", delta: "Which dates work for you?" },
+            { type: "response.completed", response: { id: "resp_workflow_active" } },
+          )
+        : events(
+            { type: "response.created", response: { id: "resp_workflow_start" } },
+            {
+              type: "response.output_item.done",
+              item: {
+                type: "function_call",
+                call_id: "call_start",
+                name: "start_workflow",
+                arguments: '{"workflowId":"meeting-booking"}',
+              },
+            },
+            { type: "response.completed", response: { id: "resp_workflow_start" } },
+          ),
+  });
+
+  const output = await readChatResponse(
+    await post(chatRequest({ message: "I would like to book a meeting." })),
+  );
+
+  assert.deepEqual(
+    inputs[0]?.tools.map(({ name }) => name),
+    ["search_website", "start_workflow"],
+  );
+  assert.deepEqual(
+    inputs[1]?.tools.map(({ name }) => name),
+    ["search_website", "cancel_workflow", "find_meeting_slots"],
+  );
+  assert.doesNotMatch(inputs[0]?.instructions ?? "", /meeting-booking workflow/i);
+  assert.match(inputs[1]?.instructions ?? "", /meeting-booking workflow/i);
+  assert.equal(inputs[1]?.input[0]?.type, "function_call_output");
+  assert.match(output, /Which dates work for you\?/);
+  assert.match(output, /"type":"workflow_instance"/);
+  assert.match(output, /"status":"active"/);
+  assert.doesNotMatch(output, /availableSlots|pendingBooking|visitor@example\.com/);
+});
+
+test("terminal workflow metadata clears the active surface without streaming private state", async () => {
+  const { inputs, post, workflowService } = createAssistant({
+    response: async (request) =>
+      request.input[0]?.type === "function_call_output"
+        ? events(
+            { type: "response.created", response: { id: "resp_booking_done" } },
+            { type: "response.output_text.delta", delta: "Your meeting is booked." },
+            { type: "response.completed", response: { id: "resp_booking_done" } },
+          )
+        : events(
+            { type: "response.created", response: { id: "resp_booking_tool" } },
+            {
+              type: "response.output_item.done",
+              item: {
+                type: "function_call",
+                call_id: "call_book",
+                name: "book_meeting",
+                arguments: "{}",
+              },
+            },
+            { type: "response.completed", response: { id: "resp_booking_tool" } },
+          ),
+  });
+
+  const instance = await workflowService.start("meeting-booking", {
+    originChannel: "test",
+    originPage: null,
+    originEntry: null,
+  });
+
+  await workflowService.executeTool(instance.id, {
+    name: "find_meeting_slots",
+    rawArguments: '{"startDate":"2099-09-15","endDate":"2099-09-15"}',
+  });
+  await workflowService.executeTool(instance.id, {
+    name: "prepare_meeting",
+    rawArguments: JSON.stringify({
+      name: "Visitor",
+      email: "visitor@example.com",
+      reason: "Discuss a project",
+      selectedSlot: { start: meetingSlot.start, end: meetingSlot.end },
+    }),
+  });
+  await workflowService.executeTool(instance.id, {
+    name: "confirm_meeting",
+    rawArguments: "{}",
+  });
+
+  const output = await readChatResponse(
+    await post(
+      chatRequest({
+        message: "Yes, confirm the prepared booking.",
+        workflowInstanceId: instance.id,
+      }),
+    ),
+  );
+
+  assert.deepEqual(
+    inputs[0]?.tools.map(({ name }) => name),
+    ["search_website", "cancel_workflow", "book_meeting"],
+  );
+  assert.deepEqual(
+    inputs[1]?.tools.map(({ name }) => name),
+    ["search_website", "start_workflow"],
+  );
+  assert.match(output, /"status":"completed"/);
+  assert.doesNotMatch(output, /availableSlots|pendingBooking|visitor@example\.com/);
+});
+
 test("a search with no results still lets the model respond", async () => {
   const { post } = createAssistant({
     chunks: [],
@@ -237,7 +378,7 @@ test("retrieval failure returns the existing safe stream error", async () => {
 });
 
 test("OpenAI streaming failure returns the existing safe stream error", async () => {
-  const { post } = createAssistant({
+  const { errors, post } = createAssistant({
     response: async () =>
       events({ type: "response.failed", response: { error: { message: "provider unavailable" } } }),
   });
@@ -252,6 +393,12 @@ test("OpenAI streaming failure returns the existing safe stream error", async ()
   );
 
   assert.match(output, /The assistant could not respond\. Please try again\./);
+  assert.deepEqual(errors, [
+    {
+      message: "assistant.response_failed",
+      context: { category: "assistant_request_failed", workflowInstanceId: null },
+    },
+  ]);
 });
 
 test("aborted request stops without emitting a response", async () => {
@@ -303,3 +450,53 @@ test("rate-limited request receives the current limit response", async () => {
   assert.equal(response.headers.get("X-RateLimit-Remaining"), "0");
   assert.ok(Number(response.headers.get("Retry-After")) >= 1);
 });
+
+class MemoryWorkflowInstanceRepository implements IWorkflowInstanceRepository {
+  private readonly instances = new Map<string, WorkflowInstance>();
+
+  private sequence = 0;
+
+  async create(input: CreateWorkflowInstanceInput): Promise<WorkflowInstance> {
+    this.sequence += 1;
+    const id = `00000000-0000-4000-8000-${String(this.sequence).padStart(12, "0")}`;
+
+    const timestamp = new Date("2026-08-20T10:00:00.000Z");
+
+    const instance: WorkflowInstance = {
+      id,
+      ...input,
+      status: "active",
+      startedAt: timestamp,
+      completedAt: null,
+      updatedAt: timestamp,
+    };
+
+    this.instances.set(id, instance);
+
+    return instance;
+  }
+
+  async findById(id: string): Promise<WorkflowInstance | null> {
+    return this.instances.get(id) ?? null;
+  }
+
+  async save(input: SaveWorkflowInstanceInput): Promise<WorkflowInstance> {
+    const current = this.instances.get(input.id);
+
+    if (!current || current.status !== "active") {
+      throw new Error("Workflow instance is unavailable.");
+    }
+
+    const saved: WorkflowInstance = {
+      ...current,
+      status: input.status,
+      state: input.state,
+      completedAt: input.completedAt,
+      updatedAt: new Date("2026-08-20T10:01:00.000Z"),
+    };
+
+    this.instances.set(saved.id, saved);
+
+    return saved;
+  }
+}

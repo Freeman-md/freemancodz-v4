@@ -52,7 +52,7 @@ export function createChatPostHandler({
       assistantService.createResponse({
         message: parsed.data.message,
         previousResponseId: parsed.data.previousResponseId ?? null,
-        workflowToken: parsed.data.workflowToken ?? null,
+        workflowInstanceId: parsed.data.workflowInstanceId ?? null,
         signal: request.signal,
       }),
       {

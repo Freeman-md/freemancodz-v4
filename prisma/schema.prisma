@@ -61,6 +61,22 @@ model Meeting {
   @@map("meetings")
 }
 
+model WorkflowInstance {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workflowId      String    @map("workflow_id")
+  workflowVersion Int       @map("workflow_version")
+  status          String    @default("active")
+  state           Json      @db.JsonB
+  originChannel   String    @map("origin_channel")
+  originPage      String?   @map("origin_page")
+  originEntry     String?   @map("origin_entry")
+  startedAt       DateTime  @default(now()) @map("started_at") @db.Timestamptz(6)
+  completedAt     DateTime? @map("completed_at") @db.Timestamptz(6)
+  updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("workflow_instances")
+}
+
 enum ProfileIconCollection {
   AUDIENCE            @map("audience")
   PRINCIPLES          @map("principles")

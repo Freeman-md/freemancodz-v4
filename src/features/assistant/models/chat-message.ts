@@ -1,4 +1,8 @@
-import type { AssistantSource, AssistantStreamEvent } from "@/contracts/assistant.contract";
+import type {
+  AssistantSource,
+  AssistantStreamEvent,
+  WorkflowPublicInstance,
+} from "@/contracts/assistant.contract";
 
 export type ChatSource = AssistantSource;
 export type ChatStreamEvent = AssistantStreamEvent;
@@ -6,7 +10,7 @@ export type ChatStreamEvent = AssistantStreamEvent;
 export type StreamChatResponseHandlers = {
   onDelta: (delta: string) => void;
   onResponseId: (responseId: string) => void;
-  onWorkflow: (token: string) => void;
+  onWorkflow: (instance: WorkflowPublicInstance) => void;
   onSources: (sources: ChatSource[]) => void;
 };
 
