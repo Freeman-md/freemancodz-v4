@@ -177,11 +177,15 @@ export function WorkAdditionalSection({
   ];
 
   return (
-    <section aria-labelledby="additional-work-heading" className="bg-white py-20 sm:py-28">
+    <section
+      aria-labelledby="work-additional-heading"
+      className="bg-white py-20 sm:py-28"
+      id="work-additional"
+    >
       <Container>
         <MarketingSectionHeading
           eyebrow={additionalWork.eyebrow}
-          id="additional-work-heading"
+          id="work-additional-heading"
           title={additionalWork.title}
         />
 

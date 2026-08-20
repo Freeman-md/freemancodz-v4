@@ -123,12 +123,16 @@ function ComparisonCard({
 
 export function BeforeAfterSection({ beforeAfter }: Pick<AuditPresentationData, "beforeAfter">) {
   return (
-    <section aria-labelledby="friction-heading" className="py-16 sm:py-20">
+    <section
+      aria-labelledby="audit-before-after-heading"
+      className="py-16 sm:py-20"
+      id="audit-before-after"
+    >
       <Container>
         <MarketingSectionHeading
           copy={<p>{beforeAfter.copy}</p>}
           eyebrow={beforeAfter.eyebrow}
-          id="friction-heading"
+          id="audit-before-after-heading"
           title={beforeAfter.title}
         />
 

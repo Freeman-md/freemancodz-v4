@@ -12,13 +12,17 @@ export function AboutClosingSection({
   profile,
 }: Pick<AboutPresentationData, "closing" | "profile">) {
   return (
-    <section aria-labelledby="about-closing-heading" className="pb-20 pt-16 sm:pb-28 sm:pt-20">
+    <section
+      aria-labelledby="about-cta-heading"
+      className="pb-20 pt-16 sm:pb-28 sm:pt-20"
+      id="about-cta"
+    >
       <Container>
         <div className="overflow-hidden rounded-3xl border border-line bg-white px-6 py-14 text-center shadow-soft sm:px-10 sm:py-20 lg:px-20">
           <MarketingSectionHeading
             copy={<p>{closing.copy}</p>}
             eyebrow={closing.eyebrow}
-            id="about-closing-heading"
+            id="about-cta-heading"
             title={closing.title}
           />
 

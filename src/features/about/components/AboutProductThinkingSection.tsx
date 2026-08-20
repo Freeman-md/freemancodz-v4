@@ -90,13 +90,17 @@ export function AboutProductThinkingSection({
   thinking,
 }: Pick<AboutPresentationData, "profile" | "thinking">) {
   return (
-    <section aria-labelledby="product-thinking-heading" className="py-20 sm:py-28">
+    <section
+      aria-labelledby="about-thinking-heading"
+      className="py-20 sm:py-28"
+      id="about-thinking"
+    >
       <Container>
         <MarketingSectionHeading
           align="left"
           copy={<p>{thinking.copy}</p>}
           eyebrow={thinking.eyebrow}
-          id="product-thinking-heading"
+          id="about-thinking-heading"
           title={thinking.title}
         />
 

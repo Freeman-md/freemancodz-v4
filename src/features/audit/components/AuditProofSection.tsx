@@ -182,12 +182,16 @@ export function AuditProofSection({
   proof,
 }: Pick<AuditPresentationData, "projects" | "proof">) {
   return (
-    <section aria-labelledby="proof-heading" className="py-16 sm:py-20">
+    <section
+      aria-labelledby="audit-proof-heading"
+      className="py-16 sm:py-20"
+      id="audit-proof"
+    >
       <Container>
         <MarketingSectionHeading
           copy={<p>{proof.copy}</p>}
           eyebrow={proof.eyebrow}
-          id="proof-heading"
+          id="audit-proof-heading"
           title={proof.title}
         />
 

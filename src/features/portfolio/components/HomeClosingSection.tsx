@@ -68,7 +68,7 @@ export function HomeClosingSection({ closing }: Pick<HomePresentationData, "clos
           Free · Personally reviewed · Delivered within 48 hours
         </p>
       }
-      id="home-closing-heading"
+      sectionId="home-cta"
       title={closing.title}
       visual={<FrictionResolutionVisual />}
     />

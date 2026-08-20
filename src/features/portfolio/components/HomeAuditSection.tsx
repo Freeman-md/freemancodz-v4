@@ -156,7 +156,11 @@ function AuditAction({ audit }: { audit: PortfolioSection }) {
 
 export function HomeAuditSection({ audit }: Pick<HomePresentationData, "audit">) {
   return (
-    <section className="bg-white py-24 lg:py-32">
+    <section
+      aria-labelledby="home-audit-heading"
+      className="bg-white py-24 lg:py-32"
+      id="home-audit"
+    >
       <Container className="grid gap-10 lg:grid-cols-[0.38fr_0.62fr] lg:grid-rows-[auto_1fr] lg:gap-x-16">
         <MarketingSectionHeading
           align="left"

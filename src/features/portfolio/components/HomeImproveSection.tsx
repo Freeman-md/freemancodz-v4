@@ -89,7 +89,11 @@ function Handoff() {
 
 export function HomeImproveSection({ improve }: Pick<HomePresentationData, "improve">) {
   return (
-    <section className="border-b border-line bg-white py-24 lg:py-32">
+    <section
+      aria-labelledby="home-improve-heading"
+      className="border-b border-line bg-white py-24 lg:py-32"
+      id="home-improve"
+    >
       <Container>
         <MarketingSectionHeading
           copy={<p>{improve.copy}</p>}

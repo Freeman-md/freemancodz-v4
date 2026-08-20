@@ -47,7 +47,7 @@ test("maps and deduplicates the complete public portfolio with stable identities
   assert.ok(experience);
   assert.equal(content.url, "/#customer-journey");
   assert.equal(project.url, "/work");
-  assert.equal(experience.url, "/about#about-journey-heading");
+  assert.equal(experience.url, "/about#about-journey");
   assert.doesNotMatch(
     profile.paragraphs.join("\n"),
     /freeman@example|linkedin\.example|github\.example|storage\.example/,

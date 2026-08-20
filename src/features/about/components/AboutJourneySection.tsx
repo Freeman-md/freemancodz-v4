@@ -134,7 +134,11 @@ export function AboutJourneySection({
   const today = experiences[3];
 
   return (
-    <section aria-labelledby="about-journey-heading" className="pb-20 pt-8 sm:pb-28 sm:pt-12">
+    <section
+      aria-labelledby="about-journey-heading"
+      className="pb-20 pt-8 sm:pb-28 sm:pt-12"
+      id="about-journey"
+    >
       <Container>
         <MarketingSectionHeading
           align="left"

@@ -87,13 +87,13 @@ const projects: PortfolioProjectSource[] = projectSlugs.map((slug) => ({
 
 test("page adapters use URL and hierarchy identities instead of root array position", () => {
   const homeBlocks = [
-    block("/#home-closing-heading", "Closing"),
-    block("/#home-audit-heading", "Audit", [
+    block("/#home-cta", "Closing"),
+    block("/#home-audit", "Audit", [
       block("/shared", "Problem"),
       block("/shared", "Improvement"),
     ]),
-    block("/#home-relevant-work-heading", "Relevant"),
-    block("/#home-improve-heading", "Improve", [
+    block("/#home-work", "Relevant"),
+    block("/#home-improve", "Improve", [
       block("/shared", "Journey"),
       block("/shared", "Workflow"),
     ]),
@@ -114,10 +114,10 @@ test("page adapters use URL and hierarchy identities instead of root array posit
     block("/work", "Approach"),
   ]);
 
-  const connects = block("/work#work-connection-heading", "Connects", [
-    block("/work#work-connection-heading", "Products"),
-    block("/work#work-connection-heading", "Experiences"),
-    block("/work#work-connection-heading", "Workflows"),
+  const connects = block("/work#work-connects", "Connects", [
+    block("/work#work-connects", "Products"),
+    block("/work#work-connects", "Experiences"),
+    block("/work#work-connects", "Workflows"),
   ]);
 
   const work = createWorkPresentationData({
@@ -126,8 +126,8 @@ test("page adapters use URL and hierarchy identities instead of root array posit
     contentBlocks: [
       block("/work#work-cta", "CTA"),
       connects,
-      block("/work#additional-work-heading", "Additional"),
-      block("/work#case-studies-heading", "Relevant"),
+      block("/work#work-additional", "Additional"),
+      block("/work#work-relevant", "Relevant"),
       workHero,
     ],
   });
@@ -140,13 +140,13 @@ test("page adapters use URL and hierarchy identities instead of root array posit
     block("/about", "System"),
   ]);
 
-  const thinking = block("/about#product-thinking-heading", "Thinking", [
-    block("/about#product-thinking-heading", "Customer"),
-    block("/about#product-thinking-heading", "Workflow"),
+  const thinking = block("/about#about-thinking", "Thinking", [
+    block("/about#about-thinking", "Customer"),
+    block("/about#about-thinking", "Workflow"),
   ]);
 
-  const closing = block("/about#about-closing-heading", "Closing", [
-    block("/about#about-closing-heading", "Work"),
+  const closing = block("/about#about-cta", "Closing", [
+    block("/about#about-cta", "Work"),
   ]);
 
   const experiences: PortfolioExperienceSource[] = ["Pay4Me", "Today"].map((title, order) => ({
@@ -163,11 +163,11 @@ test("page adapters use URL and hierarchy identities instead of root array posit
     experiences,
     contentBlocks: [
       closing,
-      block("/about#outside-engineering-heading", "Outside"),
-      block("/about#exploration-heading", "Explore"),
-      block("/about#work-process-heading", "Process"),
+      block("/about#about-outside", "Outside"),
+      block("/about#about-explore", "Explore"),
+      block("/about#about-work", "Process"),
       thinking,
-      block("/about#about-journey-heading", "Journey"),
+      block("/about#about-journey", "Journey"),
       aboutHero,
     ],
   });
@@ -178,23 +178,23 @@ test("page adapters use URL and hierarchy identities instead of root array posit
     ["Pay4Me", "Today"],
   );
 
-  const before = block("/audit#friction-heading", "Before", [
-    block("/audit#friction-heading", "Before customer"),
-    block("/audit#friction-heading", "Before workflow"),
+  const before = block("/audit#audit-before-after", "Before", [
+    block("/audit#audit-before-after", "Before customer"),
+    block("/audit#audit-before-after", "Before workflow"),
   ]);
 
-  const after = block("/audit#friction-heading", "After", [
-    block("/audit#friction-heading", "After customer"),
-    block("/audit#friction-heading", "After workflow"),
+  const after = block("/audit#audit-before-after", "After", [
+    block("/audit#audit-before-after", "After customer"),
+    block("/audit#audit-before-after", "After workflow"),
   ]);
 
   const audit = createAuditPresentationData({
     projects,
     contentBlocks: [
-      block("/audit#audit-cta-heading", "CTA"),
-      block("/audit#proof-heading", "Proof"),
-      block("/audit#friction-heading", "Before after", [before, after]),
-      block("/audit#audit-symptoms-heading", "Symptoms"),
+      block("/audit#audit-cta", "CTA"),
+      block("/audit#audit-proof", "Proof"),
+      block("/audit#audit-before-after", "Before after", [before, after]),
+      block("/audit#audit-why", "Symptoms"),
       block("/audit", "Hero"),
     ],
   });
@@ -205,21 +205,21 @@ test("page adapters use URL and hierarchy identities instead of root array posit
 test("page adapters fail closed when required section or project identity is unavailable", () => {
   assert.throws(
     () => createHomePresentationData({ profile, contentBlocks: [], projects }),
-    /Required portfolio presentation content is unavailable: \/#home-improve-heading/,
+    /Required portfolio presentation content is unavailable: \/#home-improve/,
   );
 
   const homeBlocks = [
     block("/", "Hero"),
-    block("/#home-improve-heading", "Improve", [
+    block("/#home-improve", "Improve", [
       block("/shared", "Journey"),
       block("/shared", "Workflow"),
     ]),
-    block("/#home-relevant-work-heading", "Relevant"),
-    block("/#home-audit-heading", "Audit", [
+    block("/#home-work", "Relevant"),
+    block("/#home-audit", "Audit", [
       block("/shared", "Problem"),
       block("/shared", "Improvement"),
     ]),
-    block("/#home-closing-heading", "Closing"),
+    block("/#home-cta", "Closing"),
   ];
 
   assert.throws(
@@ -232,7 +232,7 @@ test("page adapters fail closed when required section or project identity is una
     /Required portfolio presentation content is unavailable: project:portfolio-assistant/,
   );
 
-  const incompleteImprove = block("/#home-improve-heading", "Improve", [
+  const incompleteImprove = block("/#home-improve", "Improve", [
     block("/shared", "Journey"),
   ]);
 
@@ -245,7 +245,7 @@ test("page adapters fail closed when required section or project identity is una
         ),
         projects,
       }),
-    /Required portfolio presentation content is unavailable: \/#home-improve-heading child 2/,
+    /Required portfolio presentation content is unavailable: \/#home-improve child 2/,
   );
 });
 

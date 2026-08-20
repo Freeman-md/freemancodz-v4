@@ -21,6 +21,8 @@ const adminConnectionUrl = process.env.PORTFOLIO_TEST_DATABASE_URL;
 
 const MILESTONE_17_MIGRATION = "20260818090000_database_driven_search_indexing";
 
+const CONTENT_ANCHOR_MIGRATION = "20260820090000_rename_portfolio_content_anchors";
+
 const CONTENT_BLOCK_ID = "10000000-0000-0000-0000-000000000001";
 
 const ICON_BLOCK_ID = "20000000-0000-0000-0000-000000000001";
@@ -203,7 +205,9 @@ test(
         );
 
         INSERT INTO public.content_blocks (id, title, url, "order")
-        VALUES ('${CONTENT_BLOCK_ID}', 'Protected content', '/', 1);
+        VALUES (
+          '${CONTENT_BLOCK_ID}', 'Protected content', '/#home-improve-heading', 1
+        );
 
         INSERT INTO public.icon_blocks (id, label)
         VALUES ('${ICON_BLOCK_ID}', 'Protected icon');
@@ -229,6 +233,8 @@ test(
       `);
 
       await applyMigration(database, MILESTONE_17_MIGRATION);
+
+      await applyMigration(database, CONTENT_ANCHOR_MIGRATION);
 
       prisma = new PrismaClient({
         adapter: new PrismaPg({ connectionString: databaseUrl.toString() }),
@@ -288,6 +294,13 @@ test(
           assert.equal(initialJob.claimedAt, null);
           assert.equal(initialJob.processedAt, null);
           assert.equal(initialJob.lastError, null);
+
+          const migratedContent = await database!.query<{ url: string }>(
+            `SELECT url FROM public.content_blocks WHERE id = $1`,
+            [CONTENT_BLOCK_ID],
+          );
+
+          assert.equal(migratedContent.rows[0]?.url, "/#home-improve");
         },
       );
 

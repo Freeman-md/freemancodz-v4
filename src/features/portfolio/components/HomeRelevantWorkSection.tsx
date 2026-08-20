@@ -23,12 +23,16 @@ export function HomeRelevantWorkSection({
   const emailHref = projects.emailPa.externalLinks[0] ?? "#";
 
   return (
-    <section className="bg-[#fbf9f9] py-24 lg:py-32">
+    <section
+      aria-labelledby="home-work-heading"
+      className="bg-[#fbf9f9] py-24 lg:py-32"
+      id="home-work"
+    >
       <Container>
         <MarketingSectionHeading
           copy={<p>{relevantWork.copy}</p>}
           eyebrow={relevantWork.eyebrow}
-          id="home-relevant-work-heading"
+          id="home-work-heading"
           title={relevantWork.title}
         />
 

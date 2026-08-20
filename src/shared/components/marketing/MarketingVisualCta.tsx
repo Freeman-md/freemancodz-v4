@@ -11,7 +11,7 @@ type MarketingVisualCtaProps = {
   copy: ReactNode;
   eyebrow: string;
   helper: ReactNode;
-  id: string;
+  sectionId: string;
   title: ReactNode;
   visual: ReactNode;
 };
@@ -23,10 +23,12 @@ export function MarketingVisualCta({
   copy,
   eyebrow,
   helper,
-  id,
+  sectionId,
   title,
   visual,
 }: MarketingVisualCtaProps) {
+  const headingId = `${sectionId}-heading`;
+
   const actionAlignment = {
     center: "items-center text-center",
     left: "items-start text-left",
@@ -34,7 +36,11 @@ export function MarketingVisualCta({
   }[align];
 
   return (
-    <section aria-labelledby={id} className={cn("pb-20 pt-16 sm:pb-28 sm:pt-20", className)}>
+    <section
+      aria-labelledby={headingId}
+      className={cn("pb-20 pt-16 sm:pb-28 sm:pt-20", className)}
+      id={sectionId}
+    >
       <Container>
         <div className="grid overflow-hidden rounded-3xl border border-line bg-white p-6 shadow-soft sm:p-10 lg:grid-cols-[minmax(0,0.9fr)_minmax(22rem,1.1fr)] lg:items-center lg:gap-14 lg:p-16">
           <div className="lg:col-start-1 lg:row-start-1">
@@ -42,7 +48,7 @@ export function MarketingVisualCta({
               align={align}
               copy={copy}
               eyebrow={eyebrow}
-              id={id}
+              id={headingId}
               title={title}
             />
           </div>

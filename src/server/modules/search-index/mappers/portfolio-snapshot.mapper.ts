@@ -394,7 +394,7 @@ function mapExperience(experience: Experience): IndexDocument {
     sourceId: experience.id,
     title,
     category: "Experience",
-    url: "/about#about-journey-heading",
+    url: "/about#about-journey",
     keywords: uniqueKeywords(keywords),
     paragraphs,
   };

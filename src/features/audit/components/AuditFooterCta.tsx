@@ -25,7 +25,7 @@ export function AuditFooterCta({ closing }: Pick<AuditPresentationData, "closing
           Free. No obligation. Your information is never shared.
         </p>
       }
-      id="audit-cta-heading"
+      sectionId="audit-cta"
       title={closing.title}
       visual={<SignalVisual />}
     />

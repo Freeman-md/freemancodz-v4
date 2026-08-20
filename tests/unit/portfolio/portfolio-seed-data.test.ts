@@ -30,7 +30,7 @@ test("the complete approved canonical seed payload remains exact", () => {
   assert.deepEqual(fingerprints, {
     profileSeed: "c2df2bd00ae8356225ef697ff3a3d8a60ac330ebee47f90582713250e46f0af1",
     profileCollections: "e1317ceb833726db55175b442b6703fa28c9180d51c5d2b2c8eb374447d83278",
-    contentSeeds: "b17c684484f154ca457fd4420c41f5fec5028101e3259caa0936e11123b3e45d",
+    contentSeeds: "7c4941bd6bcf61b221a4328a7dce1eb4414f07e3e58a63eb8b030a72a07f904f",
     actionSeeds: "3ddaf27d71f9af15490e9825ccc872606b29070c165484cfdfa8022881c6478a",
     mediaSeeds: "448adf47d084175810fb94625b4f18291a17864a98fabf916c257c24ec19bbb5",
     projectSeeds: "15ca3c9242edc6cca4948ed95785e402ecec1bd044bdbb386966df818fd46b19",
@@ -286,6 +286,39 @@ test("page allocation, hierarchy, and ordered reusable relationships are exact",
     },
     "audit.cta": { icons: [], media: [], actions: ["action.audit.start"] },
   });
+});
+
+test("content URLs use each top-level seed key as the public section anchor", () => {
+  const seedsByKey = new Map(contentSeeds.map((seed) => [seed.key, seed]));
+
+  const rootFor = (seed: (typeof contentSeeds)[number]) => {
+    let current = seed;
+
+    while (current.parent) {
+      const parent = seedsByKey.get(current.parent);
+
+      assert.ok(parent, `Expected parent seed ${current.parent}.`);
+      current = parent;
+    }
+
+    return current;
+  };
+
+  assert.equal(contentSeeds.length, 42);
+
+  for (const seed of contentSeeds) {
+    const root = rootFor(seed);
+
+    const page = root.key.split(".")[0]!;
+
+    const pageUrl = page === "home" ? "/" : `/${page}`;
+
+    const expectedUrl = root.key.endsWith(".hero")
+      ? pageUrl
+      : `${pageUrl}#${root.key.replaceAll(".", "-")}`;
+
+    assert.equal(seed.url, expectedUrl, seed.key);
+  }
 });
 
 test("all action labels, destinations, and assistant messages are exact", () => {

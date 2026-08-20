@@ -110,9 +110,9 @@ export function createHomePresentationData(source: {
   contentBlocks: PortfolioContentSource[];
   projects: PortfolioProjectSource[];
 }): HomePresentationData {
-  const improve = rootAt(source.contentBlocks, "/#home-improve-heading");
+  const improve = rootAt(source.contentBlocks, "/#home-improve");
 
-  const audit = rootAt(source.contentBlocks, "/#home-audit-heading");
+  const audit = rootAt(source.contentBlocks, "/#home-audit");
 
   return {
     profile: {
@@ -126,7 +126,7 @@ export function createHomePresentationData(source: {
       customerJourney: section(childAt(improve, 1)),
       operationalWorkflow: section(childAt(improve, 2)),
     },
-    relevantWork: section(rootAt(source.contentBlocks, "/#home-relevant-work-heading")),
+    relevantWork: section(rootAt(source.contentBlocks, "/#home-work")),
     projects: {
       pay4Me: projectBySlug(source.projects, pay4MeSlug),
       portfolioAssistant: projectBySlug(source.projects, portfolioAssistantSlug),
@@ -137,7 +137,7 @@ export function createHomePresentationData(source: {
       problem: section(childAt(audit, 1)),
       improvement: section(childAt(audit, 2)),
     },
-    closing: section(rootAt(source.contentBlocks, "/#home-closing-heading")),
+    closing: section(rootAt(source.contentBlocks, "/#home-cta")),
   };
 }
 
@@ -148,7 +148,7 @@ export function createWorkPresentationData(source: {
 }): WorkPresentationData {
   const hero = rootAt(source.contentBlocks, "/work");
 
-  const connects = rootAt(source.contentBlocks, "/work#work-connection-heading");
+  const connects = rootAt(source.contentBlocks, "/work#work-connects");
 
   return {
     hero: {
@@ -156,8 +156,8 @@ export function createWorkPresentationData(source: {
       focus: section(childAt(hero, 1)),
       approach: section(childAt(hero, 2)),
     },
-    relevantWork: section(rootAt(source.contentBlocks, "/work#case-studies-heading")),
-    additionalWork: section(rootAt(source.contentBlocks, "/work#additional-work-heading")),
+    relevantWork: section(rootAt(source.contentBlocks, "/work#work-relevant")),
+    additionalWork: section(rootAt(source.contentBlocks, "/work#work-additional")),
     projects: {
       pay4Me: projectBySlug(source.projects, pay4MeSlug),
       portfolioAssistant: projectBySlug(source.projects, portfolioAssistantSlug),
@@ -184,9 +184,9 @@ export function createAboutPresentationData(source: {
 }): AboutPresentationData {
   const hero = rootAt(source.contentBlocks, "/about");
 
-  const thinking = rootAt(source.contentBlocks, "/about#product-thinking-heading");
+  const thinking = rootAt(source.contentBlocks, "/about#about-thinking");
 
-  const closing = rootAt(source.contentBlocks, "/about#about-closing-heading");
+  const closing = rootAt(source.contentBlocks, "/about#about-cta");
 
   return {
     profile: {
@@ -204,16 +204,16 @@ export function createAboutPresentationData(source: {
       customer: section(childAt(hero, 1)),
       system: section(childAt(hero, 2)),
     },
-    journey: section(rootAt(source.contentBlocks, "/about#about-journey-heading")),
+    journey: section(rootAt(source.contentBlocks, "/about#about-journey")),
     experiences: byOrder(source.experiences).map(experience),
     thinking: {
       ...section(thinking),
       customer: section(childAt(thinking, 1)),
       workflow: section(childAt(thinking, 2)),
     },
-    process: section(rootAt(source.contentBlocks, "/about#work-process-heading")),
-    exploration: section(rootAt(source.contentBlocks, "/about#exploration-heading")),
-    outsideEngineering: section(rootAt(source.contentBlocks, "/about#outside-engineering-heading")),
+    process: section(rootAt(source.contentBlocks, "/about#about-work")),
+    exploration: section(rootAt(source.contentBlocks, "/about#about-explore")),
+    outsideEngineering: section(rootAt(source.contentBlocks, "/about#about-outside")),
     closing: { ...section(closing), work: section(childAt(closing, 1)) },
   };
 }
@@ -222,7 +222,7 @@ export function createAuditPresentationData(source: {
   contentBlocks: PortfolioContentSource[];
   projects: PortfolioProjectSource[];
 }): AuditPresentationData {
-  const beforeAfter = rootAt(source.contentBlocks, "/audit#friction-heading");
+  const beforeAfter = rootAt(source.contentBlocks, "/audit#audit-before-after");
 
   const before = childAt(beforeAfter, 1);
 
@@ -230,7 +230,7 @@ export function createAuditPresentationData(source: {
 
   return {
     hero: section(rootAt(source.contentBlocks, "/audit")),
-    symptoms: section(rootAt(source.contentBlocks, "/audit#audit-symptoms-heading")),
+    symptoms: section(rootAt(source.contentBlocks, "/audit#audit-why")),
     beforeAfter: {
       ...section(beforeAfter),
       before: {
@@ -244,10 +244,10 @@ export function createAuditPresentationData(source: {
         workflow: section(childAt(after, 2)),
       },
     },
-    proof: section(rootAt(source.contentBlocks, "/audit#proof-heading")),
+    proof: section(rootAt(source.contentBlocks, "/audit#audit-proof")),
     projects: [pay4MeSlug, portfolioAssistantSlug, emailPaSlug].map((slug) =>
       projectBySlug(source.projects, slug),
     ),
-    closing: section(rootAt(source.contentBlocks, "/audit#audit-cta-heading")),
+    closing: section(rootAt(source.contentBlocks, "/audit#audit-cta")),
   };
 }

@@ -33,12 +33,16 @@ function Symptom({
 
 export function AuditSymptomsSection({ symptoms }: Pick<AuditPresentationData, "symptoms">) {
   return (
-    <section aria-labelledby="audit-symptoms-heading" className="py-16 sm:py-20">
+    <section
+      aria-labelledby="audit-why-heading"
+      className="py-16 sm:py-20"
+      id="audit-why"
+    >
       <Container>
         <MarketingSectionHeading
           copy={<p>{symptoms.copy}</p>}
           eyebrow={symptoms.eyebrow}
-          id="audit-symptoms-heading"
+          id="audit-why-heading"
           title={symptoms.title}
         />
 

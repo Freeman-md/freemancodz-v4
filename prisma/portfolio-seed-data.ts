@@ -446,36 +446,36 @@ export const contentSeeds: ContentSeed[] = [
     copy: "I help businesses improve how customers find information, understand their options and take action, while reducing the repetitive work happening behind the scenes.",
     actions: ["action.home.audit", "action.home.relevant"],
   }),
-  content("home.improve", 2, "/#home-improve-heading", {
+  content("home.improve", 2, "/#home-improve", {
     eyebrow: "Customer journeys + workflows",
     title: "What I Help Improve.",
     copy: "The customer experience in front, and the workflow that keeps it moving behind the scenes.",
   }),
-  content("home.improve.journey", 1, "/#home-improve-heading", {
+  content("home.improve.journey", 1, "/#home-improve", {
     parent: "home.improve",
     title: "Customer Journeys",
     copy: "Help customers understand what to do and take the next step.",
     icons: ["journey.find", "journey.understand", "journey.decide", "journey.act"],
   }),
-  content("home.improve.workflow", 2, "/#home-improve-heading", {
+  content("home.improve.workflow", 2, "/#home-improve", {
     parent: "home.improve",
     title: "Operational Workflows",
     copy: "Reduce the repetitive work required to keep the process moving.",
     icons: ["workflow.capture", "workflow.route", "journey.decide", "workflow.complete"],
   }),
-  content("home.work", 3, "/#home-relevant-work-heading", {
+  content("home.work", 3, "/#home-work", {
     eyebrow: "Proof of work",
     title: "Relevant Work",
     copy: "A few examples of customer-facing products and operational systems built around real problems.",
     actions: ["action.home.all"],
   }),
-  content("home.audit", 4, "/#home-audit-heading", {
+  content("home.audit", 4, "/#home-audit", {
     eyebrow: "Free customer journey & workflow audit",
     title: "Find where customers get stuck or work falls back to manual effort.",
     icons: ["home.audit.identify", "home.audit.view", "home.audit.reviewed"],
     actions: ["action.home.audit"],
   }),
-  content("home.audit.problem", 1, "/#home-audit-heading", {
+  content("home.audit.problem", 1, "/#home-audit", {
     parent: "home.audit",
     eyebrow: "The problem",
     title: "Unnecessary friction in the current process",
@@ -488,7 +488,7 @@ export const contentSeeds: ContentSeed[] = [
       "home.problem.follow",
     ],
   }),
-  content("home.audit.improve", 2, "/#home-audit-heading", {
+  content("home.audit.improve", 2, "/#home-audit", {
     parent: "home.audit",
     eyebrow: "The improvement",
     title: "A smoother handoff and faster follow-up",
@@ -500,7 +500,7 @@ export const contentSeeds: ContentSeed[] = [
       "home.improve.follow",
     ],
   }),
-  content("home.cta", 5, "/#home-closing-heading", {
+  content("home.cta", 5, "/#home-cta", {
     eyebrow: "Not sure where the friction is?",
     title: "Show me one part of the journey that isn’t working as smoothly as it should.",
     copy: "You don’t need to know whether the answer is software, automation or AI. Start with what is happening now.",
@@ -521,31 +521,31 @@ export const contentSeeds: ContentSeed[] = [
     title: "Approach",
     copy: "User value, operational impact, technical rigor.",
   }),
-  content("work.relevant", 2, "/work#case-studies-heading", {
+  content("work.relevant", 2, "/work#work-relevant", {
     eyebrow: "Relevant work",
     title: "Relevant Work. Real Problems. Meaningful Impact",
     copy: "Selected case studies across customer-facing products, operational systems and practical AI.",
   }),
-  content("work.additional", 3, "/work#additional-work-heading", {
+  content("work.additional", 3, "/work#work-additional", {
     eyebrow: "Supporting work",
     title: "Additional Work & Experiments",
   }),
-  content("work.connects", 4, "/work#work-connection-heading", {
+  content("work.connects", 4, "/work#work-connects", {
     eyebrow: "How the work connects",
     title:
       "Different problems. The same focus: make the experience clearer and the system behind it work better.",
   }),
-  content("work.connects.products", 1, "/work#work-connection-heading", {
+  content("work.connects.products", 1, "/work#work-connects", {
     parent: "work.connects",
     title: "Customer-Facing Products",
     copy: "Helping people understand their options and complete important actions with confidence.",
   }),
-  content("work.connects.experiences", 2, "/work#work-connection-heading", {
+  content("work.connects.experiences", 2, "/work#work-connects", {
     parent: "work.connects",
     title: "Connected Experiences",
     copy: "Bridging the moment a customer acts with what happens next.",
   }),
-  content("work.connects.workflows", 3, "/work#work-connection-heading", {
+  content("work.connects.workflows", 3, "/work#work-connects", {
     parent: "work.connects",
     title: "Reliable Operational Workflows",
     copy: "Reducing manual work and ensuring the right things happen, every time.",
@@ -573,27 +573,27 @@ export const contentSeeds: ContentSeed[] = [
     title: "System / Workflow",
     icons: ["workflow.capture", "workflow.route", "workflow.complete"],
   }),
-  content("about.journey", 2, "/about#about-journey-heading", {
+  content("about.journey", 2, "/about#about-journey", {
     eyebrow: "How I got here",
     title: "From the interface to the full journey",
     copy: "My focus broadened from building customer-facing products to understanding the systems and operations that make them work.",
   }),
-  content("about.thinking", 3, "/about#product-thinking-heading", {
+  content("about.thinking", 3, "/about#about-thinking", {
     eyebrow: "How I think about products",
     title: "The interface is only half the product",
     copy: "A product only works when the customer-facing experience and the operational workflow behind it work together.",
   }),
-  content("about.thinking.customer", 1, "/about#product-thinking-heading", {
+  content("about.thinking.customer", 1, "/about#about-thinking", {
     parent: "about.thinking",
     title: "Customer-Facing Experience",
     icons: ["journey.find", "journey.understand", "journey.decide", "journey.act"],
   }),
-  content("about.thinking.workflow", 2, "/about#product-thinking-heading", {
+  content("about.thinking.workflow", 2, "/about#about-thinking", {
     parent: "about.thinking",
     title: "Operational Workflow",
     icons: ["workflow.capture", "workflow.route", "journey.decide", "workflow.complete"],
   }),
-  content("about.work", 4, "/about#work-process-heading", {
+  content("about.work", 4, "/about#about-work", {
     eyebrow: "How I work",
     title: "From problem to working system",
     copy: "I start by understanding what should happen, then map the journey, build what matters, connect the right pieces and verify the result.",
@@ -605,7 +605,7 @@ export const contentSeeds: ContentSeed[] = [
       "process.verify",
     ],
   }),
-  content("about.explore", 5, "/about#exploration-heading", {
+  content("about.explore", 5, "/about#about-explore", {
     eyebrow: "Current exploration",
     title: "Exploring software that can recover without losing control.",
     icons: [
@@ -617,19 +617,19 @@ export const contentSeeds: ContentSeed[] = [
       "explore.verify",
     ],
   }),
-  content("about.outside", 6, "/about#outside-engineering-heading", {
+  content("about.outside", 6, "/about#about-outside", {
     eyebrow: "About me",
     title: "Outside Engineering",
     copy: "A few things that keep me grounded outside the work.",
     media: ["outside.strength", "outside.endurance", "outside.community", "outside.learning"],
   }),
-  content("about.cta", 7, "/about#about-closing-heading", {
+  content("about.cta", 7, "/about#about-cta", {
     eyebrow: "Let's talk",
     title: "Got a role, project, collaboration or event in mind?",
     copy: "Send me the context. My assistant will gather what I need and make sure it reaches me properly.",
     actions: ["action.about.message"],
   }),
-  content("about.cta.work", 1, "/about#about-closing-heading", {
+  content("about.cta.work", 1, "/about#about-cta", {
     parent: "about.cta",
     title: "Want to see more of my work?",
     actions: ["action.about.work"],
@@ -641,7 +641,7 @@ export const contentSeeds: ContentSeed[] = [
     copy: "A focused review of one important customer journey or operational workflow. Personally reviewed by Freeman, delivered within 48 hours.",
     actions: ["action.audit.claim"],
   }),
-  content("audit.why", 2, "/audit#audit-symptoms-heading", {
+  content("audit.why", 2, "/audit#audit-why", {
     eyebrow: "Why this audit exists",
     title: "You usually notice the symptoms first",
     copy: "Small issues often point to deeper friction between the customer journey and the workflow behind it.",
@@ -654,47 +654,47 @@ export const contentSeeds: ContentSeed[] = [
       "audit.symptom.remember",
     ],
   }),
-  content("audit.before-after", 3, "/audit#friction-heading", {
+  content("audit.before-after", 3, "/audit#audit-before-after", {
     eyebrow: "Before & after",
     title: "Where the friction hides",
     copy: "Same customer action. Very different experience behind the scenes.",
   }),
-  content("audit.before", 1, "/audit#friction-heading", {
+  content("audit.before", 1, "/audit#audit-before-after", {
     parent: "audit.before-after",
     title: "Before",
     copy: "Slow. Unclear. Manual.",
   }),
-  content("audit.before.customer", 1, "/audit#friction-heading", {
+  content("audit.before.customer", 1, "/audit#audit-before-after", {
     parent: "audit.before",
     title: "Customer-facing journey",
     icons: ["audit.before.sent", "audit.before.waits", "audit.before.unclear"],
   }),
-  content("audit.before.workflow", 2, "/audit#friction-heading", {
+  content("audit.before.workflow", 2, "/audit#audit-before-after", {
     parent: "audit.before",
     title: "Operational workflow",
     icons: ["audit.before.inbox", "audit.before.handoff", "audit.before.delayed"],
   }),
-  content("audit.after", 2, "/audit#friction-heading", {
+  content("audit.after", 2, "/audit#audit-before-after", {
     parent: "audit.before-after",
     title: "After",
     copy: "Clear. Connected. Reliable.",
   }),
-  content("audit.after.customer", 1, "/audit#friction-heading", {
+  content("audit.after.customer", 1, "/audit#audit-before-after", {
     parent: "audit.after",
     title: "Customer-facing journey",
     icons: ["audit.after.info", "audit.after.knows"],
   }),
-  content("audit.after.workflow", 2, "/audit#friction-heading", {
+  content("audit.after.workflow", 2, "/audit#audit-before-after", {
     parent: "audit.after",
     title: "Operational workflow",
     icons: ["audit.after.place", "audit.after.owner", "audit.after.update"],
   }),
-  content("audit.proof", 4, "/audit#proof-heading", {
+  content("audit.proof", 4, "/audit#audit-proof", {
     eyebrow: "Proof",
     title: "Customer-Facing. Operationally Sound.",
     copy: "Real work across customer-facing journeys and operational workflows.",
   }),
-  content("audit.cta", 5, "/audit#audit-cta-heading", {
+  content("audit.cta", 5, "/audit#audit-cta", {
     eyebrow: "Let's fix what's getting in the way",
     title: "Show me one part of your business that isn't running as smoothly as it should.",
     copy: "Share one customer journey or operational workflow. My assistant will help you provide the relevant context.",

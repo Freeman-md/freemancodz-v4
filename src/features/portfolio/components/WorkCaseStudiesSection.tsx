@@ -21,12 +21,16 @@ export function WorkCaseStudiesSection({
   const supporting = [projects.portfolioAssistant, projects.emailPa, projects.acrossTheHorizon];
 
   return (
-    <section aria-labelledby="case-studies-heading" className="bg-[#fbf9f9] py-20 sm:py-28">
+    <section
+      aria-labelledby="work-relevant-heading"
+      className="bg-[#fbf9f9] py-20 sm:py-28"
+      id="work-relevant"
+    >
       <Container>
         <MarketingSectionHeading
           copy={<p>{relevantWork.copy}</p>}
           eyebrow={relevantWork.eyebrow}
-          id="case-studies-heading"
+          id="work-relevant-heading"
           title={relevantWork.title}
         />
 

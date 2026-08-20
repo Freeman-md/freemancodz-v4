@@ -158,12 +158,16 @@ export function AboutExplorationSection({
   }
 
   return (
-    <section aria-labelledby="exploration-heading" className="py-20 sm:py-28">
+    <section
+      aria-labelledby="about-explore-heading"
+      className="py-20 sm:py-28"
+      id="about-explore"
+    >
       <Container>
         <MarketingSectionHeading
           align="left"
           eyebrow={exploration.eyebrow}
-          id="exploration-heading"
+          id="about-explore-heading"
           title={exploration.title}
         />
 

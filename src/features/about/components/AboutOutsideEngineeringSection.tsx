@@ -35,7 +35,11 @@ export function AboutOutsideEngineeringSection({
   outsideEngineering,
 }: Pick<AboutPresentationData, "outsideEngineering">) {
   return (
-    <section aria-labelledby="outside-engineering-heading" className="py-20 sm:py-28">
+    <section
+      aria-labelledby="about-outside-heading"
+      className="py-20 sm:py-28"
+      id="about-outside"
+    >
       <Container>
         <div className="rounded-3xl border border-line bg-white p-6 shadow-soft sm:p-10 lg:grid lg:grid-cols-[0.7fr_1.3fr] lg:gap-16 lg:p-16">
           <div className="flex flex-col justify-center lg:pr-4">
@@ -43,7 +47,7 @@ export function AboutOutsideEngineeringSection({
               align="left"
               copy={<p>{outsideEngineering.copy}</p>}
               eyebrow={outsideEngineering.eyebrow}
-              id="outside-engineering-heading"
+              id="about-outside-heading"
               title={outsideEngineering.title}
             />
           </div>

@@ -93,13 +93,17 @@ export function AboutWorkProcessSection({
   }));
 
   return (
-    <section aria-labelledby="work-process-heading" className="py-20 sm:py-28">
+    <section
+      aria-labelledby="about-work-heading"
+      className="py-20 sm:py-28"
+      id="about-work"
+    >
       <Container>
         <MarketingSectionHeading
           align="left"
           copy={<p>{process.copy}</p>}
           eyebrow={process.eyebrow}
-          id="work-process-heading"
+          id="about-work-heading"
           title={process.title}
         />
 
