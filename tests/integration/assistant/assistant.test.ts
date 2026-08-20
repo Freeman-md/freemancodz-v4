@@ -10,6 +10,7 @@ import { AssistantService } from "@/server/modules/assistant/services/assistant.
 import type { IWorkflowInstanceRepository } from "@/server/modules/workflow/interfaces/workflow-instance.repository.interface";
 import type { WorkflowInstance } from "@/generated/prisma/client";
 import { MeetingBookingWorkflowDefinition } from "@/server/modules/workflow/definitions/meeting-booking/meeting-booking.definition";
+import { AuditWorkflowDefinition } from "@/server/modules/workflow/definitions/audit/audit.definition";
 import { WorkflowDefinitionRegistry } from "@/server/modules/workflow/workflow-definition.registry";
 import type {
   CreateWorkflowInstanceInput,
@@ -105,7 +106,17 @@ function createAssistant({
   const workflowRepository = new MemoryWorkflowInstanceRepository();
 
   const workflowService = new WorkflowService(
-    new WorkflowDefinitionRegistry([new MeetingBookingWorkflowDefinition(meetingService)]),
+    new WorkflowDefinitionRegistry([
+      new AuditWorkflowDefinition({
+        submit: async (input) => ({
+          id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+          ...input,
+          createdAt: new Date("2026-08-20T10:00:00.000Z"),
+        }),
+        listRequests: async () => [],
+      }),
+      new MeetingBookingWorkflowDefinition(meetingService),
+    ]),
     workflowRepository,
     ["search_website"],
   );
@@ -117,6 +128,7 @@ function createAssistant({
     inputs,
     meetingService,
     post: createChatPostHandler({ assistantService }),
+    workflowRepository,
     workflowService,
   };
 }
@@ -245,6 +257,8 @@ test("starting a workflow changes instructions and tools on the next iteration i
     inputs[0]?.tools.map(({ name }) => name),
     ["search_website", "start_workflow"],
   );
+  assert.match(inputs[0]?.instructions ?? "", /audit: Request a free review/);
+  assert.match(JSON.stringify(inputs[0]?.tools[1]?.parameters), /"audit"/);
   assert.deepEqual(
     inputs[1]?.tools.map(({ name }) => name),
     ["search_website", "cancel_workflow", "find_meeting_slots"],
@@ -256,6 +270,37 @@ test("starting a workflow changes instructions and tools on the next iteration i
   assert.match(output, /"type":"workflow_instance"/);
   assert.match(output, /"status":"active"/);
   assert.doesNotMatch(output, /availableSlots|pendingBooking|visitor@example\.com/);
+});
+
+test("an Audit CTA starts deterministically with bounded origin metadata", async () => {
+  const { inputs, post, workflowRepository } = createAssistant();
+
+  const output = await readChatResponse(
+    await post(
+      chatRequest({
+        message: "I would like to claim my free customer journey and workflow audit.",
+        workflowStart: {
+          workflowId: "audit",
+          originPage: "/audit",
+          originEntry: "audit-hero-cta",
+        },
+      }),
+    ),
+  );
+
+  const stored = await workflowRepository.findById("00000000-0000-4000-8000-000000000001");
+
+  assert.equal(stored?.workflowId, "audit");
+  assert.equal(stored?.workflowVersion, 1);
+  assert.equal(stored?.originChannel, "web");
+  assert.equal(stored?.originPage, "/audit");
+  assert.equal(stored?.originEntry, "audit-hero-cta");
+  assert.deepEqual(
+    inputs[0]?.tools.map(({ name }) => name),
+    ["search_website", "cancel_workflow", "update_audit_context"],
+  );
+  assert.match(inputs[0]?.instructions ?? "", /free customer journey and workflow Audit/);
+  assert.match(output, /"workflowId":"audit"/);
 });
 
 test("provider failure after a durable start still streams the safe active instance ID", async () => {
@@ -437,7 +482,7 @@ test("terminal workflow metadata clears the active surface without streaming pri
   );
   assert.deepEqual(
     inputs[2]?.tools.map(({ name }) => name),
-    ["search_website", "start_workflow"],
+    ["search_website"],
   );
   assert.match(output, /"status":"completed"/);
   assert.doesNotMatch(output, /availableSlots|pendingBooking|visitor@example\.com/);

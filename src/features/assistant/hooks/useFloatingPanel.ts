@@ -5,12 +5,13 @@ import { useReducedMotion, type Transition } from "framer-motion";
 import { OPEN_PORTFOLIO_CHAT_EVENT, type OpenPortfolioChatDetail } from "../assistant.events";
 import { stageWhenOpening } from "../state/assistant-conversation";
 import type { ChatMessage, ChatStage } from "../models/chat-message";
+import type { AssistantWorkflowStart } from "@/contracts/assistant.contract";
 
 interface UseFloatingPanelOptions {
   clearError: () => void;
   isLoading: boolean;
   messages: ChatMessage[];
-  submitMessage: (message: string) => Promise<void>;
+  submitMessage: (message: string, workflowStart?: AssistantWorkflowStart | null) => Promise<void>;
 }
 
 export function useFloatingPanel({
@@ -50,7 +51,7 @@ export function useFloatingPanel({
 
     if (detail?.message) {
       showConversation();
-      await submitMessage(detail.message);
+      await submitMessage(detail.message, detail.workflowStart ?? null);
 
       return;
     }

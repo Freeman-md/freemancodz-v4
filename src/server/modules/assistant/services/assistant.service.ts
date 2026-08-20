@@ -22,10 +22,11 @@ import type { OpenAIResponseInputItem } from "@/server/infrastructure/openai/mod
 import type { ISiteSearchService } from "@/server/modules/search-index/public";
 import type { ILogger } from "@/server/infrastructure/logging/logger.interface";
 import type { AssistantSource, AssistantStreamEvent } from "@/contracts/assistant.contract";
-import type {
-  IWorkflowService,
-  WorkflowAssistantContext,
-  WorkflowPublicInstance,
+import {
+  START_WORKFLOW_TOOL_NAME,
+  type IWorkflowService,
+  type WorkflowAssistantContext,
+  type WorkflowPublicInstance,
 } from "@/server/modules/workflow/public";
 type WindowCounter = { count: number; resetAt: number };
 
@@ -90,6 +91,7 @@ export class AssistantService implements IAssistantService {
     message,
     previousResponseId,
     workflowInstanceId,
+    workflowStart,
     signal,
   }: AssistantResponseInput) {
     const encoder = new TextEncoder();
@@ -109,23 +111,57 @@ export class AssistantService implements IAssistantService {
 
         let latestWorkflowInstance: WorkflowPublicInstance | null = null;
 
+        let workflowEndedThisInteraction = false;
+
         const sources = new Map<string, AssistantSource>();
 
         let input: OpenAIResponseInputItem[] = [{ type: "user_message", content: message }];
 
         try {
+          if (workflowStart) {
+            const existingContext = activeWorkflowInstanceId
+              ? await this.workflow.getAssistantContext(activeWorkflowInstanceId)
+              : null;
+
+            if (
+              existingContext?.instance &&
+              existingContext.instance.workflowId !== workflowStart.workflowId
+            ) {
+              throw new Error("Another workflow is already active.");
+            }
+
+            if (!existingContext?.instance) {
+              const started = await this.workflow.start(workflowStart.workflowId, {
+                originChannel: "web",
+                originPage: workflowStart.originPage,
+                originEntry: workflowStart.originEntry,
+              });
+
+              activeWorkflowInstanceId = started.id;
+              latestWorkflowInstance = started;
+            }
+          }
+
           for (let iteration = 0; iteration < MAX_TOOL_CALL_ITERATIONS; iteration += 1) {
             const toolCalls: Array<{ callId: string; name: string; arguments: string }> = [];
 
             const workflowContext =
               await this.workflow.getAssistantContext(activeWorkflowInstanceId);
 
+            const workflowTools = workflowEndedThisInteraction
+              ? workflowContext.tools.filter(({ name }) => name !== START_WORKFLOW_TOOL_NAME)
+              : workflowContext.tools;
+
+            const workflowInstructions = workflowEndedThisInteraction
+              ? "A workflow ended during this visitor interaction. Do not start another workflow until a later visitor message."
+              : workflowContext.instructions;
+
             latestWorkflowInstance = workflowContext.instance ?? latestWorkflowInstance;
 
             const response = await this.openai.streamResponse({
               input,
-              instructions: combineInstructions(CHAT_SYSTEM_PROMPT, workflowContext.instructions),
-              tools: [...GLOBAL_ASSISTANT_TOOLS, ...workflowContext.tools],
+              instructions: combineInstructions(CHAT_SYSTEM_PROMPT, workflowInstructions),
+              tools: [...GLOBAL_ASSISTANT_TOOLS, ...workflowTools],
               previousResponseId: responseId,
               signal,
             });
@@ -182,6 +218,7 @@ export class AssistantService implements IAssistantService {
               (instance) => {
                 latestWorkflowInstance = instance;
                 activeWorkflowInstanceId = instance.status === "active" ? instance.id : null;
+                workflowEndedThisInteraction = instance.status !== "active";
               },
             );
 

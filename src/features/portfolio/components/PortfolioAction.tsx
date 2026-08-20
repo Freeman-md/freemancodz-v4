@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 
 import { AssistantTriggerButton } from "@/features/assistant/components/AssistantTriggerButton";
+import type { AssistantTriggerDetail } from "@/contracts/assistant.contract";
 import { buttonVariants } from "@/shared/components/ui/Button";
 import { cn } from "@/shared/utils/class-names";
 import {
@@ -26,9 +27,11 @@ const assistantVariant = {
 
 export function PortfolioAction({
   action,
+  assistantDetail,
   className,
 }: {
   action: PortfolioActionModel;
+  assistantDetail?: Omit<AssistantTriggerDetail, "message">;
   className?: string;
 }) {
   const content = (
@@ -45,7 +48,7 @@ export function PortfolioAction({
     return (
       <AssistantTriggerButton
         className={className}
-        detail={{ message: action.assistantMessage }}
+        detail={{ message: action.assistantMessage, ...assistantDetail }}
         variant={assistantVariant[action.variant]}
       >
         {content}

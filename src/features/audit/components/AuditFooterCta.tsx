@@ -13,6 +13,7 @@ export function AuditFooterCta({ closing }: Pick<AuditPresentationData, "closing
         <AuditButton
           action={action}
           className="mt-0 w-full max-w-lg text-base"
+          entryPoint="audit-footer-cta"
           key={action.label}
         />
       ))}

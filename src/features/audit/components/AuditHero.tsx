@@ -17,7 +17,7 @@ export function AuditHero({ hero }: Pick<AuditPresentationData, "hero">) {
           {hero.copy}
         </p>
         {hero.actions.map((action) => (
-          <AuditButton action={action} key={action.label} />
+          <AuditButton action={action} entryPoint="audit-hero-cta" key={action.label} />
         ))}
         <p className="mt-4 flex items-center gap-1.5 font-mono text-[10px] tracking-[0.02em] text-black">
           <Clock3 className="text-signal-700" size={12} strokeWidth={1.5} />

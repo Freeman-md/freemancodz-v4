@@ -157,7 +157,7 @@ export class WorkflowService implements IWorkflowService {
       );
     }
 
-    const execution = await this.executeDefinitionTool(definition, toolCall, state);
+    const execution = await this.executeDefinitionTool(definition, toolCall, state, instance.id);
 
     const nextState = this.validateState(definition, execution.state);
 
@@ -359,9 +359,11 @@ export class WorkflowService implements IWorkflowService {
     definition: IWorkflowDefinition,
     toolCall: WorkflowToolCall,
     state: Prisma.JsonObject,
+    workflowInstanceId: string,
   ): Promise<WorkflowExecutionResult<Prisma.JsonObject>> {
     try {
       return await definition.executeTool(toolCall.name, toolCall.rawArguments, state, {
+        workflowInstanceId,
         interactionId: toolCall.interactionId,
       });
     } catch (error) {

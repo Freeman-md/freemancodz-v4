@@ -53,6 +53,7 @@ export function createChatPostHandler({
         message: parsed.data.message,
         previousResponseId: parsed.data.previousResponseId ?? null,
         workflowInstanceId: parsed.data.workflowInstanceId ?? null,
+        workflowStart: parsed.data.workflowStart ?? null,
         signal: request.signal,
       }),
       {

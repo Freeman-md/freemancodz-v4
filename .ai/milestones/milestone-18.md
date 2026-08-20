@@ -1,6 +1,6 @@
 # Milestone 18: Database-Backed Workflow Foundation
 
-**Status:** Frozen
+**Status:** Archived
 **Version:** 1.0.0
 **Last Updated:** 2026-08-20
 **Depends On:** Milestone 17
