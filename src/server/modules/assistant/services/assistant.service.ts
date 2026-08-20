@@ -179,6 +179,10 @@ export class AssistantService implements IAssistantService {
               activeWorkflowInstanceId,
               workflowContext,
               interactionId,
+              (instance) => {
+                latestWorkflowInstance = instance;
+                activeWorkflowInstanceId = instance.status === "active" ? instance.id : null;
+              },
             );
 
             activeWorkflowInstanceId = toolResult.activeWorkflowInstanceId;
@@ -254,6 +258,7 @@ export class AssistantService implements IAssistantService {
     instanceId: string | null,
     workflowContext: WorkflowAssistantContext,
     interactionId: string,
+    onWorkflowTransition: (instance: WorkflowPublicInstance) => void,
   ): Promise<{
     output: OpenAIResponseInputItem[];
     activeWorkflowInstanceId: string | null;
@@ -317,6 +322,7 @@ export class AssistantService implements IAssistantService {
 
       workflowInstance = result.instance;
       activeWorkflowInstanceId = result.instance.status === "active" ? result.instance.id : null;
+      onWorkflowTransition(result.instance);
 
       outputs.push({
         type: "function_call_output",

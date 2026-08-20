@@ -301,6 +301,52 @@ test("provider failure after a durable start still streams the safe active insta
   ]);
 });
 
+test("a later workflow-call failure in one model batch does not orphan a persisted start", async () => {
+  const { errors, post } = createAssistant({
+    response: async () =>
+      events(
+        { type: "response.created", response: { id: "resp_duplicate_start" } },
+        {
+          type: "response.output_item.done",
+          item: {
+            type: "function_call",
+            call_id: "call_start_one",
+            name: "start_workflow",
+            arguments: '{"workflowId":"meeting-booking"}',
+          },
+        },
+        {
+          type: "response.output_item.done",
+          item: {
+            type: "function_call",
+            call_id: "call_start_two",
+            name: "start_workflow",
+            arguments: '{"workflowId":"meeting-booking"}',
+          },
+        },
+        { type: "response.completed", response: { id: "resp_duplicate_start" } },
+      ),
+  });
+
+  const output = await readChatResponse(
+    await post(chatRequest({ message: "I would like to book a meeting." })),
+  );
+
+  assert.match(output, /"type":"workflow_instance"/);
+  assert.match(output, /"id":"00000000-0000-4000-8000-000000000001"/);
+  assert.match(output, /"status":"active"/);
+  assert.match(output, /The assistant could not respond\. Please try again\./);
+  assert.deepEqual(errors, [
+    {
+      message: "assistant.response_failed",
+      context: {
+        category: "assistant_request_failed",
+        workflowInstanceId: "00000000-0000-4000-8000-000000000001",
+      },
+    },
+  ]);
+});
+
 test("terminal workflow metadata clears the active surface without streaming private state", async () => {
   const { inputs, post, workflowService } = createAssistant({
     response: async (request) => {
