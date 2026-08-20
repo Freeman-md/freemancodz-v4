@@ -8,6 +8,8 @@ export const meetingSlotSchema = z
   })
   .strict();
 
+export const meetingProviderPayloadSchema = z.record(z.string(), z.json());
+
 export const meetingBookingStateSchema = z
   .object({
     step: z.enum(["collecting", "awaiting_confirmation", "confirmed"]),
@@ -22,7 +24,7 @@ export const meetingBookingStateSchema = z
       .object({
         googleEventId: z.string().min(1),
         googleEventUrl: z.string().url().nullable(),
-        rawProviderPayload: z.record(z.string(), z.json()),
+        rawProviderPayload: meetingProviderPayloadSchema,
         name: z.string().min(1).max(160),
         email: z.string().email().max(320),
         reason: z.string().min(1).max(1_000),

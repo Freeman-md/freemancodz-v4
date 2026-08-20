@@ -1,16 +1,16 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import type { WorkflowInstance } from "@/generated/prisma/client";
 import type { OpenAIResponseTool } from "@/server/infrastructure/openai/models/openai-response-request";
 import type { IWorkflowInstanceRepository } from "@/server/modules/workflow/interfaces/workflow-instance.repository.interface";
 import { WorkflowInstanceRepositoryError } from "@/server/modules/workflow/interfaces/workflow-instance.repository.interface";
 import type { IWorkflowDefinition } from "@/server/modules/workflow/interfaces/workflow-definition.interface";
-import { WorkflowDefinitionRegistry } from "@/server/modules/workflow/models/workflow-definition-registry";
+import { WorkflowDefinitionRegistry } from "@/server/modules/workflow/workflow-definition.registry";
 import type {
   CreateWorkflowInstanceInput,
   SaveWorkflowInstanceInput,
-  WorkflowInstance,
-} from "@/server/modules/workflow/models/workflow-instance";
+} from "@/server/modules/workflow/workflow.types";
 import { WorkflowService } from "@/server/modules/workflow/services/workflow.service";
 import {
   CANCEL_WORKFLOW_TOOL_NAME,
@@ -89,6 +89,17 @@ test("starts the latest version with supplied origin and exposes only safe publi
   const repository = new MemoryWorkflowInstanceRepository();
 
   const registry = new WorkflowDefinitionRegistry([createDefinition(1), createDefinition(2)]);
+
+  assert.equal(registry.get("test-workflow", 1)?.version, 1);
+  assert.equal(registry.getLatest("test-workflow")?.version, 2);
+  assert.throws(
+    () => new WorkflowDefinitionRegistry([createDefinition(1), createDefinition(1)]),
+    /Duplicate workflow definition/,
+  );
+  assert.throws(
+    () => new WorkflowDefinitionRegistry([createDefinition(0)]),
+    /positive integer version/,
+  );
 
   const service = new WorkflowService(registry, repository, ["search_website"]);
 

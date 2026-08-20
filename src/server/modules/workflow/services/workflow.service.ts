@@ -1,30 +1,25 @@
 import "server-only";
 
+import type { Prisma, WorkflowInstance } from "@/generated/prisma/client";
 import type { OpenAIResponseTool } from "@/server/infrastructure/openai/models/openai-response-request";
 import type { IWorkflowDefinition } from "../interfaces/workflow-definition.interface";
 import type { IWorkflowInstanceRepository } from "../interfaces/workflow-instance.repository.interface";
 import { WorkflowInstanceRepositoryError } from "../interfaces/workflow-instance.repository.interface";
 import type { IWorkflowService } from "../interfaces/workflow.service.interface";
-import type {
-  WorkflowExecutionResult,
-  WorkflowSemanticOutput,
-} from "../models/workflow-definition";
-import { WorkflowDefinitionRegistry } from "../models/workflow-definition-registry";
-import {
-  toWorkflowPublicInstance,
-  type WorkflowInstance,
-  type WorkflowStartContext,
-} from "../models/workflow-instance";
-import { toWorkflowJsonObject, type WorkflowJsonObject } from "../models/workflow-json";
 import {
   WorkflowServiceError,
   type WorkflowAssistantContext,
+  type WorkflowExecutionResult,
+  type WorkflowPublicInstance,
+  type WorkflowStartContext,
   type WorkflowToolCall,
   type WorkflowToolExecutionResult,
-} from "../models/workflow-service";
+} from "../workflow.types";
+import { WorkflowDefinitionRegistry } from "../workflow-definition.registry";
 import {
   CancelWorkflowArgumentsSchema,
   StartWorkflowArgumentsSchema,
+  WorkflowInstanceStatusSchema,
   WorkflowStartContextSchema,
 } from "../schemas/workflow-control.schema";
 import { CANCEL_WORKFLOW_TOOL_NAME, START_WORKFLOW_TOOL_NAME } from "../workflow.constants";
@@ -41,10 +36,20 @@ export class WorkflowService implements IWorkflowService {
     globalToolNames: readonly string[],
     private readonly clock: () => Date = () => new Date(),
   ) {
-    this.globalToolNames = validateGlobalToolNames(globalToolNames);
+    this.globalToolNames = new Set(globalToolNames);
+
+    if (
+      this.globalToolNames.has(START_WORKFLOW_TOOL_NAME) ||
+      this.globalToolNames.has(CANCEL_WORKFLOW_TOOL_NAME)
+    ) {
+      throw new WorkflowServiceError(
+        "configuration_error",
+        "A global assistant tool collides with workflow control.",
+      );
+    }
   }
 
-  async start(workflowId: string, context: WorkflowStartContext): Promise<WorkflowInstance> {
+  async start(workflowId: string, context: WorkflowStartContext): Promise<WorkflowPublicInstance> {
     const definition = this.registry.getLatest(workflowId);
 
     if (!definition) {
@@ -65,7 +70,7 @@ export class WorkflowService implements IWorkflowService {
     this.getDefinitionInstructions(definition, initialState);
     this.getDefinitionTools(definition, initialState);
 
-    return this.runRepositoryOperation(() =>
+    const instance = await this.runRepositoryOperation(() =>
       this.repository.create({
         workflowId: definition.id,
         workflowVersion: definition.version,
@@ -73,6 +78,8 @@ export class WorkflowService implements IWorkflowService {
         ...validatedContext.data,
       }),
     );
+
+    return toWorkflowPublicInstance(instance);
   }
 
   async getAssistantContext(instanceId: string | null): Promise<WorkflowAssistantContext> {
@@ -154,9 +161,7 @@ export class WorkflowService implements IWorkflowService {
 
     const nextState = this.validateState(definition, execution.state);
 
-    const output = this.validateSemanticOutput(execution.output);
-
-    const status = validateExecutionStatus(execution);
+    const { output, status } = execution;
 
     if (status === "active") {
       this.getDefinitionInstructions(definition, nextState);
@@ -177,7 +182,7 @@ export class WorkflowService implements IWorkflowService {
     return { output, instance: toWorkflowPublicInstance(saved) };
   }
 
-  async cancel(instanceId: string): Promise<WorkflowInstance> {
+  async cancel(instanceId: string): Promise<WorkflowPublicInstance> {
     const instance = await this.loadInstance(instanceId);
 
     if (instance.status !== "active") {
@@ -187,7 +192,7 @@ export class WorkflowService implements IWorkflowService {
       );
     }
 
-    return this.cancelLoadedInstance(instance);
+    return toWorkflowPublicInstance(await this.cancelLoadedInstance(instance));
   }
 
   private createStartContext(): WorkflowAssistantContext {
@@ -232,7 +237,7 @@ export class WorkflowService implements IWorkflowService {
         message: "The workflow started.",
         workflowId: instance.workflowId,
       },
-      instance: toWorkflowPublicInstance(instance),
+      instance,
     };
   }
 
@@ -281,7 +286,7 @@ export class WorkflowService implements IWorkflowService {
   private createInitialState(
     definition: IWorkflowDefinition,
     context: WorkflowStartContext,
-  ): WorkflowJsonObject {
+  ): Prisma.JsonObject {
     try {
       return this.validateState(definition, definition.createInitialState(context));
     } catch (error) {
@@ -295,34 +300,22 @@ export class WorkflowService implements IWorkflowService {
     }
   }
 
-  private validateState(definition: IWorkflowDefinition, state: unknown): WorkflowJsonObject {
+  private validateState(definition: IWorkflowDefinition, state: unknown): Prisma.JsonObject {
     const result = definition.stateSchema.safeParse(state);
 
     if (!result.success) {
       throw new WorkflowServiceError("invalid_state", "The workflow state is invalid.");
     }
 
-    try {
-      return toWorkflowJsonObject(result.data);
-    } catch (error) {
-      throw new WorkflowServiceError("invalid_state", "The workflow state is invalid.", {
-        cause: error,
-      });
-    }
+    return result.data;
   }
 
   private getDefinitionInstructions(
     definition: IWorkflowDefinition,
-    state: WorkflowJsonObject,
+    state: Prisma.JsonObject,
   ): string {
     try {
-      const instructions = definition.getInstructions(state);
-
-      if (typeof instructions !== "string") {
-        throw new Error("Workflow instructions must be text.");
-      }
-
-      return instructions;
+      return definition.getInstructions(state);
     } catch (error) {
       throw new WorkflowServiceError(
         "configuration_error",
@@ -334,7 +327,7 @@ export class WorkflowService implements IWorkflowService {
 
   private getDefinitionTools(
     definition: IWorkflowDefinition,
-    state: WorkflowJsonObject,
+    state: Prisma.JsonObject,
   ): OpenAIResponseTool[] {
     let tools: OpenAIResponseTool[];
 
@@ -346,16 +339,7 @@ export class WorkflowService implements IWorkflowService {
       });
     }
 
-    const seen = new Set<string>();
-
     for (const tool of tools) {
-      if (!tool.name || tool.name.trim() !== tool.name || seen.has(tool.name)) {
-        throw new WorkflowServiceError(
-          "configuration_error",
-          "The workflow tool configuration is invalid.",
-        );
-      }
-
       if (
         tool.name === START_WORKFLOW_TOOL_NAME ||
         tool.name === CANCEL_WORKFLOW_TOOL_NAME ||
@@ -366,18 +350,16 @@ export class WorkflowService implements IWorkflowService {
           "The workflow tool configuration collides with a reserved tool.",
         );
       }
-
-      seen.add(tool.name);
     }
 
-    return [...tools];
+    return tools;
   }
 
   private async executeDefinitionTool(
     definition: IWorkflowDefinition,
     toolCall: WorkflowToolCall,
-    state: WorkflowJsonObject,
-  ): Promise<WorkflowExecutionResult<WorkflowJsonObject>> {
+    state: Prisma.JsonObject,
+  ): Promise<WorkflowExecutionResult<Prisma.JsonObject>> {
     try {
       return await definition.executeTool(toolCall.name, toolCall.rawArguments, state, {
         interactionId: toolCall.interactionId,
@@ -386,18 +368,6 @@ export class WorkflowService implements IWorkflowService {
       throw new WorkflowServiceError(
         "execution_failed",
         "The workflow action could not be completed.",
-        { cause: error },
-      );
-    }
-  }
-
-  private validateSemanticOutput(output: unknown): WorkflowSemanticOutput {
-    try {
-      return toWorkflowJsonObject(output);
-    } catch (error) {
-      throw new WorkflowServiceError(
-        "execution_failed",
-        "The workflow returned an invalid result.",
         { cause: error },
       );
     }
@@ -426,30 +396,6 @@ export class WorkflowService implements IWorkflowService {
       });
     }
   }
-}
-
-function validateGlobalToolNames(globalToolNames: readonly string[]): ReadonlySet<string> {
-  const names = new Set<string>();
-
-  for (const name of globalToolNames) {
-    if (!name || name.trim() !== name || names.has(name)) {
-      throw new WorkflowServiceError(
-        "configuration_error",
-        "The global assistant tool configuration is invalid.",
-      );
-    }
-
-    if (name === START_WORKFLOW_TOOL_NAME || name === CANCEL_WORKFLOW_TOOL_NAME) {
-      throw new WorkflowServiceError(
-        "configuration_error",
-        "A global assistant tool collides with workflow control.",
-      );
-    }
-
-    names.add(name);
-  }
-
-  return names;
 }
 
 function validateToolCall(toolCall: WorkflowToolCall): void {
@@ -487,19 +433,6 @@ function parseControlArguments<Output>(
   return result.data;
 }
 
-function validateExecutionStatus(
-  execution: WorkflowExecutionResult<WorkflowJsonObject>,
-): "active" | "completed" {
-  if (execution.status !== "active" && execution.status !== "completed") {
-    throw new WorkflowServiceError(
-      "execution_failed",
-      "The workflow returned an invalid lifecycle result.",
-    );
-  }
-
-  return execution.status;
-}
-
 function createStartWorkflowTool(definitions: readonly IWorkflowDefinition[]): OpenAIResponseTool {
   return {
     type: "function",
@@ -517,6 +450,21 @@ function createStartWorkflowTool(definitions: readonly IWorkflowDefinition[]): O
         },
       },
     },
+  };
+}
+
+function toWorkflowPublicInstance(instance: WorkflowInstance): WorkflowPublicInstance {
+  const status = WorkflowInstanceStatusSchema.safeParse(instance.status);
+
+  if (!status.success) {
+    throw new WorkflowServiceError("invalid_state", "The workflow status is invalid.");
+  }
+
+  return {
+    id: instance.id,
+    workflowId: instance.workflowId,
+    workflowVersion: instance.workflowVersion,
+    status: status.data,
   };
 }
 

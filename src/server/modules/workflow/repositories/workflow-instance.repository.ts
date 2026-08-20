@@ -1,16 +1,11 @@
 import "server-only";
 
-import type { PrismaClient } from "@/generated/prisma/client";
+import type { PrismaClient, WorkflowInstance } from "@/generated/prisma/client";
 import {
   WorkflowInstanceRepositoryError,
   type IWorkflowInstanceRepository,
 } from "../interfaces/workflow-instance.repository.interface";
-import { mapWorkflowInstance, toWorkflowStateInput } from "../mappers/workflow-instance.mapper";
-import type {
-  CreateWorkflowInstanceInput,
-  SaveWorkflowInstanceInput,
-  WorkflowInstance,
-} from "../models/workflow-instance";
+import type { CreateWorkflowInstanceInput, SaveWorkflowInstanceInput } from "../workflow.types";
 
 export class WorkflowInstanceRepository implements IWorkflowInstanceRepository {
   constructor(private readonly database: PrismaClient) {}
@@ -22,14 +17,14 @@ export class WorkflowInstanceRepository implements IWorkflowInstanceRepository {
           workflowId: input.workflowId,
           workflowVersion: input.workflowVersion,
           status: "active",
-          state: toWorkflowStateInput(input.state),
+          state: input.state,
           originChannel: input.originChannel,
           originPage: input.originPage,
           originEntry: input.originEntry,
         },
       });
 
-      return mapWorkflowInstance(record);
+      return record;
     } catch (error) {
       throw normalizePersistenceError(error);
     }
@@ -39,7 +34,7 @@ export class WorkflowInstanceRepository implements IWorkflowInstanceRepository {
     try {
       const record = await this.database.workflowInstance.findUnique({ where: { id } });
 
-      return record ? mapWorkflowInstance(record) : null;
+      return record;
     } catch (error) {
       throw normalizePersistenceError(error);
     }
@@ -54,7 +49,7 @@ export class WorkflowInstanceRepository implements IWorkflowInstanceRepository {
           where: { id: input.id, status: "active" },
           data: {
             status: input.status,
-            state: toWorkflowStateInput(input.state),
+            state: input.state,
             completedAt: input.completedAt,
           },
         });
@@ -87,7 +82,7 @@ export class WorkflowInstanceRepository implements IWorkflowInstanceRepository {
           );
         }
 
-        return mapWorkflowInstance(record);
+        return record;
       });
     } catch (error) {
       throw normalizePersistenceError(error);

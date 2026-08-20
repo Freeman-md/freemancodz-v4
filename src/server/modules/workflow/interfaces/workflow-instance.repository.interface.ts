@@ -1,8 +1,5 @@
-import type {
-  CreateWorkflowInstanceInput,
-  SaveWorkflowInstanceInput,
-  WorkflowInstance,
-} from "../models/workflow-instance";
+import type { WorkflowInstance } from "@/generated/prisma/client";
+import type { CreateWorkflowInstanceInput, SaveWorkflowInstanceInput } from "../workflow.types";
 
 export type WorkflowInstanceRepositoryErrorCode = "not_found" | "terminal" | "unavailable";
 

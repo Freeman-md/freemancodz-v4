@@ -1,13 +1,13 @@
+import type { Prisma } from "@/generated/prisma/client";
 import type { OpenAIResponseTool } from "@/server/infrastructure/openai/models/openai-response-request";
 import type { z } from "zod";
 import type {
   WorkflowExecutionContext,
   WorkflowExecutionResult,
-} from "../models/workflow-definition";
-import type { WorkflowStartContext } from "../models/workflow-instance";
-import type { WorkflowJsonObject } from "../models/workflow-json";
+  WorkflowStartContext,
+} from "../workflow.types";
 
-export interface IWorkflowDefinition<State extends WorkflowJsonObject = WorkflowJsonObject> {
+export interface IWorkflowDefinition<State extends Prisma.JsonObject = Prisma.JsonObject> {
   readonly id: string;
   readonly version: number;
   readonly description: string;

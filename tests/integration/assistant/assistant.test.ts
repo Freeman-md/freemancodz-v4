@@ -8,13 +8,13 @@ import type { OpenAIResponseRequest } from "@/server/infrastructure/openai/model
 import type { ISiteSearchService, SiteSearchResult } from "@/server/modules/search-index/public";
 import { AssistantService } from "@/server/modules/assistant/services/assistant.service";
 import type { IWorkflowInstanceRepository } from "@/server/modules/workflow/interfaces/workflow-instance.repository.interface";
-import { MeetingBookingWorkflowDefinition } from "@/server/modules/workflow/definitions/meeting-booking/meeting-booking-definition";
-import { WorkflowDefinitionRegistry } from "@/server/modules/workflow/models/workflow-definition-registry";
+import type { WorkflowInstance } from "@/generated/prisma/client";
+import { MeetingBookingWorkflowDefinition } from "@/server/modules/workflow/definitions/meeting-booking/meeting-booking.definition";
+import { WorkflowDefinitionRegistry } from "@/server/modules/workflow/workflow-definition.registry";
 import type {
   CreateWorkflowInstanceInput,
   SaveWorkflowInstanceInput,
-  WorkflowInstance,
-} from "@/server/modules/workflow/models/workflow-instance";
+} from "@/server/modules/workflow/workflow.types";
 import { WorkflowService } from "@/server/modules/workflow/services/workflow.service";
 
 const source = {
@@ -368,18 +368,18 @@ test("terminal workflow metadata clears the active surface without streaming pri
 
       if (request.tools.some(({ name }) => name === "book_meeting")) {
         return events(
-            { type: "response.created", response: { id: "resp_booking_tool" } },
-            {
-              type: "response.output_item.done",
-              item: {
-                type: "function_call",
-                call_id: "call_book",
-                name: "book_meeting",
-                arguments: "{}",
-              },
+          { type: "response.created", response: { id: "resp_booking_tool" } },
+          {
+            type: "response.output_item.done",
+            item: {
+              type: "function_call",
+              call_id: "call_book",
+              name: "book_meeting",
+              arguments: "{}",
             },
-            { type: "response.completed", response: { id: "resp_booking_tool" } },
-          );
+          },
+          { type: "response.completed", response: { id: "resp_booking_tool" } },
+        );
       }
 
       return events(

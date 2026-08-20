@@ -1,8 +1,9 @@
+import type { Prisma } from "@/generated/prisma/client";
 import type { MeetingSlot } from "../models/meeting-slot";
 export type PendingCalendarEvent = {
   googleEventId: string;
   googleEventUrl: string | null;
-  rawProviderPayload: Record<string, unknown>;
+  rawProviderPayload: Prisma.JsonObject;
 };
 export class MeetingPersistenceError extends Error {
   constructor(

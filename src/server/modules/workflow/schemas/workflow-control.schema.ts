@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { WORKFLOW_INSTANCE_STATUSES } from "../workflow.types";
 
 export const StartWorkflowArgumentsSchema = z
   .object({
@@ -13,3 +14,5 @@ export const WorkflowStartContextSchema = z.object({
   originPage: z.string().trim().min(1).nullable(),
   originEntry: z.string().trim().min(1).nullable(),
 });
+
+export const WorkflowInstanceStatusSchema = z.enum(WORKFLOW_INSTANCE_STATUSES);

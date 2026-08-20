@@ -88,9 +88,7 @@ export class MeetingService implements IMeetingService {
       endsAt: new Date(input.slot.end),
       status: "confirmed",
       googleEventUrl: input.pendingEvent.googleEventUrl,
-      rawProviderPayload: JSON.parse(
-        JSON.stringify(input.pendingEvent.rawProviderPayload),
-      ) as import("@/generated/prisma/client").Prisma.InputJsonObject,
+      rawProviderPayload: input.pendingEvent.rawProviderPayload,
     };
 
     try {

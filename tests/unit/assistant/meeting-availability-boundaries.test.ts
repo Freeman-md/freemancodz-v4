@@ -3,7 +3,7 @@ import test from "node:test";
 import type { IGoogleCalendarProvider } from "@/server/infrastructure/google-calendar/interfaces/google-calendar.provider.interface";
 import type { IMeetingRepository } from "@/server/modules/meeting/interfaces/meeting.repository.interface";
 import { MeetingService } from "@/server/modules/meeting/services/meeting.service";
-import { MeetingBookingWorkflowDefinition } from "@/server/modules/workflow/definitions/meeting-booking/meeting-booking-definition";
+import { MeetingBookingWorkflowDefinition } from "@/server/modules/workflow/definitions/meeting-booking/meeting-booking.definition";
 
 test("today is accepted while a wholly past availability range is rejected", async () => {
   const today = new Intl.DateTimeFormat("en-CA", {

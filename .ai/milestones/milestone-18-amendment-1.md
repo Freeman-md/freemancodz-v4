@@ -1,6 +1,6 @@
 # Milestone 18 Amendment 1: Simplify the Workflow Foundation
 
-**Status:** Active
+**Status:** Frozen
 **Version:** 1.0.0
 **Last Updated:** 2026-08-20
 **Parent Milestone:** `.ai/milestones/milestone-18.md`
