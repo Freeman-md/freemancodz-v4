@@ -39,7 +39,7 @@ The stream returns only safe instance metadata: ID, workflow ID, version, and li
 
 The meeting definition uses the Meeting module's public service interface for London-time availability, final slot rechecking, Calendar creation, Meeting persistence, and partial-failure reconciliation. It owns all attendee fields, booking state, meeting prompts, and meeting tools.
 
-Preparation exposes a confirmation tool but not the booking tool. Only a later explicit confirmation transition exposes booking. A successful booking completes the instance. If Calendar creation succeeds before database persistence fails, private recovery state remains on the active instance so a retry reconciles the existing event instead of knowingly creating another one. Provider payloads, event identifiers, and Calendar URLs remain server-only.
+Preparation exposes a confirmation tool but not the booking tool. The server records a private, request-local interaction marker with the preparation and rejects confirmation in that same visitor request; a later visitor message can explicitly confirm and then expose booking. A successful booking completes the instance. If Calendar creation succeeds before database persistence fails, private recovery state remains on the active instance so a retry reconciles the existing event instead of knowingly creating another one. Provider payloads, event identifiers, and Calendar URLs remain server-only.
 
 ## Adding a real future workflow
 

@@ -258,16 +258,70 @@ test("starting a workflow changes instructions and tools on the next iteration i
   assert.doesNotMatch(output, /availableSlots|pendingBooking|visitor@example\.com/);
 });
 
-test("terminal workflow metadata clears the active surface without streaming private state", async () => {
-  const { inputs, post, workflowService } = createAssistant({
+test("provider failure after a durable start still streams the safe active instance ID", async () => {
+  const { errors, post } = createAssistant({
     response: async (request) =>
       request.input[0]?.type === "function_call_output"
-        ? events(
-            { type: "response.created", response: { id: "resp_booking_done" } },
-            { type: "response.output_text.delta", delta: "Your meeting is booked." },
-            { type: "response.completed", response: { id: "resp_booking_done" } },
-          )
+        ? events({
+            type: "response.failed",
+            response: { error: { message: "provider unavailable after start" } },
+          })
         : events(
+            { type: "response.created", response: { id: "resp_workflow_start" } },
+            {
+              type: "response.output_item.done",
+              item: {
+                type: "function_call",
+                call_id: "call_start",
+                name: "start_workflow",
+                arguments: '{"workflowId":"meeting-booking"}',
+              },
+            },
+            { type: "response.completed", response: { id: "resp_workflow_start" } },
+          ),
+  });
+
+  const output = await readChatResponse(
+    await post(chatRequest({ message: "I would like to book a meeting." })),
+  );
+
+  assert.match(output, /"type":"workflow_instance"/);
+  assert.match(output, /"id":"00000000-0000-4000-8000-000000000001"/);
+  assert.match(output, /"status":"active"/);
+  assert.match(output, /The assistant could not respond\. Please try again\./);
+  assert.doesNotMatch(output, /availableSlots|pendingBooking|visitor@example\.com/);
+  assert.deepEqual(errors, [
+    {
+      message: "assistant.response_failed",
+      context: {
+        category: "assistant_request_failed",
+        workflowInstanceId: "00000000-0000-4000-8000-000000000001",
+      },
+    },
+  ]);
+});
+
+test("terminal workflow metadata clears the active surface without streaming private state", async () => {
+  const { inputs, post, workflowService } = createAssistant({
+    response: async (request) => {
+      if (request.input[0]?.type !== "function_call_output") {
+        return events(
+          { type: "response.created", response: { id: "resp_confirmation_tool" } },
+          {
+            type: "response.output_item.done",
+            item: {
+              type: "function_call",
+              call_id: "call_confirm",
+              name: "confirm_meeting",
+              arguments: "{}",
+            },
+          },
+          { type: "response.completed", response: { id: "resp_confirmation_tool" } },
+        );
+      }
+
+      if (request.tools.some(({ name }) => name === "book_meeting")) {
+        return events(
             { type: "response.created", response: { id: "resp_booking_tool" } },
             {
               type: "response.output_item.done",
@@ -279,7 +333,15 @@ test("terminal workflow metadata clears the active surface without streaming pri
               },
             },
             { type: "response.completed", response: { id: "resp_booking_tool" } },
-          ),
+          );
+      }
+
+      return events(
+        { type: "response.created", response: { id: "resp_booking_done" } },
+        { type: "response.output_text.delta", delta: "Your meeting is booked." },
+        { type: "response.completed", response: { id: "resp_booking_done" } },
+      );
+    },
   });
 
   const instance = await workflowService.start("meeting-booking", {
@@ -291,6 +353,7 @@ test("terminal workflow metadata clears the active surface without streaming pri
   await workflowService.executeTool(instance.id, {
     name: "find_meeting_slots",
     rawArguments: '{"startDate":"2099-09-15","endDate":"2099-09-15"}',
+    interactionId: "33333333-3333-4333-8333-333333333333",
   });
   await workflowService.executeTool(instance.id, {
     name: "prepare_meeting",
@@ -300,10 +363,7 @@ test("terminal workflow metadata clears the active surface without streaming pri
       reason: "Discuss a project",
       selectedSlot: { start: meetingSlot.start, end: meetingSlot.end },
     }),
-  });
-  await workflowService.executeTool(instance.id, {
-    name: "confirm_meeting",
-    rawArguments: "{}",
+    interactionId: "33333333-3333-4333-8333-333333333333",
   });
 
   const output = await readChatResponse(
@@ -317,10 +377,20 @@ test("terminal workflow metadata clears the active surface without streaming pri
 
   assert.deepEqual(
     inputs[0]?.tools.map(({ name }) => name),
-    ["search_website", "cancel_workflow", "book_meeting"],
+    [
+      "search_website",
+      "cancel_workflow",
+      "find_meeting_slots",
+      "prepare_meeting",
+      "confirm_meeting",
+    ],
   );
   assert.deepEqual(
     inputs[1]?.tools.map(({ name }) => name),
+    ["search_website", "cancel_workflow", "book_meeting"],
+  );
+  assert.deepEqual(
+    inputs[2]?.tools.map(({ name }) => name),
     ["search_website", "start_workflow"],
   );
   assert.match(output, /"status":"completed"/);

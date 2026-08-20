@@ -1,4 +1,5 @@
 import "server-only";
+import { randomUUID } from "node:crypto";
 import {
   DAILY_RATE_LIMIT_MAX,
   DAILY_RATE_LIMIT_WINDOW_MS,
@@ -93,6 +94,8 @@ export class AssistantService implements IAssistantService {
   }: AssistantResponseInput) {
     const encoder = new TextEncoder();
 
+    const interactionId = randomUUID();
+
     return new ReadableStream<Uint8Array>({
       start: async (controller) => {
         const write = (event: AssistantStreamEvent) =>
@@ -175,6 +178,7 @@ export class AssistantService implements IAssistantService {
               signal,
               activeWorkflowInstanceId,
               workflowContext,
+              interactionId,
             );
 
             activeWorkflowInstanceId = toolResult.activeWorkflowInstanceId;
@@ -202,6 +206,11 @@ export class AssistantService implements IAssistantService {
               category: "assistant_request_failed",
               workflowInstanceId: activeWorkflowInstanceId,
             });
+
+            if (latestWorkflowInstance) {
+              write({ type: "workflow_instance", instance: latestWorkflowInstance });
+            }
+
             write({ type: "error", error: "The assistant could not respond. Please try again." });
           }
         } finally {
@@ -244,6 +253,7 @@ export class AssistantService implements IAssistantService {
     signal: AbortSignal,
     instanceId: string | null,
     workflowContext: WorkflowAssistantContext,
+    interactionId: string,
   ): Promise<{
     output: OpenAIResponseInputItem[];
     activeWorkflowInstanceId: string | null;
@@ -299,6 +309,7 @@ export class AssistantService implements IAssistantService {
       const result = await this.workflow.executeTool(activeWorkflowInstanceId, {
         name: toolCall.name,
         rawArguments: toolCall.arguments,
+        interactionId,
         startContext: activeWorkflowInstanceId
           ? undefined
           : { originChannel: "web", originPage: null, originEntry: null },

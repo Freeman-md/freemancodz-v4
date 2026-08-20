@@ -22,6 +22,8 @@ const FIRST_INSTANCE_ID = "11111111-1111-4111-8111-111111111111";
 
 const SECOND_INSTANCE_ID = "22222222-2222-4222-8222-222222222222";
 
+const INTERACTION_ID = "33333333-3333-4333-8333-333333333333";
+
 const StateSchema = z
   .object({
     step: z.enum(["collecting", "ready"]),
@@ -101,6 +103,7 @@ test("starts the latest version with supplied origin and exposes only safe publi
   const result = await service.executeTool(null, {
     name: START_WORKFLOW_TOOL_NAME,
     rawArguments: JSON.stringify({ workflowId: "test-workflow" }),
+    interactionId: INTERACTION_ID,
     startContext: {
       originChannel: "web",
       originPage: "/work",
@@ -162,6 +165,7 @@ test("rejects nested starts and stale tools without persisting a second transiti
     service.executeTool(FIRST_INSTANCE_ID, {
       name: START_WORKFLOW_TOOL_NAME,
       rawArguments: JSON.stringify({ workflowId: "test-workflow" }),
+      interactionId: INTERACTION_ID,
       startContext: { originChannel: "web", originPage: null, originEntry: null },
     }),
     { code: "invalid_transition" },
@@ -170,12 +174,14 @@ test("rejects nested starts and stale tools without persisting a second transiti
   await service.executeTool(FIRST_INSTANCE_ID, {
     name: "advance_test",
     rawArguments: "{}",
+    interactionId: INTERACTION_ID,
   });
 
   await assert.rejects(
     service.executeTool(FIRST_INSTANCE_ID, {
       name: "advance_test",
       rawArguments: "{}",
+      interactionId: INTERACTION_ID,
     }),
     { code: "unavailable_tool" },
   );
@@ -215,6 +221,7 @@ test("rejects invalid initial and returned state before persistence", async () =
     invalidReturnedService.executeTool(FIRST_INSTANCE_ID, {
       name: "advance_test",
       rawArguments: "{}",
+      interactionId: INTERACTION_ID,
     }),
     { code: "invalid_state" },
   );
@@ -238,11 +245,13 @@ test("persists completion and cancellation as terminal states and rejects later 
   const completed = await service.executeTool(FIRST_INSTANCE_ID, {
     name: "complete_test",
     rawArguments: "{}",
+    interactionId: INTERACTION_ID,
   });
 
   const cancelled = await service.executeTool(SECOND_INSTANCE_ID, {
     name: CANCEL_WORKFLOW_TOOL_NAME,
     rawArguments: "{}",
+    interactionId: INTERACTION_ID,
   });
 
   assert.equal(completed.instance.status, "completed");
@@ -254,6 +263,7 @@ test("persists completion and cancellation as terminal states and rejects later 
     service.executeTool(FIRST_INSTANCE_ID, {
       name: "complete_test",
       rawArguments: "{}",
+      interactionId: INTERACTION_ID,
     }),
     { code: "invalid_transition" },
   );

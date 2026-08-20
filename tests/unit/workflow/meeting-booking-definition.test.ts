@@ -23,6 +23,14 @@ const startContext = {
   originEntry: null,
 };
 
+const PREPARATION_INTERACTION = {
+  interactionId: "33333333-3333-4333-8333-333333333333",
+};
+
+const CONFIRMATION_INTERACTION = {
+  interactionId: "44444444-4444-4444-8444-444444444444",
+};
+
 function createMeetingService(overrides: Partial<IMeetingService> = {}): IMeetingService {
   return {
     findAvailableSlots: async () => [slot],
@@ -40,6 +48,7 @@ async function prepareDefinition(definition: MeetingBookingWorkflowDefinition) {
     "find_meeting_slots",
     JSON.stringify({ startDate: "2099-09-15", endDate: "2099-09-15" }),
     initial,
+    PREPARATION_INTERACTION,
   );
 
   return definition.executeTool(
@@ -51,6 +60,7 @@ async function prepareDefinition(definition: MeetingBookingWorkflowDefinition) {
       selectedSlot: { start: slot.start, end: slot.end },
     }),
     availability.state,
+    PREPARATION_INTERACTION,
   );
 }
 
@@ -74,19 +84,44 @@ test("preparation requires a later explicit confirmation transition before booki
   assert.deepEqual(preparedTools, ["find_meeting_slots", "prepare_meeting", "confirm_meeting"]);
   assert.equal(preparedTools.includes("book_meeting"), false);
 
-  const earlyBooking = await definition.executeTool("book_meeting", "{}", prepared.state);
+  const earlyBooking = await definition.executeTool(
+    "book_meeting",
+    "{}",
+    prepared.state,
+    PREPARATION_INTERACTION,
+  );
 
   assert.equal(earlyBooking.output.error, "confirmation_required");
   assert.equal(bookingCalls, 0);
 
-  const confirmed = await definition.executeTool("confirm_meeting", "{}", prepared.state);
+  const sameInteractionConfirmation = await definition.executeTool(
+    "confirm_meeting",
+    "{}",
+    prepared.state,
+    PREPARATION_INTERACTION,
+  );
+
+  assert.equal(sameInteractionConfirmation.output.error, "confirmation_requires_new_input");
+  assert.equal(sameInteractionConfirmation.state.step, "awaiting_confirmation");
+
+  const confirmed = await definition.executeTool(
+    "confirm_meeting",
+    "{}",
+    prepared.state,
+    CONFIRMATION_INTERACTION,
+  );
 
   assert.deepEqual(
     definition.getTools(confirmed.state).map(({ name }) => name),
     ["book_meeting"],
   );
 
-  const booked = await definition.executeTool("book_meeting", "{}", confirmed.state);
+  const booked = await definition.executeTool(
+    "book_meeting",
+    "{}",
+    confirmed.state,
+    CONFIRMATION_INTERACTION,
+  );
 
   assert.equal(booked.status, "completed");
   assert.equal(booked.output.status, "confirmed");
@@ -159,15 +194,30 @@ test("a persistence retry reconciles one created event without exposing provider
 
   const prepared = await prepareDefinition(definition);
 
-  const confirmed = await definition.executeTool("confirm_meeting", "{}", prepared.state);
+  const confirmed = await definition.executeTool(
+    "confirm_meeting",
+    "{}",
+    prepared.state,
+    CONFIRMATION_INTERACTION,
+  );
 
-  const first = await definition.executeTool("book_meeting", "{}", confirmed.state);
+  const first = await definition.executeTool(
+    "book_meeting",
+    "{}",
+    confirmed.state,
+    CONFIRMATION_INTERACTION,
+  );
 
   assert.equal(first.status, "active");
   assert.equal(first.output.error, "booking_recovery_required");
   assert.equal(first.state.pendingBooking?.googleEventId, "event_internal");
 
-  const second = await definition.executeTool("book_meeting", "{}", first.state);
+  const second = await definition.executeTool(
+    "book_meeting",
+    "{}",
+    first.state,
+    CONFIRMATION_INTERACTION,
+  );
 
   assert.equal(second.status, "completed");
   assert.equal(createEventCalls, 1);
@@ -195,9 +245,19 @@ test("an unavailable confirmed slot forces a fresh availability check", async ()
 
   const prepared = await prepareDefinition(definition);
 
-  const confirmed = await definition.executeTool("confirm_meeting", "{}", prepared.state);
+  const confirmed = await definition.executeTool(
+    "confirm_meeting",
+    "{}",
+    prepared.state,
+    CONFIRMATION_INTERACTION,
+  );
 
-  const result = await definition.executeTool("book_meeting", "{}", confirmed.state);
+  const result = await definition.executeTool(
+    "book_meeting",
+    "{}",
+    confirmed.state,
+    CONFIRMATION_INTERACTION,
+  );
 
   assert.equal(result.status, "active");
   assert.equal(result.output.error, "slot_unavailable");

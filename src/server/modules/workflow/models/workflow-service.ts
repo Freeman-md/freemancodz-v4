@@ -11,6 +11,7 @@ export type WorkflowAssistantContext = {
 export type WorkflowToolCall = {
   name: string;
   rawArguments: string;
+  interactionId: string;
   startContext?: WorkflowStartContext;
 };
 

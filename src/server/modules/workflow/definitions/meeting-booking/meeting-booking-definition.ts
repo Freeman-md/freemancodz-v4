@@ -9,6 +9,7 @@ import {
 } from "@/server/modules/meeting/public";
 import type {
   IWorkflowDefinition,
+  WorkflowExecutionContext,
   WorkflowExecutionResult,
   WorkflowSemanticOutput,
   WorkflowStartContext,
@@ -53,6 +54,7 @@ export class MeetingBookingWorkflowDefinition implements IWorkflowDefinition<Mee
       availableSlots: [],
       availabilityCheckedAt: null,
       selectedSlot: null,
+      preparedInteractionId: null,
       pendingBooking: null,
     };
   }
@@ -91,6 +93,7 @@ export class MeetingBookingWorkflowDefinition implements IWorkflowDefinition<Mee
     name: string,
     rawArguments: string,
     state: MeetingBookingState,
+    context: WorkflowExecutionContext,
   ): Promise<WorkflowExecutionResult<MeetingBookingState>> {
     const args = parseArguments(rawArguments);
 
@@ -110,13 +113,13 @@ export class MeetingBookingWorkflowDefinition implements IWorkflowDefinition<Mee
       const parsed = prepareMeetingSchema.safeParse(args);
 
       return parsed.success
-        ? this.prepareMeeting(parsed.data, state)
+        ? this.prepareMeeting(parsed.data, state, context)
         : active(state, invalidArguments());
     }
 
     if (name === CONFIRM_MEETING_TOOL.name) {
       return noArgumentsSchema.safeParse(args).success
-        ? this.confirmMeeting(state)
+        ? this.confirmMeeting(state, context)
         : active(state, invalidArguments());
     }
 
@@ -156,6 +159,7 @@ export class MeetingBookingWorkflowDefinition implements IWorkflowDefinition<Mee
         availableSlots: slots.map(withLondonTimezone),
         availabilityCheckedAt: new Date().toISOString(),
         selectedSlot: null,
+        preparedInteractionId: null,
       },
       {
         kind: "meeting_slots",
@@ -171,6 +175,7 @@ export class MeetingBookingWorkflowDefinition implements IWorkflowDefinition<Mee
   private prepareMeeting(
     input: PrepareMeetingInput,
     state: MeetingBookingState,
+    context: WorkflowExecutionContext,
   ): WorkflowExecutionResult<MeetingBookingState> {
     if (state.pendingBooking) {
       return active(state, bookingRecoveryOutput());
@@ -193,6 +198,7 @@ export class MeetingBookingWorkflowDefinition implements IWorkflowDefinition<Mee
       email: input.email,
       reason: input.reason,
       selectedSlot: withLondonTimezone(selectedSlot),
+      preparedInteractionId: context.interactionId,
     };
 
     return active(nextState, {
@@ -209,7 +215,10 @@ export class MeetingBookingWorkflowDefinition implements IWorkflowDefinition<Mee
     });
   }
 
-  private confirmMeeting(state: MeetingBookingState): WorkflowExecutionResult<MeetingBookingState> {
+  private confirmMeeting(
+    state: MeetingBookingState,
+    context: WorkflowExecutionContext,
+  ): WorkflowExecutionResult<MeetingBookingState> {
     if (
       state.step !== "awaiting_confirmation" ||
       !state.name ||
@@ -220,6 +229,13 @@ export class MeetingBookingWorkflowDefinition implements IWorkflowDefinition<Mee
       return active(state, {
         error: "preparation_required",
         message: "Prepare a complete booking summary before confirmation.",
+      });
+    }
+
+    if (state.preparedInteractionId === context.interactionId) {
+      return active(state, {
+        error: "confirmation_requires_new_input",
+        message: "Wait for the visitor to explicitly confirm the prepared summary.",
       });
     }
 
@@ -261,6 +277,7 @@ export class MeetingBookingWorkflowDefinition implements IWorkflowDefinition<Mee
           availableSlots: [],
           availabilityCheckedAt: new Date().toISOString(),
           selectedSlot: null,
+          preparedInteractionId: null,
         },
         {
           error: "slot_unavailable",

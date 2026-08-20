@@ -2,6 +2,10 @@ import type { WorkflowJsonObject } from "./workflow-json";
 
 export type WorkflowSemanticOutput = WorkflowJsonObject;
 
+export type WorkflowExecutionContext = {
+  interactionId: string;
+};
+
 export type WorkflowExecutionResult<State extends WorkflowJsonObject> = {
   state: State;
   status: "active" | "completed";

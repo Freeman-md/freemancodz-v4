@@ -1,6 +1,10 @@
 export type { IWorkflowService } from "./interfaces/workflow.service.interface";
 export type { IWorkflowDefinition } from "./interfaces/workflow-definition.interface";
-export type { WorkflowExecutionResult, WorkflowSemanticOutput } from "./models/workflow-definition";
+export type {
+  WorkflowExecutionContext,
+  WorkflowExecutionResult,
+  WorkflowSemanticOutput,
+} from "./models/workflow-definition";
 export { WorkflowDefinitionRegistry } from "./models/workflow-definition-registry";
 export type {
   WorkflowInstance,

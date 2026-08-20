@@ -17,6 +17,7 @@ export const meetingBookingStateSchema = z
     availableSlots: z.array(meetingSlotSchema).max(40),
     availabilityCheckedAt: z.string().datetime().nullable(),
     selectedSlot: meetingSlotSchema.nullable(),
+    preparedInteractionId: z.string().uuid().nullable(),
     pendingBooking: z
       .object({
         googleEventId: z.string().min(1),

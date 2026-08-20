@@ -379,7 +379,9 @@ export class WorkflowService implements IWorkflowService {
     state: WorkflowJsonObject,
   ): Promise<WorkflowExecutionResult<WorkflowJsonObject>> {
     try {
-      return await definition.executeTool(toolCall.name, toolCall.rawArguments, state);
+      return await definition.executeTool(toolCall.name, toolCall.rawArguments, state, {
+        interactionId: toolCall.interactionId,
+      });
     } catch (error) {
       throw new WorkflowServiceError(
         "execution_failed",
@@ -457,6 +459,10 @@ function validateToolCall(toolCall: WorkflowToolCall): void {
 
   if (typeof toolCall.rawArguments !== "string") {
     throw new WorkflowServiceError("invalid_request", "The workflow arguments are invalid.");
+  }
+
+  if (!INSTANCE_ID_PATTERN.test(toolCall.interactionId)) {
+    throw new WorkflowServiceError("invalid_request", "The workflow interaction is invalid.");
   }
 }
 

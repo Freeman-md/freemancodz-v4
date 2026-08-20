@@ -95,6 +95,8 @@ test("assistant client rejects malformed stream events with a safe error", async
 test("assistant client reports non-2xx and provider errors safely", async () => {
   const originalFetch = globalThis.fetch;
 
+  let recoveredWorkflowInstanceId = "";
+
   globalThis.fetch = async () =>
     new Response(JSON.stringify({ error: "Request rejected." }), { status: 429 });
   try {
@@ -110,17 +112,23 @@ test("assistant client reports non-2xx and provider errors safely", async () => 
     );
 
     globalThis.fetch = async () =>
-      streamResponse(['{"type":"error","error":"The assistant could not respond."}\n']);
+      streamResponse([
+        '{"type":"workflow_instance","instance":{"id":"11111111-1111-4111-8111-111111111111","workflowId":"meeting-booking","workflowVersion":1,"status":"active"}}\n',
+        '{"type":"error","error":"The assistant could not respond."}\n',
+      ]);
     await assert.rejects(
       () =>
         streamChatResponse("Hello", null, null, {
           onDelta: () => undefined,
           onResponseId: () => undefined,
           onSources: () => undefined,
-          onWorkflow: () => undefined,
+          onWorkflow: (instance) => {
+            recoveredWorkflowInstanceId = instance.id;
+          },
         }),
       /could not respond/,
     );
+    assert.equal(recoveredWorkflowInstanceId, "11111111-1111-4111-8111-111111111111");
   } finally {
     globalThis.fetch = originalFetch;
   }
