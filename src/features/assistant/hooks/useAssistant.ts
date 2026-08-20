@@ -11,6 +11,7 @@ import {
 import { MAX_MESSAGE_LENGTH } from "../constants";
 import type { ChatMessage } from "../models/chat-message";
 import { activeWorkflowInstanceId } from "../state/active-workflow-instance";
+import type { AssistantWorkflowStart } from "@/contracts/assistant.contract";
 
 const REVEAL_INTERVAL_MS = 16;
 
@@ -89,7 +90,7 @@ export function useAssistant() {
   }, [input, isLoading]);
 
   const submitMessage = useCallback(
-    async (rawMessage: string) => {
+    async (rawMessage: string, workflowStart: AssistantWorkflowStart | null = null) => {
       const message = rawMessage.trim();
 
       if (!message || message.length > MAX_MESSAGE_LENGTH || isLoading) {
@@ -158,41 +159,49 @@ export function useAssistant() {
       setErrorMessage(null);
 
       try {
-        await streamChatResponse(message, previousResponseId, workflowInstanceId, {
-          onDelta(delta) {
-            if (!isMountedRef.current || activeRequestIdRef.current !== requestId) {
-              return;
-            }
+        await streamChatResponse(
+          message,
+          previousResponseId,
+          workflowInstanceId,
+          {
+            onDelta(delta) {
+              if (!isMountedRef.current || activeRequestIdRef.current !== requestId) {
+                return;
+              }
 
-            if (reduceMotionImmediately) {
-              setMessages((current) => appendAssistantDelta(current, assistantMessage.id, delta));
+              if (reduceMotionImmediately) {
+                setMessages((current) => appendAssistantDelta(current, assistantMessage.id, delta));
 
-              return;
-            }
+                return;
+              }
 
-            bufferedTextRef.current += delta;
-            scheduleReveal?.();
+              bufferedTextRef.current += delta;
+              scheduleReveal?.();
+            },
+            onResponseId(responseId) {
+              if (!isMountedRef.current || activeRequestIdRef.current !== requestId) {
+                return;
+              }
+
+              setPreviousResponseId(responseId);
+            },
+            onWorkflow(instance) {
+              if (isMountedRef.current && activeRequestIdRef.current === requestId) {
+                setWorkflowInstanceId(activeWorkflowInstanceId(instance));
+              }
+            },
+            onSources(sources) {
+              if (!isMountedRef.current || activeRequestIdRef.current !== requestId) {
+                return;
+              }
+
+              setMessages((current) =>
+                attachAssistantSources(current, assistantMessage.id, sources),
+              );
+            },
           },
-          onResponseId(responseId) {
-            if (!isMountedRef.current || activeRequestIdRef.current !== requestId) {
-              return;
-            }
-
-            setPreviousResponseId(responseId);
-          },
-          onWorkflow(instance) {
-            if (isMountedRef.current && activeRequestIdRef.current === requestId) {
-              setWorkflowInstanceId(activeWorkflowInstanceId(instance));
-            }
-          },
-          onSources(sources) {
-            if (!isMountedRef.current || activeRequestIdRef.current !== requestId) {
-              return;
-            }
-
-            setMessages((current) => attachAssistantSources(current, assistantMessage.id, sources));
-          },
-        });
+          workflowStart,
+        );
 
         if (!reduceMotionImmediately) {
           await waitForRevealToFinish();

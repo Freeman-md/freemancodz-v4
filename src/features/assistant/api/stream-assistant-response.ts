@@ -1,4 +1,7 @@
-import { assistantStreamEventSchema } from "@/contracts/assistant.contract";
+import {
+  assistantStreamEventSchema,
+  type AssistantWorkflowStart,
+} from "@/contracts/assistant.contract";
 import type { StreamChatResponseHandlers } from "../models/chat-message";
 
 async function getErrorMessage(response: Response) {
@@ -20,13 +23,19 @@ export async function streamChatResponse(
   previousResponseId: string | null,
   workflowInstanceId: string | null,
   handlers: StreamChatResponseHandlers,
+  workflowStart: AssistantWorkflowStart | null = null,
 ) {
   const response = await fetch("/api/chat", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ message, previousResponseId, workflowInstanceId }),
+    body: JSON.stringify({
+      message,
+      previousResponseId,
+      workflowInstanceId,
+      ...(workflowStart ? { workflowStart } : {}),
+    }),
   });
 
   if (!response.ok) {

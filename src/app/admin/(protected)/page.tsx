@@ -8,6 +8,7 @@ import {
 } from "@/shared/components/ui/Card";
 
 const areas = [
+  ["Audit requests", "Review submitted customer journey and workflow audits.", "/admin/audits"],
   ["Pages", "Edit the semantic sections used by Home, Work, About and Audit.", "/admin/pages/home"],
   ["Profile", "Maintain the singleton profile and its ordered icon collections.", "/admin/profile"],
   [

@@ -32,6 +32,7 @@ export type SaveWorkflowInstanceInput = {
 };
 
 export type WorkflowExecutionContext = {
+  workflowInstanceId: string;
   interactionId: string;
 };
 

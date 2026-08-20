@@ -4,11 +4,13 @@ const MAX_MESSAGE_LENGTH = 500;
 
 export const assistantTriggerEvent = "portfolio-chat:open";
 
-const sourceSchema = z.object({
-  id: z.string(),
-  title: z.string(),
-  url: z.string(),
-}).strict();
+const sourceSchema = z
+  .object({
+    id: z.string(),
+    title: z.string(),
+    url: z.string(),
+  })
+  .strict();
 
 const workflowInstanceSchema = z
   .object({
@@ -19,11 +21,20 @@ const workflowInstanceSchema = z
   })
   .strict();
 
+const auditWorkflowStartSchema = z
+  .object({
+    workflowId: z.literal("audit"),
+    originPage: z.literal("/audit"),
+    originEntry: z.enum(["audit-hero-cta", "audit-footer-cta", "audit-navbar-cta"]),
+  })
+  .strict();
+
 export const assistantRequestSchema = z
   .object({
     message: z.string().trim().min(1, "Message is required.").max(MAX_MESSAGE_LENGTH),
     previousResponseId: z.string().nullable().optional().transform(normalizePreviousResponseId),
     workflowInstanceId: z.string().uuid().nullable().optional(),
+    workflowStart: auditWorkflowStartSchema.nullable().optional(),
   })
   .strict();
 
@@ -53,12 +64,16 @@ export const assistantStreamEventSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("error"), error: z.string() }).strict(),
 ]);
 
-export const assistantTriggerDetailSchema = z.object({
-  message: z.string().trim().min(1).max(MAX_MESSAGE_LENGTH).optional(),
-});
+export const assistantTriggerDetailSchema = z
+  .object({
+    message: z.string().trim().min(1).max(MAX_MESSAGE_LENGTH).optional(),
+    workflowStart: auditWorkflowStartSchema.optional(),
+  })
+  .strict();
 
 export type AssistantRequest = z.infer<typeof assistantRequestSchema>;
 export type AssistantStreamEvent = z.infer<typeof assistantStreamEventSchema>;
 export type AssistantSource = z.infer<typeof sourceSchema>;
 export type AssistantTriggerDetail = z.infer<typeof assistantTriggerDetailSchema>;
+export type AssistantWorkflowStart = z.infer<typeof auditWorkflowStartSchema>;
 export type WorkflowPublicInstance = z.infer<typeof workflowInstanceSchema>;

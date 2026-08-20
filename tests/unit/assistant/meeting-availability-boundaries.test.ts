@@ -34,14 +34,20 @@ test("today is accepted while a wholly past availability range is rejected", asy
     "find_meeting_slots",
     JSON.stringify({ startDate: today, endDate: today }),
     state,
-    { interactionId: "33333333-3333-4333-8333-333333333333" },
+    {
+      workflowInstanceId: "11111111-1111-4111-8111-111111111111",
+      interactionId: "33333333-3333-4333-8333-333333333333",
+    },
   );
 
   const past = await workflow.executeTool(
     "find_meeting_slots",
     JSON.stringify({ startDate: "2020-01-01", endDate: "2020-01-01" }),
     state,
-    { interactionId: "33333333-3333-4333-8333-333333333333" },
+    {
+      workflowInstanceId: "11111111-1111-4111-8111-111111111111",
+      interactionId: "33333333-3333-4333-8333-333333333333",
+    },
   );
 
   assert.equal(sameDay.output.kind, "meeting_slots");

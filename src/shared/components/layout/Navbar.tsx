@@ -84,6 +84,11 @@ export function Navbar({ linkedInUrl }: { linkedInUrl: string }) {
                       detail: {
                         message:
                           "I would like to claim my free customer journey and workflow audit.",
+                        workflowStart: {
+                          workflowId: "audit",
+                          originPage: "/audit",
+                          originEntry: "audit-navbar-cta",
+                        },
                       },
                     }),
                   );
