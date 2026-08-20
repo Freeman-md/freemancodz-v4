@@ -3,12 +3,13 @@
 This is a Next.js App Router portfolio. The current pages remain component-driven while the portfolio content backend is stored in PostgreSQL through Prisma. The floating assistant streams answers from OpenAI and retrieves evidence from a database-driven snapshot of the current portfolio.
 
 See [Portfolio Content System](docs/portfolio-content-system.md) for the completed content architecture, admin, authentication, caching, media and operations guide.
+See [Workflow Foundation](docs/workflow-foundation.md) for versioned workflow definitions, durable private instances, assistant integration, the meeting-booking migration, and extension guidance.
 
 ## Structure
 
 - `src/app` contains routes, pages, layouts, and thin HTTP adapters.
 - `src/features` owns browser-facing assistant and portfolio UI; client interactions use feature API adapters.
-- `src/server/modules` owns portfolio, assistant, and search-index use cases. Pages, routes, and other modules import only a module's `public.ts` API.
+- `src/server/modules` owns portfolio, assistant, workflow, Meeting, and search-index capabilities. Pages, routes, and other modules import only a module's `public.ts` API.
 - `src/server/infrastructure` owns Prisma, environment, OpenAI, and logging configuration; `src/server/entrypoints` owns one-shot job and maintenance adapters.
 - `src/shared` contains domain-free layout, UI primitives, configuration, and utilities. `src/contracts` owns runtime-validated HTTP and stream shapes.
 - `prisma/portfolio-seed-data.ts` is the canonical one-time bootstrap input transcribed from the approved Notion artifacts; runtime content comes from the database.
@@ -25,7 +26,7 @@ npm run prisma:generate
 npm run dev
 ```
 
-Provide `DATABASE_URL` for Prisma. Portfolio storage requires `NEXT_PUBLIC_SUPABASE_URL` and the server-only Supabase secret documented in `.env.example`. Bootstrap creates or verifies the public `portfolio-media` bucket but does not require or upload local media files; media can be added later through the protected admin. `NEXT_PUBLIC_SUPABASE_URL` must be a valid HTTP(S) project URL outside local development; only an explicit development runtime may fall back to local Supabase. Assistant and indexing operations additionally require `OPENAI_API_KEY` and `OPENAI_EMBEDDING_MODEL`. The deployed daily worker requires `CRON_SECRET`.
+Provide `DATABASE_URL` for Prisma. Portfolio storage requires `NEXT_PUBLIC_SUPABASE_URL` and the server-only Supabase secret documented in `.env.example`. Bootstrap creates or verifies the public `portfolio-media` bucket but does not require or upload local media files; media can be added later through the protected admin. `NEXT_PUBLIC_SUPABASE_URL` must be a valid HTTP(S) project URL outside local development; only an explicit development runtime may fall back to local Supabase. Assistant and indexing operations additionally require `OPENAI_API_KEY` and `OPENAI_EMBEDDING_MODEL`; meeting booking requires the documented Google Calendar configuration. Workflow state is durable in PostgreSQL and needs no browser-state encryption configuration. The deployed daily worker requires `CRON_SECRET`.
 
 Prisma migrations in `prisma/migrations` are the only migration source of truth. The Supabase JavaScript client is server-only and used solely for the public `portfolio-media` Object Storage bucket.
 
@@ -94,10 +95,12 @@ npm run prisma:generate
 npm run lint
 npm run typecheck
 npm test
+npm run test:workflow
+npm run test:portfolio:database
 npm run test:search-index
 npm run build
 ```
 
 ## Testing
 
-Automate critical flows, agreed failures, and regressions that have occurred; use manual checks when they are clearer, and do not pursue a coverage percentage target. `npm run test:unit` runs focused deterministic units, `npm run test:integration` runs deterministic assistant flows using fakes, and `npm test` runs both. `npm run test:search-index` runs the indexing units and runs the disposable PostgreSQL suite when `PORTFOLIO_TEST_DATABASE_URL` is configured; a skipped database suite is not evidence of trigger or transaction correctness. `npm run eval:assistant` is an explicit live OpenAI evaluation with the stable fixture and rubric in `tests/evals/assistant`; it is intentionally excluded from normal tests and CI.
+Automate critical flows, agreed failures, and regressions that have occurred; use manual checks when they are clearer, and do not pursue a coverage percentage target. `npm run test:unit` runs focused deterministic units, `npm run test:integration` runs deterministic assistant flows using fakes plus conditionally configured database suites, and `npm test` runs both. `npm run test:workflow` covers definition, registry, lifecycle, adapter, meeting, migration, security, and repository behaviour; its disposable PostgreSQL case runs only when `PORTFOLIO_TEST_DATABASE_URL` is configured. `npm run test:search-index` uses the same disposable-server setting for its database suite. A skipped database suite is not evidence of database correctness. `npm run eval:assistant` is an explicit live OpenAI evaluation with the stable fixture and rubric in `tests/evals/assistant`; it is intentionally excluded from normal tests and CI.

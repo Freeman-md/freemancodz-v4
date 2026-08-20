@@ -1,5 +1,5 @@
 import "server-only";
-import type { MeetingSlot } from "@/contracts/assistant.contract";
+import type { MeetingSlot } from "../models/meeting-slot";
 import type { IGoogleCalendarProvider } from "@/server/infrastructure/google-calendar/interfaces/google-calendar.provider.interface";
 import type { ILogger } from "@/server/infrastructure/logging/logger.interface";
 import { MEETING_CONFIG } from "../meeting.config";
@@ -88,9 +88,7 @@ export class MeetingService implements IMeetingService {
       endsAt: new Date(input.slot.end),
       status: "confirmed",
       googleEventUrl: input.pendingEvent.googleEventUrl,
-      rawProviderPayload: JSON.parse(
-        JSON.stringify(input.pendingEvent.rawProviderPayload),
-      ) as import("@/generated/prisma/client").Prisma.InputJsonObject,
+      rawProviderPayload: input.pendingEvent.rawProviderPayload,
     };
 
     try {

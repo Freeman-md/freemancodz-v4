@@ -68,7 +68,7 @@ export class GoogleCalendarProvider implements IGoogleCalendarProvider {
         htmlLink: response.data.htmlLink ?? null,
         payload: JSON.parse(
           JSON.stringify(response.data),
-        ) as import("@/generated/prisma/client").Prisma.InputJsonObject,
+        ) as import("@/generated/prisma/client").Prisma.JsonObject,
       };
     } catch (error) {
       throw new Error("Google Calendar event creation failed.", { cause: error });

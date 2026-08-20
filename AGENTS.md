@@ -34,6 +34,7 @@ The complete architecture and naming standard lives only in `.agents/skills/next
 
 ## Clean-code rules
 
+- Prefer existing code and generated types; add a type, helper, wrapper, or file only when it owns a concrete responsibility that cannot be represented more simply.
 - Prefer obvious code over clever code.
 - Give each file one coherent reason to change. Treat file length as a warning signal, not a target to game with meaningless fragments.
 - Keep a private helper in the same file when it has one consumer and does not obscure the main flow.

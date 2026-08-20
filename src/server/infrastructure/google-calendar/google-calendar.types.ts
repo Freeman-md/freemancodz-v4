@@ -3,5 +3,5 @@ import type { Prisma } from "@/generated/prisma/client";
 export type CreatedCalendarEvent = {
   id: string;
   htmlLink: string | null;
-  payload: Prisma.InputJsonObject;
+  payload: Prisma.JsonObject;
 };

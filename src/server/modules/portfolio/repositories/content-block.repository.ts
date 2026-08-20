@@ -89,7 +89,11 @@ export class ContentBlockRepository implements IContentBlockAdministrationReposi
       await transaction.contentBlockChild.deleteMany({ where: { parentId: id } });
       if (children.length > 0) {
         await transaction.contentBlockChild.createMany({
-          data: children.map(({ id: childId, order }) => ({ parentId: id, childId, order })),
+          data: children.map(({ id: childId, order }) => ({
+            parentId: id,
+            childId,
+            order: order + 1,
+          })),
         });
       }
     });
@@ -120,7 +124,7 @@ export class ContentBlockRepository implements IContentBlockAdministrationReposi
             data: items.map(({ id: iconBlockId, order }) => ({
               contentBlockId,
               iconBlockId,
-              order,
+              order: order + 1,
             })),
           });
         }
@@ -135,7 +139,7 @@ export class ContentBlockRepository implements IContentBlockAdministrationReposi
             data: items.map(({ id: mediaBlockId, order }) => ({
               contentBlockId,
               mediaBlockId,
-              order,
+              order: order + 1,
             })),
           });
         }
@@ -149,7 +153,7 @@ export class ContentBlockRepository implements IContentBlockAdministrationReposi
           data: items.map(({ id: actionBlockId, order }) => ({
             contentBlockId,
             actionBlockId,
-            order,
+            order: order + 1,
           })),
         });
       }

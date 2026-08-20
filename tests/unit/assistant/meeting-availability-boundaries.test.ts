@@ -1,14 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { findMeetingSlots } from "@/server/modules/assistant/tools/find-meeting-slots.tool";
-import { WorkflowService } from "@/server/modules/assistant/services/workflow.service";
 import type { IGoogleCalendarProvider } from "@/server/infrastructure/google-calendar/interfaces/google-calendar.provider.interface";
 import type { IMeetingRepository } from "@/server/modules/meeting/interfaces/meeting.repository.interface";
 import { MeetingService } from "@/server/modules/meeting/services/meeting.service";
+import { MeetingBookingWorkflowDefinition } from "@/server/modules/workflow/definitions/meeting-booking/meeting-booking.definition";
 
 test("today is accepted while a wholly past availability range is rejected", async () => {
-  const workflow = new WorkflowService(() => "test-secret");
-
   const today = new Intl.DateTimeFormat("en-CA", {
     timeZone: "Europe/London",
     year: "numeric",
@@ -25,17 +22,29 @@ test("today is accepted while a wholly past availability range is rejected", asy
     reconcileMeeting: async () => ({ googleEventId: "event", googleEventUrl: null }),
   };
 
-  const sameDay = await findMeetingSlots(
-    { startDate: today, endDate: today },
-    { workflow, meetingService: service, state: workflow.reset() },
+  const workflow = new MeetingBookingWorkflowDefinition(service);
+
+  const state = workflow.createInitialState({
+    originChannel: "test",
+    originPage: null,
+    originEntry: null,
+  });
+
+  const sameDay = await workflow.executeTool(
+    "find_meeting_slots",
+    JSON.stringify({ startDate: today, endDate: today }),
+    state,
+    { interactionId: "33333333-3333-4333-8333-333333333333" },
   );
 
-  const past = await findMeetingSlots(
-    { startDate: "2020-01-01", endDate: "2020-01-01" },
-    { workflow, meetingService: service, state: workflow.reset() },
+  const past = await workflow.executeTool(
+    "find_meeting_slots",
+    JSON.stringify({ startDate: "2020-01-01", endDate: "2020-01-01" }),
+    state,
+    { interactionId: "33333333-3333-4333-8333-333333333333" },
   );
 
-  assert.equal("kind" in sameDay.output && sameDay.output.kind, "meeting_slots");
+  assert.equal(sameDay.output.kind, "meeting_slots");
   assert.equal(past.output.error, "invalid_date_range");
 });
 
