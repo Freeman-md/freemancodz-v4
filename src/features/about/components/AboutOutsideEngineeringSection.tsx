@@ -41,22 +41,20 @@ export function AboutOutsideEngineeringSection({
   return (
     <section aria-labelledby="about-outside-heading" className="py-20 sm:py-28" id="about-outside">
       <Container>
-        <div className="lg:grid lg:grid-cols-[minmax(0,0.7fr)_minmax(32rem,1.3fr)] lg:items-center lg:gap-16 xl:gap-24">
-          <div className="flex flex-col justify-center">
-            <MarketingSectionHeading
-              align="left"
-              copy={<p>{outsideEngineering.copy}</p>}
-              eyebrow={outsideEngineering.eyebrow}
-              id="about-outside-heading"
-              title={outsideEngineering.title}
-            />
-          </div>
+        <div className="max-w-3xl">
+          <MarketingSectionHeading
+            align="left"
+            copy={<p>{outsideEngineering.copy}</p>}
+            eyebrow={outsideEngineering.eyebrow}
+            id="about-outside-heading"
+            title={outsideEngineering.title}
+          />
+        </div>
 
-          <div className="mt-12 grid grid-cols-2 gap-x-4 gap-y-6 sm:gap-x-6 sm:gap-y-8 lg:mt-0 lg:grid-cols-4">
-            {outsideEngineering.media.map((interest, index) => (
-              <InterestCard index={index} interest={interest} key={interest.label} />
-            ))}
-          </div>
+        <div className="mt-12 grid grid-cols-2 gap-x-4 gap-y-6 sm:mt-16 sm:gap-x-6 sm:gap-y-8 lg:grid-cols-4">
+          {outsideEngineering.media.map((interest, index) => (
+            <InterestCard index={index} interest={interest} key={interest.label} />
+          ))}
         </div>
       </Container>
     </section>
