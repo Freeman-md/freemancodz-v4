@@ -7,6 +7,11 @@ import type { IOpenAIProvider } from "@/server/infrastructure/openai/interfaces/
 import type { OpenAIResponseRequest } from "@/server/infrastructure/openai/models/openai-response-request";
 import type { ISiteSearchService, SiteSearchResult } from "@/server/modules/search-index/public";
 import { AssistantService } from "@/server/modules/assistant/services/assistant.service";
+import type {
+  ConsumeRateLimitInput,
+  IRateLimitService,
+  RateLimitResult,
+} from "@/server/modules/rate-limit/public";
 import type { IWorkflowInstanceRepository } from "@/server/modules/workflow/interfaces/workflow-instance.repository.interface";
 import type { WorkflowInstance } from "@/generated/prisma/client";
 import { MeetingBookingWorkflowDefinition } from "@/server/modules/workflow/definitions/meeting-booking/meeting-booking.definition";
@@ -67,12 +72,16 @@ function createAssistant({
       { type: "response.output_text.delta", delta: "A grounded answer." },
       { type: "response.completed", response: { id: "resp_current" } },
     ),
+  rateLimit,
 }: {
   chunks?: SiteSearchResult[];
   embedding?: IOpenAIProvider["createEmbedding"];
   response?: (request: OpenAIResponseRequest) => ReturnType<IOpenAIProvider["streamResponse"]>;
+  rateLimit?: IRateLimitService;
 } = {}) {
   const inputs: OpenAIResponseRequest[] = [];
+
+  const rateLimitInputs: ConsumeRateLimitInput[] = [];
 
   const errors: Array<{ message: string; context: unknown }> = [];
 
@@ -123,11 +132,20 @@ function createAssistant({
 
   const assistantService = new AssistantService(openai, siteSearch, logger, workflowService);
 
+  const rateLimitService: IRateLimitService = rateLimit ?? {
+    consume: async (input) => {
+      rateLimitInputs.push(input);
+
+      return { allowed: true };
+    },
+  };
+
   return {
     errors,
     inputs,
     meetingService,
-    post: createChatPostHandler({ assistantService }),
+    post: createChatPostHandler({ assistantService, rateLimitService, logger }),
+    rateLimitInputs,
     workflowRepository,
     workflowService,
   };
@@ -150,8 +168,8 @@ async function readChatResponse(response: Response) {
   return read(response.body);
 }
 
-test("conversational response streams without mandatory retrieval", async () => {
-  const { inputs, post } = createAssistant();
+test("allowed chat requests consume the configured rules and stream without mandatory retrieval", async () => {
+  const { inputs, post, rateLimitInputs } = createAssistant();
 
   const output = await readChatResponse(
     await post(
@@ -164,6 +182,16 @@ test("conversational response streams without mandatory retrieval", async () => 
 
   assert.equal(inputs[0]?.input.length, 1);
   assert.equal(inputs[0]?.previousResponseId, null);
+  assert.deepEqual(rateLimitInputs, [
+    {
+      scope: "chat",
+      identifier: "test-client",
+      rules: [
+        { id: "short", limit: 10, windowMs: 10 * 60 * 1000 },
+        { id: "daily", limit: 30, windowMs: 24 * 60 * 60 * 1000 },
+      ],
+    },
+  ]);
   assert.match(output, /A grounded answer\./);
   assert.match(output, /"sources":\[\]/);
   assert.match(output, /resp_current/);
@@ -592,14 +620,17 @@ test("invalid public request returns the current safe validation response", asyn
   assert.deepEqual(await response.json(), { error: "Message is required." });
 });
 
-test("rate-limited request receives the current limit response", async () => {
-  const { post } = createAssistant();
+test("denied chat requests return the current limit response without invoking the assistant", async () => {
+  const rateLimit: IRateLimitService = {
+    consume: async (): Promise<RateLimitResult> => ({
+      allowed: false,
+      limit: 10,
+      remaining: 0,
+      resetAt: Date.now() + 60_000,
+    }),
+  };
 
-  for (let attempt = 0; attempt < 10; attempt += 1) {
-    const response = await post(chatRequest({ message: "What has Freeman built?" }));
-
-    assert.equal(response.status, 200);
-  }
+  const { inputs, post } = createAssistant({ rateLimit });
 
   const response = await post(chatRequest({ message: "What has Freeman built?" }));
 
@@ -610,6 +641,31 @@ test("rate-limited request receives the current limit response", async () => {
   assert.equal(response.headers.get("X-RateLimit-Limit"), "10");
   assert.equal(response.headers.get("X-RateLimit-Remaining"), "0");
   assert.ok(Number(response.headers.get("Retry-After")) >= 1);
+  assert.equal(inputs.length, 0);
+});
+
+test("rate-limit failures return a generic unavailable response without invoking the assistant", async () => {
+  const rateLimit: IRateLimitService = {
+    consume: async () => {
+      throw new Error("database unavailable");
+    },
+  };
+
+  const { errors, inputs, post } = createAssistant({ rateLimit });
+
+  const response = await post(chatRequest({ message: "What has Freeman built?" }));
+
+  assert.equal(response.status, 503);
+  assert.deepEqual(await response.json(), {
+    error: "Service temporarily unavailable. Please try again later.",
+  });
+  assert.equal(inputs.length, 0);
+  assert.deepEqual(errors, [
+    {
+      message: "chat.rate_limit_failed",
+      context: { category: "rate_limit_failure", scope: "chat" },
+    },
+  ]);
 });
 
 class MemoryWorkflowInstanceRepository implements IWorkflowInstanceRepository {

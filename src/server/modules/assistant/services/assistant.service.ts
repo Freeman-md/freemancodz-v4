@@ -1,15 +1,7 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
-import {
-  DAILY_RATE_LIMIT_MAX,
-  DAILY_RATE_LIMIT_WINDOW_MS,
-  FALLBACK_ANSWER,
-  MAX_TOOL_CALL_ITERATIONS,
-  SHORT_RATE_LIMIT_MAX,
-  SHORT_RATE_LIMIT_WINDOW_MS,
-} from "../assistant.constants";
+import { FALLBACK_ANSWER, MAX_TOOL_CALL_ITERATIONS } from "../assistant.constants";
 import type {
-  AssistantRateLimitResult,
   AssistantResponseInput,
   IAssistantService,
 } from "../interfaces/assistant.service.interface";
@@ -28,64 +20,14 @@ import {
   type WorkflowAssistantContext,
   type WorkflowPublicInstance,
 } from "@/server/modules/workflow/public";
-type WindowCounter = { count: number; resetAt: number };
 
 export class AssistantService implements IAssistantService {
-  private readonly shortCounters = new Map<string, WindowCounter>();
-
-  private readonly dailyCounters = new Map<string, WindowCounter>();
-
   constructor(
     private readonly openai: IOpenAIProvider,
     private readonly siteSearch: ISiteSearchService,
     private readonly logger: ILogger,
     private readonly workflow: IWorkflowService,
   ) {}
-
-  checkRateLimit(clientIdentifier: string): AssistantRateLimitResult {
-    const now = Date.now();
-
-    this.prune(this.shortCounters, now);
-    this.prune(this.dailyCounters, now);
-    const short = this.counter(
-      this.shortCounters,
-      clientIdentifier,
-      now,
-      SHORT_RATE_LIMIT_WINDOW_MS,
-    );
-
-    const daily = this.counter(
-      this.dailyCounters,
-      clientIdentifier,
-      now,
-      DAILY_RATE_LIMIT_WINDOW_MS,
-    );
-
-    if (short.count >= SHORT_RATE_LIMIT_MAX) {
-      return {
-        allowed: false,
-        error: "Too many messages. Please try again in a few minutes.",
-        limit: SHORT_RATE_LIMIT_MAX,
-        remaining: 0,
-        resetAt: short.resetAt,
-      };
-    }
-
-    if (daily.count >= DAILY_RATE_LIMIT_MAX) {
-      return {
-        allowed: false,
-        error: "Daily message limit reached. Please try again later.",
-        limit: DAILY_RATE_LIMIT_MAX,
-        remaining: 0,
-        resetAt: daily.resetAt,
-      };
-    }
-
-    short.count += 1;
-    daily.count += 1;
-
-    return { allowed: true };
-  }
 
   createResponse({
     message,
@@ -259,33 +201,6 @@ export class AssistantService implements IAssistantService {
         }
       },
     });
-  }
-
-  private counter(
-    counters: Map<string, WindowCounter>,
-    key: string,
-    now: number,
-    windowMs: number,
-  ) {
-    const current = counters.get(key);
-
-    if (current && current.resetAt > now) {
-      return current;
-    }
-
-    const next = { count: 0, resetAt: now + windowMs };
-
-    counters.set(key, next);
-
-    return next;
-  }
-
-  private prune(counters: Map<string, WindowCounter>, now: number) {
-    for (const [key, counter] of counters) {
-      if (counter.resetAt <= now) {
-        counters.delete(key);
-      }
-    }
   }
 
   private async executeToolCalls(

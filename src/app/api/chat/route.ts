@@ -1,12 +1,48 @@
 import { NextResponse } from "next/server";
 
 import { assistantRequestSchema } from "@/contracts/assistant.contract";
+import type { ILogger } from "@/server/infrastructure/logging/logger.interface";
 import type { IAssistantService } from "@/server/modules/assistant/public";
+import type { IRateLimitService, RateLimitRule } from "@/server/modules/rate-limit/public";
+
+const CHAT_RATE_LIMIT_SCOPE = "chat";
+
+const CHAT_RATE_LIMIT_RULES = [
+  {
+    id: "short",
+    limit: 10,
+    windowMs: 10 * 60 * 1000,
+  },
+  {
+    id: "daily",
+    limit: 30,
+    windowMs: 24 * 60 * 60 * 1000,
+  },
+] as const satisfies readonly RateLimitRule[];
+
+function getVisitorIdentifier(request: Request) {
+  return (
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    request.headers.get("x-real-ip")?.trim() ||
+    request.headers.get("cf-connecting-ip")?.trim() ||
+    "anonymous"
+  );
+}
+
+function rateLimitError(limit: number) {
+  return limit === CHAT_RATE_LIMIT_RULES[0].limit
+    ? "Too many messages. Please try again in a few minutes."
+    : "Daily message limit reached. Please try again later.";
+}
 
 export function createChatPostHandler({
   assistantService,
+  rateLimitService,
+  logger,
 }: {
   assistantService: IAssistantService;
+  rateLimitService: IRateLimitService;
+  logger: ILogger;
 }) {
   return async function POST(request: Request) {
     let payload: unknown;
@@ -26,16 +62,29 @@ export function createChatPostHandler({
       );
     }
 
-    const rateLimit = assistantService.checkRateLimit(
-      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-        request.headers.get("x-real-ip")?.trim() ||
-        request.headers.get("cf-connecting-ip")?.trim() ||
-        "anonymous",
-    );
+    let rateLimit;
+
+    try {
+      rateLimit = await rateLimitService.consume({
+        scope: CHAT_RATE_LIMIT_SCOPE,
+        identifier: getVisitorIdentifier(request),
+        rules: CHAT_RATE_LIMIT_RULES,
+      });
+    } catch {
+      logger.error("chat.rate_limit_failed", {
+        category: "rate_limit_failure",
+        scope: CHAT_RATE_LIMIT_SCOPE,
+      });
+
+      return NextResponse.json(
+        { error: "Service temporarily unavailable. Please try again later." },
+        { status: 503 },
+      );
+    }
 
     if (!rateLimit.allowed) {
       return NextResponse.json(
-        { error: rateLimit.error },
+        { error: rateLimitError(rateLimit.limit) },
         {
           status: 429,
           headers: {
@@ -68,7 +117,7 @@ export function createChatPostHandler({
 }
 
 export async function POST(request: Request) {
-  const { assistantService } = await import("@/server/composition-root");
+  const { assistantService, logger, rateLimitService } = await import("@/server/composition-root");
 
-  return createChatPostHandler({ assistantService })(request);
+  return createChatPostHandler({ assistantService, rateLimitService, logger })(request);
 }

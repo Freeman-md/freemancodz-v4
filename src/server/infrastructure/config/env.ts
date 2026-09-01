@@ -1,6 +1,6 @@
 import "server-only";
 
-type RequiredEnvName = "DATABASE_URL" | "OPENAI_API_KEY";
+type RequiredEnvName = "DATABASE_URL" | "OPENAI_API_KEY" | "RATE_LIMIT_HMAC_SECRET";
 
 function requireEnv(name: RequiredEnvName) {
   const value = process.env[name];
@@ -22,6 +22,10 @@ export function getOpenAIConfig() {
     embeddingModel: process.env.OPENAI_EMBEDDING_MODEL || "text-embedding-3-small",
     responseModel: process.env.OPENAI_MODEL || "gpt-4.1-mini",
   };
+}
+
+export function getRateLimitHmacSecret() {
+  return requireEnv("RATE_LIMIT_HMAC_SECRET");
 }
 
 export function getCronSecret() {

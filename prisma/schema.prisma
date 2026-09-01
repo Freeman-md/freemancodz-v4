@@ -96,6 +96,18 @@ model AuditRequest {
   @@map("audit_requests")
 }
 
+model RateLimit {
+  scope     String
+  keyHash   String   @map("key_hash")
+  ruleId    String   @map("rule_id")
+  count     Int      @default(0)
+  resetAt   DateTime @map("reset_at") @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@id([scope, keyHash, ruleId])
+  @@map("rate_limits")
+}
+
 enum ProfileIconCollection {
   AUDIENCE            @map("audience")
   PRINCIPLES          @map("principles")
