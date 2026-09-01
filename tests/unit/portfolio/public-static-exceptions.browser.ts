@@ -3,7 +3,6 @@ import test from "node:test";
 import { isValidElement, type ReactElement, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { AboutJourneySection } from "@/features/about/components/AboutJourneySection";
-import { AboutProductThinkingSection } from "@/features/about/components/AboutProductThinkingSection";
 import { AboutWorkProcessSection } from "@/features/about/components/AboutWorkProcessSection";
 import { AuditFooterCta } from "@/features/audit/components/AuditFooterCta";
 import { AuditHero } from "@/features/audit/components/AuditHero";
@@ -77,7 +76,6 @@ const aboutProfile: AboutPresentationData["profile"] = {
   positioning: "Products and workflows",
   coverImage: null,
   principles: [],
-  thinkingPrinciples: [],
   processPrinciples: [],
   controlPrinciples: [],
 };
@@ -230,18 +228,7 @@ test("Home and Work preserve their mapped static presentation beside dynamic con
   assert.match(workText, /Different projects\. One consistent focus/);
 });
 
-test("About preserves mapped static rails and feedback beside dynamic content", () => {
-  const thinkingText = collectText(
-    AboutProductThinkingSection({
-      profile: aboutProfile,
-      thinking: {
-        ...section("Dynamic thinking"),
-        customer: section("Dynamic customer"),
-        workflow: section("Dynamic workflow"),
-      },
-    }),
-  );
-
+test("About preserves dynamic journey content and work-process feedback", () => {
   const journeyText = collectText(
     AboutJourneySection({
       experiences: [],
@@ -256,9 +243,8 @@ test("About preserves mapped static rails and feedback beside dynamic content", 
     }),
   );
 
-  assert.match(thinkingText, /Dynamic thinking/);
-  assert.match(thinkingText, /Customer action\s+Clear handoff\s+Reliable response/);
-  assert.match(journeyText, /Product\s+→\s+Operations\s+→\s+Systems\s+→\s+Current focus/);
+  assert.match(journeyText, /Dynamic journey/);
+  assert.doesNotMatch(journeyText, /Product\s+→\s+Operations\s+→\s+Systems\s+→\s+Current focus/);
   assert.match(processText, /Learn from production/);
 });
 

@@ -110,17 +110,12 @@ export type AboutPresentationData = {
     positioning: string;
     coverImage: string | null;
     principles: PortfolioIcon[];
-    thinkingPrinciples: PortfolioIcon[];
     processPrinciples: PortfolioIcon[];
     controlPrinciples: PortfolioIcon[];
   };
-  hero: PortfolioSection & { customer: PortfolioSection; system: PortfolioSection };
+  hero: PortfolioSection;
   journey: PortfolioSection;
   experiences: PortfolioExperience[];
-  thinking: PortfolioSection & {
-    customer: PortfolioSection;
-    workflow: PortfolioSection;
-  };
   process: PortfolioSection;
   exploration: PortfolioSection;
   outsideEngineering: PortfolioSection;

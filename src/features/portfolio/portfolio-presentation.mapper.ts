@@ -184,8 +184,6 @@ export function createAboutPresentationData(source: {
 }): AboutPresentationData {
   const hero = rootAt(source.contentBlocks, "/about");
 
-  const thinking = rootAt(source.contentBlocks, "/about#about-thinking");
-
   const closing = rootAt(source.contentBlocks, "/about#about-cta");
 
   return {
@@ -195,22 +193,12 @@ export function createAboutPresentationData(source: {
       positioning: source.profile.positioning,
       coverImage: source.profile.coverImage,
       principles: collection(source.profile, "PRINCIPLES"),
-      thinkingPrinciples: collection(source.profile, "THINKING_PRINCIPLES"),
       processPrinciples: collection(source.profile, "PROCESS_PRINCIPLES"),
       controlPrinciples: collection(source.profile, "CONTROL_PRINCIPLES"),
     },
-    hero: {
-      ...section(hero),
-      customer: section(childAt(hero, 1)),
-      system: section(childAt(hero, 2)),
-    },
+    hero: section(hero),
     journey: section(rootAt(source.contentBlocks, "/about#about-journey")),
     experiences: byOrder(source.experiences).map(experience),
-    thinking: {
-      ...section(thinking),
-      customer: section(childAt(thinking, 1)),
-      workflow: section(childAt(thinking, 2)),
-    },
     process: section(rootAt(source.contentBlocks, "/about#about-work")),
     exploration: section(rootAt(source.contentBlocks, "/about#about-explore")),
     outsideEngineering: section(rootAt(source.contentBlocks, "/about#about-outside")),

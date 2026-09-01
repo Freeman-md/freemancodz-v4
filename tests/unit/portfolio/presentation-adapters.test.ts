@@ -88,15 +88,9 @@ const projects: PortfolioProjectSource[] = projectSlugs.map((slug) => ({
 test("page adapters use URL and hierarchy identities instead of root array position", () => {
   const homeBlocks = [
     block("/#home-cta", "Closing"),
-    block("/#home-audit", "Audit", [
-      block("/shared", "Problem"),
-      block("/shared", "Improvement"),
-    ]),
+    block("/#home-audit", "Audit", [block("/shared", "Problem"), block("/shared", "Improvement")]),
     block("/#home-work", "Relevant"),
-    block("/#home-improve", "Improve", [
-      block("/shared", "Journey"),
-      block("/shared", "Workflow"),
-    ]),
+    block("/#home-improve", "Improve", [block("/shared", "Journey"), block("/shared", "Workflow")]),
     block("/", "Hero"),
   ];
 
@@ -135,19 +129,9 @@ test("page adapters use URL and hierarchy identities instead of root array posit
   assert.equal(work.hero.approach.title, "Approach");
   assert.equal(work.projects.selfHealing.title, "self-healing-backend-operations-system");
 
-  const aboutHero = block("/about", "About hero", [
-    block("/about", "Customer"),
-    block("/about", "System"),
-  ]);
+  const aboutHero = block("/about", "About hero");
 
-  const thinking = block("/about#about-thinking", "Thinking", [
-    block("/about#about-thinking", "Customer"),
-    block("/about#about-thinking", "Workflow"),
-  ]);
-
-  const closing = block("/about#about-cta", "Closing", [
-    block("/about#about-cta", "Work"),
-  ]);
+  const closing = block("/about#about-cta", "Closing", [block("/about#about-cta", "Work")]);
 
   const experiences: PortfolioExperienceSource[] = ["Pay4Me", "Today"].map((title, order) => ({
     title,
@@ -166,13 +150,12 @@ test("page adapters use URL and hierarchy identities instead of root array posit
       block("/about#about-outside", "Outside"),
       block("/about#about-explore", "Explore"),
       block("/about#about-work", "Process"),
-      thinking,
       block("/about#about-journey", "Journey"),
       aboutHero,
     ],
   });
 
-  assert.equal(about.hero.system.title, "System");
+  assert.equal(about.hero.title, "About hero");
   assert.deepEqual(
     about.experiences.map(({ title }) => title),
     ["Pay4Me", "Today"],
@@ -210,15 +193,9 @@ test("page adapters fail closed when required section or project identity is una
 
   const homeBlocks = [
     block("/", "Hero"),
-    block("/#home-improve", "Improve", [
-      block("/shared", "Journey"),
-      block("/shared", "Workflow"),
-    ]),
+    block("/#home-improve", "Improve", [block("/shared", "Journey"), block("/shared", "Workflow")]),
     block("/#home-work", "Relevant"),
-    block("/#home-audit", "Audit", [
-      block("/shared", "Problem"),
-      block("/shared", "Improvement"),
-    ]),
+    block("/#home-audit", "Audit", [block("/shared", "Problem"), block("/shared", "Improvement")]),
     block("/#home-cta", "Closing"),
   ];
 
@@ -232,9 +209,7 @@ test("page adapters fail closed when required section or project identity is una
     /Required portfolio presentation content is unavailable: project:portfolio-assistant/,
   );
 
-  const incompleteImprove = block("/#home-improve", "Improve", [
-    block("/shared", "Journey"),
-  ]);
+  const incompleteImprove = block("/#home-improve", "Improve", [block("/shared", "Journey")]);
 
   assert.throws(
     () =>

@@ -4,114 +4,62 @@ import { PortfolioIcon } from "@/features/portfolio/components/PortfolioIcon";
 import type {
   AboutPresentationData,
   PortfolioExperience,
-  PortfolioIcon as PortfolioIconModel,
 } from "@/features/portfolio/models/portfolio-presentation";
 
-type JourneyNode = PortfolioIconModel;
+function JourneyStage({
+  experience,
+  index,
+  isCurrent,
+}: {
+  experience: PortfolioExperience;
+  index: number;
+  isCurrent: boolean;
+}) {
+  const icon = experience.icons[0];
 
-type JourneyStage = {
-  title: string;
-  tag: string;
-  copy: string;
-  note: string;
-  nodes: JourneyNode[];
-  tone: "signal" | "success";
-};
-
-const nodeToneClasses = {
-  signal: "border-signal-200 bg-signal-50/60 text-signal-700",
-  success: "border-success-200 bg-success-50/60 text-success-700",
-};
-
-function StageNodes({ nodes, tone }: { nodes: JourneyNode[]; tone: JourneyStage["tone"] }) {
   return (
-    <div className="mt-8 grid grid-cols-[auto_1fr_auto_1fr_auto] items-start">
-      {nodes.map(({ iconName, label }, index) => (
-        <div className="contents" key={label}>
-          <div className="relative z-10 flex flex-col items-center bg-white px-1 text-center">
-            <div
-              className={`flex size-14 items-center justify-center rounded-full border shadow-[0_10px_24px_-18px_rgba(55,48,163,0.55)] ${nodeToneClasses[tone]}`}
-            >
-              <PortfolioIcon aria-hidden="true" className="size-6 stroke-[1.6]" name={iconName} />
+    <article className="relative grid grid-cols-[2.75rem_minmax(0,1fr)] gap-4 sm:grid-cols-[3.25rem_minmax(0,1fr)] sm:gap-6">
+      <div className="relative z-10 flex justify-center">
+        <span
+          className={`flex size-11 items-center justify-center rounded-full border bg-white font-mono text-sm font-semibold sm:size-12 ${
+            isCurrent
+              ? "border-signal-300 text-signal-700 shadow-soft"
+              : "border-line text-slate-500"
+          }`}
+        >
+          {String(index + 1).padStart(2, "0")}
+        </span>
+      </div>
+
+      <div
+        className={`pb-10 ${isCurrent ? "rounded-2xl border border-signal-100 bg-signal-50/30 p-5 sm:p-6" : "pt-1"}`}
+      >
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
+          {icon ? (
+            <div className="flex size-10 shrink-0 items-center justify-center rounded-full border border-signal-100 bg-white text-signal-700">
+              <PortfolioIcon
+                aria-hidden="true"
+                className="size-5 stroke-[1.7]"
+                name={icon.iconName}
+              />
             </div>
-            <p className="mt-3 text-xs font-medium leading-4 text-ink">{label}</p>
-          </div>
-          {index < nodes.length - 1 ? (
-            <span
-              aria-hidden="true"
-              className={`relative top-7 min-w-3 border-t border-dashed ${tone === "signal" ? "border-signal-400" : "border-success-400"
-                }`}
-            />
+          ) : null}
+          {experience.tag ? (
+            <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.16em] text-signal-700">
+              {experience.tag}
+            </p>
           ) : null}
         </div>
-      ))}
-    </div>
-  );
-}
-
-function JourneyCard({ stage, index }: { stage: JourneyStage; index: number }) {
-  const isSignal = stage.tone === "signal";
-
-  return (
-    <article className="rounded-3xl border border-line bg-white p-6 shadow-soft sm:p-7">
-      <div className="flex items-center gap-3">
-        <span
-          className={`flex size-9 shrink-0 items-center justify-center rounded-full border bg-white font-mono text-sm font-semibold ${isSignal ? "border-signal-200 text-signal-700" : "border-success-200 text-success-700"
-            }`}
-        >
-          {index + 1}
-        </span>
-        <h3 className="text-2xl font-semibold tracking-[-0.04em] text-ink">{stage.title}</h3>
+        <h3 className="mt-4 text-2xl font-semibold tracking-[-0.04em] text-ink sm:text-3xl">
+          {experience.title}
+        </h3>
+        <p className="mt-4 text-base leading-7 text-slate-700">{experience.copy}</p>
+        {experience.insight ? (
+          <p className="mt-5 border-l-2 border-signal-400 pl-4 text-sm leading-6 text-slate-600">
+            {experience.insight}
+          </p>
+        ) : null}
       </div>
-      <p
-        className={`mt-3 inline-flex rounded-full border px-3 py-1 text-xs font-medium ${isSignal
-          ? "border-signal-100 bg-signal-50/60 text-signal-700"
-          : "border-success-100 bg-success-50/70 text-success-700"
-          }`}
-      >
-        {stage.tag}
-      </p>
-      <StageNodes nodes={stage.nodes} tone={stage.tone} />
-      <p className="mt-8 border-t border-line pt-6 text-sm leading-6 text-slate-700">
-        {stage.copy}
-      </p>
-      <p
-        className={`mt-6 border-l-2 px-3 text-sm leading-5 ${isSignal ? "border-signal-500 text-slate-700" : "border-success-500 text-slate-700"
-          }`}
-      >
-        {stage.note}
-      </p>
-    </article>
-  );
-}
-
-function TodayCard({ experience }: { experience: PortfolioExperience }) {
-  return (
-    <article className="rounded-3xl border border-signal-400 bg-white p-6 shadow-[0_18px_40px_-30px_rgba(55,48,163,0.45)] sm:p-7">
-      <div className="flex items-center gap-3">
-        <span className="flex size-9 shrink-0 items-center justify-center rounded-full border border-success-500 bg-success-50 font-mono text-sm font-semibold text-success-700">
-          4
-        </span>
-        <h3 className="text-2xl font-semibold tracking-[-0.04em] text-ink">{experience.title}</h3>
-      </div>
-      <div className="mt-8 space-y-3">
-        {experience.icons.map((icon, index) => (
-          <div className="contents" key={icon.label}>
-            <div className="flex items-center gap-3 rounded-2xl border border-signal-100 bg-signal-50/40 p-4 text-sm font-semibold text-signal-800">
-              <PortfolioIcon aria-hidden="true" className="size-6 shrink-0" name={icon.iconName} />
-              {icon.label}
-            </div>
-            {index < experience.icons.length - 1 ? (
-              <div aria-hidden="true" className="flex h-6 justify-center">
-                <span className="border-l border-dashed border-signal-400" />
-              </div>
-            ) : null}
-          </div>
-        ))}
-      </div>
-      <p className="mt-8 border-t border-line pt-6 text-sm leading-6 text-slate-700">
-        {experience.copy}
-      </p>
     </article>
   );
 }
@@ -120,19 +68,6 @@ export function AboutJourneySection({
   experiences,
   journey,
 }: Pick<AboutPresentationData, "experiences" | "journey">) {
-  const stages: JourneyStage[] = experiences
-    .slice(0, 3)
-    .map((item, index) => ({
-      title: item.title,
-      tag: item.tag ?? "",
-      copy: item.copy,
-      note: item.insight ?? "",
-      nodes: item.icons,
-      tone: index === 0 ? "signal" : "success",
-    }));
-
-  const today = experiences[3];
-
   return (
     <section
       aria-labelledby="about-journey-heading"
@@ -140,35 +75,27 @@ export function AboutJourneySection({
       id="about-journey"
     >
       <Container>
-        <MarketingSectionHeading
-          align="left"
-          copy={<p>{journey.copy}</p>}
-          eyebrow={journey.eyebrow}
-          id="about-journey-heading"
-          title={journey.title}
-        />
+        <div className="lg:grid lg:grid-cols-[minmax(0,0.85fr)_minmax(28rem,1.15fr)] lg:gap-20 xl:gap-28">
+          <div className="lg:sticky lg:top-24 lg:self-start">
+            <MarketingSectionHeading
+              align="left"
+              copy={<p>{journey.copy}</p>}
+              eyebrow={journey.eyebrow}
+              id="about-journey-heading"
+              title={journey.title}
+            />
+          </div>
 
-        <div className="mt-16 grid gap-8 md:grid-cols-2 xl:grid-cols-4 xl:gap-7">
-          {stages.map((stage, index) => (
-            <JourneyCard index={index} key={stage.title} stage={stage} />
-          ))}
-          {today ? <TodayCard experience={today} /> : null}
-        </div>
-
-        <div className="mt-10 flex flex-wrap items-center justify-center gap-x-5 gap-y-3 rounded-full border border-line bg-white px-5 py-4 text-sm font-medium text-slate-700 shadow-soft">
-          <span className="text-signal-700">Product</span>
-          <span aria-hidden="true" className="text-signal-300">
-            →
-          </span>
-          <span className="text-success-700">Operations</span>
-          <span aria-hidden="true" className="text-signal-300">
-            →
-          </span>
-          <span className="text-signal-700">Systems</span>
-          <span aria-hidden="true" className="text-signal-300">
-            →
-          </span>
-          <span className="text-signal-700">Current focus</span>
+          <div className="relative mt-12 space-y-2 before:absolute before:bottom-10 before:left-[1.35rem] before:top-5 before:w-px before:bg-line sm:before:left-[1.6rem] lg:mt-0">
+            {experiences.map((experience, index) => (
+              <JourneyStage
+                experience={experience}
+                index={index}
+                isCurrent={index === experiences.length - 1}
+                key={experience.title}
+              />
+            ))}
+          </div>
         </div>
       </Container>
     </section>

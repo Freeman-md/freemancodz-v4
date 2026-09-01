@@ -5,7 +5,6 @@ import { AboutJourneySection } from "@/features/about/components/AboutJourneySec
 import { AboutClosingSection } from "@/features/about/components/AboutClosingSection";
 import { AboutExplorationSection } from "@/features/about/components/AboutExplorationSection";
 import { AboutOutsideEngineeringSection } from "@/features/about/components/AboutOutsideEngineeringSection";
-import { AboutProductThinkingSection } from "@/features/about/components/AboutProductThinkingSection";
 import { AboutWorkProcessSection } from "@/features/about/components/AboutWorkProcessSection";
 import { createAboutPresentationData } from "@/features/portfolio/portfolio-presentation.mapper";
 import { siteConfig } from "@/shared/config/site-metadata";
@@ -38,10 +37,6 @@ export default async function AboutPage() {
     <>
       <AboutHero hero={presentation.hero} profile={presentation.profile} />
       <AboutJourneySection experiences={presentation.experiences} journey={presentation.journey} />
-      <AboutProductThinkingSection
-        profile={presentation.profile}
-        thinking={presentation.thinking}
-      />
       <AboutWorkProcessSection process={presentation.process} profile={presentation.profile} />
       <AboutExplorationSection
         exploration={presentation.exploration}
