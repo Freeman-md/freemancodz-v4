@@ -161,14 +161,11 @@ test("page adapters use URL and hierarchy identities instead of root array posit
     ["Pay4Me", "Today"],
   );
 
-  const before = block("/audit#audit-before-after", "Before", [
-    block("/audit#audit-before-after", "Before customer"),
-    block("/audit#audit-before-after", "Before workflow"),
-  ]);
-
-  const after = block("/audit#audit-before-after", "After", [
-    block("/audit#audit-before-after", "After customer"),
-    block("/audit#audit-before-after", "After workflow"),
+  const process = block("/audit#audit-process", "Process", [
+    block("/audit#audit-process", "Context"),
+    block("/audit#audit-process", "Inspect"),
+    block("/audit#audit-process", "Prioritise"),
+    block("/audit#audit-process", "Action"),
   ]);
 
   const audit = createAuditPresentationData({
@@ -176,13 +173,17 @@ test("page adapters use URL and hierarchy identities instead of root array posit
     contentBlocks: [
       block("/audit#audit-cta", "CTA"),
       block("/audit#audit-proof", "Proof"),
-      block("/audit#audit-before-after", "Before after", [before, after]),
       block("/audit#audit-why", "Symptoms"),
+      process,
       block("/audit", "Hero"),
     ],
   });
 
-  assert.equal(audit.beforeAfter.after.workflow.title, "After workflow");
+  assert.equal(audit.process.title, "Process");
+  assert.deepEqual(
+    audit.process.stages.map(({ title }) => title),
+    ["Context", "Inspect", "Prioritise", "Action"],
+  );
 });
 
 test("page adapters fail closed when required section or project identity is unavailable", () => {

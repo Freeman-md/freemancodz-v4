@@ -5,6 +5,7 @@ import {
   actionSeeds,
   contentSeeds,
   experienceSeeds,
+  iconSeeds,
   mediaSeeds,
   profileCollections,
   profileSeed,
@@ -30,7 +31,7 @@ test("the complete approved canonical seed payload remains exact", () => {
   assert.deepEqual(fingerprints, {
     profileSeed: "c2df2bd00ae8356225ef697ff3a3d8a60ac330ebee47f90582713250e46f0af1",
     profileCollections: "e1317ceb833726db55175b442b6703fa28c9180d51c5d2b2c8eb374447d83278",
-    contentSeeds: "7c4941bd6bcf61b221a4328a7dce1eb4414f07e3e58a63eb8b030a72a07f904f",
+    contentSeeds: "0bb064e0548022679e60afda8fc18e5461f7d69aa98767f8ca7d5e4d9270fa60",
     actionSeeds: "3ddaf27d71f9af15490e9825ccc872606b29070c165484cfdfa8022881c6478a",
     mediaSeeds: "448adf47d084175810fb94625b4f18291a17864a98fabf916c257c24ec19bbb5",
     projectSeeds: "15ca3c9242edc6cca4948ed95785e402ecec1bd044bdbb386966df818fd46b19",
@@ -119,7 +120,7 @@ test("page allocation, hierarchy, and ordered reusable relationships are exact",
         "about.outside",
         "about.cta",
       ],
-      audit: ["audit.hero", "audit.why", "audit.before-after", "audit.proof", "audit.cta"],
+      audit: ["audit.hero", "audit.process", "audit.why", "audit.proof", "audit.cta"],
     },
   );
   assert.deepEqual(
@@ -141,12 +142,10 @@ test("page allocation, hierarchy, and ordered reusable relationships are exact",
       "about.thinking:1:about.thinking.customer",
       "about.thinking:2:about.thinking.workflow",
       "about.cta:1:about.cta.work",
-      "audit.before-after:1:audit.before",
-      "audit.before:1:audit.before.customer",
-      "audit.before:2:audit.before.workflow",
-      "audit.before-after:2:audit.after",
-      "audit.after:1:audit.after.customer",
-      "audit.after:2:audit.after.workflow",
+      "audit.process:1:audit.process.context",
+      "audit.process:2:audit.process.inspect",
+      "audit.process:3:audit.process.prioritise",
+      "audit.process:4:audit.process.action",
     ],
   );
 
@@ -264,28 +263,25 @@ test("page allocation, hierarchy, and ordered reusable relationships are exact",
       media: [],
       actions: [],
     },
-    "audit.before.customer": {
-      icons: ["audit.before.sent", "audit.before.waits", "audit.before.unclear"],
-      media: [],
-      actions: [],
-    },
-    "audit.before.workflow": {
-      icons: ["audit.before.inbox", "audit.before.handoff", "audit.before.delayed"],
-      media: [],
-      actions: [],
-    },
-    "audit.after.customer": {
-      icons: ["audit.after.info", "audit.after.knows"],
-      media: [],
-      actions: [],
-    },
-    "audit.after.workflow": {
-      icons: ["audit.after.place", "audit.after.owner", "audit.after.update"],
-      media: [],
-      actions: [],
-    },
     "audit.cta": { icons: [], media: [], actions: ["action.audit.start"] },
   });
+
+  assert.equal(
+    contentSeeds.some(({ key }) => key.startsWith("audit.before")),
+    false,
+  );
+  assert.equal(
+    contentSeeds.some(({ key }) => key.startsWith("audit.after")),
+    false,
+  );
+  assert.equal(
+    iconSeeds.some(({ key }) => key.startsWith("audit.before")),
+    false,
+  );
+  assert.equal(
+    iconSeeds.some(({ key }) => key.startsWith("audit.after")),
+    false,
+  );
 });
 
 test("content URLs use each top-level seed key as the public section anchor", () => {
@@ -304,7 +300,7 @@ test("content URLs use each top-level seed key as the public section anchor", ()
     return current;
   };
 
-  assert.equal(contentSeeds.length, 42);
+  assert.equal(contentSeeds.length, 40);
 
   for (const seed of contentSeeds) {
     const root = rootFor(seed);

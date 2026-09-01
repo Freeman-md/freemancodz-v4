@@ -124,17 +124,8 @@ export type AboutPresentationData = {
 
 export type AuditPresentationData = {
   hero: PortfolioSection;
+  process: PortfolioSection & { stages: PortfolioSection[] };
   symptoms: PortfolioSection;
-  beforeAfter: PortfolioSection & {
-    before: PortfolioSection & {
-      customer: PortfolioSection;
-      workflow: PortfolioSection;
-    };
-    after: PortfolioSection & {
-      customer: PortfolioSection;
-      workflow: PortfolioSection;
-    };
-  };
   proof: PortfolioSection;
   projects: PortfolioProject[];
   closing: PortfolioSection;

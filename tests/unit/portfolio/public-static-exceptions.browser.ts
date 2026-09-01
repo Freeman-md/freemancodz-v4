@@ -1,13 +1,15 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { isValidElement, type ReactElement, type ReactNode } from "react";
+import { createElement, isValidElement, type ReactElement, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { AboutJourneySection } from "@/features/about/components/AboutJourneySection";
 import { AboutWorkProcessSection } from "@/features/about/components/AboutWorkProcessSection";
 import { AuditFooterCta } from "@/features/audit/components/AuditFooterCta";
 import { AuditHero } from "@/features/audit/components/AuditHero";
+import { AuditProcessTimeline } from "@/features/audit/components/AuditProcessTimeline";
 import { AuditSymptomsSection } from "@/features/audit/components/AuditSymptomsSection";
 import {
+  AuditProofSection,
   projectVisualRegistry,
   resolveProjectVisual,
 } from "@/features/audit/components/AuditProofSection";
@@ -248,14 +250,40 @@ test("About preserves dynamic journey content and work-process feedback", () => 
   assert.match(processText, /Learn from production/);
 });
 
-test("Audit public integration renders canonical dynamic content beside approved static guidance", () => {
+test("Audit process retains its ordered CMS content in static output", () => {
+  const stages = [
+    { title: "You provide context", copy: "One important journey or workflow." },
+    { title: "The path is inspected", copy: "Customer steps and operational handoffs." },
+    { title: "Findings are prioritised", copy: "The points with the clearest friction." },
+    { title: "A next action becomes clear", copy: "You choose what happens after review." },
+  ];
+
+  const markup = renderToStaticMarkup(createElement(AuditProcessTimeline, { stages }));
+
+  assert.match(markup, /<ol[^>]*aria-label="Audit process"/);
+  for (const { copy, title } of stages) {
+    assert.match(markup, new RegExp(title));
+    assert.match(markup, new RegExp(copy));
+  }
+
+  assert.match(markup, /motion-reduce:bg-signal-800/);
+});
+
+test("Audit symptoms retain their six CMS labels without the removed disconnect visual", () => {
   const text = collectText(
     AuditSymptomsSection({
       symptoms: {
         eyebrow: "Why this audit exists",
         title: "Dynamic symptoms heading",
         copy: "Dynamic symptoms copy",
-        icons: [{ iconName: "Search", label: "Dynamic symptom", copy: null }],
+        icons: [
+          { iconName: "Search", label: "Repeated questions", copy: null },
+          { iconName: "Search", label: "Slow responses", copy: null },
+          { iconName: "Search", label: "Repeated follow-up", copy: null },
+          { iconName: "Search", label: "Copying info", copy: null },
+          { iconName: "Search", label: "Lost handoffs", copy: null },
+          { iconName: "Search", label: "Someone has to remember the next step", copy: null },
+        ],
         media: [],
         actions: [],
       },
@@ -264,14 +292,26 @@ test("Audit public integration renders canonical dynamic content beside approved
 
   assert.match(text, /Dynamic symptoms heading/);
   assert.match(text, /Dynamic symptoms copy/);
-  assert.match(text, /Dynamic symptom/);
-  assert.match(text, /Customer journey/);
-  assert.match(text, /Underlying disconnect/);
-  assert.match(text, /Operational workflow/);
-  assert.match(
-    text,
-    /The audit helps identify where the friction lives before deciding what should/,
+  assert.match(text, /Repeated questions/);
+  assert.match(text, /Slow responses/);
+  assert.match(text, /Repeated follow-up/);
+  assert.match(text, /Copying info/);
+  assert.match(text, /Lost handoffs/);
+  assert.match(text, /Someone has to remember the next step/);
+  assert.doesNotMatch(text, /Underlying disconnect/);
+});
+
+test("Audit proof retains the three approved project entries", () => {
+  const markup = renderToStaticMarkup(
+    createElement(AuditProofSection, {
+      proof: section("Dynamic proof"),
+      projects: [project("Pay4Me / WithRadius"), project("Portfolio Assistant"), project("Email PA")],
+    }),
   );
+
+  assert.match(markup, /Pay4Me \/ WithRadius/);
+  assert.match(markup, /Portfolio Assistant/);
+  assert.match(markup, /Email PA/);
 });
 
 test("Audit preserves its mapped static timing and privacy guidance", () => {

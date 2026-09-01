@@ -51,12 +51,12 @@ const pageBlocks = {
   "/about": [block("about.hero", "about.hero.child", "About relation")],
   "/audit": [
     {
-      ...block("audit.before-after", "audit.before", "Audit relation"),
+      ...block("audit.process", "audit.process.context", "Audit relation"),
       children: [
         {
           order: 1,
           child: {
-            ...block("audit.before", "audit.before.customer", "Before relation"),
+            ...block("audit.process.context", "audit.process.context.child", "Process relation"),
             order: null,
           },
         },
@@ -127,13 +127,10 @@ test("page services compose canonical independent records and ordered block tree
   assert.deepEqual(pages, ["/", "/work", "/about", "/audit"]);
   assert.deepEqual(
     [home, work, about, audit].map(({ contentBlocks: result }) => result[0]?.id),
-    ["home.hero", "work.hero", "about.hero", "audit.before-after"],
+    ["home.hero", "work.hero", "about.hero", "audit.process"],
   );
   assert.equal(home.contentBlocks[0]?.children[0]?.child.id, "home.hero.child");
-  assert.equal(
-    audit.contentBlocks[0]?.children[0]?.child.children[0]?.child.id,
-    "audit.before.customer",
-  );
+  assert.equal(audit.contentBlocks[0]?.children[0]?.child.id, "audit.process.context");
   assert.equal(about.contentBlocks[0]?.iconBlocks[0]?.iconBlock.label, "About relation");
   assert.equal(
     work.profile.iconCollections.some(({ collection }) => collection === "OUTCOMES"),

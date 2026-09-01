@@ -210,28 +210,15 @@ export function createAuditPresentationData(source: {
   contentBlocks: PortfolioContentSource[];
   projects: PortfolioProjectSource[];
 }): AuditPresentationData {
-  const beforeAfter = rootAt(source.contentBlocks, "/audit#audit-before-after");
-
-  const before = childAt(beforeAfter, 1);
-
-  const after = childAt(beforeAfter, 2);
+  const process = rootAt(source.contentBlocks, "/audit#audit-process");
 
   return {
     hero: section(rootAt(source.contentBlocks, "/audit")),
-    symptoms: section(rootAt(source.contentBlocks, "/audit#audit-why")),
-    beforeAfter: {
-      ...section(beforeAfter),
-      before: {
-        ...section(before),
-        customer: section(childAt(before, 1)),
-        workflow: section(childAt(before, 2)),
-      },
-      after: {
-        ...section(after),
-        customer: section(childAt(after, 1)),
-        workflow: section(childAt(after, 2)),
-      },
+    process: {
+      ...section(process),
+      stages: byOrder(process.children).map(({ child }) => section(child)),
     },
+    symptoms: section(rootAt(source.contentBlocks, "/audit#audit-why")),
     proof: section(rootAt(source.contentBlocks, "/audit#audit-proof")),
     projects: [pay4MeSlug, portfolioAssistantSlug, emailPaSlug].map((slug) =>
       projectBySlug(source.projects, slug),

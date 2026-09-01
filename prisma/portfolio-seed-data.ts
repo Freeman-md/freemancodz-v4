@@ -91,17 +91,6 @@ export const iconSeeds: IconSeed[] = [
   icon("audit.symptom.copy", "Copy", "Copying info"),
   icon("audit.symptom.handoff", "ArrowLeftRight", "Lost handoffs"),
   icon("audit.symptom.remember", "Brain", "Someone has to remember the next step"),
-  icon("audit.before.sent", "Send", "Enquiry sent"),
-  icon("audit.before.waits", "Clock3", "Waits"),
-  icon("audit.before.unclear", "MessageCircleQuestion", "Unclear next step"),
-  icon("audit.before.inbox", "Inbox", "Shared inbox"),
-  icon("audit.before.handoff", "UserRound", "Manual handoff"),
-  icon("audit.before.delayed", "Clock3", "Delayed follow-up"),
-  icon("audit.after.info", "NotebookPen", "Right info once"),
-  icon("audit.after.knows", "MessageSquareCheck", "Knows what happens next"),
-  icon("audit.after.place", "Folder", "Right place"),
-  icon("audit.after.owner", "UserRound", "Clear owner"),
-  icon("audit.after.update", "CircleCheck", "Timely update"),
 ];
 
 export const profileCollections: Array<{ collection: ProfileIconCollection; items: IconSeed[] }> = [
@@ -641,7 +630,32 @@ export const contentSeeds: ContentSeed[] = [
     copy: "A focused review of one important customer journey or operational workflow. Personally reviewed by Freeman, delivered within 48 hours.",
     actions: ["action.audit.claim"],
   }),
-  content("audit.why", 2, "/audit#audit-why", {
+  content("audit.process", 2, "/audit#audit-process", {
+    eyebrow: "What happens",
+    title: "From unclear friction to a prioritised next action.",
+    copy: "A focused review of one important customer journey or operational workflow.",
+  }),
+  content("audit.process.context", 1, "/audit#audit-process", {
+    parent: "audit.process",
+    title: "You provide context",
+    copy: "One important journey or workflow.",
+  }),
+  content("audit.process.inspect", 2, "/audit#audit-process", {
+    parent: "audit.process",
+    title: "The path is inspected",
+    copy: "Customer steps and operational handoffs.",
+  }),
+  content("audit.process.prioritise", 3, "/audit#audit-process", {
+    parent: "audit.process",
+    title: "Findings are prioritised",
+    copy: "The points with the clearest friction.",
+  }),
+  content("audit.process.action", 4, "/audit#audit-process", {
+    parent: "audit.process",
+    title: "A next action becomes clear",
+    copy: "You choose what happens after review.",
+  }),
+  content("audit.why", 3, "/audit#audit-why", {
     eyebrow: "Why this audit exists",
     title: "You usually notice the symptoms first",
     copy: "Small issues often point to deeper friction between the customer journey and the workflow behind it.",
@@ -653,41 +667,6 @@ export const contentSeeds: ContentSeed[] = [
       "audit.symptom.handoff",
       "audit.symptom.remember",
     ],
-  }),
-  content("audit.before-after", 3, "/audit#audit-before-after", {
-    eyebrow: "Before & after",
-    title: "Where the friction hides",
-    copy: "Same customer action. Very different experience behind the scenes.",
-  }),
-  content("audit.before", 1, "/audit#audit-before-after", {
-    parent: "audit.before-after",
-    title: "Before",
-    copy: "Slow. Unclear. Manual.",
-  }),
-  content("audit.before.customer", 1, "/audit#audit-before-after", {
-    parent: "audit.before",
-    title: "Customer-facing journey",
-    icons: ["audit.before.sent", "audit.before.waits", "audit.before.unclear"],
-  }),
-  content("audit.before.workflow", 2, "/audit#audit-before-after", {
-    parent: "audit.before",
-    title: "Operational workflow",
-    icons: ["audit.before.inbox", "audit.before.handoff", "audit.before.delayed"],
-  }),
-  content("audit.after", 2, "/audit#audit-before-after", {
-    parent: "audit.before-after",
-    title: "After",
-    copy: "Clear. Connected. Reliable.",
-  }),
-  content("audit.after.customer", 1, "/audit#audit-before-after", {
-    parent: "audit.after",
-    title: "Customer-facing journey",
-    icons: ["audit.after.info", "audit.after.knows"],
-  }),
-  content("audit.after.workflow", 2, "/audit#audit-before-after", {
-    parent: "audit.after",
-    title: "Operational workflow",
-    icons: ["audit.after.place", "audit.after.owner", "audit.after.update"],
   }),
   content("audit.proof", 4, "/audit#audit-proof", {
     eyebrow: "Proof",
