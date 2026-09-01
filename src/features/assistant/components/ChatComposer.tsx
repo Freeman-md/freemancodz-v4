@@ -32,7 +32,7 @@ export function ChatComposer({
 }: ChatComposerProps) {
   return (
     <form
-      className="flex h-16 items-center gap-3 px-4 sm:px-5"
+      className="flex min-h-16 items-center gap-3 px-4 py-3 pb-[max(env(safe-area-inset-bottom),0.75rem)] sm:h-16 sm:px-5 sm:py-0"
       onSubmit={(event) => {
         event.preventDefault();
         void onSubmit();

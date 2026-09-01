@@ -1,19 +1,20 @@
 "use client";
 
 import { MessageSquareIcon } from "lucide-react";
+import type { Ref } from "react";
 
 import { Button } from "@/shared/components/ui/Button";
 
 type ChatLauncherProps = {
-  autoFocus?: boolean;
+  buttonRef: Ref<HTMLButtonElement>;
   onFocus: () => void;
   onOpen: () => void;
 };
 
-export function ChatLauncher({ autoFocus, onFocus, onOpen }: ChatLauncherProps) {
+export function ChatLauncher({ buttonRef, onFocus, onOpen }: ChatLauncherProps) {
   return (
     <Button
-      autoFocus={autoFocus}
+      ref={buttonRef}
       type="button"
       aria-label="Open portfolio chat"
       onClick={onOpen}

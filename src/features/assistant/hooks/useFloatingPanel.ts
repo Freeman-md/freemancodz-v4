@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useEffectEvent, useRef, useState } from "react";
+import { useEffect, useEffectEvent, useRef, useState, useSyncExternalStore } from "react";
 import { useReducedMotion, type Transition } from "framer-motion";
 import { OPEN_PORTFOLIO_CHAT_EVENT, type OpenPortfolioChatDetail } from "../assistant.events";
 import { stageWhenOpening } from "../state/assistant-conversation";
@@ -16,8 +16,20 @@ interface UseFloatingPanelOptions {
 
 const MOBILE_MEDIA_QUERY = "(max-width: 639px)";
 
-function getIsMobileViewport() {
-  return typeof window !== "undefined" && window.matchMedia(MOBILE_MEDIA_QUERY).matches;
+function subscribeToMobileViewport(onChange: () => void) {
+  const mediaQuery = window.matchMedia(MOBILE_MEDIA_QUERY);
+
+  mediaQuery.addEventListener("change", onChange);
+
+  return () => mediaQuery.removeEventListener("change", onChange);
+}
+
+function getMobileViewportSnapshot() {
+  return window.matchMedia(MOBILE_MEDIA_QUERY).matches;
+}
+
+function getServerMobileViewportSnapshot() {
+  return false;
 }
 
 export function useFloatingPanel({
@@ -28,7 +40,11 @@ export function useFloatingPanel({
 }: UseFloatingPanelOptions) {
   const [stage, setStage] = useState<ChatStage>("launcher");
 
-  const [isMobile, setIsMobile] = useState(getIsMobileViewport);
+  const isMobile = useSyncExternalStore(
+    subscribeToMobileViewport,
+    getMobileViewportSnapshot,
+    getServerMobileViewportSnapshot,
+  );
 
   const [isSheetExpanded, setIsSheetExpanded] = useState(false);
 
@@ -37,6 +53,8 @@ export function useFloatingPanel({
   const shouldReduceMotion = useReducedMotion();
 
   const shellRef = useRef<HTMLDivElement | null>(null);
+
+  const launcherRef = useRef<HTMLButtonElement | null>(null);
 
   const shouldIgnoreLauncherFocusRef = useRef(false);
 
@@ -71,7 +89,9 @@ export function useFloatingPanel({
       return;
     }
 
-    openChat();
+    if (!isMobile) {
+      openChat();
+    }
   }
 
   function toggleSheetExpanded() {
@@ -108,16 +128,10 @@ export function useFloatingPanel({
   }, [isMobile, stage]);
 
   useEffect(() => {
-    const mediaQuery = window.matchMedia(MOBILE_MEDIA_QUERY);
-
-    function updateViewportMode() {
-      setIsMobile(mediaQuery.matches);
+    if (stage === "launcher" && shouldRestoreLauncherFocus) {
+      launcherRef.current?.focus();
     }
-
-    mediaQuery.addEventListener("change", updateViewportMode);
-
-    return () => mediaQuery.removeEventListener("change", updateViewportMode);
-  }, []);
+  }, [shouldRestoreLauncherFocus, stage]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({
@@ -182,6 +196,7 @@ export function useFloatingPanel({
     isConversation,
     isOpen,
     isSheetExpanded,
+    launcherRef,
     messagesEndRef,
     openChat,
     shellRef,
@@ -189,7 +204,6 @@ export function useFloatingPanel({
     shouldReduceMotion,
     stage,
     surfaceTransition,
-    shouldRestoreLauncherFocus,
     textareaRef,
     toggleSheetExpanded,
   };

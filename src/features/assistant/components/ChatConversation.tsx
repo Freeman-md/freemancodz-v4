@@ -1,8 +1,7 @@
 "use client";
 
-import type { RefObject } from "react";
+import type { ReactNode, RefObject } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Maximize2Icon, Minimize2Icon, XIcon } from "lucide-react";
 import Link from "next/link";
 import { CardContent, CardHeader, CardTitle } from "@/shared/components/ui/Card";
 import { ScrollArea } from "@/shared/components/ui/ScrollArea";
@@ -12,34 +11,30 @@ import { AssistantMarkdown } from "./AssistantMarkdown";
 
 type ChatConversationProps = {
   className?: string;
-  isSheetExpanded: boolean;
+  headerActions?: ReactNode;
   isLoading: boolean;
   messages: ChatMessage[];
   messagesEndRef: RefObject<HTMLDivElement | null>;
-  onClose: () => void;
-  onToggleSheet: () => void;
   shouldReduceMotion: boolean | null;
 };
 
 export function ChatConversation({
   className,
-  isSheetExpanded,
+  headerActions,
   isLoading,
   messages,
   messagesEndRef,
-  onClose,
-  onToggleSheet,
   shouldReduceMotion,
 }: ChatConversationProps) {
   return (
     <div
       className={cn(
-        "flex min-h-0 flex-1 flex-col overflow-hidden border-b border-black/8 bg-[#fbfbfa]",
+        "flex min-h-0 flex-1 flex-col overflow-hidden overscroll-contain border-b border-black/8 bg-[#fbfbfa]",
         className,
       )}
     >
-      <CardHeader className="flex items-center justify-between gap-3 border-b border-black/8 bg-white px-4 py-3 sm:px-5">
-        <div className="min-w-0">
+      <CardHeader className="relative border-b border-black/8 bg-white px-4 py-3 sm:px-5">
+        <div className="min-w-0 pr-20 sm:pr-0">
           <CardTitle
             id="portfolio-chat-title"
             className="font-sans text-[15px] font-medium text-ink"
@@ -50,31 +45,11 @@ export function ChatConversation({
             Ask about projects, experience, or current research.
           </p>
         </div>
-        <div className="flex shrink-0 items-center gap-1 sm:hidden">
-          <button
-            type="button"
-            aria-label={
-              isSheetExpanded ? "Collapse portfolio chat sheet" : "Expand portfolio chat sheet"
-            }
-            aria-expanded={isSheetExpanded}
-            className="inline-flex size-9 items-center justify-center rounded-full text-ink transition hover:bg-black/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal-400/40 focus-visible:ring-offset-2"
-            onClick={onToggleSheet}
-          >
-            {isSheetExpanded ? (
-              <Minimize2Icon aria-hidden="true" />
-            ) : (
-              <Maximize2Icon aria-hidden="true" />
-            )}
-          </button>
-          <button
-            type="button"
-            aria-label="Close portfolio chat"
-            className="inline-flex size-9 items-center justify-center rounded-full text-ink transition hover:bg-black/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal-400/40 focus-visible:ring-offset-2"
-            onClick={onClose}
-          >
-            <XIcon aria-hidden="true" />
-          </button>
-        </div>
+        {headerActions ? (
+          <div className="absolute right-3 top-3 flex items-center gap-1 sm:hidden">
+            {headerActions}
+          </div>
+        ) : null}
       </CardHeader>
 
       <CardContent className="flex min-h-0 flex-1 px-0">
