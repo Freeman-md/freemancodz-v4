@@ -14,6 +14,12 @@ interface UseFloatingPanelOptions {
   submitMessage: (message: string, workflowStart?: AssistantWorkflowStart | null) => Promise<void>;
 }
 
+const MOBILE_MEDIA_QUERY = "(max-width: 639px)";
+
+function getIsMobileViewport() {
+  return typeof window !== "undefined" && window.matchMedia(MOBILE_MEDIA_QUERY).matches;
+}
+
 export function useFloatingPanel({
   clearError,
   isLoading,
@@ -22,9 +28,17 @@ export function useFloatingPanel({
 }: UseFloatingPanelOptions) {
   const [stage, setStage] = useState<ChatStage>("launcher");
 
+  const [isMobile, setIsMobile] = useState(getIsMobileViewport);
+
+  const [isSheetExpanded, setIsSheetExpanded] = useState(false);
+
+  const [shouldRestoreLauncherFocus, setShouldRestoreLauncherFocus] = useState(false);
+
   const shouldReduceMotion = useReducedMotion();
 
   const shellRef = useRef<HTMLDivElement | null>(null);
+
+  const shouldIgnoreLauncherFocusRef = useRef(false);
 
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
@@ -39,11 +53,29 @@ export function useFloatingPanel({
   }
 
   function closeChat() {
+    shouldIgnoreLauncherFocusRef.current = true;
     setStage("launcher");
+    setIsSheetExpanded(false);
+    setShouldRestoreLauncherFocus(true);
   }
 
   function showConversation() {
     setStage("conversation");
+  }
+
+  function handleLauncherFocus() {
+    if (shouldIgnoreLauncherFocusRef.current) {
+      shouldIgnoreLauncherFocusRef.current = false;
+      setShouldRestoreLauncherFocus(false);
+
+      return;
+    }
+
+    openChat();
+  }
+
+  function toggleSheetExpanded() {
+    setIsSheetExpanded((expanded) => !expanded);
   }
 
   const handleTriggerOpen = useEffectEvent(async (detail?: OpenPortfolioChatDetail) => {
@@ -70,10 +102,22 @@ export function useFloatingPanel({
   }, []);
 
   useEffect(() => {
-    if (stage !== "launcher") {
+    if (!isMobile && stage !== "launcher") {
       textareaRef.current?.focus();
     }
-  }, [stage]);
+  }, [isMobile, stage]);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia(MOBILE_MEDIA_QUERY);
+
+    function updateViewportMode() {
+      setIsMobile(mediaQuery.matches);
+    }
+
+    mediaQuery.addEventListener("change", updateViewportMode);
+
+    return () => mediaQuery.removeEventListener("change", updateViewportMode);
+  }, []);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({
@@ -83,7 +127,7 @@ export function useFloatingPanel({
   }, [messages, isLoading, stage, shouldReduceMotion]);
 
   useEffect(() => {
-    if (stage === "launcher" || isLoading) {
+    if (stage === "launcher" || (!isMobile && isLoading)) {
       return;
     }
 
@@ -101,14 +145,31 @@ export function useFloatingPanel({
       }
     }
 
-    document.addEventListener("pointerdown", handlePointerDown);
+    if (!isMobile) {
+      document.addEventListener("pointerdown", handlePointerDown);
+    }
+
     document.addEventListener("keydown", handleEscape);
 
     return () => {
       document.removeEventListener("pointerdown", handlePointerDown);
       document.removeEventListener("keydown", handleEscape);
     };
-  }, [isLoading, stage]);
+  }, [isLoading, isMobile, stage]);
+
+  useEffect(() => {
+    if (!isMobile || !isOpen) {
+      return;
+    }
+
+    const previousOverflow = document.body.style.overflow;
+
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [isMobile, isOpen]);
 
   const surfaceTransition: Transition = shouldReduceMotion
     ? { duration: 0 }
@@ -116,8 +177,11 @@ export function useFloatingPanel({
 
   return {
     closeChat,
+    handleLauncherFocus,
+    isMobile,
     isConversation,
     isOpen,
+    isSheetExpanded,
     messagesEndRef,
     openChat,
     shellRef,
@@ -125,6 +189,8 @@ export function useFloatingPanel({
     shouldReduceMotion,
     stage,
     surfaceTransition,
+    shouldRestoreLauncherFocus,
     textareaRef,
+    toggleSheetExpanded,
   };
 }

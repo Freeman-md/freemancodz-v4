@@ -78,7 +78,7 @@ export function ChatComposer({
         aria-label="Collapse portfolio chat"
         variant="ghost"
         size="icon-sm"
-        className="shrink-0"
+        className="hidden shrink-0 sm:inline-flex"
         onClick={onClose}
         disabled={isLoading}
       >

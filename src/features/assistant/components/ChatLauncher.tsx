@@ -5,16 +5,19 @@ import { MessageSquareIcon } from "lucide-react";
 import { Button } from "@/shared/components/ui/Button";
 
 type ChatLauncherProps = {
+  autoFocus?: boolean;
+  onFocus: () => void;
   onOpen: () => void;
 };
 
-export function ChatLauncher({ onOpen }: ChatLauncherProps) {
+export function ChatLauncher({ autoFocus, onFocus, onOpen }: ChatLauncherProps) {
   return (
     <Button
+      autoFocus={autoFocus}
       type="button"
       aria-label="Open portfolio chat"
       onClick={onOpen}
-      onFocus={onOpen}
+      onFocus={onFocus}
       variant="ghost"
       className="h-16 w-full justify-start gap-3 rounded-none px-4 text-left text-white hover:bg-white/5 hover:text-white"
     >
