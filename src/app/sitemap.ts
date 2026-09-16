@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
 import { siteConfig } from "@/shared/config/site-metadata";
 
-const routes = ["", "/work", "/about", "/audit"];
+const routes = [""];
 
 export default function sitemap(): MetadataRoute.Sitemap {
   return routes.map((route) => ({

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, JetBrains_Mono, Playfair_Display } from "next/font/google";
+import { Inter, JetBrains_Mono, Manrope } from "next/font/google";
 import "./globals.css";
 import { SiteLayout } from "@/shared/components/layout/SiteLayout";
 import { FloatingPortfolioChat } from "@/features/assistant/components/FloatingPortfolioChat";
@@ -14,10 +14,9 @@ const jetbrains = JetBrains_Mono({
   variable: "--font-jetbrains",
 });
 
-const playfairDisplay = Playfair_Display({
+const storyFont = Manrope({
   subsets: ["latin"],
-  variable: "--font-display",
-  weight: ["400", "600", "700"],
+  variable: "--font-story",
 });
 
 export const metadata: Metadata = {
@@ -83,12 +82,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const profile = await getCachedPublicProfile();
 
   return (
-    <html
-      lang="en"
-      className={`${inter.variable} ${jetbrains.variable} ${playfairDisplay.variable}`}
-    >
+    <html lang="en" className={`${inter.variable} ${jetbrains.variable} ${storyFont.variable}`}>
       <body className="font-sans antialiased">
-        <SiteLayout linkedInUrl={profile.linkedInUrl} githubUrl={profile.githubUrl}>{children}</SiteLayout>
+        <SiteLayout linkedInUrl={profile.linkedInUrl} githubUrl={profile.githubUrl}>
+          {children}
+        </SiteLayout>
         <FloatingPortfolioChat />
         <Analytics />
       </body>

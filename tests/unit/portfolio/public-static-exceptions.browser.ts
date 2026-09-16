@@ -1,62 +1,34 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createElement, isValidElement, type ReactElement, type ReactNode } from "react";
+import { createElement, isValidElement, type ReactElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { AboutJourneySection } from "@/features/about/components/AboutJourneySection";
-import { AboutWorkProcessSection } from "@/features/about/components/AboutWorkProcessSection";
-import { AuditFooterCta } from "@/features/audit/components/AuditFooterCta";
-import { AuditHero } from "@/features/audit/components/AuditHero";
-import { AuditProcessTimeline } from "@/features/audit/components/AuditProcessTimeline";
-import { AuditSymptomsSection } from "@/features/audit/components/AuditSymptomsSection";
-import {
-  AuditProofSection,
-  projectVisualRegistry,
-  resolveProjectVisual,
-} from "@/features/audit/components/AuditProofSection";
-import { OPEN_PORTFOLIO_CHAT_EVENT } from "@/features/assistant/assistant.events";
-import { HomeImproveSection } from "@/features/portfolio/components/HomeImproveSection";
-import { HomeRelevantWorkSection } from "@/features/portfolio/components/HomeRelevantWorkSection";
-import { HomeClosingSection } from "@/features/portfolio/components/HomeClosingSection";
-import { HomeHero } from "@/features/portfolio/components/HomeHero";
-import { HomeAuditSection } from "@/features/portfolio/components/HomeAuditSection";
 import { PortfolioAction } from "@/features/portfolio/components/PortfolioAction";
-import { WorkConnectionSection } from "@/features/portfolio/components/WorkConnectionSection";
+import { PortfolioStoryHero } from "@/features/portfolio/components/PortfolioStoryHero";
+import { PortfolioWorkScene } from "@/features/portfolio/components/PortfolioWorkScene";
+import { PortfolioSystemsScene } from "@/features/portfolio/components/PortfolioSystemsScene";
+import { PortfolioMoreWork } from "@/features/portfolio/components/PortfolioMoreWork";
+import { PortfolioFreemanScene } from "@/features/portfolio/components/PortfolioFreemanScene";
+import { PortfolioAuditScene } from "@/features/portfolio/components/PortfolioAuditScene";
+import { StoryProjectDetail } from "@/features/portfolio/components/StoryProjectDetail";
+import { portfolioDestination } from "@/features/portfolio/portfolio-navigation";
 import {
   portfolioIconRegistry,
   resolvePortfolioIcon,
 } from "@/features/portfolio/portfolio-icon.registry";
 import type {
   AboutPresentationData,
+  AuditPresentationData,
   HomePresentationData,
-  PortfolioAction as PortfolioActionModel,
+  WorkPresentationData,
+  PortfolioAction as Action,
   PortfolioProject,
   PortfolioSection,
 } from "@/features/portfolio/models/portfolio-presentation";
 
-function collectText(node: ReactNode): string {
-  if (typeof node === "string" || typeof node === "number") {
-    return String(node);
-  }
-
-  if (Array.isArray(node)) {
-    return node.map(collectText).join(" ");
-  }
-
-  if (!isValidElement<{ children?: ReactNode }>(node)) {
-    return "";
-  }
-
-  if (typeof node.type === "function") {
-    return collectText(Reflect.apply(node.type, null, [node.props]));
-  }
-
-  return collectText(node.props.children);
-}
-
 const section = (title: string): PortfolioSection => ({
-  eyebrow: `${title} eyebrow`,
+  eyebrow: "",
   title,
-  copy: `${title} copy`,
+  copy: `${title} managed copy`,
   icons: [],
   media: [],
   actions: [],
@@ -65,9 +37,9 @@ const section = (title: string): PortfolioSection => ({
 const project = (title: string): PortfolioProject => ({
   slug: title.toLowerCase().replaceAll(" ", "-"),
   title,
-  category: "Category",
-  problem: "Problem",
-  solution: "Solution",
+  category: "Managed category",
+  problem: `${title} problem`,
+  solution: `${title} contribution`,
   outcome: null,
   externalLinks: [],
   visualBlock: null,
@@ -75,426 +47,277 @@ const project = (title: string): PortfolioProject => ({
   cover: null,
 });
 
-const aboutProfile: AboutPresentationData["profile"] = {
-  name: "Freeman",
-  title: "Engineer",
-  positioning: "Products and workflows",
-  coverImage: null,
-  principles: [],
-  processPrinciples: [],
-  controlPrinciples: [],
+const projects = {
+  pay4Me: project("Pay4Me"),
+  portfolioAssistant: project("Portfolio Assistant"),
+  emailPa: project("Email PA"),
+  acrossTheHorizon: project("AcrossTheHorizon"),
+  shifty: project("Shifty"),
+  selfHealing: project("Research"),
 };
 
-function renderedAction(action: PortfolioActionModel) {
+const home: HomePresentationData = {
+  profile: { name: "Managed Name", coverImage: null, audience: [] },
+  hero: section("Managed positioning"),
+  improve: {
+    ...section("Managed focus"),
+    customerJourney: section("Journey"),
+    operationalWorkflow: section("Operations"),
+  },
+  relevantWork: section("Work"),
+  projects,
+  audit: {
+    ...section("Audit"),
+    problem: section("Managed friction"),
+    improvement: section("Managed improvement"),
+  },
+  closing: section("Close"),
+};
+
+const work: WorkPresentationData = {
+  hero: { ...section("Work"), focus: section("Focus"), approach: section("Approach") },
+  relevantWork: section("Relevant"),
+  additionalWork: section("More"),
+  projects,
+  connects: {
+    ...section("Connects"),
+    products: section("Products"),
+    experiences: section("Experiences"),
+    workflows: section("Workflows"),
+    outcomes: [],
+  },
+  closing: section("Close"),
+};
+
+const about: AboutPresentationData = {
+  profile: {
+    name: "Managed Name",
+    title: "Managed role",
+    positioning: "Managed positioning",
+    coverImage: null,
+    principles: [],
+    processPrinciples: [],
+    controlPrinciples: [],
+  },
+  hero: section("About"),
+  journey: section("Career"),
+  experiences: [
+    { title: "Managed employer", tag: null, copy: "Managed experience", insight: null, icons: [] },
+  ],
+  process: section("Process"),
+  exploration: section("Research"),
+  outsideEngineering: section("Outside"),
+  closing: { ...section("Close"), work: section("Work") },
+};
+
+const audit: AuditPresentationData = {
+  hero: {
+    ...section("Audit"),
+    actions: [
+      {
+        label: "Managed audit action",
+        iconName: null,
+        copy: null,
+        variant: "PRIMARY",
+        url: null,
+        assistantMessage: "Managed audit intent",
+      },
+    ],
+  },
+  process: {
+    ...section("Process"),
+    stages: [section("Provide context"), section("Review findings")],
+  },
+  symptoms: section("Symptoms"),
+  proof: section("Proof"),
+  projects: [],
+  closing: section("Close"),
+};
+
+function renderedAction(action: Action) {
   const rendered = PortfolioAction({ action });
 
-  assert.equal(isValidElement(rendered), true);
+  assert.ok(isValidElement(rendered));
 
   return rendered as ReactElement<Record<string, unknown>>;
 }
 
-test("icon and project visual resolvers return known components and reject unknown identities", () => {
+test("managed icons resolve safely", () => {
   assert.equal(resolvePortfolioIcon("Search"), portfolioIconRegistry.Search);
   assert.equal(resolvePortfolioIcon("UnknownIcon"), null);
   assert.equal(resolvePortfolioIcon(null), null);
-  assert.equal(resolveProjectVisual("Pay4MeVisual"), projectVisualRegistry.Pay4MeVisual);
-  assert.equal(resolveProjectVisual("UnknownVisual"), null);
-  assert.equal(resolveProjectVisual(null), null);
 });
 
-test("PortfolioAction renders internal and external links with approved variant mappings", () => {
-  const variants = {
+test("managed actions retain link variants and assistant precedence", () => {
+  for (const [variant, expectedClass] of Object.entries({
     GHOST: "border-line",
     LINK: "border-none",
     PRIMARY: "bg-signal-800",
     SECONDARY: "bg-white",
-  } as const;
-
-  for (const [variant, expectedClass] of Object.entries(variants)) {
-    const action = renderedAction({
+  })) {
+    const action: Action = {
+      variant: variant as Action["variant"],
       iconName: null,
-      label: `${variant} action`,
+      label: "Managed action",
       copy: null,
-      variant: variant as PortfolioActionModel["variant"],
-      url: variant === "SECONDARY" ? "https://example.com/work" : "/work",
+      url: "https://example.com/project",
       assistantMessage: null,
-    });
+    };
 
-    const markup = renderToStaticMarkup(action);
+    const markup = renderToStaticMarkup(renderedAction(action));
 
-    assert.match(
-      markup,
-      new RegExp(`href="${variant === "SECONDARY" ? "https://example.com/work" : "/work"}"`),
+    assert.match(markup, /href="https:\/\/example.com\/project"/);
+    assert.ok(markup.includes(expectedClass));
+    assert.equal(
+      renderedAction({ ...action, assistantMessage: "Managed question" }).props.detail &&
+        (
+          renderedAction({ ...action, assistantMessage: "Managed question" }).props.detail as {
+            message: string;
+          }
+        ).message,
+      "Managed question",
     );
-    assert.match(markup, new RegExp(expectedClass));
-  }
-});
-
-test("PortfolioAction assistant mode dispatches the validated assistant event contract", () => {
-  const assistantVariants = {
-    GHOST: "ghost",
-    LINK: "text",
-    PRIMARY: "marketing",
-    SECONDARY: "ghost",
-  } as const;
-
-  for (const [variant, expectedVariant] of Object.entries(assistantVariants)) {
-    const rendered = renderedAction({
-      iconName: null,
-      label: `${variant} assistant action`,
-      copy: null,
-      variant: variant as PortfolioActionModel["variant"],
-      url: null,
-      assistantMessage: "Open assistant",
-    });
-
-    assert.equal(rendered.props.variant, expectedVariant);
   }
 
-  const action = renderedAction({
-    iconName: "MessageCircleQuestion",
-    label: "Start the audit",
-    copy: null,
-    variant: "PRIMARY",
-    url: "/audit",
-    assistantMessage: "Audit my workflow",
-  });
-
-  const eventTarget = new EventTarget();
-
-  const previousWindow = Object.getOwnPropertyDescriptor(globalThis, "window");
-
-  Object.defineProperty(globalThis, "window", { configurable: true, value: eventTarget });
-
-  let received: unknown;
-
-  eventTarget.addEventListener(OPEN_PORTFOLIO_CHAT_EVENT, (event) => {
-    received = (event as CustomEvent).detail;
-  });
-
-  try {
-    assert.equal(typeof action.type, "function");
-    assert.equal(action.props.variant, "marketing");
-    assert.deepEqual(action.props.detail, { message: "Audit my workflow" });
-
-    const button = Reflect.apply(action.type as (...values: unknown[]) => ReactElement, null, [
-      action.props,
-    ]) as ReactElement<Record<string, unknown>>;
-
-    assert.equal(button.props.variant, "signal");
-    (button.props.onClick as () => void)();
-    assert.deepEqual(received, { message: "Audit my workflow" });
-  } finally {
-    if (previousWindow) {
-      Object.defineProperty(globalThis, "window", previousWindow);
-    } else {
-      Reflect.deleteProperty(globalThis, "window");
-    }
-  }
-});
-
-test("Home and Work preserve their mapped static presentation beside dynamic content", () => {
-  const homeText = collectText(
-    HomeImproveSection({
-      improve: {
-        ...section("Dynamic improve"),
-        customerJourney: {
-          ...section("Dynamic customer journey"),
-          icons: ["Find", "Understand", "Decide", "Act"].map((label) => ({
-            label,
-            iconName: "Search",
-            copy: null,
-          })),
-        },
-        operationalWorkflow: {
-          ...section("Dynamic operational workflow"),
-          icons: ["Capture", "Route", "Decide", "Complete"].map((label) => ({
-            label,
-            iconName: "Search",
-            copy: null,
-          })),
-        },
-      },
-    }),
-  );
-
-  assert.match(homeText, /Dynamic improve/);
-  assert.match(homeText, /Dynamic customer journey copy/);
-  assert.match(homeText, /Dynamic operational workflow copy/);
-  assert.doesNotMatch(homeText, /Find\s+Understand\s+Decide\s+Act/);
-  assert.doesNotMatch(homeText, /Capture\s+Route\s+Decide\s+Complete/);
-
-  const homeMarkup = renderToStaticMarkup(
-    HomeImproveSection({
-      improve: {
-        ...section("Improve"),
-        customerJourney: section("Customer journeys"),
-        operationalWorkflow: section("Workflows"),
-      },
-    }),
-  );
-
-  assert.match(homeMarkup, /href="\/about"/);
-
-  const workText = collectText(
-    WorkConnectionSection({
-      connects: {
-        ...section("Dynamic connection"),
-        products: section("Dynamic products"),
-        experiences: section("Dynamic experiences"),
-        workflows: section("Dynamic workflows"),
-        outcomes: [],
-      },
-      projects: {
-        pay4Me: project("Pay4Me"),
-        portfolioAssistant: project("Portfolio Assistant"),
-        emailPa: project("Email PA"),
-        acrossTheHorizon: project("Across the Horizon"),
-        shifty: project("Shifty"),
-        selfHealing: project("Self-Healing Backend Operations System"),
-      },
-    }),
-  );
-
-  assert.match(workText, /Dynamic connection/);
-  assert.match(workText, /Self-Healing Backend Operations System/);
-  assert.match(workText, /Different projects\. One consistent focus/);
-});
-
-test("Home project actions use one truthful external destination per project and an open-only assistant", () => {
-  const projects: HomePresentationData["projects"] = {
-    pay4Me: { ...project("Pay4Me"), externalLinks: ["https://example.com/pay4me"] },
-    portfolioAssistant: {
-      ...project("Assistant"),
-      externalLinks: ["https://example.com/assistant"],
-    },
-    emailPa: { ...project("Email PA"), externalLinks: ["https://example.com/email"] },
-  };
-
-  const markup = renderToStaticMarkup(
-    HomeRelevantWorkSection({
-      projects,
-      relevantWork: section("Relevant work"),
-    }),
-  );
-
-  for (const href of ["pay4me", "assistant", "email"]) {
-    assert.equal(markup.split(`href="https://example.com/${href}"`).length - 1, 1);
-  }
-
-  assert.match(markup, /Visit project/);
-  assert.match(markup, /Try the assistant/);
-  assert.doesNotMatch(markup, /View Case Study|Live Assistant|href="#"/);
-
-  const withoutLinks = renderToStaticMarkup(
-    HomeRelevantWorkSection({
-      projects: {
-        pay4Me: { ...projects.pay4Me, externalLinks: [] },
-        portfolioAssistant: { ...projects.portfolioAssistant, externalLinks: [] },
-        emailPa: { ...projects.emailPa, externalLinks: [] },
-      },
-      relevantWork: section("Relevant work"),
-    }),
-  );
-
-  assert.doesNotMatch(withoutLinks, /href="#"|Visit project|View project/);
-  assert.match(withoutLinks, /Try the assistant/);
-});
-
-test("Home selected work preserves CMS evidence and media without repeating full case studies", () => {
-  const featured = {
-    ...project("Customer-facing product"),
-    problem: "A detailed problem that belongs on Work.",
-    solution: "Production onboarding and payment functionality.",
-    outcome: "Verified payment outcome.",
-    cover: { source: "/images/work/withradius-hero.jpg", altText: "Actual project screenshot" },
-  };
-
-  const markup = renderToStaticMarkup(
-    HomeRelevantWorkSection({
-      relevantWork: section("Selected work"),
-      projects: {
-        pay4Me: featured,
-        portfolioAssistant: project("Assistant"),
-        emailPa: project("Email PA"),
-      },
-    }),
-  );
-
-  assert.match(markup, /Production onboarding and payment functionality/);
-  assert.match(markup, /Verified payment outcome/);
-  assert.match(markup, /alt="Actual project screenshot"/);
-  assert.match(markup, /_next\/image/);
-  assert.doesNotMatch(markup, /A detailed problem that belongs on Work/);
-  assert.doesNotMatch(markup, /Ask a question|Find relevant emails/);
-});
-
-test("Home audit keeps the concrete CMS example without a second conversion action", () => {
-  const audit: HomePresentationData["audit"] = {
-    ...section("Find the friction"),
-    problem: { ...section("Problem"), copy: "An enquiry waits for a manual inbox check." },
-    improvement: { ...section("Improvement"), copy: "Capture once and route to the next step." },
-    actions: [{
-      label: "Repeated audit action",
-      iconName: null,
-      copy: null,
-      variant: "PRIMARY",
-      url: "/audit",
-      assistantMessage: null,
-    }],
-  };
-
-  const markup = renderToStaticMarkup(HomeAuditSection({ audit }));
-
-  assert.match(markup, /Find the friction/);
-  assert.match(markup, /An enquiry waits for a manual inbox check/);
-  assert.match(markup, /Capture once and route to the next step/);
-  assert.doesNotMatch(markup, /Repeated audit action/);
-});
-
-test("Home closing retains CMS supporting copy, action and reassurance without a duplicate headline", () => {
-  const closing = {
-    ...section("Start with one journey"),
-    copy: "You do not need to prescribe software, automation or AI.",
-    actions: [
-      {
-        label: "Start my audit",
+  assert.equal(
+    PortfolioAction({
+      action: {
         iconName: null,
+        label: "Unavailable",
         copy: null,
-        variant: "PRIMARY" as const,
-        url: "/audit",
+        variant: "LINK",
+        url: null,
         assistantMessage: null,
       },
-    ],
+    }),
+    null,
+  );
+});
+
+test("opening reads managed identity and positioning, and only renders supplied project media", () => {
+  const markup = renderToStaticMarkup(
+    createElement(PortfolioStoryHero, { home, horizon: projects.acrossTheHorizon }),
+  );
+
+  assert.match(markup, /Managed positioning/);
+  assert.match(markup, /Managed Name/);
+  assert.match(markup, /href="#work"/);
+  assert.doesNotMatch(markup, /<img/);
+  const withMedia = renderToStaticMarkup(
+    createElement(PortfolioStoryHero, {
+      home: {
+        ...home,
+        projects: {
+          ...projects,
+          pay4Me: {
+            ...projects.pay4Me,
+            cover: { source: "/managed-payment.png", altText: "Managed payment interface" },
+          },
+        },
+      },
+      horizon: projects.acrossTheHorizon,
+    }),
+  );
+
+  assert.match(withMedia, /Managed payment interface/);
+  assert.match(withMedia, /managed-payment/);
+});
+
+test("featured project preserves contribution, outcome, media, and expanded evidence", () => {
+  const featured = {
+    ...projects.pay4Me,
+    outcome: "Verified managed outcome",
+    cover: { source: "/managed.png", altText: "Managed project media" },
+    externalLinks: ["https://example.com/payments"],
   };
 
-  const markup = renderToStaticMarkup(HomeClosingSection({ closing }));
-
-  assert.doesNotMatch(markup, /Start with one journey/);
-  assert.match(markup, /You do not need to prescribe software, automation or AI/);
-  assert.match(markup, /href="\/audit"/);
-  assert.match(markup, /Free · Personally reviewed · Delivered within 48 hours/);
-});
-
-test("About preserves dynamic journey content and work-process feedback", () => {
-  const journeyText = collectText(
-    AboutJourneySection({
-      experiences: [],
-      journey: section("Dynamic journey"),
+  const markup = renderToStaticMarkup(
+    createElement(PortfolioWorkScene, {
+      work: { ...work, projects: { ...projects, pay4Me: featured } },
     }),
   );
 
-  const processText = collectText(
-    AboutWorkProcessSection({
-      process: section("Dynamic process"),
-      profile: aboutProfile,
-    }),
-  );
-
-  assert.match(journeyText, /Dynamic journey/);
-  assert.doesNotMatch(journeyText, /Product\s+→\s+Operations\s+→\s+Systems\s+→\s+Current focus/);
-  assert.match(processText, /Learn from production/);
-});
-
-test("Audit process retains its ordered CMS content in static output", () => {
-  const stages = [
-    { title: "You provide context", copy: "One important journey or workflow." },
-    { title: "The path is inspected", copy: "Customer steps and operational handoffs." },
-    { title: "Findings are prioritised", copy: "The points with the clearest friction." },
-    { title: "A next action becomes clear", copy: "You choose what happens after review." },
-  ];
-
-  const markup = renderToStaticMarkup(createElement(AuditProcessTimeline, { stages }));
-
-  assert.match(markup, /<ol[^>]*aria-label="Audit process"/);
-  for (const { copy, title } of stages) {
-    assert.match(markup, new RegExp(title));
-    assert.match(markup, new RegExp(copy));
+  for (const evidence of [
+    featured.problem,
+    featured.solution,
+    featured.outcome,
+    featured.cover.altText,
+  ]) {
+    assert.ok(markup.includes(evidence));
   }
 
-  assert.match(markup, /motion-reduce:bg-signal-800/);
+  assert.match(markup, /<details/);
+  assert.match(markup, /href="https:\/\/example.com\/payments"/);
+  assert.doesNotMatch(markup, /href="#"/);
 });
 
-test("Audit symptoms retain their six CMS labels without the removed disconnect visual", () => {
-  const text = collectText(
-    AuditSymptomsSection({
-      symptoms: {
-        eyebrow: "Why this audit exists",
-        title: "Dynamic symptoms heading",
-        copy: "Dynamic symptoms copy",
-        icons: [
-          { iconName: "Search", label: "Repeated questions", copy: null },
-          { iconName: "Search", label: "Slow responses", copy: null },
-          { iconName: "Search", label: "Repeated follow-up", copy: null },
-          { iconName: "Search", label: "Copying info", copy: null },
-          { iconName: "Search", label: "Lost handoffs", copy: null },
-          { iconName: "Search", label: "Someone has to remember the next step", copy: null },
-        ],
-        media: [],
-        actions: [],
-      },
-    }),
-  );
+test("systems scene renders managed project explanations and working entry buttons", () => {
+  const markup = renderToStaticMarkup(createElement(PortfolioSystemsScene, { home, work }));
 
-  assert.match(text, /Dynamic symptoms heading/);
-  assert.match(text, /Dynamic symptoms copy/);
-  assert.match(text, /Repeated questions/);
-  assert.match(text, /Slow responses/);
-  assert.match(text, /Repeated follow-up/);
-  assert.match(text, /Copying info/);
-  assert.match(text, /Lost handoffs/);
-  assert.match(text, /Someone has to remember the next step/);
-  assert.doesNotMatch(text, /Underlying disconnect/);
+  assert.ok(markup.includes(projects.portfolioAssistant.solution));
+  assert.ok(markup.includes(projects.emailPa.solution));
+  assert.match(markup, /Ask your own question/);
+  assert.match(markup, /Let’s book a conversation/);
+  assert.match(markup, /id="portfolio-assistant"/);
 });
 
-test("Audit proof retains the three approved project entries", () => {
-  const markup = renderToStaticMarkup(
-    createElement(AuditProofSection, {
-      proof: section("Dynamic proof"),
-      projects: [
-        project("Pay4Me / WithRadius"),
-        project("Portfolio Assistant"),
-        project("Email PA"),
-      ],
-    }),
-  );
+test("additional work remains discoverable, with complete managed detail", () => {
+  const markup = renderToStaticMarkup(createElement(PortfolioMoreWork, { work }));
 
-  assert.match(markup, /Pay4Me \/ WithRadius/);
-  assert.match(markup, /Portfolio Assistant/);
-  assert.match(markup, /Email PA/);
+  for (const item of [projects.acrossTheHorizon, projects.shifty, projects.selfHealing]) {
+    assert.ok(markup.includes(item.title));
+    assert.ok(markup.includes(item.problem));
+    assert.ok(markup.includes(item.solution));
+  }
 });
 
-test("Audit preserves its mapped static timing and privacy guidance", () => {
-  const text = collectText([
-    AuditHero({ hero: section("Dynamic audit hero") }),
-    AuditFooterCta({ closing: section("Dynamic audit close") }),
-  ]);
+test("personal scene retains managed experience and portrait without a static identity image", () => {
+  const markup = renderToStaticMarkup(createElement(PortfolioFreemanScene, { about, home }));
 
-  assert.match(text, /Dynamic audit hero/);
-  assert.match(text, /Takes 2 - 3 minutes/);
-  assert.match(text, /Free\. No obligation\. Your information is never shared\./);
-});
-
-test("HomeHero renders only the Profile portrait and omits images when it is unavailable", () => {
-  const profile: HomePresentationData["profile"] = {
-    name: "Freeman",
-    coverImage: null,
-    audience: [],
-  };
-
-  const withoutPortrait = renderToStaticMarkup(HomeHero({ hero: section("Home hero"), profile }));
-
-  assert.match(withoutPortrait, /Home hero/);
-  assert.match(withoutPortrait, /Freeman/);
-  assert.doesNotMatch(withoutPortrait, /<img/);
-
+  assert.match(markup, /Managed employer/);
+  assert.match(markup, /Managed experience/);
+  assert.match(markup, /About managed copy/);
+  assert.doesNotMatch(markup, /<img/);
   const withPortrait = renderToStaticMarkup(
-    HomeHero({
-      hero: section("Home hero"),
-      profile: { ...profile, coverImage: "/images/work/withradius-hero.jpg" },
+    createElement(PortfolioFreemanScene, {
+      about: { ...about, profile: { ...about.profile, coverImage: "/managed-portrait.png" } },
+      home,
     }),
   );
 
-  assert.match(withPortrait, /alt="Freeman"/);
-  assert.match(withPortrait, /_next\/image/);
+  assert.match(withPortrait, /managed-portrait/);
+  assert.match(withPortrait, /alt="Managed Name"/);
+});
+
+test("audit retains managed actions, process and example rather than fixed copies", () => {
+  const markup = renderToStaticMarkup(createElement(PortfolioAuditScene, { audit, home }));
+
+  for (const evidence of [
+    "Managed audit action",
+    audit.hero.copy,
+    home.audit.problem.copy,
+    home.audit.improvement.copy,
+    ...audit.process.stages.map((stage) => stage.title),
+  ]) {
+    assert.ok(markup.includes(evidence));
+  }
+
+  assert.match(markup, /Illustrative example/);
+});
+
+test("missing project links never create fake destinations", () => {
+  assert.doesNotMatch(
+    renderToStaticMarkup(createElement(StoryProjectDetail, { project: projects.emailPa })),
+    /<a/,
+  );
+});
+
+test("legacy navigation retains citations and maps retired sections into the story", () => {
+  assert.equal(portfolioDestination("work", ""), "/#work");
+  assert.equal(portfolioDestination("about", "#about-journey"), "/#about-journey");
+  assert.equal(portfolioDestination("audit", "#audit-proof"), "/#work");
+  assert.equal(portfolioDestination("work", "#across-the-horizon"), "/#across-the-horizon");
+  assert.equal(portfolioDestination("work", "#work-connects"), "/#systems");
+  assert.equal(portfolioDestination("about", "#about-thinking"), "/#systems");
+  assert.equal(portfolioDestination("about", "#about-outside"), "/#about-outside");
 });
