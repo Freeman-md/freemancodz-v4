@@ -10,3 +10,8 @@ src/generated/prisma
 .env
 
 docs/indexing
+
+# Local browser captures and generated design review artifacts
+.playwright-mcp/
+.impeccable/review/
+.impeccable/design.json

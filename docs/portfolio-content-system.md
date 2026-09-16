@@ -70,7 +70,11 @@ The approved sources define no colour token palette, so the admin preserves the 
 
 ## 6. Public Rendering & Cache Flow
 
-`cacheComponents: true` enables Cache Components. Each public route is a Server Component that obtains one cached, composed page payload and converts it into semantic presentation data. A cache miss or invalidation performs the Prisma reads; a normal cache hit does not issue a fresh page-service query for each visitor.
+`cacheComponents: true` enables Cache Components. The public presentation is one page at `/`. Its Server Component reads the four existing cached Home, Work, About and Audit payloads and converts them into semantic presentation data. Those records remain independently managed in the admin; presentation sections compose their useful content without duplicating records. A cache miss or invalidation performs the Prisma reads; a normal cache hit does not issue a fresh page-service query for each visitor.
+
+`/work`, `/about` and `/audit` remain compatibility entry points. A small client component preserves the incoming URL fragment and replaces the URL with its corresponding section at `/`. Project and content anchors remain available for assistant citations; a linked disclosure opens automatically. The public sitemap and canonical URLs point to `/`. The assistant, audit workflow provenance, booking flow, admin, and indexing sources remain unchanged.
+
+The visual story lives in `src/features/portfolio/components/Portfolio*Scene.tsx`, with shared tokens in `portfolio-story.css` and isolated browser motion in `StoryMotion.tsx`. Editorial headings belong to the frontend; project facts, profile, experience, media, reusable actions and detailed service copy retain their managed sources. Media failure presents a contextual fallback while leaving the stored URL intact.
 
 `next build` may execute database-backed cached reads while prerendering public routes, so the build environment requires a reachable migrated and bootstrapped `DATABASE_URL`. After deployment, cached entries serve static-like output until their dependency tags are invalidated; they are not build-only content requiring redeployment. Admin/auth data is outside these cached functions and is private and dynamic.
 
