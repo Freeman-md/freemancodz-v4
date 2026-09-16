@@ -63,9 +63,7 @@ export function Navbar({ linkedInUrl }: { linkedInUrl: string }) {
                 onClick={() => {
                   window.dispatchEvent(
                     new CustomEvent(assistantTriggerEvent, {
-                      detail: {
-                        message: "I would like to talk about something I am working on.",
-                      },
+                      detail: {},
                     }),
                   );
                 }}

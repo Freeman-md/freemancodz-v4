@@ -185,7 +185,6 @@ export function FloatingPortfolioChat() {
                   canSubmit={canSubmit}
                   errorMessage={errorMessage}
                   input={input}
-                  isLoading={isLoading}
                   onClose={closeChat}
                   onInputChange={handleInputChange}
                   onKeyDown={handleKeyDown}

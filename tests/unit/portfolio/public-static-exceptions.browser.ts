@@ -15,7 +15,10 @@ import {
 } from "@/features/audit/components/AuditProofSection";
 import { OPEN_PORTFOLIO_CHAT_EVENT } from "@/features/assistant/assistant.events";
 import { HomeImproveSection } from "@/features/portfolio/components/HomeImproveSection";
+import { HomeRelevantWorkSection } from "@/features/portfolio/components/HomeRelevantWorkSection";
+import { HomeClosingSection } from "@/features/portfolio/components/HomeClosingSection";
 import { HomeHero } from "@/features/portfolio/components/HomeHero";
+import { HomeAuditSection } from "@/features/portfolio/components/HomeAuditSection";
 import { PortfolioAction } from "@/features/portfolio/components/PortfolioAction";
 import { WorkConnectionSection } from "@/features/portfolio/components/WorkConnectionSection";
 import {
@@ -195,15 +198,43 @@ test("Home and Work preserve their mapped static presentation beside dynamic con
     HomeImproveSection({
       improve: {
         ...section("Dynamic improve"),
-        customerJourney: section("Dynamic customer journey"),
-        operationalWorkflow: section("Dynamic operational workflow"),
+        customerJourney: {
+          ...section("Dynamic customer journey"),
+          icons: ["Find", "Understand", "Decide", "Act"].map((label) => ({
+            label,
+            iconName: "Search",
+            copy: null,
+          })),
+        },
+        operationalWorkflow: {
+          ...section("Dynamic operational workflow"),
+          icons: ["Capture", "Route", "Decide", "Complete"].map((label) => ({
+            label,
+            iconName: "Search",
+            copy: null,
+          })),
+        },
       },
     }),
   );
 
   assert.match(homeText, /Dynamic improve/);
-  assert.match(homeText, /The handoff that drives outcomes/);
-  assert.match(homeText, /Right action\. Right next step\./);
+  assert.match(homeText, /Dynamic customer journey copy/);
+  assert.match(homeText, /Dynamic operational workflow copy/);
+  assert.doesNotMatch(homeText, /Find\s+Understand\s+Decide\s+Act/);
+  assert.doesNotMatch(homeText, /Capture\s+Route\s+Decide\s+Complete/);
+
+  const homeMarkup = renderToStaticMarkup(
+    HomeImproveSection({
+      improve: {
+        ...section("Improve"),
+        customerJourney: section("Customer journeys"),
+        operationalWorkflow: section("Workflows"),
+      },
+    }),
+  );
+
+  assert.match(homeMarkup, /href="\/about"/);
 
   const workText = collectText(
     WorkConnectionSection({
@@ -228,6 +259,121 @@ test("Home and Work preserve their mapped static presentation beside dynamic con
   assert.match(workText, /Dynamic connection/);
   assert.match(workText, /Self-Healing Backend Operations System/);
   assert.match(workText, /Different projects\. One consistent focus/);
+});
+
+test("Home project actions use one truthful external destination per project and an open-only assistant", () => {
+  const projects: HomePresentationData["projects"] = {
+    pay4Me: { ...project("Pay4Me"), externalLinks: ["https://example.com/pay4me"] },
+    portfolioAssistant: {
+      ...project("Assistant"),
+      externalLinks: ["https://example.com/assistant"],
+    },
+    emailPa: { ...project("Email PA"), externalLinks: ["https://example.com/email"] },
+  };
+
+  const markup = renderToStaticMarkup(
+    HomeRelevantWorkSection({
+      projects,
+      relevantWork: section("Relevant work"),
+    }),
+  );
+
+  for (const href of ["pay4me", "assistant", "email"]) {
+    assert.equal(markup.split(`href="https://example.com/${href}"`).length - 1, 1);
+  }
+
+  assert.match(markup, /Visit project/);
+  assert.match(markup, /Try the assistant/);
+  assert.doesNotMatch(markup, /View Case Study|Live Assistant|href="#"/);
+
+  const withoutLinks = renderToStaticMarkup(
+    HomeRelevantWorkSection({
+      projects: {
+        pay4Me: { ...projects.pay4Me, externalLinks: [] },
+        portfolioAssistant: { ...projects.portfolioAssistant, externalLinks: [] },
+        emailPa: { ...projects.emailPa, externalLinks: [] },
+      },
+      relevantWork: section("Relevant work"),
+    }),
+  );
+
+  assert.doesNotMatch(withoutLinks, /href="#"|Visit project|View project/);
+  assert.match(withoutLinks, /Try the assistant/);
+});
+
+test("Home selected work preserves CMS evidence and media without repeating full case studies", () => {
+  const featured = {
+    ...project("Customer-facing product"),
+    problem: "A detailed problem that belongs on Work.",
+    solution: "Production onboarding and payment functionality.",
+    outcome: "Verified payment outcome.",
+    cover: { source: "/images/work/withradius-hero.jpg", altText: "Actual project screenshot" },
+  };
+
+  const markup = renderToStaticMarkup(
+    HomeRelevantWorkSection({
+      relevantWork: section("Selected work"),
+      projects: {
+        pay4Me: featured,
+        portfolioAssistant: project("Assistant"),
+        emailPa: project("Email PA"),
+      },
+    }),
+  );
+
+  assert.match(markup, /Production onboarding and payment functionality/);
+  assert.match(markup, /Verified payment outcome/);
+  assert.match(markup, /alt="Actual project screenshot"/);
+  assert.match(markup, /_next\/image/);
+  assert.doesNotMatch(markup, /A detailed problem that belongs on Work/);
+  assert.doesNotMatch(markup, /Ask a question|Find relevant emails/);
+});
+
+test("Home audit keeps the concrete CMS example without a second conversion action", () => {
+  const audit: HomePresentationData["audit"] = {
+    ...section("Find the friction"),
+    problem: { ...section("Problem"), copy: "An enquiry waits for a manual inbox check." },
+    improvement: { ...section("Improvement"), copy: "Capture once and route to the next step." },
+    actions: [{
+      label: "Repeated audit action",
+      iconName: null,
+      copy: null,
+      variant: "PRIMARY",
+      url: "/audit",
+      assistantMessage: null,
+    }],
+  };
+
+  const markup = renderToStaticMarkup(HomeAuditSection({ audit }));
+
+  assert.match(markup, /Find the friction/);
+  assert.match(markup, /An enquiry waits for a manual inbox check/);
+  assert.match(markup, /Capture once and route to the next step/);
+  assert.doesNotMatch(markup, /Repeated audit action/);
+});
+
+test("Home closing retains CMS supporting copy, action and reassurance without a duplicate headline", () => {
+  const closing = {
+    ...section("Start with one journey"),
+    copy: "You do not need to prescribe software, automation or AI.",
+    actions: [
+      {
+        label: "Start my audit",
+        iconName: null,
+        copy: null,
+        variant: "PRIMARY" as const,
+        url: "/audit",
+        assistantMessage: null,
+      },
+    ],
+  };
+
+  const markup = renderToStaticMarkup(HomeClosingSection({ closing }));
+
+  assert.doesNotMatch(markup, /Start with one journey/);
+  assert.match(markup, /You do not need to prescribe software, automation or AI/);
+  assert.match(markup, /href="\/audit"/);
+  assert.match(markup, /Free · Personally reviewed · Delivered within 48 hours/);
 });
 
 test("About preserves dynamic journey content and work-process feedback", () => {
@@ -305,7 +451,11 @@ test("Audit proof retains the three approved project entries", () => {
   const markup = renderToStaticMarkup(
     createElement(AuditProofSection, {
       proof: section("Dynamic proof"),
-      projects: [project("Pay4Me / WithRadius"), project("Portfolio Assistant"), project("Email PA")],
+      projects: [
+        project("Pay4Me / WithRadius"),
+        project("Portfolio Assistant"),
+        project("Email PA"),
+      ],
     }),
   );
 
@@ -325,7 +475,7 @@ test("Audit preserves its mapped static timing and privacy guidance", () => {
   assert.match(text, /Free\. No obligation\. Your information is never shared\./);
 });
 
-test("HomeHero keeps a stable visual stage when the Profile portrait is unavailable", () => {
+test("HomeHero renders only the Profile portrait and omits images when it is unavailable", () => {
   const profile: HomePresentationData["profile"] = {
     name: "Freeman",
     coverImage: null,
@@ -334,7 +484,8 @@ test("HomeHero keeps a stable visual stage when the Profile portrait is unavaila
 
   const withoutPortrait = renderToStaticMarkup(HomeHero({ hero: section("Home hero"), profile }));
 
-  assert.match(withoutPortrait, /min-h-\[30rem\]/);
+  assert.match(withoutPortrait, /Home hero/);
+  assert.match(withoutPortrait, /Freeman/);
   assert.doesNotMatch(withoutPortrait, /<img/);
 
   const withPortrait = renderToStaticMarkup(

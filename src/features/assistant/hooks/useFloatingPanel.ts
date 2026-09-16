@@ -141,7 +141,7 @@ export function useFloatingPanel({
   }, [messages, isLoading, stage, shouldReduceMotion]);
 
   useEffect(() => {
-    if (stage === "launcher" || (!isMobile && isLoading)) {
+    if (stage === "launcher") {
       return;
     }
 
@@ -169,7 +169,7 @@ export function useFloatingPanel({
       document.removeEventListener("pointerdown", handlePointerDown);
       document.removeEventListener("keydown", handleEscape);
     };
-  }, [isLoading, isMobile, stage]);
+  }, [isMobile, stage]);
 
   useEffect(() => {
     if (!isMobile || !isOpen) {

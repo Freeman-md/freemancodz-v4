@@ -32,7 +32,7 @@ export function CaseBadge({
 export function StudyLink({ href, icon: Icon, label }: CaseStudyLink) {
   return (
     <a
-      className="inline-flex items-center gap-2 text-sm font-semibold text-signal-700 transition hover:text-signal-900"
+      className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-signal-700 transition hover:text-signal-900"
       href={href}
       rel="noreferrer"
       target="_blank"

@@ -11,7 +11,6 @@ type ChatComposerProps = {
   canSubmit: boolean;
   errorMessage: string | null;
   input: string;
-  isLoading: boolean;
   onClose: () => void;
   onInputChange: (value: string) => void;
   onKeyDown: (event: KeyboardEvent<HTMLTextAreaElement>) => void;
@@ -23,7 +22,6 @@ export function ChatComposer({
   canSubmit,
   errorMessage,
   input,
-  isLoading,
   onClose,
   onInputChange,
   onKeyDown,
@@ -66,12 +64,13 @@ export function ChatComposer({
 
       <Button
         type="submit"
+        aria-label="Send message"
         disabled={!canSubmit}
         variant="primary"
         size="icon"
         className="size-10 shrink-0 rounded-full"
       >
-        <ArrowUpIcon />
+        <ArrowUpIcon aria-hidden="true" />
       </Button>
       <Button
         type="button"
@@ -80,7 +79,6 @@ export function ChatComposer({
         size="icon-sm"
         className="hidden shrink-0 sm:inline-flex"
         onClick={onClose}
-        disabled={isLoading}
       >
         <XIcon />
       </Button>

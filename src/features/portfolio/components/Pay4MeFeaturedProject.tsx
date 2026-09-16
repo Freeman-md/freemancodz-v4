@@ -1,33 +1,28 @@
 import Image from "next/image";
 import { ArrowUpRight, ShieldCheck, Star, TrendingUp, Wrench } from "lucide-react";
 
-import {
-  CaseBadge,
-  StudyLink,
-  StudyPoint,
-} from "@/features/portfolio/components/PortfolioProjectElements";
+import { CaseBadge, StudyPoint } from "@/features/portfolio/components/PortfolioProjectElements";
 import { FeaturedProject } from "@/shared/components/marketing/FeaturedProject";
 import { buttonVariants } from "@/shared/components/ui/Button";
 import type { PortfolioProject } from "../models/portfolio-presentation";
 
 export function Pay4MeFeaturedProject({ project }: { project: PortfolioProject }) {
-  const href = project.externalLinks[0] ?? "#";
+  const href = project.externalLinks[0];
 
   return (
     <FeaturedProject
       actions={
-        <>
+        href ? (
           <a
             className={buttonVariants({ size: "lg", variant: "signal" })}
             href={href}
             rel="noreferrer"
             target="_blank"
           >
-            View Case Study
+            Visit project
             <ArrowUpRight aria-hidden="true" className="size-4" />
           </a>
-          <StudyLink href={href} label="View Live" />
-        </>
+        ) : null
       }
       meta={
         <>
