@@ -84,7 +84,7 @@ export function PortfolioStoryHero({
       <div className="story-hero-signoff story-container">
         <p>
           {home.profile.name}
-          <span>Software engineer</span>
+          <span>{home.profile.title}</span>
         </p>
         <p>
           Customer-facing products<span>Connected to what happens next</span>

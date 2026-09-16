@@ -14,16 +14,16 @@ function getSiteUrl() {
 }
 
 export const siteConfig = {
-  name: `${SITE_OWNER_NAME} | Software Engineer`,
+  name: `${SITE_OWNER_NAME} | Product Engineer`,
   shortName: SITE_OWNER_NAME,
-  title: `${SITE_OWNER_NAME} | Software Engineer`,
+  title: `${SITE_OWNER_NAME} | Product Engineer`,
   description:
     "Building customer-facing products and reliable operational workflows that help businesses improve customer journeys and reduce repetitive work.",
   url: getSiteUrl(),
   ogImage: "/opengraph-image",
   keywords: [
     "Freeman Madudili",
-    "Software Engineer",
+    "Product Engineer",
     "AI-assisted engineering",
     "systems engineering",
     "reliable software",

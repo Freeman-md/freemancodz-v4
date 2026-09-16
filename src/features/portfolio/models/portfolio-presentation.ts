@@ -61,6 +61,7 @@ export type PortfolioExperience = {
 export type HomePresentationData = {
   profile: {
     name: string;
+    title: string;
     coverImage: string | null;
     audience: PortfolioIcon[];
   };

@@ -57,7 +57,7 @@ const projects = {
 };
 
 const home: HomePresentationData = {
-  profile: { name: "Managed Name", coverImage: null, audience: [] },
+  profile: { name: "Managed Name", title: "Managed role", coverImage: null, audience: [] },
   hero: section("Managed positioning"),
   improve: {
     ...section("Managed focus"),
@@ -201,6 +201,7 @@ test("opening reads managed identity and positioning, and only renders supplied 
 
   assert.match(markup, /Managed positioning/);
   assert.match(markup, /Managed Name/);
+  assert.match(markup, /Managed role/);
   assert.match(markup, /href="#work"/);
   assert.doesNotMatch(markup, /<img/);
   const withMedia = renderToStaticMarkup(

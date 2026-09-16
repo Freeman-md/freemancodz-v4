@@ -97,6 +97,7 @@ test("page adapters use URL and hierarchy identities instead of root array posit
   const home = createHomePresentationData({ profile, contentBlocks: homeBlocks, projects });
 
   assert.equal(home.hero.title, "Hero");
+  assert.equal(home.profile.title, profile.title);
   assert.equal(home.improve.operationalWorkflow.title, "Workflow");
   assert.deepEqual(
     home.hero.icons.map(({ label }) => label),

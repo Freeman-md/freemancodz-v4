@@ -117,6 +117,7 @@ export function createHomePresentationData(source: {
   return {
     profile: {
       name: source.profile.name,
+      title: source.profile.title,
       coverImage: source.profile.coverImage,
       audience: collection(source.profile, "AUDIENCE"),
     },
