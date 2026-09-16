@@ -2,9 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { JSDOM } from "jsdom";
 import { act, createElement } from "react";
-import { PathnameContext } from "next/dist/shared/lib/hooks-client-context.shared-runtime";
-import { Navbar } from "@/shared/components/layout/Navbar";
-import { HomeRelevantWorkSection } from "@/features/portfolio/components/HomeRelevantWorkSection";
+import { AssistantTriggerButton } from "@/features/assistant/components/AssistantTriggerButton";
 import { ChatComposer } from "@/features/assistant/components/ChatComposer";
 import { dispatchOpenPortfolioChat } from "@/features/assistant/assistant.events";
 import { useFloatingPanel } from "@/features/assistant/hooks/useFloatingPanel";
@@ -40,19 +38,6 @@ test("generic assistant entry opens without submitting, and pending responses re
 
   const root = createRoot(container);
 
-  const project = {
-    slug: "project",
-    title: "Project",
-    category: "Test",
-    problem: "Problem",
-    solution: "Solution",
-    outcome: null,
-    externalLinks: [],
-    visualBlock: null,
-    visualText: null,
-    cover: null,
-  };
-
   function Panel({ isLoading }: { isLoading: boolean }) {
     const panel = useFloatingPanel({
       clearError() {},
@@ -84,24 +69,10 @@ test("generic assistant entry opens without submitting, and pending responses re
 
   const render = (isLoading: boolean) =>
     createElement(
-      PathnameContext.Provider,
-      { value: "/" },
-      createElement(Navbar, { linkedInUrl: "https://example.com/profile" }),
-      createElement(HomeRelevantWorkSection, {
-        projects: {
-          pay4Me: { ...project, title: "Pay4Me" },
-          portfolioAssistant: { ...project, title: "Portfolio Assistant" },
-          emailPa: { ...project, title: "Email PA" },
-        },
-        relevantWork: {
-          eyebrow: "Proof",
-          title: "Relevant work",
-          copy: "Project evidence",
-          icons: [],
-          media: [],
-          actions: [],
-        },
-      }),
+      "div",
+      null,
+      createElement(AssistantTriggerButton, null, "Ask my assistant"),
+      createElement(AssistantTriggerButton, null, "Ask your own question"),
       createElement(Panel, { isLoading }),
     );
 
@@ -123,7 +94,7 @@ test("generic assistant entry opens without submitting, and pending responses re
       root.render(render(false));
     });
     await act(async () => {
-      button("Assistant").click();
+      button("Ask my assistant").click();
     });
     assert.equal(state(), "composer");
     assert.deepEqual(submitted, []);
@@ -133,7 +104,7 @@ test("generic assistant entry opens without submitting, and pending responses re
     });
     assert.equal(state(), "launcher");
     await act(async () => {
-      button("Try the assistant").click();
+      button("Ask your own question").click();
     });
     assert.equal(state(), "composer");
     assert.deepEqual(submitted, []);

@@ -51,7 +51,7 @@ export function ChatComposer({
           aria-label="Ask a question about Freeman's portfolio"
           placeholder={errorMessage || "Ask me a question"}
           className={cn(
-            "h-10 max-h-10 min-h-10 resize-none overflow-y-auto border-0 bg-transparent px-0 py-2 text-sm leading-6 text-ink shadow-none placeholder:font-mono placeholder:text-[12px] placeholder:tracking-[0.02em] placeholder:text-muted focus-visible:ring-0",
+            "h-10 max-h-10 min-h-10 resize-none overflow-y-auto border-0 bg-transparent px-0 py-2 text-base leading-6 text-ink shadow-none placeholder:text-sm placeholder:text-muted focus-visible:ring-0",
             errorMessage ? "placeholder:text-red-700" : null,
           )}
           onChange={(event) => {
