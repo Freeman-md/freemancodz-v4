@@ -43,7 +43,7 @@ export function ChatComposer({
         <MessageSquareIcon aria-hidden="true" className="size-4.5" />
       </span>
 
-      <div className="min-w-0 flex-1">
+      <div className="min-w-0 flex-1 has-[textarea:focus-visible]:shadow-[0_1px_0_var(--brand-link,#087d69)]">
         <Textarea
           id="portfolio-chat-input"
           ref={textareaRef}
@@ -51,7 +51,7 @@ export function ChatComposer({
           aria-label="Ask a question about Freeman's portfolio"
           placeholder={errorMessage || "Ask me a question"}
           className={cn(
-            "h-10 max-h-10 min-h-10 resize-none overflow-y-auto border-0 bg-transparent px-0 py-2 text-base leading-6 text-ink shadow-none placeholder:text-sm placeholder:text-muted focus-visible:ring-0",
+            "h-10 max-h-10 min-h-10 resize-none overflow-y-auto border-0 bg-transparent px-0 py-2 text-base leading-6 text-ink shadow-none placeholder:text-sm placeholder:text-muted focus-visible:outline-0 focus-visible:ring-0",
             errorMessage ? "placeholder:text-red-700" : null,
           )}
           onChange={(event) => {

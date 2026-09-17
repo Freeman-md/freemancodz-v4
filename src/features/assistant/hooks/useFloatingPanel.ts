@@ -171,20 +171,6 @@ export function useFloatingPanel({
     };
   }, [isMobile, stage]);
 
-  useEffect(() => {
-    if (!isMobile || !isOpen) {
-      return;
-    }
-
-    const previousOverflow = document.body.style.overflow;
-
-    document.body.style.overflow = "hidden";
-
-    return () => {
-      document.body.style.overflow = previousOverflow;
-    };
-  }, [isMobile, isOpen]);
-
   const surfaceTransition: Transition = shouldReduceMotion
     ? { duration: 0 }
     : { type: "spring", stiffness: 420, damping: 38, mass: 0.9 };
