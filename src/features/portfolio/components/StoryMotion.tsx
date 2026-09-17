@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, type ReactNode } from "react";
 
-/** Keep reading content visible; only the project planes respond to native scrolling. */
+/** Keep reading content visible while native scrolling moves the scene's visual objects. */
 export function StoryMotion({ children }: { children: ReactNode }) {
   const root = useRef<HTMLDivElement>(null);
 
@@ -17,6 +17,10 @@ export function StoryMotion({ children }: { children: ReactNode }) {
       return;
     }
 
+    const scenes = element.querySelectorAll<HTMLElement>(
+      ".story-featured-visual, .story-assistant-scene, .story-workflow-scene, .story-person-visual, .story-audit-grid",
+    );
+
     const update = () => {
       frame = 0;
       const distance = Math.min(window.scrollY / 900, 1);
@@ -26,6 +30,17 @@ export function StoryMotion({ children }: { children: ReactNode }) {
         preference.matches ? "0px" : `${distance * 42}px`,
       );
       element.style.setProperty("--scene-turn", preference.matches ? "0deg" : `${distance * 3}deg`);
+
+      for (const scene of scenes) {
+        const bounds = scene.getBoundingClientRect();
+
+        const progress = Math.max(
+          0,
+          Math.min((window.innerHeight - bounds.top) / (window.innerHeight + bounds.height), 1),
+        );
+
+        scene.style.setProperty("--object-progress", preference.matches ? "0.5" : progress.toFixed(4));
+      }
     };
 
     const schedule = () => {
@@ -85,31 +100,42 @@ export function StoryMotion({ children }: { children: ReactNode }) {
     const observer = new IntersectionObserver(
       (entries) => {
         for (const entry of entries) {
-          if (entry.isIntersecting) {
+          // Keep the four-step entrance visible together, including on narrow screens.
+          const requiredVisibility = entry.target.classList.contains("story-workflow-object")
+            ? 0.65
+            : 0.15;
+
+          if (entry.isIntersecting && entry.intersectionRatio >= requiredVisibility) {
             entry.target.setAttribute("data-arrived", "true");
             observer.unobserve(entry.target);
           }
         }
       },
-      { threshold: 0.25 },
+      { threshold: [0.15, 0.65], rootMargin: "0px 0px -120px 0px" },
     );
 
     element
-      .querySelectorAll(".story-assistant-object, .story-workflow-object, .story-audit-paper")
+      .querySelectorAll(
+        ".story-section-intro, .story-featured-visual, .story-assistant-object, .story-workflow-object, .story-more > h2, .story-more-list > article, .story-person-visual, .story-person-copy > h2, .story-audit-copy > h2, .story-audit-paper",
+      )
       .forEach((target) => observer.observe(target));
 
     update();
+    element.setAttribute("data-motion-ready", "true");
     revealDestination(true);
     window.addEventListener("scroll", schedule, { passive: true });
+    window.addEventListener("resize", schedule);
     window.addEventListener("hashchange", onHashChange);
     preference.addEventListener("change", update);
 
     return () => {
       window.cancelAnimationFrame(frame);
       window.removeEventListener("scroll", schedule);
+      window.removeEventListener("resize", schedule);
       window.removeEventListener("hashchange", onHashChange);
       preference.removeEventListener("change", update);
       observer.disconnect();
+      element.removeAttribute("data-motion-ready");
     };
   }, []);
 

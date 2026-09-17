@@ -603,9 +603,6 @@
   padding-bottom: 20px;
   font-size: 14px;
 }
-.story-flow-start svg {
-  color: #98b0ff;
-}
 .story-flow-path {
   display: flex;
   align-items: center;
@@ -616,6 +613,10 @@
 .story-flow-path span {
   height: 1px;
   background: #4b648e;
+}
+.story-flow-path > svg {
+  flex-shrink: 0;
+  transform: rotate(45deg);
 }
 .story-flow-path span:first-child {
   width: 35%;
@@ -649,6 +650,8 @@
 .story-workflow-object li svg {
   flex-shrink: 0;
   color: #a6bbff;
+  transform-box: fill-box;
+  transform-origin: center;
 }
 .story-workflow-object figcaption {
   font-size: 12px;
@@ -1125,38 +1128,152 @@
   outline-color: #294be8;
 }
 @media (prefers-reduced-motion: no-preference) {
+  .story-featured-screen {
+    transform: translateY(calc((0.5 - var(--object-progress, 0.5)) * 64px))
+      rotate(calc(-3deg + (var(--object-progress, 0.5) - 0.5) * 6deg));
+    transition: none;
+  }
+  .story-assistant-object {
+    translate: 0 calc((0.5 - var(--object-progress, 0.5)) * 40px);
+    --object-angle: -2deg;
+  }
+  .story-portrait {
+    translate: 0 calc((0.5 - var(--object-progress, 0.5)) * 40px);
+  }
+  .story-audit-paper {
+    translate: 0 calc((0.5 - var(--object-progress, 0.5)) * 48px);
+    --object-angle: 4deg;
+  }
+  .story-flow-path > svg {
+    translate: calc((var(--object-progress, 0.5) - 0.5) * 32px) 0;
+  }
+  [data-motion-ready] .story-section-intro:not([data-arrived]) h2,
+  [data-motion-ready] .story-more > h2:not([data-arrived]),
+  [data-motion-ready] .story-person-copy > h2:not([data-arrived]),
+  [data-motion-ready] .story-audit-copy > h2:not([data-arrived]) {
+    opacity: 0.6;
+    transform: translateY(18px);
+  }
+  [data-motion-ready] .story-featured-visual:not([data-arrived]),
+  [data-motion-ready] .story-more-list > article:not([data-arrived]) {
+    opacity: 0.7;
+    transform: translateY(28px);
+  }
+  [data-motion-ready] .story-person-visual:not([data-arrived]) .story-portrait {
+    opacity: 0.6;
+    transform: translateY(28px);
+  }
+  [data-motion-ready] .story-assistant-object:not([data-arrived]),
+  [data-motion-ready] .story-audit-paper:not([data-arrived]) {
+    transform: translateY(28px) rotate(var(--object-angle));
+  }
+  [data-motion-ready] .story-workflow-object:not([data-arrived]) .story-flow-path > svg {
+    transform: translateX(-30px) rotate(45deg);
+  }
+  .story-section-intro[data-arrived] h2,
+  .story-more > h2[data-arrived],
+  .story-person-copy > h2[data-arrived],
+  .story-audit-copy > h2[data-arrived] {
+    animation: story-heading-arrive 500ms var(--story-ease) both;
+  }
+  .story-featured-visual[data-arrived],
+  .story-more-list > article[data-arrived] {
+    animation: story-work-arrive 550ms var(--story-ease) both;
+  }
+  .story-person-visual[data-arrived] .story-portrait {
+    animation: story-portrait-arrive 600ms var(--story-ease) both;
+  }
   .story-assistant-object[data-arrived] {
     animation: story-object-settle 650ms var(--story-ease) both;
   }
-  .story-workflow-object[data-arrived] .story-flow-path {
-    animation: story-flow-connect 650ms var(--story-ease) both;
-    transform-origin: left;
+  .story-workflow-object[data-arrived] .story-flow-path > svg {
+    animation: story-plane-send 650ms var(--story-ease) both;
+  }
+  .story-workflow-object[data-arrived] li svg {
+    animation: story-step-pop 200ms var(--story-ease) both;
+  }
+  .story-workflow-object[data-arrived] li:nth-child(2) svg {
+    animation-delay: 80ms;
+  }
+  .story-workflow-object[data-arrived] li:nth-child(3) svg {
+    animation-delay: 160ms;
+  }
+  .story-workflow-object[data-arrived] li:nth-child(4) svg {
+    animation-delay: 240ms;
   }
   .story-audit-paper[data-arrived] {
     animation: story-paper-settle 650ms var(--story-ease) both;
   }
 }
-@keyframes story-object-settle {
-  from {
-    transform: translateY(14px) rotate(-4deg);
+@media (max-width: 700px) and (prefers-reduced-motion: no-preference) {
+  .story-assistant-object {
+    --object-angle: -1deg;
   }
-  to {
-    transform: translateY(0) rotate(-2deg);
+  .story-audit-paper {
+    --object-angle: 3deg;
   }
 }
-@keyframes story-flow-connect {
+@keyframes story-heading-arrive {
   from {
-    transform: scaleX(0.35);
+    opacity: 0.6;
+    transform: translateY(18px);
   }
   to {
-    transform: scaleX(1);
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes story-work-arrive {
+  from {
+    opacity: 0.7;
+    transform: translateY(28px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes story-portrait-arrive {
+  from {
+    opacity: 0.6;
+    transform: translateY(28px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes story-plane-send {
+  from {
+    transform: translateX(-30px) rotate(45deg);
+  }
+  to {
+    transform: translateX(0) rotate(45deg);
+  }
+}
+@keyframes story-object-settle {
+  from {
+    transform: translateY(28px) rotate(var(--object-angle));
+  }
+  to {
+    transform: translateY(0) rotate(var(--object-angle));
+  }
+}
+@keyframes story-step-pop {
+  from {
+    opacity: 0;
+    transform: translateY(3px) scale(0.85);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
   }
 }
 @keyframes story-paper-settle {
   from {
-    transform: translateY(18px) rotate(7deg);
+    transform: translateY(28px) rotate(var(--object-angle));
   }
   to {
-    transform: translateY(0) rotate(4deg);
+    transform: translateY(0) rotate(var(--object-angle));
   }
 }

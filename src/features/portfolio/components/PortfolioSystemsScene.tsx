@@ -1,6 +1,7 @@
-import { ArrowRight, ArrowUpRight, MessageCircle, Send, Check } from "lucide-react";
+import { ArrowUpRight, Inbox, MessageCircle, Send } from "lucide-react";
 import { AssistantTriggerButton } from "@/features/assistant/components/AssistantTriggerButton";
 import type { HomePresentationData, WorkPresentationData } from "../models/portfolio-presentation";
+import { resolvePortfolioIcon } from "../portfolio-icon.registry";
 import { StoryDisclosure } from "./StoryDisclosure";
 import { StoryProjectDetail } from "./StoryProjectDetail";
 
@@ -94,21 +95,24 @@ export function PortfolioSystemsScene({
           </div>
           <figure className="story-workflow-object">
             <div className="story-flow-start">
-              <Send aria-hidden="true" size={19} />
               <span>Incoming email</span>
             </div>
             <div className="story-flow-path" aria-hidden="true">
               <span />
-              <ArrowRight size={24} />
+              <Send size={24} strokeWidth={1.5} />
               <span />
             </div>
-            <ol>
-              {home.improve.operationalWorkflow.icons.map((step) => (
-                <li key={step.label}>
-                  <Check aria-hidden="true" size={17} />
-                  <span>{step.label}</span>
-                </li>
-              ))}
+            <ol role="list">
+              {home.improve.operationalWorkflow.icons.map((step) => {
+                const Icon = step.iconName === "Download" ? Inbox : resolvePortfolioIcon(step.iconName);
+
+                return (
+                  <li key={step.label}>
+                    {Icon && <Icon aria-hidden="true" size={18} strokeWidth={1.5} />}
+                    <span>{step.label}</span>
+                  </li>
+                );
+              })}
             </ol>
             <figcaption>Workflow concept · {email.visualText}</figcaption>
           </figure>
