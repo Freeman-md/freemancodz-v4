@@ -5,6 +5,7 @@ import { SiteLayout } from "@/shared/components/layout/SiteLayout";
 import { FloatingPortfolioChat } from "@/features/assistant/components/FloatingPortfolioChat";
 import { Analytics } from "@vercel/analytics/next";
 import { siteConfig } from "@/shared/config/site-metadata";
+import { THEME_INIT_SCRIPT } from "@/shared/config/theme";
 import { getCachedPublicProfile } from "./_portfolio/portfolio-page-cache";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
@@ -82,7 +83,15 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const profile = await getCachedPublicProfile();
 
   return (
-    <html lang="en" className={`${inter.variable} ${jetbrains.variable} ${storyFont.variable}`}>
+    <html
+      lang="en"
+      data-theme="light"
+      suppressHydrationWarning
+      className={`${inter.variable} ${jetbrains.variable} ${storyFont.variable}`}
+    >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+      </head>
       <body className="font-sans antialiased">
         <SiteLayout linkedInUrl={profile.linkedInUrl} githubUrl={profile.githubUrl}>
           {children}

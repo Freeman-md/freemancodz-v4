@@ -39,7 +39,7 @@ export function ChatComposer({
       <label htmlFor="portfolio-chat-input" className="sr-only">
         Ask a question about Freeman&apos;s portfolio
       </label>
-      <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-black text-white">
+      <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-ink text-accent">
         <MessageSquareIcon aria-hidden="true" className="size-4.5" />
       </span>
 

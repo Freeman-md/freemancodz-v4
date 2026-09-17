@@ -10,22 +10,22 @@ const config: Config = {
         display: ["var(--font-display)", "Playfair Display", "serif"],
       },
       colors: {
-        ink: "#171717",
+        ink: "#020C1B",
         muted: "#666666",
         line: "#EDEDED",
         surface: "#FAFAFA",
-        accent: "#6366F1",
+        accent: "#64FFDA",
         signal: {
-          50: "#eef2ff",
-          100: "#e0e7ff",
-          200: "#c7d2fe",
-          300: "#a5b4fc",
-          400: "#818cf8",
-          500: "#6366f1",
-          600: "#4f46e5",
-          700: "#4338ca",
-          800: "#3730a3",
-          900: "#312e81",
+          50: "#edfff9",
+          100: "#d7fff2",
+          200: "#b1ffe7",
+          300: "#93ffe5",
+          400: "#64ffda",
+          500: "#2ed4ad",
+          600: "#149b80",
+          700: "#087d69",
+          800: "#065347",
+          900: "#043b33",
         },
         success: {
           50: "#ecfdf5",
@@ -46,11 +46,11 @@ const config: Config = {
       keyframes: {
         "signal-glow": {
           "0%, 100%": {
-            boxShadow: "0 0 24px rgba(55, 48, 163, 0.24), 0 0 52px rgba(199, 210, 254, 0.5)",
+            boxShadow: "0 0 24px rgba(100, 255, 218, 0.24), 0 0 52px rgba(147, 255, 229, 0.5)",
             transform: "scale(1)",
           },
           "50%": {
-            boxShadow: "0 0 36px rgba(55, 48, 163, 0.42), 0 0 84px rgba(199, 210, 254, 0.78)",
+            boxShadow: "0 0 36px rgba(100, 255, 218, 0.42), 0 0 84px rgba(147, 255, 229, 0.78)",
             transform: "scale(1.025)",
           },
         },

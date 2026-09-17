@@ -152,7 +152,7 @@ test("managed actions retain link variants and assistant precedence", () => {
   for (const [variant, expectedClass] of Object.entries({
     GHOST: "border-line",
     LINK: "border-none",
-    PRIMARY: "bg-signal-800",
+    PRIMARY: "bg-accent",
     SECONDARY: "bg-white",
   })) {
     const action: Action = {

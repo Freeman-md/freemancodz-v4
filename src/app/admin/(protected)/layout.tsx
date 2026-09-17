@@ -25,7 +25,7 @@ export default async function ProtectedAdminLayout({ children }: { children: Rea
   }
 
   return (
-    <Container className="grid min-h-[80vh] lg:grid-cols-[260px_1fr]">
+    <Container className="grid min-h-[80vh] text-ink lg:grid-cols-[260px_1fr]">
       <aside className="border-b border-line bg-white p-5 lg:border-r lg:border-b-0 lg:p-7">
         <p className="font-mono text-xs font-semibold tracking-[0.16em] text-signal-700 uppercase">
           Portfolio content
@@ -50,7 +50,7 @@ export default async function ProtectedAdminLayout({ children }: { children: Rea
           </Button>
         </form>
       </aside>
-      <main className="min-w-0 p-5 sm:p-8 lg:p-10">{children}</main>
+      <main className="min-w-0 bg-white p-5 sm:p-8 lg:p-10">{children}</main>
     </Container>
   );
 }

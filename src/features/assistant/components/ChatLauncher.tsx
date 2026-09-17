@@ -20,7 +20,7 @@ export function ChatLauncher({ buttonRef, onFocus, onOpen }: ChatLauncherProps) 
       onClick={onOpen}
       onFocus={onFocus}
       variant="ghost"
-      className="h-12 w-full justify-center gap-2 rounded-none px-4 text-left text-white hover:bg-white/5 hover:text-white"
+      className="h-12 w-full justify-center gap-2 rounded-none px-4 text-left text-ink hover:bg-black/5 hover:text-ink"
     >
       <MessageSquareIcon aria-hidden="true" className="size-4" />
       <span className="hidden text-[13px] font-medium sm:inline">Ask assistant</span>

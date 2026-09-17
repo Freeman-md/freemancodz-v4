@@ -1,28 +1,29 @@
 ---
 name: Freeman Madudili — Working Objects
-description: Frost-white product displays, cobalt actions, and clear engineering evidence.
+description: Light product displays, optional dark navy scenes, mint actions, and clear engineering evidence.
 colors:
-  story-paper: "#f7f8fa"
+  story-canvas: "#f7f8fa"
   story-white: "#ffffff"
-  story-ink: "#18202f"
+  story-ink: "#020c1b"
+  story-object-ink: "#020c1b"
   story-muted: "#596271"
-  story-accent: "#294be8"
-  story-accent-hover: "#1c37b2"
+  story-accent: "#64ffda"
+  story-accent-hover: "#93ffe5"
   story-line: "#dce1e9"
-  story-night: "#141d30"
-  story-night-muted: "#bdc8de"
-  story-night-line: "#36425a"
+  story-night: "#020c1b"
+  story-night-muted: "#a8b7ca"
+  story-night-line: "#20364a"
   story-night-text: "#f4f6fc"
-  story-night-highlight: "#98b0ff"
-  story-audit-muted: "#e1e8ff"
-  story-audit-highlight: "#c4d0ff"
-  story-audit-line: "#657feb"
+  story-night-highlight: "#64ffda"
+  story-audit-muted: "#174d47"
+  story-audit-highlight: "#246257"
+  story-audit-line: "#40bda0"
   story-audit-paper: "#f7f8fc"
-  story-audit-button-text: "#1935bc"
+  story-audit-button-text: "#64ffda"
   story-assistant-paper: "#fafbff"
-  story-project-stage: "#e5eafa"
-  story-portrait-stage: "#dce5f4"
-  assistant-ink: "#171717"
+  story-project-stage: "#e5f3ee"
+  story-portrait-stage: "#d7fff2"
+  assistant-ink: "#020c1b"
   assistant-muted: "#666666"
 typography:
   display:
@@ -75,30 +76,30 @@ spacing:
 components:
   button-primary:
     backgroundColor: "{colors.story-accent}"
-    textColor: "{colors.story-white}"
+    textColor: "{colors.story-object-ink}"
     typography: "{typography.button}"
     rounded: "{rounded.pill}"
     padding: "13px 24px"
   button-primary-hover:
     backgroundColor: "{colors.story-accent-hover}"
-    textColor: "{colors.story-white}"
+    textColor: "{colors.story-object-ink}"
   button-audit:
-    backgroundColor: "{colors.story-white}"
+    backgroundColor: "{colors.story-object-ink}"
     textColor: "{colors.story-audit-button-text}"
     typography: "{typography.button}"
     rounded: "{rounded.pill}"
   project-plane:
     backgroundColor: "{colors.story-white}"
-    textColor: "{colors.story-ink}"
+    textColor: "{colors.story-object-ink}"
     rounded: "{rounded.plane}"
   assistant-object:
     backgroundColor: "{colors.story-assistant-paper}"
-    textColor: "{colors.story-ink}"
+    textColor: "{colors.story-object-ink}"
     rounded: "{rounded.object}"
     padding: "30px"
   audit-paper:
     backgroundColor: "{colors.story-audit-paper}"
-    textColor: "{colors.story-ink}"
+    textColor: "{colors.story-object-ink}"
     rounded: "{rounded.paper}"
     padding: "38px"
   navigation:
@@ -121,28 +122,28 @@ components:
 
 **Creative North Star: "Working Objects"**
 
-Real interfaces and small working interactions carry the visual identity. Frost-white space, ink text, cobalt actions, and gently tilted product objects make the engineering tangible. Manrope gives the display language a rounded, precise character; Inter keeps the evidence easy to read.
+Real interfaces and small working interactions carry the visual identity. Light space, navy text, mint actions, and gently tilted product objects make the engineering tangible. Manrope gives the display language a rounded, precise character; Inter keeps the evidence easy to read.
 
 This documents the implemented public portfolio and its shared navigation. The existing assistant retains its established conversation controls. Page order and the current composition belong in `.impeccable/surface-briefs/public-home.md`; this file records reusable visual decisions, not a replacement product or architecture specification.
 
 **Key Characteristics:**
 
 - Dimensional project objects within generous, quiet space.
-- Cobalt actions and occasional full-color sections.
+- Mint actions and a mint audit invitation.
 - Restrained reading typography and inline disclosure of detail.
 - Motion enhances visible content without delaying access to it.
 
 ## Colors
 
-The palette combines cool paper neutrals with a single vivid cobalt accent. The frontmatter records the source CSS values; contextual shades are deliberate section overrides.
+The palette uses Freeman’s original mint `#64FFDA` and dark navy `#020C1B`, with light surfaces, navy text, and an optional dark presentation. The frontmatter records light-mode values; dark mode overrides the canvas to `#020C1B`, text to `#E6F1FF`, muted text to `#A8B7CA`, rules to `#20364A`, and the project stage to `#0A192F`. Contextual shades are deliberate section overrides.
 
 ### Primary
 
-Cobalt identifies primary actions, selected headline phrases, and the audit invitation. Deep cobalt supplies primary button hover feedback. The audit button reverses to white with blue lettering.
+Mint identifies primary actions, selected headline phrases, and the audit invitation. Mint fills carry navy text. The audit button reverses to navy with mint lettering. Dark green supplies readable links and focus feedback inside light interface objects.
 
 ### Neutral
 
-Frost paper is the page ground; white and lightly tinted paper hold project and assistant objects. Ink and slate supply primary and supporting text. Thin cool-grey rules separate expandable content. Night sections use pale text, blue-grey supporting copy, and lighter blue accents; do not reuse paper-section muted text there.
+Light mode is the default: frost paper is the page ground, with navy text and cool-grey rules. Dark mode uses navy ground, pale text, and blue-grey rules. White and lightly tinted paper hold real project and assistant interfaces in both modes. The systems scene uses navy in either mode; the mint audit scene uses navy text and green rules.
 
 **The Contextual Contrast Rule.** Keep each section's text, divider, and focus colors together; a dark background is a complete color context.
 
@@ -176,23 +177,23 @@ Pills identify primary actions and floating navigation. Media and paper use the 
 
 ### Buttons and links
 
-Primary story buttons have a 50px minimum height; their compact variant uses 46px with 12px × 18px padding. Pointer hover deepens cobalt and raises the button slightly; press scales it to 0.97. Text links have a 48px minimum height and gain an underline on hover. The audit action is white on cobalt with a 52px minimum height.
+Primary story buttons have a 50px minimum height; their compact variant uses 46px with 12px × 18px padding. Pointer hover lightens mint and raises the button slightly; press scales it to 0.97. Text links have a 48px minimum height and gain an underline on hover. The audit action is navy on mint with a 52px minimum height.
 
-Page links navigate to anchors. Assistant prompts and enquiry actions open the existing assistant. Use a real button for actions and a link for destinations. Global keyboard focus uses a 3px outline with a 5px offset; colored sections lighten the outline, and light objects within them restore cobalt. Existing assistant primitives retain their own focus treatment.
+Page links navigate to anchors. Assistant prompts and enquiry actions open the existing assistant. Use a real button for actions and a link for destinations. Global keyboard focus uses a 3px dark-green outline in light mode and mint in dark mode, with a 5px offset; the mint section uses navy, and light objects use dark green. Existing assistant primitives retain their own focus treatment.
 
 ### Navigation
 
-The sticky pill holds the existing Freemancodz logo and visible section links. It is 64px tall on desktop and 58px on compact screens. Links have 44px minimum heights and a cobalt hover. Compact sizing reduces the logo and gaps without removing the destinations. A keyboard-accessible skip link precedes the navigation.
+The sticky pill holds the existing Freemancodz logo and visible section links. It is 64px tall on desktop and 58px on compact screens. Links have 44px minimum heights and a mint hover. Compact sizing reduces the logo and gaps without removing the destinations. A keyboard-accessible skip link precedes the navigation. Its theme switch remembers a visitor’s choice in local storage; a synchronous bootstrap applies saved dark mode before paint. Fresh visits use light mode, and switching still works if preference storage is unavailable. Palette colours and the hero lighting transition together over 240ms; reduced motion switches immediately.
 
 ### Objects and disclosures
 
-Project planes crop real screenshots to their established aspect ratio; the featured screen sits within a pale blue stage. The assistant object contains actionable prompt rows separated by rules. The audit sheet is explicitly an illustrative example, not fabricated client evidence.
+Project planes crop real screenshots to their established aspect ratio; the featured screen sits within a pale mint stage. The assistant object contains actionable prompt rows separated by rules. The audit sheet is explicitly an illustrative example, not fabricated client evidence.
 
 Native details/summary controls expose project, career, interests, and audit depth. Summary rows have a 60px minimum height; additional-project rows use 76px. Opening rotates the plus icon and animates the content briefly. Deep-link handling opens enclosing disclosures before positioning the destination.
 
 ### Assistant input
 
-The existing composer uses a borderless, transparent, 40px-high textarea, with muted placeholder copy and circular send control. It remains part of the established assistant UI, with its existing disabled, validation, and conversation behavior. Its local focus ring is suppressed in the current implementation; this is a description, not a new recommended focus pattern.
+The existing composer uses a borderless, transparent, 40px-high textarea, with muted placeholder copy and circular send control. It remains part of the established assistant UI, with its existing disabled, validation, and conversation behavior. The textarea has no outline; a subtle green underline on its wrapper preserves keyboard focus feedback.
 
 ### Imagery and motion
 

@@ -8,14 +8,14 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          "bg-signal-800 text-white shadow-[0_12px_28px_-14px_rgba(55,48,163,0.72)] hover:bg-signal-900",
+          "bg-accent text-ink shadow-[0_12px_28px_-14px_rgba(100,255,218,0.28)] hover:bg-signal-300",
         signal:
-          "bg-signal-800 text-white shadow-[0_12px_28px_-14px_rgba(55,48,163,0.72)] hover:bg-signal-900",
+          "bg-accent text-ink shadow-[0_12px_28px_-14px_rgba(100,255,218,0.28)] hover:bg-signal-300",
         light:
           "border-slate-300 bg-white text-slate-950 shadow-sm hover:border-signal-200 hover:bg-signal-50/40",
         success:
           "bg-success-700 text-white shadow-[0_12px_28px_-14px_rgba(4,120,87,0.62)] hover:bg-success-800",
-        primary: "bg-black text-white hover:bg-black/85",
+        primary: "bg-accent text-ink hover:bg-signal-300",
         outline: "border-line bg-white text-ink hover:border-signal-200 hover:bg-signal-50/40",
         secondary: "bg-surface text-ink hover:bg-black/[0.04]",
         ghost: "bg-transparent text-ink hover:bg-surface",

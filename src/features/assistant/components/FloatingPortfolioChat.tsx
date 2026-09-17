@@ -71,7 +71,7 @@ export function FloatingPortfolioChat() {
       initial={false}
       animate={{
         maxWidth: isOpen ? 640 : launcherWidth,
-        backgroundColor: isOpen ? "#ffffff" : "#18202f",
+        backgroundColor: isOpen ? "#ffffff" : "var(--brand-primary)",
         borderColor:
           isMobileSheet && isSheetExpanded
             ? "rgba(0,0,0,0)"
@@ -90,7 +90,7 @@ export function FloatingPortfolioChat() {
       aria-modal={isMobileSheet || undefined}
       aria-labelledby={isMobileSheet ? "portfolio-chat-title" : undefined}
       className={cn(
-        "pointer-events-auto flex w-full flex-col overflow-hidden border",
+        "portfolio-chat-surface pointer-events-auto flex w-full flex-col overflow-hidden border",
         isMobileSheet
           ? isSheetExpanded
             ? "h-dvh max-w-none rounded-none bg-white"
