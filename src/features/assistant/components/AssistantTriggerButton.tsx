@@ -6,7 +6,6 @@ import {
   dispatchOpenPortfolioChat,
   type OpenPortfolioChatDetail,
 } from "@/features/assistant/assistant.events";
-import { marketingCtaClasses } from "@/shared/components/marketing/MarketingCtaLink";
 import { Button } from "@/shared/components/ui/Button";
 import { cn } from "@/shared/utils/class-names";
 
@@ -38,7 +37,7 @@ export function AssistantTriggerButton({
       size={variant === "marketing" ? "lg" : variant === "text" ? "sm" : "lg"}
       className={cn(
         "font-mono text-[12px] tracking-[0.02em]",
-        variant === "marketing" ? marketingCtaClasses : null,
+        variant === "marketing" ? "mx-auto mt-10 w-full max-w-lg gap-5" : null,
         className,
       )}
       onClick={() => {

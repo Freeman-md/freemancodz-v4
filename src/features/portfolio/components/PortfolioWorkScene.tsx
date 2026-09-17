@@ -11,6 +11,7 @@ export function PortfolioWorkScene({ work }: { work: WorkPresentationData }) {
     <section className="story-work story-container" id="work" aria-labelledby="work-title">
       <span id="home-work" />
       <span id="work-relevant" />
+      <span id="audit-proof" />
       <div className="story-section-intro">
         <h2 id="work-title">
           Good software makes

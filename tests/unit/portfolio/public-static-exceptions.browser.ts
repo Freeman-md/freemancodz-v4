@@ -10,7 +10,6 @@ import { PortfolioMoreWork } from "@/features/portfolio/components/PortfolioMore
 import { PortfolioFreemanScene } from "@/features/portfolio/components/PortfolioFreemanScene";
 import { PortfolioAuditScene } from "@/features/portfolio/components/PortfolioAuditScene";
 import { StoryProjectDetail } from "@/features/portfolio/components/StoryProjectDetail";
-import { portfolioDestination } from "@/features/portfolio/portfolio-navigation";
 import {
   portfolioIconRegistry,
   resolvePortfolioIcon,
@@ -313,12 +312,15 @@ test("missing project links never create fake destinations", () => {
   );
 });
 
-test("legacy navigation retains citations and maps retired sections into the story", () => {
-  assert.equal(portfolioDestination("work", ""), "/#work");
-  assert.equal(portfolioDestination("about", "#about-journey"), "/#about-journey");
-  assert.equal(portfolioDestination("audit", "#audit-proof"), "/#work");
-  assert.equal(portfolioDestination("work", "#across-the-horizon"), "/#across-the-horizon");
-  assert.equal(portfolioDestination("work", "#work-connects"), "/#systems");
-  assert.equal(portfolioDestination("about", "#about-thinking"), "/#systems");
-  assert.equal(portfolioDestination("about", "#about-outside"), "/#about-outside");
+test("homepage retains section anchors used by existing assistant citations", () => {
+  const markup = renderToStaticMarkup(createElement("div", null,
+    createElement(PortfolioWorkScene, { work }),
+    createElement(PortfolioSystemsScene, { home, work }),
+    createElement(PortfolioFreemanScene, { about, home }),
+    createElement(PortfolioAuditScene, { audit, home }),
+  ));
+
+  for (const anchor of ["work-relevant", "work-connects", "about-thinking", "about-journey", "about-outside", "audit-proof", "audit-process"]) {
+    assert.ok(markup.includes(`id="${anchor}"`), anchor);
+  }
 });

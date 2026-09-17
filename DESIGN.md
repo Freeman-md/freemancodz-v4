@@ -179,7 +179,7 @@ Pills identify primary actions and floating navigation. Media and paper use the 
 
 Primary story buttons have a 50px minimum height; their compact variant uses 46px with 12px × 18px padding. Pointer hover lightens mint and raises the button slightly; press scales it to 0.97. Text links have a 48px minimum height and gain an underline on hover. The audit action is navy on mint with a 52px minimum height.
 
-Page links navigate to anchors. Assistant prompts and enquiry actions open the existing assistant. Use a real button for actions and a link for destinations. Global keyboard focus uses a 3px dark-green outline in light mode and mint in dark mode, with a 5px offset; the mint section uses navy, and light objects use dark green. Existing assistant primitives retain their own focus treatment.
+Page links navigate to anchors. Retired and unknown public page URLs redirect to `/`; existing fragment anchors retain assistant citation destinations. Admin, authentication, API and asset routes remain available. Assistant prompts and enquiry actions open the existing assistant. Use a real button for actions and a link for destinations. Global keyboard focus uses a 3px dark-green outline in light mode and mint in dark mode, with a 5px offset; the mint section uses navy, and light objects use dark green. Existing assistant primitives retain their own focus treatment.
 
 ### Navigation
 
