@@ -1,8 +1,11 @@
 import "server-only";
 
-import type { ILogger } from "./logger.interface";
+export type Logger = {
+  error(message: string, context?: unknown): void;
+  info(message: string, context?: unknown): void;
+};
 
-export class ConsoleLogger implements ILogger {
+export class ConsoleLogger implements Logger {
   error(message: string, error?: unknown) {
     console.error(message, error);
   }
@@ -12,4 +15,4 @@ export class ConsoleLogger implements ILogger {
   }
 }
 
-export const logger: ILogger = new ConsoleLogger();
+export const logger: Logger = new ConsoleLogger();

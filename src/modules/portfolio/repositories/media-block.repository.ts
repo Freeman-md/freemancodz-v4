@@ -1,8 +1,8 @@
 import "server-only";
 import type { MediaMetadataInput } from "@/contracts/portfolio-admin.contract";
 import type { PrismaClient } from "@/generated/prisma/client";
-import type { IMediaBlockAdministrationRepository } from "../interfaces/media-block.repository.interface";
-export class MediaBlockRepository implements IMediaBlockAdministrationRepository {
+import type { MediaBlockStore } from "../types";
+export class MediaBlockRepository implements MediaBlockStore {
   constructor(private readonly database: PrismaClient) {}
 
   findById(id: string) {

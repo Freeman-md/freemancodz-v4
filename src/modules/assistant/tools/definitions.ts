@@ -1,4 +1,4 @@
-import type { OpenAIResponseTool } from "@/infrastructure/openai/models/openai-response-request";
+import type { OpenAIResponseTool } from "@/infrastructure/openai/types";
 
 export const GLOBAL_ASSISTANT_TOOLS: OpenAIResponseTool[] = [
   {

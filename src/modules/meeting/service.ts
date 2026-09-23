@@ -1,15 +1,15 @@
 import "server-only";
 import type { MeetingSlot, MeetingStore, PendingCalendarEvent } from "./types";
-import type { IGoogleCalendarProvider } from "@/infrastructure/google-calendar/interfaces/google-calendar.provider.interface";
-import type { ILogger } from "@/infrastructure/logging/logger.interface";
+import type { CalendarClient } from "@/infrastructure/google-calendar/types";
+import type { Logger } from "@/infrastructure/logging/logger";
 import { MEETING_CONFIG } from "./config";
 import { MeetingPersistenceError } from "./types";
 
 export class MeetingService {
   constructor(
-    private readonly calendar: IGoogleCalendarProvider,
+    private readonly calendar: CalendarClient,
     private readonly repository: MeetingStore,
-    private readonly logger: ILogger,
+    private readonly logger: Logger,
   ) {}
 
   async findAvailableSlots(input: { startDate: string; endDate: string }): Promise<MeetingSlot[]> {

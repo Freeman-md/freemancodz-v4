@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import type { ILogger } from "@/infrastructure/logging/logger.interface";
+import type { Logger } from "@/infrastructure/logging/logger";
 import {
   AdminAuthProviderError,
   type AdminAuthProvider,
@@ -13,7 +13,7 @@ import {
 
 const approvedEmail = "freemanmadudili@gmail.com";
 
-type FakeLogger = ILogger & { entries: Array<{ event: string; context: unknown }> };
+type FakeLogger = Logger & { entries: Array<{ event: string; context: unknown }> };
 
 function logger(): FakeLogger {
   const entries: Array<{ event: string; context: unknown }> = [];

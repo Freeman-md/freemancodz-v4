@@ -4,8 +4,8 @@ import type {
   UpsertExperienceInput,
 } from "@/contracts/portfolio-admin.contract";
 import type { PrismaClient } from "@/generated/prisma/client";
-import type { IExperienceAdministrationRepository } from "../interfaces/experience.repository.interface";
-export class ExperienceRepository implements IExperienceAdministrationRepository {
+import type { ExperienceStore } from "../types";
+export class ExperienceRepository implements ExperienceStore {
   constructor(private readonly database: PrismaClient) {}
 
   findAll() {

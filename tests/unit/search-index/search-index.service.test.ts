@@ -1,20 +1,20 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import type { ILogger } from "@/infrastructure/logging/logger.interface";
+import type { Logger } from "@/infrastructure/logging/logger";
 import type {
   GeneratedEmbedding,
-  IOpenAIProvider,
-} from "@/infrastructure/openai/interfaces/openai.provider.interface";
-import type { ISearchIndexJobRepository } from "@/modules/search-index/interfaces/search-index-job.repository.interface";
-import type { ISiteChunkRepository } from "@/modules/search-index/interfaces/site-chunk.repository.interface";
+  OpenAITransport,
+} from "@/infrastructure/openai/types";
+import type { SearchIndexJobStore } from "@/modules/search-index/types";
+import type { SiteChunkStore } from "@/modules/search-index/types";
 import type {
   ClaimedSearchIndexJob,
   SearchIndexJob,
   SearchIndexJobClaimResult,
-} from "@/modules/search-index/models/search-index-job";
-import type { EmbeddedSiteChunk } from "@/modules/search-index/models/site-chunk";
-import { SearchIndexService } from "@/modules/search-index/services/search-index.service";
+} from "@/modules/search-index/types";
+import type { EmbeddedSiteChunk } from "@/modules/search-index/types";
+import { SearchIndexService } from "@/modules/search-index/service";
 import { createPortfolioSnapshotFixture } from "./search-index.fixture";
 
 const CLAIMED_AT = new Date("2026-08-18T09:00:00.000Z");
@@ -68,7 +68,7 @@ function createService(options: ServiceOptions = {}) {
 
   let rebuildRequests = 0;
 
-  const jobs: ISearchIndexJobRepository = {
+  const jobs: SearchIndexJobStore = {
     requestRebuild: async () => {
       rebuildRequests += 1;
     },
@@ -89,7 +89,7 @@ function createService(options: ServiceOptions = {}) {
     },
   };
 
-  const chunks: ISiteChunkRepository = {
+  const chunks: SiteChunkStore = {
     replacePortfolioSnapshot: async (values, claimedAt) => {
       replaced.push(values);
       replacementTokens.push(claimedAt);
@@ -98,7 +98,7 @@ function createService(options: ServiceOptions = {}) {
     match: async () => [],
   };
 
-  const openai: IOpenAIProvider = {
+  const openai: OpenAITransport = {
     getEmbeddingModel: () => "text-embedding-test",
     createEmbedding: async () => [],
     createEmbeddings: async (inputs) => {
@@ -119,39 +119,31 @@ function createService(options: ServiceOptions = {}) {
       })(),
   };
 
-  const logger: ILogger = {
+  const logger: Logger = {
     info: (message, context) => events.push({ level: "info", message, context }),
     error: (message, context) => events.push({ level: "error", message, context }),
   };
 
   const portfolio = {
-    home: {
-      getPageData: async () => {
-        pageCalls.push("home");
+    getHomePageData: async () => {
+      pageCalls.push("home");
 
-        return snapshot.home;
-      },
+      return snapshot.home;
     },
-    work: {
-      getPageData: async () => {
-        pageCalls.push("work");
+    getWorkPageData: async () => {
+      pageCalls.push("work");
 
-        return snapshot.work;
-      },
+      return snapshot.work;
     },
-    about: {
-      getPageData: async () => {
-        pageCalls.push("about");
+    getAboutPageData: async () => {
+      pageCalls.push("about");
 
-        return snapshot.about;
-      },
+      return snapshot.about;
     },
-    audit: {
-      getPageData: async () => {
-        pageCalls.push("audit");
+    getAuditPageData: async () => {
+      pageCalls.push("audit");
 
-        return snapshot.audit;
-      },
+      return snapshot.audit;
     },
   };
 

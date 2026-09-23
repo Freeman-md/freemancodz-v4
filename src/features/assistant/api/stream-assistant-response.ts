@@ -2,7 +2,7 @@ import {
   assistantStreamEventSchema,
   type AssistantWorkflowStart,
 } from "@/contracts/assistant.contract";
-import type { StreamChatResponseHandlers } from "../models/chat-message";
+import type { StreamChatResponseHandlers } from "../types";
 
 async function getErrorMessage(response: Response) {
   try {

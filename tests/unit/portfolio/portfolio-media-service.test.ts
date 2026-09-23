@@ -1,11 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import type { ILogger } from "@/infrastructure/logging/logger.interface";
-import type { IMediaBlockAdministrationRepository } from "@/modules/portfolio/interfaces/media-block.repository.interface";
-import type { IProfileAdministrationRepository } from "@/modules/portfolio/interfaces/profile.repository.interface";
-import type { IProjectAdministrationRepository } from "@/modules/portfolio/interfaces/project.repository.interface";
-import type { IPortfolioMediaStorageProvider } from "@/modules/portfolio/interfaces/supabase-storage.provider.interface";
-import { PortfolioMediaService } from "@/modules/portfolio/services/portfolio-media.service";
+import type { Logger } from "@/infrastructure/logging/logger";
+import type { MediaBlockStore } from "@/modules/portfolio/types";
+import type { ProfileStore } from "@/modules/portfolio/types";
+import type { ProjectStore } from "@/modules/portfolio/types";
+import type { PortfolioMediaStorage } from "@/modules/portfolio/types";
+import { PortfolioMediaService } from "@/modules/portfolio/media";
 
 const profile = {
   id: "global",
@@ -34,7 +34,7 @@ function setup(
 
   const createdMedia: Array<{ source: string; type: "IMAGE" | "VIDEO" }> = [];
 
-  const storage: IPortfolioMediaStorageProvider = {
+  const storage: PortfolioMediaStorage = {
     ensurePublicBucket: async () => undefined,
     getPublicUrl: (path) => `https://storage.test/storage/v1/object/public/portfolio-media/${path}`,
     upload: async ({ objectPath }) =>
@@ -48,7 +48,7 @@ function setup(
     getObjectPath: (url) => url.split("portfolio-media/")[1] || null,
   };
 
-  const profiles: IProfileAdministrationRepository = {
+  const profiles: ProfileStore = {
     findSingleton: async () => profile,
     updateSingleton: async () => undefined,
     updateCoverImage: async () => {
@@ -59,7 +59,7 @@ function setup(
     replaceCollection: async () => undefined,
   };
 
-  const media: IMediaBlockAdministrationRepository = {
+  const media: MediaBlockStore = {
     findById: async () => null,
     findAll: async () => [],
     countSourceReferences: async () => {
@@ -123,7 +123,7 @@ function setup(
     },
   };
 
-  const projects: IProjectAdministrationRepository = {
+  const projects: ProjectStore = {
     findAll: async () => [project],
     findById: async () => project,
     findBySlug: async () => project,
@@ -136,7 +136,7 @@ function setup(
 
   const errors: string[] = [];
 
-  const logger: ILogger = {
+  const logger: Logger = {
     info: () => undefined,
     error: (message) => {
       errors.push(message);

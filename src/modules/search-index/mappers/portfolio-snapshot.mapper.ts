@@ -3,8 +3,8 @@ import type {
   AuditPageData,
   HomePageData,
   WorkPageData,
-} from "@/modules/portfolio/public";
-import type { IndexDocument } from "../models/index-document";
+} from "@/modules/portfolio/types";
+import type { IndexDocument } from "../types";
 
 export type PortfolioSnapshot = {
   home: HomePageData;

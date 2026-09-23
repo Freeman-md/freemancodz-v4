@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { getAdminEmail } from "@/infrastructure/config/env";
-import { refreshSupabaseAuth } from "@/infrastructure/supabase/refresh-supabase-auth";
+import { refreshSupabaseAuth } from "@/infrastructure/supabase/refresh-auth";
 
 const allowedGeneratedRoutes = new Set(["/opengraph-image", "/robots.txt", "/sitemap.xml"]);
 

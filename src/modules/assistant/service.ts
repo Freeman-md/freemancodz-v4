@@ -5,24 +5,24 @@ import { CHAT_SYSTEM_PROMPT } from "./prompt";
 import type { AssistantResponseInput } from "./types";
 import { GLOBAL_ASSISTANT_TOOLS } from "./tools/definitions";
 import { executeGlobalAssistantTool } from "./tools/execute";
-import type { IOpenAIProvider } from "@/infrastructure/openai/interfaces/openai.provider.interface";
-import type { OpenAIResponseInputItem } from "@/infrastructure/openai/models/openai-response-request";
-import type { ISiteSearchService } from "@/modules/search-index/public";
-import type { ILogger } from "@/infrastructure/logging/logger.interface";
+import type { OpenAITransport } from "@/infrastructure/openai/types";
+import type { OpenAIResponseInputItem } from "@/infrastructure/openai/types";
+import type { SiteSearch } from "@/modules/search-index/types";
+import type { Logger } from "@/infrastructure/logging/logger";
 import type { AssistantSource, AssistantStreamEvent } from "@/contracts/assistant.contract";
-import {
-  START_WORKFLOW_TOOL_NAME,
-  type IWorkflowService,
-  type WorkflowAssistantContext,
-  type WorkflowPublicInstance,
-} from "@/modules/workflow/public";
+import { START_WORKFLOW_TOOL_NAME } from "@/modules/workflow/constants";
+import type {
+  WorkflowServiceClient,
+  WorkflowAssistantContext,
+  WorkflowPublicInstance,
+} from "@/modules/workflow/types";
 
 export class AssistantService {
   constructor(
-    private readonly openai: IOpenAIProvider,
-    private readonly siteSearch: ISiteSearchService,
-    private readonly logger: ILogger,
-    private readonly workflow: IWorkflowService,
+    private readonly openai: OpenAITransport,
+    private readonly siteSearch: SiteSearch,
+    private readonly logger: Logger,
+    private readonly workflow: WorkflowServiceClient,
   ) {}
 
   createResponse({

@@ -6,14 +6,14 @@ import type {
   ExperienceWithIcons,
   ProfileWithCollections,
   ProjectWithCover,
-} from "@/modules/portfolio/models/portfolio-records";
+} from "@/modules/portfolio/types";
 import {
   getAboutPageCacheTags,
   getAuditPageCacheTags,
   getHomePageCacheTags,
   getWorkPageCacheTags,
   PortfolioCacheTag,
-} from "@/modules/portfolio/portfolio-cache";
+} from "@/modules/portfolio/cache";
 
 const now = new Date("2026-08-12T00:00:00.000Z");
 

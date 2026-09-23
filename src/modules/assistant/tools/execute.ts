@@ -1,10 +1,10 @@
 import { searchWebsite, searchWebsiteSchema } from "./search-website";
-import type { IOpenAIProvider } from "@/infrastructure/openai/interfaces/openai.provider.interface";
-import type { ISiteSearchService } from "@/modules/search-index/public";
+import type { OpenAITransport } from "@/infrastructure/openai/types";
+import type { SiteSearch } from "@/modules/search-index/types";
 
 type AssistantToolDependencies = {
-  openai: IOpenAIProvider;
-  siteSearch: ISiteSearchService;
+  openai: OpenAITransport;
+  siteSearch: SiteSearch;
 };
 export type AssistantToolResult = {
   output: Record<string, unknown>;

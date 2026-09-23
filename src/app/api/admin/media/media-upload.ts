@@ -7,7 +7,8 @@ import {
   AdminAuthenticationError,
   type AdminAuthService,
 } from "@/modules/admin-auth/service";
-import { type IPortfolioMediaService, PortfolioCacheTag } from "@/modules/portfolio/public";
+import type { PortfolioMedia } from "@/modules/portfolio/types";
+import { PortfolioCacheTag } from "@/modules/portfolio/cache";
 
 const mediaExtensions: Record<string, string> = {
   "image/jpeg": "jpg",
@@ -22,12 +23,12 @@ class MediaRequestTooLargeError extends Error {}
 
 export type MediaUploadDependencies = {
   auth: Pick<AdminAuthService, "requireAdmin">;
-  media: IPortfolioMediaService;
+  media: PortfolioMedia;
   revalidate: (tag: string) => void;
 };
 
 function getOwnerCacheTag(
-  owner: Parameters<IPortfolioMediaService["replaceMedia"]>[0]["owner"],
+  owner: Parameters<PortfolioMedia["replaceMedia"]>[0]["owner"],
   projectSlug?: string,
 ) {
   if (projectSlug) {

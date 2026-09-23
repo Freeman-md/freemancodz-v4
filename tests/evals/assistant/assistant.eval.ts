@@ -1,6 +1,6 @@
 import { CHAT_SYSTEM_PROMPT } from "@/modules/assistant/prompt";
-import { createOpenAIClient, getResponseModel } from "@/infrastructure/openai/openai.client";
-import { getEmbeddingModel } from "@/infrastructure/openai/openai.client";
+import { createOpenAIClient, getResponseModel } from "@/infrastructure/openai/client";
+import { getEmbeddingModel } from "@/infrastructure/openai/client";
 import { siteSearchService } from "@/modules/composition";
 import { assistantEvalFixture, type AssistantEvalSource } from "./assistant-eval.fixture";
 

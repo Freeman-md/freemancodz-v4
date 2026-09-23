@@ -2,11 +2,11 @@ import "server-only";
 import type { OrderedRelationInput } from "@/contracts/portfolio-admin.contract";
 import type { Prisma, PrismaClient } from "@/generated/prisma/client";
 import type {
-  IContentBlockAdministrationRepository,
+  ContentBlockStore,
   PortfolioPagePath,
-} from "../interfaces/content-block.repository.interface";
-import type { ContentBlockNode } from "../models/portfolio-records";
-import type { UpdateContentBlockInput } from "../models/portfolio-administration";
+} from "../types";
+import type { ContentBlockNode } from "../types";
+import type { UpdateContentBlockInput } from "../types";
 
 const relations = {
   iconBlocks: { orderBy: { order: "asc" }, include: { iconBlock: true } },
@@ -20,7 +20,7 @@ const relations = {
   },
 } satisfies Prisma.ContentBlockInclude;
 
-export class ContentBlockRepository implements IContentBlockAdministrationRepository {
+export class ContentBlockRepository implements ContentBlockStore {
   constructor(private readonly database: PrismaClient) {}
 
   async findPageTree(page: PortfolioPagePath): Promise<ContentBlockNode[]> {

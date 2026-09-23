@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
-import type { IndexDocument } from "../models/index-document";
-import type { PreparedSiteChunk } from "../models/site-chunk";
+import type { IndexDocument } from "../types";
+import type { PreparedSiteChunk } from "../types";
 
 const MAX_CHUNK_CHARACTERS = 1_200;
 

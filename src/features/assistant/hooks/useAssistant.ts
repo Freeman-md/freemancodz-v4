@@ -9,7 +9,7 @@ import {
   replaceAssistantWithError,
 } from "../state/assistant-conversation";
 import { MAX_MESSAGE_LENGTH } from "../constants";
-import type { ChatMessage } from "../models/chat-message";
+import type { ChatMessage } from "../types";
 import { activeWorkflowInstanceId } from "../state/active-workflow-instance";
 import type { AssistantWorkflowStart } from "@/contracts/assistant.contract";
 

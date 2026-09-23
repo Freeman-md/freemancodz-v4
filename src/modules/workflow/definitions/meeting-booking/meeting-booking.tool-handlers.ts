@@ -5,7 +5,7 @@ import {
   type MeetingServiceClient,
   type MeetingSlot,
 } from "@/modules/meeting/types";
-import type { WorkflowExecutionContext, WorkflowExecutionResult } from "../../workflow.types";
+import type { WorkflowExecutionContext, WorkflowExecutionResult } from "../../types";
 import { formatMeetingSlot } from "./meeting-slot.mapper";
 import {
   findMeetingSlotsSchema,

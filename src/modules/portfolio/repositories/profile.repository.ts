@@ -4,9 +4,9 @@ import type {
   UpdateProfileInput,
 } from "@/contracts/portfolio-admin.contract";
 import type { PrismaClient } from "@/generated/prisma/client";
-import type { IProfileAdministrationRepository } from "../interfaces/profile.repository.interface";
+import type { ProfileStore } from "../types";
 
-export class ProfileRepository implements IProfileAdministrationRepository {
+export class ProfileRepository implements ProfileStore {
   constructor(private readonly database: PrismaClient) {}
 
   async findSingleton() {

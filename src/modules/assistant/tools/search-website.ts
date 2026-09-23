@@ -1,7 +1,7 @@
 import { z } from "zod";
 
-import type { IOpenAIProvider } from "@/infrastructure/openai/interfaces/openai.provider.interface";
-import type { ISiteSearchService } from "@/modules/search-index/public";
+import type { OpenAITransport } from "@/infrastructure/openai/types";
+import type { SiteSearch } from "@/modules/search-index/types";
 export const searchWebsiteSchema = z
   .object({ query: z.string().trim().min(1).max(500) })
   .strict();
@@ -10,7 +10,7 @@ type SearchWebsiteInput = z.infer<typeof searchWebsiteSchema>;
 
 export async function searchWebsite(
   input: SearchWebsiteInput,
-  dependencies: { openai: IOpenAIProvider; siteSearch: ISiteSearchService },
+  dependencies: { openai: OpenAITransport; siteSearch: SiteSearch },
 ) {
   const embedding = await dependencies.openai.createEmbedding(input.query);
 

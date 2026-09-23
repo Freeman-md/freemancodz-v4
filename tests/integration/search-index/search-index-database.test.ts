@@ -11,9 +11,9 @@ import {
   seedPortfolio,
   verifyPortfolio,
 } from "../../../prisma/portfolio-bootstrap";
-import type { ISupabaseStorageProvider } from "@/modules/portfolio/interfaces/supabase-storage.provider.interface";
-import type { SearchIndexJob } from "@/modules/search-index/models/search-index-job";
-import type { EmbeddedSiteChunk } from "@/modules/search-index/models/site-chunk";
+import type { PortfolioStorage } from "@/modules/portfolio/types";
+import type { SearchIndexJob } from "@/modules/search-index/types";
+import type { EmbeddedSiteChunk } from "@/modules/search-index/types";
 import { SearchIndexJobRepository } from "@/modules/search-index/repositories/search-index-job.repository";
 import { SiteChunkRepository } from "@/modules/search-index/repositories/site-chunk.repository";
 
@@ -835,7 +835,7 @@ test(
       await context.test(
         "portfolio bootstrap requests indexing only through database triggers",
         async () => {
-          const storage: ISupabaseStorageProvider = {
+          const storage: PortfolioStorage = {
             ensurePublicBucket: async () => undefined,
             getPublicUrl: (objectPath) => `https://portfolio.test/${objectPath}`,
           };

@@ -1,4 +1,4 @@
-import type { OpenAIResponseTool } from "@/infrastructure/openai/models/openai-response-request";
+import type { OpenAIResponseTool } from "@/infrastructure/openai/types";
 
 const AUDIT_FIELDS = [
   "focus",

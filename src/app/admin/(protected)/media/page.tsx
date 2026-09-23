@@ -1,7 +1,7 @@
 import { portfolioIconNameSchema } from "@/contracts/portfolio-presentation.contract";
 import { adminAuthService, portfolioAdministrationService } from "@/modules/composition";
-import { MediaMetadataEditor } from "../../_components/AdminEditors";
-import { NewMediaBlockUploader } from "../../_components/MediaUploader";
+import { MediaMetadataEditor } from "@/features/admin/components/AdminEditors";
+import { NewMediaBlockUploader } from "@/features/admin/components/MediaUploader";
 
 const iconName = (value: string | null) => portfolioIconNameSchema.safeParse(value).data || null;
 

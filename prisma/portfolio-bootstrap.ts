@@ -1,6 +1,6 @@
 import "server-only";
 import type { PrismaClient } from "../src/generated/prisma/client";
-import type { ISupabaseStorageProvider } from "../src/modules/portfolio/interfaces/supabase-storage.provider.interface";
+import type { PortfolioStorage } from "../src/modules/portfolio/types";
 import {
   actionSeeds,
   contentSeeds,
@@ -46,7 +46,7 @@ export async function resetPortfolio(database: PrismaClient) {
   });
 }
 
-export async function seedPortfolio(database: PrismaClient, storage: ISupabaseStorageProvider) {
+export async function seedPortfolio(database: PrismaClient, storage: PortfolioStorage) {
   await database.$transaction(
     async (tx) => {
       const ids = new Map<string, string>();

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { createSearchIndexWorkerGetHandler } from "@/app/api/internal/search-index-worker/route";
 import type { SearchIndexWorkerResult } from "@/contracts/search-index-worker.contract";
-import type { ILogger } from "@/infrastructure/logging/logger.interface";
+import type { Logger } from "@/infrastructure/logging/logger";
 
 type LogEntry = {
   context: unknown;
@@ -10,7 +10,7 @@ type LogEntry = {
   message: string;
 };
 
-function createLogger(): ILogger & { entries: LogEntry[] } {
+function createLogger(): Logger & { entries: LogEntry[] } {
   const entries: LogEntry[] = [];
 
   return {

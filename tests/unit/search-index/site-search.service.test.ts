@@ -1,13 +1,13 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import type { ISiteChunkRepository } from "@/modules/search-index/interfaces/site-chunk.repository.interface";
-import { SiteSearchService } from "@/modules/search-index/services/site-search.service";
+import type { SiteChunkStore } from "@/modules/search-index/types";
+import { SiteSearchService } from "@/modules/search-index/search";
 
 test("retains the assistant retrieval count and similarity defaults", async () => {
   const calls: Array<{ count: number | undefined; threshold: number | undefined }> = [];
 
-  const repository: ISiteChunkRepository = {
+  const repository: SiteChunkStore = {
     replacePortfolioSnapshot: async () => undefined,
     match: async (_embedding, count, threshold) => {
       calls.push({ count, threshold });

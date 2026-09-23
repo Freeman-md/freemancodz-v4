@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import type { IGoogleCalendarProvider } from "@/infrastructure/google-calendar/interfaces/google-calendar.provider.interface";
+import type { CalendarClient } from "@/infrastructure/google-calendar/types";
 import type { MeetingStore } from "@/modules/meeting/types";
 import { MeetingService } from "@/modules/meeting/service";
 import { MeetingBookingWorkflowDefinition } from "@/modules/workflow/definitions/meeting-booking/meeting-booking.definition";
@@ -57,7 +57,7 @@ test("today is accepted while a wholly past availability range is rejected", asy
 test("elapsed slots are unavailable without querying Calendar", async () => {
   let queries = 0;
 
-  const calendar: IGoogleCalendarProvider = {
+  const calendar: CalendarClient = {
     getBusyPeriods: async () => {
       queries += 1;
 

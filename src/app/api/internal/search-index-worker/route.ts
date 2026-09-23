@@ -5,15 +5,15 @@ import {
 } from "@/contracts/search-index-worker.contract";
 import { logger } from "@/infrastructure/logging/logger";
 import { getCronSecret } from "@/infrastructure/config/env";
-import type { ILogger } from "@/infrastructure/logging/logger.interface";
-import type { ISearchIndexService } from "@/modules/search-index/public";
+import type { Logger } from "@/infrastructure/logging/logger";
+import type { SearchIndexService } from "@/modules/search-index/service";
 
-type SearchIndexWorkerService = Pick<ISearchIndexService, "processPendingJob">;
+type SearchIndexWorkerService = Pick<SearchIndexService, "processPendingJob">;
 
 type SearchIndexWorkerRouteDependencies = {
   getSecret: () => string | undefined;
   loadWorkerService: () => Promise<SearchIndexWorkerService>;
-  logger: ILogger;
+  logger: Logger;
 };
 
 export function createSearchIndexWorkerGetHandler({

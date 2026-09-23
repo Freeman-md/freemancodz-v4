@@ -1,9 +1,9 @@
 import "server-only";
 
 import { Prisma, type PrismaClient } from "@/generated/prisma/client";
-import type { ISiteChunkRepository } from "../interfaces/site-chunk.repository.interface";
-import type { EmbeddedSiteChunk } from "../models/site-chunk";
-import type { SiteSearchResult } from "../models/site-search-result";
+import type { SiteChunkStore } from "../types";
+import type { EmbeddedSiteChunk } from "../types";
+import type { SiteSearchResult } from "../types";
 
 const EMBEDDING_DIMENSIONS = 1_536;
 
@@ -47,7 +47,7 @@ function validateSnapshot(chunks: EmbeddedSiteChunk[]): void {
   }
 }
 
-export class SiteChunkRepository implements ISiteChunkRepository {
+export class SiteChunkRepository implements SiteChunkStore {
   constructor(private readonly database: PrismaClient) {}
 
   async replacePortfolioSnapshot(chunks: EmbeddedSiteChunk[], claimedAt: Date): Promise<void> {

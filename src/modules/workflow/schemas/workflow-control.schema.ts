@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { WORKFLOW_INSTANCE_STATUSES } from "../workflow.types";
+import { WORKFLOW_INSTANCE_STATUSES } from "../types";
 
 export const StartWorkflowArgumentsSchema = z
   .object({

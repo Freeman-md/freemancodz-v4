@@ -1,12 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { MAX_PORTFOLIO_MEDIA_REQUEST_BYTES } from "@/contracts/portfolio-admin.contract";
-import { runAuthorizedAdminMutation } from "@/app/admin/admin-action-boundary";
-import { invalidateProjectUpdate } from "@/app/admin/project-cache-invalidation";
-import { invalidateReusableBlockUpdate } from "@/app/admin/reusable-block-cache-invalidation";
+import { runAuthorizedAdminMutation } from "@/entrypoints/admin/admin-action-boundary";
+import { invalidateProjectUpdate } from "@/entrypoints/admin/project-cache-invalidation";
+import { invalidateReusableBlockUpdate } from "@/entrypoints/admin/reusable-block-cache-invalidation";
 import { handlePortfolioMediaUpload } from "@/app/api/admin/media/media-upload";
 import { AdminAuthenticationError } from "@/modules/admin-auth/service";
-import type { IPortfolioMediaService } from "@/modules/portfolio/interfaces/portfolio-media.service.interface";
+import type { PortfolioMedia } from "@/modules/portfolio/types";
 
 test("direct admin mutation boundary rejects before executing a write", async () => {
   let writes = 0;
@@ -81,7 +81,7 @@ test("Action and Media metadata updates invalidate subtype and shared IconBlock 
 test("media route boundary rejects unauthorised and over-limit requests before media writes", async () => {
   let writes = 0;
 
-  const media: IPortfolioMediaService = {
+  const media: PortfolioMedia = {
     createMediaBlock: async () => ({ id: "media-id", source: "https://storage.test/new.webp", cleanupWarning: false }),
     replaceMedia: async () => {
       writes += 1;

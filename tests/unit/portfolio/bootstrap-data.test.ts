@@ -15,7 +15,7 @@ import {
   seedPortfolio,
 } from "../../../prisma/portfolio-bootstrap";
 import type { PrismaClient } from "@/generated/prisma/client";
-import type { ISupabaseStorageProvider } from "@/modules/portfolio/interfaces/supabase-storage.provider.interface";
+import type { PortfolioStorage } from "@/modules/portfolio/types";
 
 test("canonical seed values and relationship allocation match the approved artifacts", () => {
   assert.equal(profileSeed.name, "Freeman Madudili");
@@ -121,7 +121,7 @@ test("a failed database seed transaction does not leave an initialised portfolio
     },
   } as unknown as PrismaClient;
 
-  const storage: ISupabaseStorageProvider = {
+  const storage: PortfolioStorage = {
     ensurePublicBucket: async () => undefined,
     getPublicUrl: (objectPath) => `https://example.test/${objectPath}`,
   };

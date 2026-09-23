@@ -1,6 +1,6 @@
 import { ArrowUpRight, Inbox, MessageCircle, Send } from "lucide-react";
 import { AssistantTriggerButton } from "@/features/assistant/components/AssistantTriggerButton";
-import type { HomePresentationData, WorkPresentationData } from "../models/portfolio-presentation";
+import type { HomePresentationData, WorkPresentationData } from "../types";
 import { resolvePortfolioIcon } from "../portfolio-icon.registry";
 import { StoryDisclosure } from "./StoryDisclosure";
 import { StoryProjectDetail } from "./StoryProjectDetail";

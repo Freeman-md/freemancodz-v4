@@ -1,13 +1,13 @@
 import "server-only";
 
-import type { OpenAIResponseTool } from "@/infrastructure/openai/models/openai-response-request";
+import type { OpenAIResponseTool } from "@/infrastructure/openai/types";
 import type { MeetingServiceClient } from "@/modules/meeting/types";
 import type {
-  IWorkflowDefinition,
+  WorkflowDefinition,
   WorkflowExecutionContext,
   WorkflowExecutionResult,
   WorkflowStartContext,
-} from "../../public";
+} from "../../types";
 import { executeMeetingBookingTool } from "./meeting-booking.tool-handlers";
 import { meetingBookingStateSchema, type MeetingBookingState } from "./meeting-booking.schema";
 import {
@@ -19,7 +19,7 @@ import {
 
 export const MEETING_BOOKING_WORKFLOW_ID = "meeting-booking";
 
-export class MeetingBookingWorkflowDefinition implements IWorkflowDefinition<MeetingBookingState> {
+export class MeetingBookingWorkflowDefinition implements WorkflowDefinition<MeetingBookingState> {
   readonly id = MEETING_BOOKING_WORKFLOW_ID;
 
   readonly version = 1;

@@ -1,12 +1,12 @@
 import "server-only";
 
 import type { PrismaClient } from "@/generated/prisma/client";
-import type { ISearchIndexJobRepository } from "../interfaces/search-index-job.repository.interface";
+import type { SearchIndexJobStore } from "../types";
 import type {
   ClaimedSearchIndexJob,
   SearchIndexJob,
   SearchIndexJobClaimResult,
-} from "../models/search-index-job";
+} from "../types";
 
 const MAX_ATTEMPTS = 3;
 
@@ -36,7 +36,7 @@ function asClaimedJob(job: SearchIndexJobRow | undefined): ClaimedSearchIndexJob
   return job as ClaimedSearchIndexJob;
 }
 
-export class SearchIndexJobRepository implements ISearchIndexJobRepository {
+export class SearchIndexJobRepository implements SearchIndexJobStore {
   constructor(private readonly database: PrismaClient) {}
 
   async requestRebuild(): Promise<void> {

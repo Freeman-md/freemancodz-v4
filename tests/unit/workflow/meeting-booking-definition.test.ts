@@ -7,7 +7,7 @@ import {
   prepareMeetingSchema,
 } from "@/modules/workflow/definitions/meeting-booking/meeting-booking.schema";
 import type { MeetingServiceClient } from "@/modules/meeting/types";
-import type { IGoogleCalendarProvider } from "@/infrastructure/google-calendar/interfaces/google-calendar.provider.interface";
+import type { CalendarClient } from "@/infrastructure/google-calendar/types";
 import type { MeetingStore } from "@/modules/meeting/types";
 import { MeetingService } from "@/modules/meeting/service";
 
@@ -141,7 +141,7 @@ test("a persistence retry reconciles one created event without exposing provider
 
   let persistedEventUrl: string | null | undefined;
 
-  const calendar: IGoogleCalendarProvider = {
+  const calendar: CalendarClient = {
     getBusyPeriods: async () => [],
     createEvent: async (input) => {
       createEventCalls += 1;

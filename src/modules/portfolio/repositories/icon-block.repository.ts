@@ -1,8 +1,8 @@
 import "server-only";
 import type { UpsertIconBlockInput } from "@/contracts/portfolio-admin.contract";
 import type { PrismaClient } from "@/generated/prisma/client";
-import type { IIconBlockAdministrationRepository } from "../interfaces/icon-block.repository.interface";
-export class IconBlockRepository implements IIconBlockAdministrationRepository {
+import type { IconBlockStore } from "../types";
+export class IconBlockRepository implements IconBlockStore {
   constructor(private readonly database: PrismaClient) {}
 
   findById(id: string) {

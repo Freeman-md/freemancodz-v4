@@ -1,13 +1,13 @@
 import "server-only";
 
-import type { OpenAIResponseTool } from "@/infrastructure/openai/models/openai-response-request";
+import type { OpenAIResponseTool } from "@/infrastructure/openai/types";
 import type { AuditService } from "@/modules/audit/service";
 import type {
-  IWorkflowDefinition,
+  WorkflowDefinition,
   WorkflowExecutionContext,
   WorkflowExecutionResult,
   WorkflowStartContext,
-} from "../../public";
+} from "../../types";
 import { auditStateSchema, type AuditState } from "./audit.schema";
 import { executeAuditTool, missingAuditFields } from "./audit.tool-handlers";
 import {
@@ -18,7 +18,7 @@ import {
 
 export const AUDIT_WORKFLOW_ID = "audit";
 
-export class AuditWorkflowDefinition implements IWorkflowDefinition<AuditState> {
+export class AuditWorkflowDefinition implements WorkflowDefinition<AuditState> {
   readonly id = AUDIT_WORKFLOW_ID;
 
   readonly version = 1;

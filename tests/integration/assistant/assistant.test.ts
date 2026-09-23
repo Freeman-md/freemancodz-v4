@@ -2,26 +2,26 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { createChatPostHandler } from "@/app/api/chat/route";
-import type { ILogger } from "@/infrastructure/logging/logger.interface";
-import type { IOpenAIProvider } from "@/infrastructure/openai/interfaces/openai.provider.interface";
-import type { OpenAIResponseRequest } from "@/infrastructure/openai/models/openai-response-request";
-import type { ISiteSearchService, SiteSearchResult } from "@/modules/search-index/public";
+import type { Logger } from "@/infrastructure/logging/logger";
+import type { OpenAITransport } from "@/infrastructure/openai/types";
+import type { OpenAIResponseRequest } from "@/infrastructure/openai/types";
+import type { SiteSearch, SiteSearchResult } from "@/modules/search-index/types";
 import { AssistantService } from "@/modules/assistant/service";
 import type {
   ConsumeRateLimitInput,
   RateLimitResult,
 } from "@/modules/rate-limit/rate-limit.types";
 import type { RateLimitService } from "@/modules/rate-limit/service";
-import type { IWorkflowInstanceRepository } from "@/modules/workflow/interfaces/workflow-instance.repository.interface";
+import type { WorkflowInstanceStore } from "@/modules/workflow/types";
 import type { WorkflowInstance } from "@/generated/prisma/client";
 import { MeetingBookingWorkflowDefinition } from "@/modules/workflow/definitions/meeting-booking/meeting-booking.definition";
 import { AuditWorkflowDefinition } from "@/modules/workflow/definitions/audit/audit.definition";
-import { WorkflowDefinitionRegistry } from "@/modules/workflow/workflow-definition.registry";
+import { WorkflowDefinitionRegistry } from "@/modules/workflow/registry";
 import type {
   CreateWorkflowInstanceInput,
   SaveWorkflowInstanceInput,
-} from "@/modules/workflow/workflow.types";
-import { WorkflowService } from "@/modules/workflow/services/workflow.service";
+} from "@/modules/workflow/types";
+import { WorkflowService } from "@/modules/workflow/service";
 
 const source = {
   id: "project-1",
@@ -75,8 +75,8 @@ function createAssistant({
   rateLimit,
 }: {
   chunks?: SiteSearchResult[];
-  embedding?: IOpenAIProvider["createEmbedding"];
-  response?: (request: OpenAIResponseRequest) => ReturnType<IOpenAIProvider["streamResponse"]>;
+  embedding?: OpenAITransport["createEmbedding"];
+  response?: (request: OpenAIResponseRequest) => ReturnType<OpenAITransport["streamResponse"]>;
   rateLimit?: Pick<RateLimitService, "consume">;
 } = {}) {
   const inputs: OpenAIResponseRequest[] = [];
@@ -85,12 +85,12 @@ function createAssistant({
 
   const errors: Array<{ message: string; context: unknown }> = [];
 
-  const logger: ILogger = {
+  const logger: Logger = {
     info: () => undefined,
     error: (message, context) => errors.push({ message, context }),
   };
 
-  const openai: IOpenAIProvider = {
+  const openai: OpenAITransport = {
     getEmbeddingModel: () => "test-model",
     createEmbedding: embedding,
     createEmbeddings: async () => [],
@@ -101,7 +101,7 @@ function createAssistant({
     },
   };
 
-  const siteSearch: ISiteSearchService = {
+  const siteSearch: SiteSearch = {
     search: async () => chunks,
   };
 
@@ -667,7 +667,7 @@ test("rate-limit failures return a generic unavailable response without invoking
   ]);
 });
 
-class MemoryWorkflowInstanceRepository implements IWorkflowInstanceRepository {
+class MemoryWorkflowInstanceRepository implements WorkflowInstanceStore {
   private readonly instances = new Map<string, WorkflowInstance>();
 
   private sequence = 0;

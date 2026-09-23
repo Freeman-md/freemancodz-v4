@@ -109,7 +109,6 @@ const config = [
             "@/modules/*/schemas/*",
             "@/modules/*/prompts/*",
             "@/modules/*/*.constants",
-            "@/infrastructure/*",
           ],
         },
       ],

@@ -1,10 +1,10 @@
 import "server-only";
 import type { UpsertProjectInput } from "@/contracts/portfolio-admin.contract";
 import type { PrismaClient } from "@/generated/prisma/client";
-import type { IProjectAdministrationRepository } from "../interfaces/project.repository.interface";
+import type { ProjectStore } from "../types";
 const include = { cover: { include: { iconBlock: true } } } as const;
 
-export class ProjectRepository implements IProjectAdministrationRepository {
+export class ProjectRepository implements ProjectStore {
   constructor(private readonly database: PrismaClient) {}
 
   findAll() {

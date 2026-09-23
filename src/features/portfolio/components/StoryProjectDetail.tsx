@@ -1,5 +1,5 @@
 import { ArrowUpRight } from "lucide-react";
-import type { PortfolioProject } from "../models/portfolio-presentation";
+import type { PortfolioProject } from "../types";
 
 export function StoryProjectDetail({ project }: { project: PortfolioProject }) {
   return (

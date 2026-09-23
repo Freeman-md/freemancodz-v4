@@ -5,7 +5,7 @@ import {
   chunkText,
   prepareSiteChunks,
 } from "@/modules/search-index/mappers/site-chunk.mapper";
-import type { IndexDocument } from "@/modules/search-index/models/index-document";
+import type { IndexDocument } from "@/modules/search-index/types";
 
 const document: IndexDocument = {
   sourceType: "project",

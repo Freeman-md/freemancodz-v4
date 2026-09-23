@@ -7,8 +7,8 @@ import {
 } from "../../../prisma/portfolio-bootstrap";
 import { getDatabaseUrl } from "@/infrastructure/config/env";
 import { prisma } from "@/infrastructure/database/prisma";
-import { createSupabaseStorageClient } from "@/infrastructure/supabase/supabase-storage.client";
-import { SupabaseStorageProvider } from "@/modules/portfolio/providers/supabase-storage.provider";
+import { createSupabaseStorageClient } from "@/infrastructure/supabase/clients";
+import { SupabaseStorageProvider } from "@/infrastructure/supabase/storage";
 import { parsePortfolioBootstrapArguments } from "./bootstrap-portfolio.arguments";
 
 async function main() {

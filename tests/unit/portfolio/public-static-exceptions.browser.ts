@@ -22,7 +22,7 @@ import type {
   PortfolioAction as Action,
   PortfolioProject,
   PortfolioSection,
-} from "@/features/portfolio/models/portfolio-presentation";
+} from "@/features/portfolio/types";
 
 const section = (title: string): PortfolioSection => ({
   eyebrow: "",

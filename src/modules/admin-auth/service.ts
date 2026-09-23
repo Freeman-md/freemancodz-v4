@@ -1,5 +1,5 @@
 import "server-only";
-import type { ILogger } from "@/infrastructure/logging/logger.interface";
+import type { Logger } from "@/infrastructure/logging/logger";
 import type {
   AdminAuthFailureContext,
   AdminAuthOperation,
@@ -22,7 +22,7 @@ export class AdminAuthService {
   constructor(
     private readonly provider: AdminAuthProvider,
     private readonly approvedEmail: string,
-    private readonly logger: ILogger,
+    private readonly logger: Logger,
   ) {}
 
   async requireAdmin() {

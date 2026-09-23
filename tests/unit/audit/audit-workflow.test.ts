@@ -3,15 +3,15 @@ import test from "node:test";
 
 import type { AuditRequest, WorkflowInstance } from "@/generated/prisma/client";
 import type { AuditService } from "@/modules/audit/service";
-import type { IWorkflowInstanceRepository } from "@/modules/workflow/interfaces/workflow-instance.repository.interface";
+import type { WorkflowInstanceStore } from "@/modules/workflow/types";
 import { AuditWorkflowDefinition } from "@/modules/workflow/definitions/audit/audit.definition";
-import { WorkflowDefinitionRegistry } from "@/modules/workflow/workflow-definition.registry";
+import { WorkflowDefinitionRegistry } from "@/modules/workflow/registry";
 import type {
   CreateWorkflowInstanceInput,
   SaveWorkflowInstanceInput,
   WorkflowExecutionContext,
-} from "@/modules/workflow/workflow.types";
-import { WorkflowService } from "@/modules/workflow/services/workflow.service";
+} from "@/modules/workflow/types";
+import { WorkflowService } from "@/modules/workflow/service";
 
 const INSTANCE_ID = "11111111-1111-4111-8111-111111111111";
 
@@ -287,7 +287,7 @@ test("cancellation creates no audit request", async () => {
   assert.equal(audit.createdCount, 0);
 });
 
-class MemoryWorkflowRepository implements IWorkflowInstanceRepository {
+class MemoryWorkflowRepository implements WorkflowInstanceStore {
   private readonly instances = new Map<string, WorkflowInstance>();
 
   failNextSave = false;

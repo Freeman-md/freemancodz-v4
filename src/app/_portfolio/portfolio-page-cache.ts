@@ -1,19 +1,19 @@
 import "server-only";
 import { cacheLife, cacheTag } from "next/cache";
-import { aboutService, auditService, homeService, profileService, workService } from "@/modules/composition";
+import { portfolioService } from "@/modules/composition";
 import {
   getAboutPageCacheTags,
   getAuditPageCacheTags,
   getHomePageCacheTags,
   getWorkPageCacheTags,
-} from "@/modules/portfolio/public";
-import { PortfolioCacheTag } from "@/modules/portfolio/public";
+  PortfolioCacheTag,
+} from "@/modules/portfolio/cache";
 import { registerPortfolioCacheTags } from "./register-portfolio-cache-tags";
 
 export async function getCachedHomePageData() {
   "use cache";
   cacheLife("max");
-  const data = await homeService.getPageData();
+  const data = await portfolioService.getHomePageData();
 
   registerPortfolioCacheTags(getHomePageCacheTags(data), cacheTag);
 
@@ -23,7 +23,7 @@ export async function getCachedHomePageData() {
 export async function getCachedWorkPageData() {
   "use cache";
   cacheLife("max");
-  const data = await workService.getPageData();
+  const data = await portfolioService.getWorkPageData();
 
   registerPortfolioCacheTags(getWorkPageCacheTags(data), cacheTag);
 
@@ -33,7 +33,7 @@ export async function getCachedWorkPageData() {
 export async function getCachedAboutPageData() {
   "use cache";
   cacheLife("max");
-  const data = await aboutService.getPageData();
+  const data = await portfolioService.getAboutPageData();
 
   registerPortfolioCacheTags(getAboutPageCacheTags(data), cacheTag);
 
@@ -43,7 +43,7 @@ export async function getCachedAboutPageData() {
 export async function getCachedAuditPageData() {
   "use cache";
   cacheLife("max");
-  const data = await auditService.getPageData();
+  const data = await portfolioService.getAuditPageData();
 
   registerPortfolioCacheTags(getAuditPageCacheTags(data), cacheTag);
 
@@ -53,7 +53,7 @@ export async function getCachedAuditPageData() {
 export async function getCachedPublicProfile() {
   "use cache";
   cacheLife("max");
-  const profile = await profileService.getPublicProfile();
+  const profile = await portfolioService.getPublicProfile();
 
   cacheTag(PortfolioCacheTag.profile);
 

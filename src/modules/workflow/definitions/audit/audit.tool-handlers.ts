@@ -1,6 +1,6 @@
 import type { Prisma } from "@/generated/prisma/client";
 import type { AuditService } from "@/modules/audit/service";
-import type { WorkflowExecutionContext, WorkflowExecutionResult } from "../../workflow.types";
+import type { WorkflowExecutionContext, WorkflowExecutionResult } from "../../types";
 import {
   auditStateSchema,
   noAuditArgumentsSchema,
