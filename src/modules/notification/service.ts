@@ -1,0 +1,116 @@
+import "server-only";
+
+import type { AuditRequest, ContactRequest } from "@/generated/prisma/client";
+import type { Logger } from "@/infrastructure/logging/logger";
+import type { MeetingRecord } from "@/modules/meeting/types";
+
+type EmailSender = {
+  send(input: {
+    from: string;
+    to: string;
+    replyTo: string;
+    subject: string;
+    text: string;
+    idempotencyKey: string;
+  }): Promise<void>;
+};
+
+type NotificationConfig = {
+  adminEmail: string;
+  fromEmail: string;
+};
+
+export class NotificationService {
+  constructor(
+    private readonly sender: EmailSender,
+    private readonly getConfig: () => NotificationConfig,
+    private readonly logger: Logger,
+  ) {}
+
+  notifyAuditSubmitted(request: AuditRequest): Promise<void> {
+    return this.send("audit-submitted", request.id, request.email, {
+      subject: `New audit request from ${request.name}`,
+      text: lines([
+        `Name: ${request.name}`,
+        `Email: ${request.email}`,
+        request.businessName ? `Business: ${request.businessName}` : null,
+        request.websiteUrl ? `Website: ${request.websiteUrl}` : null,
+        `Focus: ${request.focus}`,
+        `Current process: ${request.currentProcess}`,
+        `Friction: ${request.friction}`,
+        `Desired outcome: ${request.desiredOutcome}`,
+        request.additionalContext ? `Additional context: ${request.additionalContext}` : null,
+      ]),
+    });
+  }
+
+  notifyMeetingBooked(meeting: MeetingRecord): Promise<void> {
+    return this.send("meeting-booked", meeting.id, meeting.email, {
+      subject: `New meeting booked with ${meeting.name}`,
+      text: lines([
+        `Name: ${meeting.name}`,
+        `Email: ${meeting.email}`,
+        `Reason: ${meeting.reason}`,
+        `Starts: ${meeting.startsAt.toISOString()}`,
+        `Ends: ${meeting.endsAt.toISOString()}`,
+        `Timezone: ${meeting.timezone}`,
+        meeting.googleEventUrl ? `Calendar event: ${meeting.googleEventUrl}` : null,
+      ]),
+    });
+  }
+
+  notifyContactSubmitted(request: ContactRequest): Promise<void> {
+    return this.send("contact-submitted", request.id, request.email, {
+      subject: `New message from ${request.name}`,
+      text: lines([
+        `Name: ${request.name}`,
+        `Email: ${request.email}`,
+        request.businessName ? `Business: ${request.businessName}` : null,
+        `Message: ${request.message}`,
+      ]),
+    });
+  }
+
+  private async send(
+    kind: "audit-submitted" | "meeting-booked" | "contact-submitted",
+    recordId: string,
+    replyTo: string,
+    content: { subject: string; text: string },
+  ): Promise<void> {
+    try {
+      const config = this.getConfig();
+
+      await this.sender.send({
+        from: config.fromEmail,
+        to: config.adminEmail,
+        replyTo,
+        subject: content.subject,
+        text: content.text,
+        idempotencyKey: `${kind}/${recordId}`,
+      });
+    } catch (error) {
+      this.logger.error("notification.owner_email_failed", {
+        kind,
+        recordId,
+        category: safeErrorCategory(error),
+      });
+    }
+  }
+}
+
+function lines(values: Array<string | null>) {
+  return values.filter((value): value is string => value !== null).join("\n");
+}
+
+function safeErrorCategory(error: unknown) {
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "category" in error &&
+    ["configuration", "network", "provider"].includes(String(error.category))
+  ) {
+    return String(error.category);
+  }
+
+  return "unknown";
+}

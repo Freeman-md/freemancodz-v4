@@ -74,6 +74,7 @@ model WorkflowInstance {
   completedAt     DateTime? @map("completed_at") @db.Timestamptz(6)
   updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
   auditRequest    AuditRequest?
+  contactRequest  ContactRequest?
 
   @@map("workflow_instances")
 }
@@ -94,6 +95,19 @@ model AuditRequest {
   createdAt          DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
 
   @@map("audit_requests")
+}
+
+model ContactRequest {
+  id                 String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workflowInstanceId String           @unique @map("workflow_instance_id") @db.Uuid
+  workflowInstance   WorkflowInstance @relation(fields: [workflowInstanceId], references: [id], onDelete: Restrict)
+  name               String
+  email              String
+  message            String
+  businessName       String?          @map("business_name")
+  createdAt          DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@map("contact_requests")
 }
 
 model RateLimit {

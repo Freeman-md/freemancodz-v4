@@ -76,10 +76,15 @@ test("elapsed slots are unavailable without querying Calendar", async () => {
     },
   };
 
-  const service = new MeetingService(calendar, repository, {
-    info: () => undefined,
-    error: () => undefined,
-  });
+  const service = new MeetingService(
+    calendar,
+    repository,
+    {
+      info: () => undefined,
+      error: () => undefined,
+    },
+    { notifyMeetingBooked: async () => undefined },
+  );
 
   assert.equal(
     await service.isSlotAvailable({

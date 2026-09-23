@@ -57,6 +57,54 @@ test("deterministic Audit start accepts only real Audit-page CTA origins", () =>
   );
 });
 
+test("assistant starter workflow starts accept only approved workflow and origin pairs", () => {
+  for (const workflowStart of [
+    {
+      workflowId: "audit",
+      originPage: "/",
+      originEntry: "assistant-starter-audit",
+    },
+    {
+      workflowId: "meeting-booking",
+      originPage: "/",
+      originEntry: "assistant-starter-meeting",
+    },
+    {
+      workflowId: "contact",
+      originPage: "/",
+      originEntry: "assistant-starter-contact",
+    },
+  ]) {
+    assert.equal(
+      assistantRequestSchema.safeParse({ message: "Start", workflowStart }).success,
+      true,
+    );
+  }
+
+  for (const workflowStart of [
+    {
+      workflowId: "contact",
+      originPage: "/",
+      originEntry: "assistant-starter-audit",
+    },
+    {
+      workflowId: "meeting-booking",
+      originPage: "/work",
+      originEntry: "assistant-starter-meeting",
+    },
+    {
+      workflowId: "anything",
+      originPage: "/",
+      originEntry: "assistant-starter-anything",
+    },
+  ]) {
+    assert.equal(
+      assistantRequestSchema.safeParse({ message: "Start", workflowStart }).success,
+      false,
+    );
+  }
+});
+
 test("assistant request rejects missing and oversized messages", () => {
   assert.equal(assistantRequestSchema.safeParse({}).success, false);
   assert.equal(assistantRequestSchema.safeParse({ message: " ".repeat(501) }).success, false);

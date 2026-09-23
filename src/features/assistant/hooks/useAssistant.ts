@@ -57,6 +57,8 @@ export function useAssistant() {
 
   const activeRequestIdRef = useRef(0);
 
+  const submissionInProgressRef = useRef(false);
+
   const clearRevealWork = useCallback(() => {
     bufferedTextRef.current = "";
 
@@ -93,9 +95,11 @@ export function useAssistant() {
     async (rawMessage: string, workflowStart: AssistantWorkflowStart | null = null) => {
       const message = rawMessage.trim();
 
-      if (!message || message.length > MAX_MESSAGE_LENGTH || isLoading) {
+      if (!message || message.length > MAX_MESSAGE_LENGTH || submissionInProgressRef.current) {
         return;
       }
+
+      submissionInProgressRef.current = true;
 
       const assistantMessage: ChatMessage = {
         id: `assistant-${Date.now()}`,
@@ -227,18 +231,13 @@ export function useAssistant() {
           );
         }
       } finally {
+        submissionInProgressRef.current = false;
         if (isMountedRef.current) {
           setIsLoading(false);
         }
       }
     },
-    [
-      cancelPendingRequest,
-      isLoading,
-      previousResponseId,
-      reduceMotionImmediately,
-      workflowInstanceId,
-    ],
+    [cancelPendingRequest, previousResponseId, reduceMotionImmediately, workflowInstanceId],
   );
 
   const clearError = useCallback(() => setErrorMessage(null), []);

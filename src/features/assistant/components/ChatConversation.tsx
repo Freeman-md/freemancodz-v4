@@ -8,6 +8,7 @@ import { ScrollArea } from "@/shared/components/ui/ScrollArea";
 import { cn } from "@/shared/utils/class-names";
 import type { ChatMessage } from "@/features/assistant/types";
 import { AssistantMarkdown } from "./AssistantMarkdown";
+import { StarterActions, type StarterAction } from "./StarterActions";
 
 type ChatConversationProps = {
   className?: string;
@@ -16,6 +17,7 @@ type ChatConversationProps = {
   messages: ChatMessage[];
   messagesEndRef: RefObject<HTMLDivElement | null>;
   shouldReduceMotion: boolean | null;
+  onStarterAction: (action: StarterAction) => void;
 };
 
 export function ChatConversation({
@@ -25,6 +27,7 @@ export function ChatConversation({
   messages,
   messagesEndRef,
   shouldReduceMotion,
+  onStarterAction,
 }: ChatConversationProps) {
   return (
     <div
@@ -65,6 +68,9 @@ export function ChatConversation({
                   Ask about selected work, systems thinking, AI projects, or what Freeman is focused
                   on now.
                 </p>
+                <div className="mt-4">
+                  <StarterActions disabled={isLoading} onSelect={onStarterAction} />
+                </div>
               </motion.div>
             ) : null}
 

@@ -9,6 +9,7 @@ import {
 
 const areas = [
   ["Audit requests", "Review submitted customer journey and workflow audits.", "/admin/audits"],
+  ["Messages", "Review project, collaboration and general enquiries.", "/admin/messages"],
   ["Pages", "Edit the semantic sections used by Home, Work, About and Audit.", "/admin/pages/home"],
   ["Profile", "Maintain the singleton profile and its ordered icon collections.", "/admin/profile"],
   [

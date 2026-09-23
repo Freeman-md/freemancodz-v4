@@ -38,7 +38,7 @@ test("assistant session updates only the active response for deltas, sources, an
   ]);
 });
 
-test("assistant session restores the composer or conversation when opened", () => {
-  assert.equal(stageWhenOpening([]), "composer");
+test("assistant session opens the conversation surface for starters or existing messages", () => {
+  assert.equal(stageWhenOpening([]), "conversation");
   assert.equal(stageWhenOpening(messages), "conversation");
 });

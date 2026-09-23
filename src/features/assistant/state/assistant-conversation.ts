@@ -1,7 +1,7 @@
 import type { ChatMessage, ChatSource, ChatStage } from "../types";
 
-export function stageWhenOpening(messages: ChatMessage[]): ChatStage {
-  return messages.length > 0 ? "conversation" : "composer";
+export function stageWhenOpening(_messages: ChatMessage[]): ChatStage {
+  return "conversation";
 }
 
 export function appendAssistantDelta(messages: ChatMessage[], messageId: string, delta: string) {

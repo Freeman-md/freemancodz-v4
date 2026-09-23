@@ -21,20 +21,57 @@ const workflowInstanceSchema = z
   })
   .strict();
 
-const auditWorkflowStartSchema = z
-  .object({
-    workflowId: z.literal("audit"),
-    originPage: z.literal("/audit"),
-    originEntry: z.enum(["audit-hero-cta", "audit-footer-cta", "audit-navbar-cta"]),
-  })
-  .strict();
+const workflowStartSchema = z.discriminatedUnion("originEntry", [
+  z
+    .object({
+      workflowId: z.literal("audit"),
+      originPage: z.literal("/audit"),
+      originEntry: z.literal("audit-hero-cta"),
+    })
+    .strict(),
+  z
+    .object({
+      workflowId: z.literal("audit"),
+      originPage: z.literal("/audit"),
+      originEntry: z.literal("audit-footer-cta"),
+    })
+    .strict(),
+  z
+    .object({
+      workflowId: z.literal("audit"),
+      originPage: z.literal("/audit"),
+      originEntry: z.literal("audit-navbar-cta"),
+    })
+    .strict(),
+  z
+    .object({
+      workflowId: z.literal("audit"),
+      originPage: z.literal("/"),
+      originEntry: z.literal("assistant-starter-audit"),
+    })
+    .strict(),
+  z
+    .object({
+      workflowId: z.literal("meeting-booking"),
+      originPage: z.literal("/"),
+      originEntry: z.literal("assistant-starter-meeting"),
+    })
+    .strict(),
+  z
+    .object({
+      workflowId: z.literal("contact"),
+      originPage: z.literal("/"),
+      originEntry: z.literal("assistant-starter-contact"),
+    })
+    .strict(),
+]);
 
 export const assistantRequestSchema = z
   .object({
     message: z.string().trim().min(1, "Message is required.").max(MAX_MESSAGE_LENGTH),
     previousResponseId: z.string().nullable().optional().transform(normalizePreviousResponseId),
     workflowInstanceId: z.string().uuid().nullable().optional(),
-    workflowStart: auditWorkflowStartSchema.nullable().optional(),
+    workflowStart: workflowStartSchema.nullable().optional(),
   })
   .strict();
 
@@ -67,7 +104,7 @@ export const assistantStreamEventSchema = z.discriminatedUnion("type", [
 export const assistantTriggerDetailSchema = z
   .object({
     message: z.string().trim().min(1).max(MAX_MESSAGE_LENGTH).optional(),
-    workflowStart: auditWorkflowStartSchema.optional(),
+    workflowStart: workflowStartSchema.optional(),
   })
   .strict();
 
@@ -75,5 +112,5 @@ export type AssistantRequest = z.infer<typeof assistantRequestSchema>;
 export type AssistantStreamEvent = z.infer<typeof assistantStreamEventSchema>;
 export type AssistantSource = z.infer<typeof sourceSchema>;
 export type AssistantTriggerDetail = z.infer<typeof assistantTriggerDetailSchema>;
-export type AssistantWorkflowStart = z.infer<typeof auditWorkflowStartSchema>;
+export type AssistantWorkflowStart = z.infer<typeof workflowStartSchema>;
 export type WorkflowPublicInstance = z.infer<typeof workflowInstanceSchema>;

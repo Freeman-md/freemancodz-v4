@@ -96,7 +96,7 @@ test("generic assistant entry opens without submitting, and pending responses re
     await act(async () => {
       button("Ask my assistant").click();
     });
-    assert.equal(state(), "composer");
+    assert.equal(state(), "conversation");
     assert.deepEqual(submitted, []);
     assert.equal(button("Send message").disabled, true);
     await act(async () => {
@@ -106,7 +106,7 @@ test("generic assistant entry opens without submitting, and pending responses re
     await act(async () => {
       button("Ask your own question").click();
     });
-    assert.equal(state(), "composer");
+    assert.equal(state(), "conversation");
     assert.deepEqual(submitted, []);
 
     await act(async () => {

@@ -141,6 +141,8 @@ test("a persistence retry reconciles one created event without exposing provider
 
   let persistedEventUrl: string | null | undefined;
 
+  let notificationCalls = 0;
+
   const calendar: CalendarClient = {
     getBusyPeriods: async () => [],
     createEvent: async (input) => {
@@ -187,10 +189,21 @@ test("a persistence retry reconciles one created event without exposing provider
     }),
   };
 
-  const meetingService = new MeetingService(calendar, repository, {
-    info: () => undefined,
-    error: () => undefined,
-  });
+  const meetingService = new MeetingService(
+    calendar,
+    repository,
+    {
+      info: () => undefined,
+      error: () => undefined,
+    },
+    {
+      notifyMeetingBooked: async (record) => {
+        notificationCalls += 1;
+        assert.equal(persistenceAttempts, 2);
+        assert.equal(record.id, "meeting_1");
+      },
+    },
+  );
 
   const definition = new MeetingBookingWorkflowDefinition(meetingService);
 
@@ -224,6 +237,7 @@ test("a persistence retry reconciles one created event without exposing provider
   assert.equal(second.status, "completed");
   assert.equal(createEventCalls, 1);
   assert.equal(persistenceAttempts, 2);
+  assert.equal(notificationCalls, 1);
   assert.equal(calendarTimezone, "Europe/London");
   assert.equal(persistedTimezone, "Europe/London");
   assert.equal(persistedEventUrl, "https://calendar.example/event_internal");

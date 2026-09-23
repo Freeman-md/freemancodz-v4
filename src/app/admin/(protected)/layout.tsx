@@ -32,6 +32,7 @@ import { signOutAdmin } from "../login/actions";
 const navigation = [
   ["Overview", "/admin"],
   ["Audit requests", "/admin/audits"],
+  ["Messages", "/admin/messages"],
   ["Pages", "/admin/pages/home"],
   ["Profile", "/admin/profile"],
   ["Projects", "/admin/projects"],
