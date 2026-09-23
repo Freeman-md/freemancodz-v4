@@ -15,8 +15,8 @@ import {
   mediaMetadataSchema,
   upsertProjectSchema,
 } from "@/contracts/portfolio-admin.contract";
-import { adminAuthService, portfolioAdministrationService } from "@/server/composition-root";
-import { PortfolioAdministrationError, PortfolioCacheTag } from "@/server/modules/portfolio/public";
+import { adminAuthService, portfolioAdministrationService } from "@/modules/composition";
+import { PortfolioAdministrationError, PortfolioCacheTag } from "@/modules/portfolio/public";
 import { invalidateProjectUpdate } from "./project-cache-invalidation";
 import { invalidateReusableBlockUpdate } from "./reusable-block-cache-invalidation";
 import { runAuthorizedAdminMutation } from "./admin-action-boundary";

@@ -11,11 +11,11 @@ import {
   seedPortfolio,
   verifyPortfolio,
 } from "../../../prisma/portfolio-bootstrap";
-import type { ISupabaseStorageProvider } from "@/server/modules/portfolio/interfaces/supabase-storage.provider.interface";
-import type { SearchIndexJob } from "@/server/modules/search-index/models/search-index-job";
-import type { EmbeddedSiteChunk } from "@/server/modules/search-index/models/site-chunk";
-import { SearchIndexJobRepository } from "@/server/modules/search-index/repositories/search-index-job.repository";
-import { SiteChunkRepository } from "@/server/modules/search-index/repositories/site-chunk.repository";
+import type { ISupabaseStorageProvider } from "@/modules/portfolio/interfaces/supabase-storage.provider.interface";
+import type { SearchIndexJob } from "@/modules/search-index/models/search-index-job";
+import type { EmbeddedSiteChunk } from "@/modules/search-index/models/site-chunk";
+import { SearchIndexJobRepository } from "@/modules/search-index/repositories/search-index-job.repository";
+import { SiteChunkRepository } from "@/modules/search-index/repositories/site-chunk.repository";
 
 const adminConnectionUrl = process.env.PORTFOLIO_TEST_DATABASE_URL;
 

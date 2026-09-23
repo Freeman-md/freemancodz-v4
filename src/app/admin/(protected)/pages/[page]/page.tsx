@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
-import type { ContentBlockNode } from "@/server/modules/portfolio/models/portfolio-records";
-import { adminAuthService, portfolioAdministrationService } from "@/server/composition-root";
+import type { ContentBlockNode } from "@/modules/portfolio/models/portfolio-records";
+import { adminAuthService, portfolioAdministrationService } from "@/modules/composition";
 import { portfolioPageSchema } from "@/contracts/portfolio-admin.contract";
 import { ContentBlockEditor } from "../../../_components/AdminEditors";
 

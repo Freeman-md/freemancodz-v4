@@ -1,4 +1,4 @@
-import { adminAuthService, portfolioAdministrationService } from "@/server/composition-root";
+import { adminAuthService, portfolioAdministrationService } from "@/modules/composition";
 import { ProfileEditor, RelationEditor } from "../../_components/AdminEditors";
 import { MediaUploader } from "../../_components/MediaUploader";
 

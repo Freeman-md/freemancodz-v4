@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { createSearchIndexWorkerGetHandler } from "@/app/api/internal/search-index-worker/route";
 import type { SearchIndexWorkerResult } from "@/contracts/search-index-worker.contract";
-import type { ILogger } from "@/server/infrastructure/logging/logger.interface";
+import type { ILogger } from "@/infrastructure/logging/logger.interface";
 
 type LogEntry = {
   context: unknown;

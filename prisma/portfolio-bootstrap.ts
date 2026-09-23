@@ -1,6 +1,6 @@
 import "server-only";
 import type { PrismaClient } from "../src/generated/prisma/client";
-import type { ISupabaseStorageProvider } from "../src/server/modules/portfolio/interfaces/supabase-storage.provider.interface";
+import type { ISupabaseStorageProvider } from "../src/modules/portfolio/interfaces/supabase-storage.provider.interface";
 import {
   actionSeeds,
   contentSeeds,

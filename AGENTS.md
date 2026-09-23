@@ -6,6 +6,8 @@ This file defines repository-wide engineering rules and the entry point for the 
 
 Before planning, implementing, reviewing, or refactoring any Next.js code, read and follow `.agents/skills/nextjs-architecture/SKILL.md`. Treat it as the authoritative architectural standard for all Next.js implementations, milestones, and refactors.
 
+The architecture skill defines the canonical `src/` layout. Legacy `src/server` paths are not an allowed alternative.
+
 Validate every proposed file location, name, interface, dependency, service boundary, architectural role, and client/server boundary against that skill before writing code and again before completion. Do not introduce an exception without explicit user approval. Existing repository inconsistencies do not override the skill.
 
 Before making a framework-specific decision:

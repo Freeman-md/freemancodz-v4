@@ -1,19 +1,19 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import type { IContentBlockRepository } from "@/server/modules/portfolio/interfaces/content-block.repository.interface";
-import type { IExperienceRepository } from "@/server/modules/portfolio/interfaces/experience.repository.interface";
-import type { IProfileRepository } from "@/server/modules/portfolio/interfaces/profile.repository.interface";
-import type { IProjectRepository } from "@/server/modules/portfolio/interfaces/project.repository.interface";
-import { AboutService } from "@/server/modules/portfolio/services/about.service";
-import { AuditService } from "@/server/modules/portfolio/services/audit.service";
-import { HomeService } from "@/server/modules/portfolio/services/home.service";
-import { WorkService } from "@/server/modules/portfolio/services/work.service";
+import type { IContentBlockRepository } from "@/modules/portfolio/interfaces/content-block.repository.interface";
+import type { IExperienceRepository } from "@/modules/portfolio/interfaces/experience.repository.interface";
+import type { IProfileRepository } from "@/modules/portfolio/interfaces/profile.repository.interface";
+import type { IProjectRepository } from "@/modules/portfolio/interfaces/project.repository.interface";
+import { AboutService } from "@/modules/portfolio/services/about.service";
+import { AuditService } from "@/modules/portfolio/services/audit.service";
+import { HomeService } from "@/modules/portfolio/services/home.service";
+import { WorkService } from "@/modules/portfolio/services/work.service";
 import type {
   ContentBlockNode,
   ExperienceWithIcons,
   ProfileWithCollections,
   ProjectWithCover,
-} from "@/server/modules/portfolio/models/portfolio-records";
+} from "@/modules/portfolio/models/portfolio-records";
 
 const profile = {
   id: "global",

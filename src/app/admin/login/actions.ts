@@ -3,7 +3,7 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { adminAuthService, logger } from "@/server/composition-root";
+import { adminAuthService, logger } from "@/modules/composition";
 
 const emailSchema = z.string().trim().email().max(320);
 

@@ -1,4 +1,4 @@
-import { adminAuthService, portfolioAdministrationService } from "@/server/composition-root";
+import { adminAuthService, portfolioAdministrationService } from "@/modules/composition";
 import { ExperienceEditor, RelationEditor } from "../../_components/AdminEditors";
 
 const dateOnly = (value: Date | null) => (value ? value.toISOString().slice(0, 10) : null);

@@ -2,26 +2,26 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { createChatPostHandler } from "@/app/api/chat/route";
-import type { ILogger } from "@/server/infrastructure/logging/logger.interface";
-import type { IOpenAIProvider } from "@/server/infrastructure/openai/interfaces/openai.provider.interface";
-import type { OpenAIResponseRequest } from "@/server/infrastructure/openai/models/openai-response-request";
-import type { ISiteSearchService, SiteSearchResult } from "@/server/modules/search-index/public";
-import { AssistantService } from "@/server/modules/assistant/services/assistant.service";
+import type { ILogger } from "@/infrastructure/logging/logger.interface";
+import type { IOpenAIProvider } from "@/infrastructure/openai/interfaces/openai.provider.interface";
+import type { OpenAIResponseRequest } from "@/infrastructure/openai/models/openai-response-request";
+import type { ISiteSearchService, SiteSearchResult } from "@/modules/search-index/public";
+import { AssistantService } from "@/modules/assistant/services/assistant.service";
 import type {
   ConsumeRateLimitInput,
-  IRateLimitService,
   RateLimitResult,
-} from "@/server/modules/rate-limit/public";
-import type { IWorkflowInstanceRepository } from "@/server/modules/workflow/interfaces/workflow-instance.repository.interface";
+} from "@/modules/rate-limit/rate-limit.types";
+import type { RateLimitService } from "@/modules/rate-limit/service";
+import type { IWorkflowInstanceRepository } from "@/modules/workflow/interfaces/workflow-instance.repository.interface";
 import type { WorkflowInstance } from "@/generated/prisma/client";
-import { MeetingBookingWorkflowDefinition } from "@/server/modules/workflow/definitions/meeting-booking/meeting-booking.definition";
-import { AuditWorkflowDefinition } from "@/server/modules/workflow/definitions/audit/audit.definition";
-import { WorkflowDefinitionRegistry } from "@/server/modules/workflow/workflow-definition.registry";
+import { MeetingBookingWorkflowDefinition } from "@/modules/workflow/definitions/meeting-booking/meeting-booking.definition";
+import { AuditWorkflowDefinition } from "@/modules/workflow/definitions/audit/audit.definition";
+import { WorkflowDefinitionRegistry } from "@/modules/workflow/workflow-definition.registry";
 import type {
   CreateWorkflowInstanceInput,
   SaveWorkflowInstanceInput,
-} from "@/server/modules/workflow/workflow.types";
-import { WorkflowService } from "@/server/modules/workflow/services/workflow.service";
+} from "@/modules/workflow/workflow.types";
+import { WorkflowService } from "@/modules/workflow/services/workflow.service";
 
 const source = {
   id: "project-1",
@@ -77,7 +77,7 @@ function createAssistant({
   chunks?: SiteSearchResult[];
   embedding?: IOpenAIProvider["createEmbedding"];
   response?: (request: OpenAIResponseRequest) => ReturnType<IOpenAIProvider["streamResponse"]>;
-  rateLimit?: IRateLimitService;
+  rateLimit?: Pick<RateLimitService, "consume">;
 } = {}) {
   const inputs: OpenAIResponseRequest[] = [];
 
@@ -132,7 +132,7 @@ function createAssistant({
 
   const assistantService = new AssistantService(openai, siteSearch, logger, workflowService);
 
-  const rateLimitService: IRateLimitService = rateLimit ?? {
+  const rateLimitService: Pick<RateLimitService, "consume"> = rateLimit ?? {
     consume: async (input) => {
       rateLimitInputs.push(input);
 
@@ -621,7 +621,7 @@ test("invalid public request returns the current safe validation response", asyn
 });
 
 test("denied chat requests return the current limit response without invoking the assistant", async () => {
-  const rateLimit: IRateLimitService = {
+  const rateLimit: Pick<RateLimitService, "consume"> = {
     consume: async (): Promise<RateLimitResult> => ({
       allowed: false,
       limit: 10,
@@ -645,7 +645,7 @@ test("denied chat requests return the current limit response without invoking th
 });
 
 test("rate-limit failures return a generic unavailable response without invoking the assistant", async () => {
-  const rateLimit: IRateLimitService = {
+  const rateLimit: Pick<RateLimitService, "consume"> = {
     consume: async () => {
       throw new Error("database unavailable");
     },

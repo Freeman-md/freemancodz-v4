@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
-import { adminAuthService } from "@/server/composition-root";
+import { adminAuthService } from "@/modules/composition";
 import { Container } from "@/shared/components/layout/Container";
 import { Button } from "@/shared/components/ui/Button";
 import { signOutAdmin } from "../login/actions";

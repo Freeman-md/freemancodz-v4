@@ -2,16 +2,16 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import type { AuditRequest, WorkflowInstance } from "@/generated/prisma/client";
-import type { IAuditService } from "@/server/modules/audit/public";
-import type { IWorkflowInstanceRepository } from "@/server/modules/workflow/interfaces/workflow-instance.repository.interface";
-import { AuditWorkflowDefinition } from "@/server/modules/workflow/definitions/audit/audit.definition";
-import { WorkflowDefinitionRegistry } from "@/server/modules/workflow/workflow-definition.registry";
+import type { IAuditService } from "@/modules/audit/public";
+import type { IWorkflowInstanceRepository } from "@/modules/workflow/interfaces/workflow-instance.repository.interface";
+import { AuditWorkflowDefinition } from "@/modules/workflow/definitions/audit/audit.definition";
+import { WorkflowDefinitionRegistry } from "@/modules/workflow/workflow-definition.registry";
 import type {
   CreateWorkflowInstanceInput,
   SaveWorkflowInstanceInput,
   WorkflowExecutionContext,
-} from "@/server/modules/workflow/workflow.types";
-import { WorkflowService } from "@/server/modules/workflow/services/workflow.service";
+} from "@/modules/workflow/workflow.types";
+import { WorkflowService } from "@/modules/workflow/services/workflow.service";
 
 const INSTANCE_ID = "11111111-1111-4111-8111-111111111111";
 

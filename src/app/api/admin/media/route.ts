@@ -1,5 +1,5 @@
 import { revalidateTag } from "next/cache";
-import { adminAuthService, portfolioMediaService } from "@/server/composition-root";
+import { adminAuthService, portfolioMediaService } from "@/modules/composition";
 import { handlePortfolioMediaUpload } from "./media-upload";
 
 export async function POST(request: Request) {

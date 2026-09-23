@@ -1,11 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import type { ILogger } from "@/server/infrastructure/logging/logger.interface";
-import type { IMediaBlockAdministrationRepository } from "@/server/modules/portfolio/interfaces/media-block.repository.interface";
-import type { IProfileAdministrationRepository } from "@/server/modules/portfolio/interfaces/profile.repository.interface";
-import type { IProjectAdministrationRepository } from "@/server/modules/portfolio/interfaces/project.repository.interface";
-import type { IPortfolioMediaStorageProvider } from "@/server/modules/portfolio/interfaces/supabase-storage.provider.interface";
-import { PortfolioMediaService } from "@/server/modules/portfolio/services/portfolio-media.service";
+import type { ILogger } from "@/infrastructure/logging/logger.interface";
+import type { IMediaBlockAdministrationRepository } from "@/modules/portfolio/interfaces/media-block.repository.interface";
+import type { IProfileAdministrationRepository } from "@/modules/portfolio/interfaces/profile.repository.interface";
+import type { IProjectAdministrationRepository } from "@/modules/portfolio/interfaces/project.repository.interface";
+import type { IPortfolioMediaStorageProvider } from "@/modules/portfolio/interfaces/supabase-storage.provider.interface";
+import { PortfolioMediaService } from "@/modules/portfolio/services/portfolio-media.service";
 
 const profile = {
   id: "global",

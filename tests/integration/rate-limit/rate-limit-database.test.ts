@@ -6,8 +6,8 @@ import test from "node:test";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { Client } from "pg";
 import { PrismaClient } from "@/generated/prisma/client";
-import { RateLimitRepository } from "@/server/modules/rate-limit/repositories/rate-limit.repository";
-import type { RateLimitRule } from "@/server/modules/rate-limit/rate-limit.types";
+import { RateLimitRepository } from "@/modules/rate-limit/repository";
+import type { RateLimitRule } from "@/modules/rate-limit/rate-limit.types";
 
 const adminConnectionUrl = process.env.PORTFOLIO_TEST_DATABASE_URL;
 

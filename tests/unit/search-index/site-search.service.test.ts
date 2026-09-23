@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import type { ISiteChunkRepository } from "@/server/modules/search-index/interfaces/site-chunk.repository.interface";
-import { SiteSearchService } from "@/server/modules/search-index/services/site-search.service";
+import type { ISiteChunkRepository } from "@/modules/search-index/interfaces/site-chunk.repository.interface";
+import { SiteSearchService } from "@/modules/search-index/services/site-search.service";
 
 test("retains the assistant retrieval count and similarity defaults", async () => {
   const calls: Array<{ count: number | undefined; threshold: number | undefined }> = [];

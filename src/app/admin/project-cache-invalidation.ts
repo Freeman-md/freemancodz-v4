@@ -1,4 +1,4 @@
-import { type ProjectUpdateResult, PortfolioCacheTag } from "@/server/modules/portfolio/public";
+import { type ProjectUpdateResult, PortfolioCacheTag } from "@/modules/portfolio/public";
 
 export function invalidateProjectUpdate(
   result: ProjectUpdateResult,

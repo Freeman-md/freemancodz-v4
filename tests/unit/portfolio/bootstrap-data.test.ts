@@ -15,7 +15,7 @@ import {
   seedPortfolio,
 } from "../../../prisma/portfolio-bootstrap";
 import type { PrismaClient } from "@/generated/prisma/client";
-import type { ISupabaseStorageProvider } from "@/server/modules/portfolio/interfaces/supabase-storage.provider.interface";
+import type { ISupabaseStorageProvider } from "@/modules/portfolio/interfaces/supabase-storage.provider.interface";
 
 test("canonical seed values and relationship allocation match the approved artifacts", () => {
   assert.equal(profileSeed.name, "Freeman Madudili");

@@ -1,15 +1,15 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { MeetingBookingWorkflowDefinition } from "@/server/modules/workflow/definitions/meeting-booking/meeting-booking.definition";
+import { MeetingBookingWorkflowDefinition } from "@/modules/workflow/definitions/meeting-booking/meeting-booking.definition";
 import {
   findMeetingSlotsSchema,
   prepareMeetingSchema,
-} from "@/server/modules/workflow/definitions/meeting-booking/meeting-booking.schema";
-import type { IMeetingService } from "@/server/modules/meeting/public";
-import type { IGoogleCalendarProvider } from "@/server/infrastructure/google-calendar/interfaces/google-calendar.provider.interface";
-import type { IMeetingRepository } from "@/server/modules/meeting/interfaces/meeting.repository.interface";
-import { MeetingService } from "@/server/modules/meeting/services/meeting.service";
+} from "@/modules/workflow/definitions/meeting-booking/meeting-booking.schema";
+import type { IMeetingService } from "@/modules/meeting/public";
+import type { IGoogleCalendarProvider } from "@/infrastructure/google-calendar/interfaces/google-calendar.provider.interface";
+import type { IMeetingRepository } from "@/modules/meeting/interfaces/meeting.repository.interface";
+import { MeetingService } from "@/modules/meeting/services/meeting.service";
 
 const slot = {
   start: "2099-09-15T11:00:00.000Z",

@@ -1,14 +1,14 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { requiredPortfolioProjectSlugs } from "@/contracts/portfolio-presentation.contract";
-import type { IActionBlockAdministrationRepository } from "@/server/modules/portfolio/interfaces/action-block.repository.interface";
-import type { IContentBlockAdministrationRepository } from "@/server/modules/portfolio/interfaces/content-block.repository.interface";
-import type { IExperienceAdministrationRepository } from "@/server/modules/portfolio/interfaces/experience.repository.interface";
-import type { IIconBlockAdministrationRepository } from "@/server/modules/portfolio/interfaces/icon-block.repository.interface";
-import type { IMediaBlockAdministrationRepository } from "@/server/modules/portfolio/interfaces/media-block.repository.interface";
-import type { IProfileAdministrationRepository } from "@/server/modules/portfolio/interfaces/profile.repository.interface";
-import type { IProjectAdministrationRepository } from "@/server/modules/portfolio/interfaces/project.repository.interface";
-import { PortfolioAdministrationService } from "@/server/modules/portfolio/services/portfolio-administration.service";
+import type { IActionBlockAdministrationRepository } from "@/modules/portfolio/interfaces/action-block.repository.interface";
+import type { IContentBlockAdministrationRepository } from "@/modules/portfolio/interfaces/content-block.repository.interface";
+import type { IExperienceAdministrationRepository } from "@/modules/portfolio/interfaces/experience.repository.interface";
+import type { IIconBlockAdministrationRepository } from "@/modules/portfolio/interfaces/icon-block.repository.interface";
+import type { IMediaBlockAdministrationRepository } from "@/modules/portfolio/interfaces/media-block.repository.interface";
+import type { IProfileAdministrationRepository } from "@/modules/portfolio/interfaces/profile.repository.interface";
+import type { IProjectAdministrationRepository } from "@/modules/portfolio/interfaces/project.repository.interface";
+import { PortfolioAdministrationService } from "@/modules/portfolio/services/portfolio-administration.service";
 
 const now = new Date("2026-08-12T00:00:00.000Z");
 

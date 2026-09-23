@@ -1,13 +1,13 @@
 import "server-only";
 import { cacheLife, cacheTag } from "next/cache";
-import { aboutService, auditService, homeService, profileService, workService } from "@/server/composition-root";
+import { aboutService, auditService, homeService, profileService, workService } from "@/modules/composition";
 import {
   getAboutPageCacheTags,
   getAuditPageCacheTags,
   getHomePageCacheTags,
   getWorkPageCacheTags,
-} from "@/server/modules/portfolio/public";
-import { PortfolioCacheTag } from "@/server/modules/portfolio/public";
+} from "@/modules/portfolio/public";
+import { PortfolioCacheTag } from "@/modules/portfolio/public";
 import { registerPortfolioCacheTags } from "./register-portfolio-cache-tags";
 
 export async function getCachedHomePageData() {

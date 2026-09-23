@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 
 import { assistantRequestSchema } from "@/contracts/assistant.contract";
-import type { ILogger } from "@/server/infrastructure/logging/logger.interface";
-import type { IAssistantService } from "@/server/modules/assistant/public";
-import type { IRateLimitService, RateLimitRule } from "@/server/modules/rate-limit/public";
+import type { ILogger } from "@/infrastructure/logging/logger.interface";
+import type { IAssistantService } from "@/modules/assistant/public";
+import type { RateLimitRule } from "@/modules/rate-limit/rate-limit.types";
+import type { RateLimitService } from "@/modules/rate-limit/service";
 
 const CHAT_RATE_LIMIT_SCOPE = "chat";
 
@@ -41,7 +42,7 @@ export function createChatPostHandler({
   logger,
 }: {
   assistantService: IAssistantService;
-  rateLimitService: IRateLimitService;
+  rateLimitService: Pick<RateLimitService, "consume">;
   logger: ILogger;
 }) {
   return async function POST(request: Request) {
@@ -117,7 +118,7 @@ export function createChatPostHandler({
 }
 
 export async function POST(request: Request) {
-  const { assistantService, logger, rateLimitService } = await import("@/server/composition-root");
+  const { assistantService, logger, rateLimitService } = await import("@/modules/composition");
 
   return createChatPostHandler({ assistantService, rateLimitService, logger })(request);
 }

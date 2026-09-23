@@ -3,9 +3,9 @@ import {
   mediaMetadataSchema,
   mediaOwnerSchema,
 } from "@/contracts/portfolio-admin.contract";
-import type { IAdminAuthService } from "@/server/modules/admin-auth/public";
-import { AdminAuthenticationError } from "@/server/modules/admin-auth/public";
-import { type IPortfolioMediaService, PortfolioCacheTag } from "@/server/modules/portfolio/public";
+import type { IAdminAuthService } from "@/modules/admin-auth/public";
+import { AdminAuthenticationError } from "@/modules/admin-auth/public";
+import { type IPortfolioMediaService, PortfolioCacheTag } from "@/modules/portfolio/public";
 
 const mediaExtensions: Record<string, string> = {
   "image/jpeg": "jpg",

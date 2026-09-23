@@ -2,20 +2,20 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import type { WorkflowInstance } from "@/generated/prisma/client";
-import type { OpenAIResponseTool } from "@/server/infrastructure/openai/models/openai-response-request";
-import type { IWorkflowInstanceRepository } from "@/server/modules/workflow/interfaces/workflow-instance.repository.interface";
-import { WorkflowInstanceRepositoryError } from "@/server/modules/workflow/interfaces/workflow-instance.repository.interface";
-import type { IWorkflowDefinition } from "@/server/modules/workflow/interfaces/workflow-definition.interface";
-import { WorkflowDefinitionRegistry } from "@/server/modules/workflow/workflow-definition.registry";
+import type { OpenAIResponseTool } from "@/infrastructure/openai/models/openai-response-request";
+import type { IWorkflowInstanceRepository } from "@/modules/workflow/interfaces/workflow-instance.repository.interface";
+import { WorkflowInstanceRepositoryError } from "@/modules/workflow/interfaces/workflow-instance.repository.interface";
+import type { IWorkflowDefinition } from "@/modules/workflow/interfaces/workflow-definition.interface";
+import { WorkflowDefinitionRegistry } from "@/modules/workflow/workflow-definition.registry";
 import type {
   CreateWorkflowInstanceInput,
   SaveWorkflowInstanceInput,
-} from "@/server/modules/workflow/workflow.types";
-import { WorkflowService } from "@/server/modules/workflow/services/workflow.service";
+} from "@/modules/workflow/workflow.types";
+import { WorkflowService } from "@/modules/workflow/services/workflow.service";
 import {
   CANCEL_WORKFLOW_TOOL_NAME,
   START_WORKFLOW_TOOL_NAME,
-} from "@/server/modules/workflow/workflow.constants";
+} from "@/modules/workflow/workflow.constants";
 import { z } from "zod";
 
 const FIRST_INSTANCE_ID = "11111111-1111-4111-8111-111111111111";

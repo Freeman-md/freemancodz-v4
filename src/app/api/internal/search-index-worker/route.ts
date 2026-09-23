@@ -3,10 +3,10 @@ import {
   searchIndexWorkerErrorSchema,
   searchIndexWorkerResultSchema,
 } from "@/contracts/search-index-worker.contract";
-import { logger } from "@/server/composition/logging.composition";
-import { getCronSecret } from "@/server/infrastructure/config/env";
-import type { ILogger } from "@/server/infrastructure/logging/logger.interface";
-import type { ISearchIndexService } from "@/server/modules/search-index/public";
+import { logger } from "@/modules/composition";
+import { getCronSecret } from "@/infrastructure/config/env";
+import type { ILogger } from "@/infrastructure/logging/logger.interface";
+import type { ISearchIndexService } from "@/modules/search-index/public";
 
 type SearchIndexWorkerService = Pick<ISearchIndexService, "processPendingJob">;
 
@@ -87,7 +87,7 @@ export function createSearchIndexWorkerGetHandler({
 const handleGet = createSearchIndexWorkerGetHandler({
   getSecret: getCronSecret,
   loadWorkerService: async () => {
-    const { searchIndexService } = await import("@/server/composition-root");
+    const { searchIndexService } = await import("@/modules/composition");
 
     return searchIndexService;
   },

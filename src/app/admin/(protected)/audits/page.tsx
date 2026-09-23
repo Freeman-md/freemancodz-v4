@@ -1,4 +1,4 @@
-import { auditRequestService } from "@/server/composition-root";
+import { auditRequestService } from "@/modules/composition";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/Card";
 
 export default async function AdminAuditsPage() {

@@ -4,8 +4,8 @@ import test from "node:test";
 import {
   chunkText,
   prepareSiteChunks,
-} from "@/server/modules/search-index/mappers/site-chunk.mapper";
-import type { IndexDocument } from "@/server/modules/search-index/models/index-document";
+} from "@/modules/search-index/mappers/site-chunk.mapper";
+import type { IndexDocument } from "@/modules/search-index/models/index-document";
 
 const document: IndexDocument = {
   sourceType: "project",

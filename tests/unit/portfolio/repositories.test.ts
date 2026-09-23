@@ -1,13 +1,13 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { PrismaClient } from "@/generated/prisma/client";
-import { ActionBlockRepository } from "@/server/modules/portfolio/repositories/action-block.repository";
-import { ContentBlockRepository } from "@/server/modules/portfolio/repositories/content-block.repository";
-import { ExperienceRepository } from "@/server/modules/portfolio/repositories/experience.repository";
-import { IconBlockRepository } from "@/server/modules/portfolio/repositories/icon-block.repository";
-import { MediaBlockRepository } from "@/server/modules/portfolio/repositories/media-block.repository";
-import { ProfileRepository } from "@/server/modules/portfolio/repositories/profile.repository";
-import { ProjectRepository } from "@/server/modules/portfolio/repositories/project.repository";
+import { ActionBlockRepository } from "@/modules/portfolio/repositories/action-block.repository";
+import { ContentBlockRepository } from "@/modules/portfolio/repositories/content-block.repository";
+import { ExperienceRepository } from "@/modules/portfolio/repositories/experience.repository";
+import { IconBlockRepository } from "@/modules/portfolio/repositories/icon-block.repository";
+import { MediaBlockRepository } from "@/modules/portfolio/repositories/media-block.repository";
+import { ProfileRepository } from "@/modules/portfolio/repositories/profile.repository";
+import { ProjectRepository } from "@/modules/portfolio/repositories/project.repository";
 
 test("seven portfolio repositories expose ordered domain reads and subtype bases", async () => {
   const calls: Array<[string, unknown]> = [];

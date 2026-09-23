@@ -1,20 +1,20 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import type { ILogger } from "@/server/infrastructure/logging/logger.interface";
+import type { ILogger } from "@/infrastructure/logging/logger.interface";
 import type {
   GeneratedEmbedding,
   IOpenAIProvider,
-} from "@/server/infrastructure/openai/interfaces/openai.provider.interface";
-import type { ISearchIndexJobRepository } from "@/server/modules/search-index/interfaces/search-index-job.repository.interface";
-import type { ISiteChunkRepository } from "@/server/modules/search-index/interfaces/site-chunk.repository.interface";
+} from "@/infrastructure/openai/interfaces/openai.provider.interface";
+import type { ISearchIndexJobRepository } from "@/modules/search-index/interfaces/search-index-job.repository.interface";
+import type { ISiteChunkRepository } from "@/modules/search-index/interfaces/site-chunk.repository.interface";
 import type {
   ClaimedSearchIndexJob,
   SearchIndexJob,
   SearchIndexJobClaimResult,
-} from "@/server/modules/search-index/models/search-index-job";
-import type { EmbeddedSiteChunk } from "@/server/modules/search-index/models/site-chunk";
-import { SearchIndexService } from "@/server/modules/search-index/services/search-index.service";
+} from "@/modules/search-index/models/search-index-job";
+import type { EmbeddedSiteChunk } from "@/modules/search-index/models/site-chunk";
+import { SearchIndexService } from "@/modules/search-index/services/search-index.service";
 import { createPortfolioSnapshotFixture } from "./search-index.fixture";
 
 const CLAIMED_AT = new Date("2026-08-18T09:00:00.000Z");

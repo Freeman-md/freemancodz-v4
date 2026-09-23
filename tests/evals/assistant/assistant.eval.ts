@@ -1,7 +1,7 @@
-import { CHAT_SYSTEM_PROMPT } from "@/server/modules/assistant/prompts/portfolio-assistant.prompt";
-import { createOpenAIClient, getResponseModel } from "@/server/infrastructure/openai/openai.client";
-import { getEmbeddingModel } from "@/server/infrastructure/openai/openai.client";
-import { siteSearchService } from "@/server/composition-root";
+import { CHAT_SYSTEM_PROMPT } from "@/modules/assistant/prompts/portfolio-assistant.prompt";
+import { createOpenAIClient, getResponseModel } from "@/infrastructure/openai/openai.client";
+import { getEmbeddingModel } from "@/infrastructure/openai/openai.client";
+import { siteSearchService } from "@/modules/composition";
 import { assistantEvalFixture, type AssistantEvalSource } from "./assistant-eval.fixture";
 
 function formatPortfolioContent(portfolioContent: readonly AssistantEvalSource[]) {

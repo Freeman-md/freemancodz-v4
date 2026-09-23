@@ -1,5 +1,5 @@
 import { portfolioIconNameSchema } from "@/contracts/portfolio-presentation.contract";
-import { adminAuthService, portfolioAdministrationService } from "@/server/composition-root";
+import { adminAuthService, portfolioAdministrationService } from "@/modules/composition";
 import { MediaMetadataEditor } from "../../_components/AdminEditors";
 import { NewMediaBlockUploader } from "../../_components/MediaUploader";
 

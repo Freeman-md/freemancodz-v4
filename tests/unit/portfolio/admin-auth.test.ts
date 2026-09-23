@@ -1,15 +1,15 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import type { ILogger } from "@/server/infrastructure/logging/logger.interface";
+import type { ILogger } from "@/infrastructure/logging/logger.interface";
 import {
   AdminAuthProviderError,
   type IAdminAuthProvider,
-} from "@/server/modules/admin-auth/interfaces/admin-auth.provider.interface";
+} from "@/modules/admin-auth/interfaces/admin-auth.provider.interface";
 import {
   AdminAuthProvisioningError,
   AdminAuthService,
   AdminAuthenticationError,
-} from "@/server/modules/admin-auth/services/admin-auth.service";
+} from "@/modules/admin-auth/services/admin-auth.service";
 
 const approvedEmail = "freemanmadudili@gmail.com";
 

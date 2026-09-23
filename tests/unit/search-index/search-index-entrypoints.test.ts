@@ -4,8 +4,8 @@ import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import test from "node:test";
 import type { SearchIndexWorkerResult } from "@/contracts/search-index-worker.contract";
-import { runSearchIndexWorkerOnce } from "@/server/entrypoints/jobs/run-search-index-worker";
-import { requestAndRunSearchIndexRebuild } from "@/server/entrypoints/maintenance/rebuild-search-index";
+import { runSearchIndexWorkerOnce } from "@/entrypoints/jobs/run-search-index-worker";
+import { requestAndRunSearchIndexRebuild } from "@/entrypoints/maintenance/rebuild-search-index";
 
 const processed = {
   outcome: "processed",
@@ -73,8 +73,8 @@ async function runUnconfirmedProductionEntrypoint(entrypoint: string) {
 
 test("production indexing commands reject before composition without operator confirmation", async () => {
   for (const entrypoint of [
-    resolve(process.cwd(), "src/server/entrypoints/jobs/run-search-index-worker.ts"),
-    resolve(process.cwd(), "src/server/entrypoints/maintenance/rebuild-search-index.ts"),
+    resolve(process.cwd(), "src/entrypoints/jobs/run-search-index-worker.ts"),
+    resolve(process.cwd(), "src/entrypoints/maintenance/rebuild-search-index.ts"),
   ]) {
     const result = await runUnconfirmedProductionEntrypoint(entrypoint);
 
