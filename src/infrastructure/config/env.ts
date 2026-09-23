@@ -57,6 +57,13 @@ export function getAdminEmail() {
   return (process.env.ADMIN_EMAIL || "freemanmadudili@gmail.com").trim().toLowerCase();
 }
 
+export function getResendConfig() {
+  return {
+    apiKey: requireEnvValue("RESEND_API_KEY"),
+    fromEmail: requireEnvValue("RESEND_FROM_EMAIL"),
+  };
+}
+
 export function getGoogleCalendarConfig() {
   return {
     clientId: requireEnvValue("GOOGLE_CLIENT_ID"),

@@ -4,12 +4,14 @@ import type { CalendarClient } from "@/infrastructure/google-calendar/types";
 import type { Logger } from "@/infrastructure/logging/logger";
 import { MEETING_CONFIG } from "./config";
 import { MeetingPersistenceError } from "./types";
+import type { NotificationService } from "@/modules/notification/service";
 
 export class MeetingService {
   constructor(
     private readonly calendar: CalendarClient,
     private readonly repository: MeetingStore,
     private readonly logger: Logger,
+    private readonly notifications: Pick<NotificationService, "notifyMeetingBooked">,
   ) {}
 
   async findAvailableSlots(input: { startDate: string; endDate: string }): Promise<MeetingSlot[]> {
@@ -86,8 +88,10 @@ export class MeetingService {
       rawProviderPayload: input.pendingEvent.rawProviderPayload,
     };
 
+    let meeting;
+
     try {
-      await this.repository.createMeeting(record);
+      meeting = await this.repository.createMeeting(record);
     } catch (error) {
       const existing = await this.repository.findMeetingByGoogleEventId(
         input.pendingEvent.googleEventId,
@@ -101,7 +105,11 @@ export class MeetingService {
 
         throw new MeetingPersistenceError(input.pendingEvent, error);
       }
+
+      meeting = existing;
     }
+
+    await this.notifications.notifyMeetingBooked(meeting);
 
     return {
       googleEventId: input.pendingEvent.googleEventId,

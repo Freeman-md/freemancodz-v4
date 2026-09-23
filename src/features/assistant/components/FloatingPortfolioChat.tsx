@@ -12,6 +12,7 @@ import { ChatConversation } from "./ChatConversation";
 import { ChatLauncher } from "./ChatLauncher";
 import { useAssistant } from "../hooks/useAssistant";
 import { useFloatingPanel } from "../hooks/useFloatingPanel";
+import type { StarterAction } from "./StarterActions";
 
 export function FloatingPortfolioChat() {
   const {
@@ -56,6 +57,15 @@ export function FloatingPortfolioChat() {
 
     showConversation();
     await submitInput();
+  }
+
+  async function handleStarterAction(action: StarterAction) {
+    if (isLoading || messages.length > 0) {
+      return;
+    }
+
+    showConversation();
+    await submitMessage(action.message, action.workflowStart);
   }
 
   function handleKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
@@ -152,6 +162,7 @@ export function FloatingPortfolioChat() {
             messages={messages}
             messagesEndRef={messagesEndRef}
             shouldReduceMotion={shouldReduceMotion}
+            onStarterAction={(action) => void handleStarterAction(action)}
           />
 
           <CardContent className="shrink-0 p-0">
