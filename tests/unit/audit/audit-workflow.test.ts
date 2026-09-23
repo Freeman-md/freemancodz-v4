@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import type { AuditRequest, WorkflowInstance } from "@/generated/prisma/client";
-import type { IAuditService } from "@/modules/audit/public";
+import type { AuditService } from "@/modules/audit/service";
 import type { IWorkflowInstanceRepository } from "@/modules/workflow/interfaces/workflow-instance.repository.interface";
 import { AuditWorkflowDefinition } from "@/modules/workflow/definitions/audit/audit.definition";
 import { WorkflowDefinitionRegistry } from "@/modules/workflow/workflow-definition.registry";
@@ -39,7 +39,7 @@ function createAuditService() {
 
   let submitCalls = 0;
 
-  const service: IAuditService = {
+  const service: Pick<AuditService, "submit" | "listRequests"> = {
     submit: async (input) => {
       submitCalls += 1;
       const existing = requests.get(input.workflowInstanceId);

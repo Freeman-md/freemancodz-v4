@@ -1,7 +1,7 @@
 import "server-only";
 
 import type { OpenAIResponseTool } from "@/infrastructure/openai/models/openai-response-request";
-import type { IMeetingService } from "@/modules/meeting/public";
+import type { MeetingServiceClient } from "@/modules/meeting/types";
 import type {
   IWorkflowDefinition,
   WorkflowExecutionContext,
@@ -28,7 +28,7 @@ export class MeetingBookingWorkflowDefinition implements IWorkflowDefinition<Mee
 
   readonly stateSchema = meetingBookingStateSchema;
 
-  constructor(private readonly meetingService: IMeetingService) {}
+  constructor(private readonly meetingService: MeetingServiceClient) {}
 
   createInitialState(_context: WorkflowStartContext): MeetingBookingState {
     return {

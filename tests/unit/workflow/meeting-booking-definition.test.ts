@@ -6,10 +6,10 @@ import {
   findMeetingSlotsSchema,
   prepareMeetingSchema,
 } from "@/modules/workflow/definitions/meeting-booking/meeting-booking.schema";
-import type { IMeetingService } from "@/modules/meeting/public";
+import type { MeetingServiceClient } from "@/modules/meeting/types";
 import type { IGoogleCalendarProvider } from "@/infrastructure/google-calendar/interfaces/google-calendar.provider.interface";
-import type { IMeetingRepository } from "@/modules/meeting/interfaces/meeting.repository.interface";
-import { MeetingService } from "@/modules/meeting/services/meeting.service";
+import type { MeetingStore } from "@/modules/meeting/types";
+import { MeetingService } from "@/modules/meeting/service";
 
 const slot = {
   start: "2099-09-15T11:00:00.000Z",
@@ -33,7 +33,7 @@ const CONFIRMATION_INTERACTION = {
   interactionId: "44444444-4444-4444-8444-444444444444",
 };
 
-function createMeetingService(overrides: Partial<IMeetingService> = {}): IMeetingService {
+function createMeetingService(overrides: Partial<MeetingServiceClient> = {}): MeetingServiceClient {
   return {
     findAvailableSlots: async () => [slot],
     isSlotAvailable: async () => true,
@@ -155,7 +155,7 @@ test("a persistence retry reconciles one created event without exposing provider
     },
   };
 
-  const repository: IMeetingRepository = {
+  const repository: MeetingStore = {
     createMeeting: async (input) => {
       persistenceAttempts += 1;
       persistedTimezone = input.timezone;

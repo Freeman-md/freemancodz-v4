@@ -5,7 +5,7 @@ import { runAuthorizedAdminMutation } from "@/app/admin/admin-action-boundary";
 import { invalidateProjectUpdate } from "@/app/admin/project-cache-invalidation";
 import { invalidateReusableBlockUpdate } from "@/app/admin/reusable-block-cache-invalidation";
 import { handlePortfolioMediaUpload } from "@/app/api/admin/media/media-upload";
-import { AdminAuthenticationError } from "@/modules/admin-auth/public";
+import { AdminAuthenticationError } from "@/modules/admin-auth/service";
 import type { IPortfolioMediaService } from "@/modules/portfolio/interfaces/portfolio-media.service.interface";
 
 test("direct admin mutation boundary rejects before executing a write", async () => {

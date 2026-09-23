@@ -1,7 +1,7 @@
 import "server-only";
 
 import type { OpenAIResponseTool } from "@/infrastructure/openai/models/openai-response-request";
-import type { IAuditService } from "@/modules/audit/public";
+import type { AuditService } from "@/modules/audit/service";
 import type {
   IWorkflowDefinition,
   WorkflowExecutionContext,
@@ -27,7 +27,7 @@ export class AuditWorkflowDefinition implements IWorkflowDefinition<AuditState> 
 
   readonly stateSchema = auditStateSchema;
 
-  constructor(private readonly auditService: IAuditService) {}
+  constructor(private readonly auditService: Pick<AuditService, "submit">) {}
 
   createInitialState(_context: WorkflowStartContext): AuditState {
     return {

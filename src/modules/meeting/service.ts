@@ -1,19 +1,14 @@
 import "server-only";
-import type { MeetingSlot } from "../models/meeting-slot";
+import type { MeetingSlot, MeetingStore, PendingCalendarEvent } from "./types";
 import type { IGoogleCalendarProvider } from "@/infrastructure/google-calendar/interfaces/google-calendar.provider.interface";
 import type { ILogger } from "@/infrastructure/logging/logger.interface";
-import { MEETING_CONFIG } from "../meeting.config";
-import type { IMeetingRepository } from "../interfaces/meeting.repository.interface";
-import {
-  MeetingPersistenceError,
-  type IMeetingService,
-  type PendingCalendarEvent,
-} from "../interfaces/meeting.service.interface";
+import { MEETING_CONFIG } from "./config";
+import { MeetingPersistenceError } from "./types";
 
-export class MeetingService implements IMeetingService {
+export class MeetingService {
   constructor(
     private readonly calendar: IGoogleCalendarProvider,
-    private readonly repository: IMeetingRepository,
+    private readonly repository: MeetingStore,
     private readonly logger: ILogger,
   ) {}
 

@@ -1,6 +1,12 @@
+import { z } from "zod";
+
 import type { IOpenAIProvider } from "@/infrastructure/openai/interfaces/openai.provider.interface";
 import type { ISiteSearchService } from "@/modules/search-index/public";
-import type { SearchWebsiteInput } from "../schemas/tools/search-website.schema";
+export const searchWebsiteSchema = z
+  .object({ query: z.string().trim().min(1).max(500) })
+  .strict();
+
+type SearchWebsiteInput = z.infer<typeof searchWebsiteSchema>;
 
 export async function searchWebsite(
   input: SearchWebsiteInput,

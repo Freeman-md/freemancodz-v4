@@ -1,5 +1,5 @@
 import type { Prisma } from "@/generated/prisma/client";
-import type { IAuditService } from "@/modules/audit/public";
+import type { AuditService } from "@/modules/audit/service";
 import type { WorkflowExecutionContext, WorkflowExecutionResult } from "../../workflow.types";
 import {
   auditStateSchema,
@@ -26,7 +26,7 @@ const REQUIRED_FIELDS = [
 type RequiredAuditField = (typeof REQUIRED_FIELDS)[number];
 
 type ExecuteAuditToolInput = {
-  auditService: IAuditService;
+  auditService: Pick<AuditService, "submit">;
   name: string;
   rawArguments: string;
   state: AuditState;
@@ -141,7 +141,7 @@ function prepareSubmission(
 }
 
 async function submitAudit(
-  auditService: IAuditService,
+  auditService: Pick<AuditService, "submit">,
   state: AuditState,
   context: WorkflowExecutionContext,
 ): Promise<WorkflowExecutionResult<AuditState>> {

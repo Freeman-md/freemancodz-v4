@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 import { assistantRequestSchema } from "@/contracts/assistant.contract";
 import type { ILogger } from "@/infrastructure/logging/logger.interface";
-import type { IAssistantService } from "@/modules/assistant/public";
+import type { AssistantService } from "@/modules/assistant/service";
 import type { RateLimitRule } from "@/modules/rate-limit/rate-limit.types";
 import type { RateLimitService } from "@/modules/rate-limit/service";
 
@@ -41,7 +41,7 @@ export function createChatPostHandler({
   rateLimitService,
   logger,
 }: {
-  assistantService: IAssistantService;
+  assistantService: Pick<AssistantService, "createResponse">;
   rateLimitService: Pick<RateLimitService, "consume">;
   logger: ILogger;
 }) {

@@ -3,20 +3,20 @@ import "server-only";
 import { getAdminEmail, getGoogleCalendarConfig, getRateLimitHmacSecret } from "@/infrastructure/config/env";
 import { prisma } from "@/infrastructure/database/prisma";
 import { GoogleCalendarProvider } from "@/infrastructure/google-calendar/google-calendar.provider";
-import { ConsoleLogger } from "@/infrastructure/logging/logger";
+import { logger } from "@/infrastructure/logging/logger";
 import { createOpenAIClient, getEmbeddingModel, getResponseModel } from "@/infrastructure/openai/openai.client";
 import { OpenAIProvider } from "@/infrastructure/openai/openai.provider";
 import { createSupabaseAdminAuthClient } from "@/infrastructure/supabase/supabase-admin-auth.client";
 import { createSupabaseAuthClient } from "@/infrastructure/supabase/supabase-auth.client";
 import { createSupabaseStorageClient } from "@/infrastructure/supabase/supabase-storage.client";
-import { AdminAuthService } from "./admin-auth/services/admin-auth.service";
-import { SupabaseAuthProvider } from "./admin-auth/providers/supabase-auth.provider";
-import { AssistantService } from "./assistant/services/assistant.service";
-import { GLOBAL_ASSISTANT_TOOLS } from "./assistant/tools/assistant-tools";
-import { AuditRequestRepository } from "./audit/repositories/audit-request.repository";
-import { AuditService as AuditRequestService } from "./audit/services/audit.service";
-import { MeetingRepository } from "./meeting/repositories/meeting.repository";
-import { MeetingService } from "./meeting/services/meeting.service";
+import { AdminAuthService } from "./admin-auth/service";
+import { SupabaseAuth } from "@/infrastructure/supabase/auth";
+import { AssistantService } from "./assistant/service";
+import { GLOBAL_ASSISTANT_TOOLS } from "./assistant/tools/definitions";
+import { AuditRequestRepository } from "./audit/repository";
+import { AuditService as AuditRequestService } from "./audit/service";
+import { MeetingRepository } from "./meeting/repository";
+import { MeetingService } from "./meeting/service";
 import { ActionBlockRepository } from "./portfolio/repositories/action-block.repository";
 import { ContentBlockRepository } from "./portfolio/repositories/content-block.repository";
 import { ExperienceRepository } from "./portfolio/repositories/experience.repository";
@@ -44,16 +44,12 @@ import { WorkflowInstanceRepository } from "./workflow/repositories/workflow-ins
 import { WorkflowService } from "./workflow/services/workflow.service";
 import { WorkflowDefinitionRegistry } from "./workflow/workflow-definition.registry";
 
-export const logger = new ConsoleLogger();
+const openAIProvider = new OpenAIProvider(createOpenAIClient, getEmbeddingModel, getResponseModel);
 
-const openAIProvider = new OpenAIProvider(
-  createOpenAIClient(),
-  getEmbeddingModel(),
-  getResponseModel(),
-);
+export { logger };
 
 export const adminAuthService = new AdminAuthService(
-  new SupabaseAuthProvider(createSupabaseAuthClient, createSupabaseAdminAuthClient),
+  new SupabaseAuth(createSupabaseAuthClient, createSupabaseAdminAuthClient),
   getAdminEmail(),
   logger,
 );

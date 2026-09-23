@@ -6,7 +6,7 @@ import type { ILogger } from "@/infrastructure/logging/logger.interface";
 import type { IOpenAIProvider } from "@/infrastructure/openai/interfaces/openai.provider.interface";
 import type { OpenAIResponseRequest } from "@/infrastructure/openai/models/openai-response-request";
 import type { ISiteSearchService, SiteSearchResult } from "@/modules/search-index/public";
-import { AssistantService } from "@/modules/assistant/services/assistant.service";
+import { AssistantService } from "@/modules/assistant/service";
 import type {
   ConsumeRateLimitInput,
   RateLimitResult,
@@ -122,7 +122,6 @@ function createAssistant({
           ...input,
           createdAt: new Date("2026-08-20T10:00:00.000Z"),
         }),
-        listRequests: async () => [],
       }),
       new MeetingBookingWorkflowDefinition(meetingService),
     ]),

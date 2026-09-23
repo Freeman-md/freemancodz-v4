@@ -3,13 +3,13 @@ import test from "node:test";
 import type { ILogger } from "@/infrastructure/logging/logger.interface";
 import {
   AdminAuthProviderError,
-  type IAdminAuthProvider,
-} from "@/modules/admin-auth/interfaces/admin-auth.provider.interface";
+  type AdminAuthProvider,
+} from "@/modules/admin-auth/types";
 import {
   AdminAuthProvisioningError,
   AdminAuthService,
   AdminAuthenticationError,
-} from "@/modules/admin-auth/services/admin-auth.service";
+} from "@/modules/admin-auth/service";
 
 const approvedEmail = "freemanmadudili@gmail.com";
 
@@ -27,7 +27,7 @@ function logger(): FakeLogger {
 
 function provider(
   identity: { id: string; email: string } | null,
-): IAdminAuthProvider & { requested: string[] } {
+): AdminAuthProvider & { requested: string[] } {
   const requested: string[] = [];
 
   return {
@@ -43,7 +43,7 @@ function provider(
   };
 }
 
-function service(fake: IAdminAuthProvider, fakeLogger = logger()): {
+function service(fake: AdminAuthProvider, fakeLogger = logger()): {
   service: AdminAuthService;
   logger: FakeLogger;
 } {

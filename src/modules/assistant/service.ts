@@ -1,14 +1,10 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
-import { FALLBACK_ANSWER, MAX_TOOL_CALL_ITERATIONS } from "../assistant.constants";
-import type {
-  AssistantResponseInput,
-  IAssistantService,
-} from "../interfaces/assistant.service.interface";
-import { encodeStreamEvent } from "../mappers/assistant-stream.mapper";
-import { CHAT_SYSTEM_PROMPT } from "../prompts/portfolio-assistant.prompt";
-import { GLOBAL_ASSISTANT_TOOLS } from "../tools/assistant-tools";
-import { executeGlobalAssistantTool } from "../tools/execute-assistant-tool";
+import { FALLBACK_ANSWER, MAX_TOOL_CALL_ITERATIONS } from "./constants";
+import { CHAT_SYSTEM_PROMPT } from "./prompt";
+import type { AssistantResponseInput } from "./types";
+import { GLOBAL_ASSISTANT_TOOLS } from "./tools/definitions";
+import { executeGlobalAssistantTool } from "./tools/execute";
 import type { IOpenAIProvider } from "@/infrastructure/openai/interfaces/openai.provider.interface";
 import type { OpenAIResponseInputItem } from "@/infrastructure/openai/models/openai-response-request";
 import type { ISiteSearchService } from "@/modules/search-index/public";
@@ -21,7 +17,7 @@ import {
   type WorkflowPublicInstance,
 } from "@/modules/workflow/public";
 
-export class AssistantService implements IAssistantService {
+export class AssistantService {
   constructor(
     private readonly openai: IOpenAIProvider,
     private readonly siteSearch: ISiteSearchService,
@@ -43,7 +39,7 @@ export class AssistantService implements IAssistantService {
     return new ReadableStream<Uint8Array>({
       start: async (controller) => {
         const write = (event: AssistantStreamEvent) =>
-          controller.enqueue(encoder.encode(encodeStreamEvent(event)));
+          controller.enqueue(encoder.encode(`${JSON.stringify(event)}\\n`));
 
         let didStreamText = false;
 

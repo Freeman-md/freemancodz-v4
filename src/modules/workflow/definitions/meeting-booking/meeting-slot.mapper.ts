@@ -1,4 +1,5 @@
-import { MEETING_CONFIG, type MeetingSlot } from "@/modules/meeting/public";
+import { MEETING_CONFIG } from "@/modules/meeting/config";
+import type { MeetingSlot } from "@/modules/meeting/types";
 
 const formatter = new Intl.DateTimeFormat("en-GB", {
   timeZone: MEETING_CONFIG.timezone,

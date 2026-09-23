@@ -11,15 +11,15 @@ import type {
 
 export class OpenAIProvider implements IOpenAIProvider {
   constructor(
-    private readonly client: OpenAI,
-    private readonly embeddingModel: string,
-    private readonly responseModel: string,
+    private readonly createClient: () => OpenAI,
+    private readonly getEmbeddingModelName: () => string,
+    private readonly getResponseModelName: () => string,
   ) {}
 
   streamResponse(request: OpenAIResponseRequest) {
-    return this.client.responses.create(
+    return this.createClient().responses.create(
       {
-        model: this.responseModel,
+        model: this.getResponseModelName(),
         instructions: request.instructions,
         input: this.toResponseInput(request.input),
         tools: this.toFunctionTools(request.tools),
@@ -32,7 +32,10 @@ export class OpenAIProvider implements IOpenAIProvider {
   }
 
   async createEmbedding(input: string) {
-    const response = await this.client.embeddings.create({ model: this.embeddingModel, input });
+    const response = await this.createClient().embeddings.create({
+      model: this.getEmbeddingModelName(),
+      input,
+    });
 
     return response.data[0]?.embedding;
   }
@@ -42,8 +45,10 @@ export class OpenAIProvider implements IOpenAIProvider {
       return [];
     }
 
-    const response = await this.client.embeddings.create({
-      model: this.embeddingModel,
+    const embeddingModel = this.getEmbeddingModelName();
+
+    const response = await this.createClient().embeddings.create({
+      model: embeddingModel,
       input: inputs,
     });
 
@@ -53,12 +58,12 @@ export class OpenAIProvider implements IOpenAIProvider {
 
     return response.data.map((item) => ({
       embedding: item.embedding,
-      embeddingModel: this.embeddingModel,
+      embeddingModel,
     }));
   }
 
   getEmbeddingModel() {
-    return this.embeddingModel;
+    return this.getEmbeddingModelName();
   }
 
   private toResponseInput(input: OpenAIResponseInputItem[]): ResponseInput {

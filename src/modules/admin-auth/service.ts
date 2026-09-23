@@ -1,11 +1,10 @@
 import "server-only";
-import type { ILogger } from "../../../infrastructure/logging/logger.interface";
-import {
-  AdminAuthProviderError,
-  type AdminAuthProviderOperation,
-  type IAdminAuthProvider,
-} from "../interfaces/admin-auth.provider.interface";
-import type { IAdminAuthService } from "../interfaces/admin-auth.service.interface";
+import type { ILogger } from "@/infrastructure/logging/logger.interface";
+import type {
+  AdminAuthFailureContext,
+  AdminAuthOperation,
+  AdminAuthProvider,
+} from "./types";
 
 export class AdminAuthProvisioningError extends Error { constructor() { super("Administrator provisioning could not be completed."); this.name = "AdminAuthProvisioningError"; } }
 
@@ -19,9 +18,9 @@ export class AdminAuthenticationError extends Error {
   }
 }
 
-export class AdminAuthService implements IAdminAuthService {
+export class AdminAuthService {
   constructor(
-    private readonly provider: IAdminAuthProvider,
+    private readonly provider: AdminAuthProvider,
     private readonly approvedEmail: string,
     private readonly logger: ILogger,
   ) {}
@@ -107,10 +106,10 @@ export class AdminAuthService implements IAdminAuthService {
 
   private logFailure(
     event: string,
-    operation: AdminAuthProviderOperation,
+    operation: AdminAuthOperation,
     error: unknown,
   ): void {
-    if (error instanceof AdminAuthProviderError) {
+    if (isAdminAuthProviderFailure(error)) {
       this.logger.error(event, error.context);
 
       return;
@@ -132,4 +131,12 @@ export class AdminAuthService implements IAdminAuthService {
 
     return "UnknownError";
   }
+}
+
+function isAdminAuthProviderFailure(error: unknown): error is { context: AdminAuthFailureContext } {
+  return (
+    error instanceof Error &&
+    typeof (error as { context?: unknown }).context === "object" &&
+    (error as unknown as { context: { provider?: unknown } }).context.provider === "supabase"
+  );
 }

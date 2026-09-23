@@ -1,10 +1,10 @@
 import type { Prisma } from "@/generated/prisma/client";
+import { MEETING_CONFIG } from "@/modules/meeting/config";
 import {
-  MEETING_CONFIG,
   MeetingPersistenceError,
-  type IMeetingService,
+  type MeetingServiceClient,
   type MeetingSlot,
-} from "@/modules/meeting/public";
+} from "@/modules/meeting/types";
 import type { WorkflowExecutionContext, WorkflowExecutionResult } from "../../workflow.types";
 import { formatMeetingSlot } from "./meeting-slot.mapper";
 import {
@@ -24,7 +24,7 @@ import {
 } from "./meeting-booking.tools";
 
 type ExecuteMeetingBookingToolInput = {
-  meetingService: IMeetingService;
+  meetingService: MeetingServiceClient;
   name: string;
   rawArguments: string;
   state: MeetingBookingState;
@@ -79,7 +79,7 @@ export async function executeMeetingBookingTool({
 }
 
 async function findMeetingSlots(
-  meetingService: IMeetingService,
+  meetingService: MeetingServiceClient,
   input: FindMeetingSlotsInput,
   state: MeetingBookingState,
 ): Promise<WorkflowExecutionResult<MeetingBookingState>> {
@@ -194,7 +194,7 @@ function confirmMeeting(
 }
 
 async function bookMeeting(
-  meetingService: IMeetingService,
+  meetingService: MeetingServiceClient,
   state: MeetingBookingState,
 ): Promise<WorkflowExecutionResult<MeetingBookingState>> {
   if (
@@ -266,7 +266,7 @@ async function bookMeeting(
 }
 
 async function reconcilePendingBooking(
-  meetingService: IMeetingService,
+  meetingService: MeetingServiceClient,
   state: MeetingBookingState,
 ): Promise<WorkflowExecutionResult<MeetingBookingState>> {
   const pendingBooking = state.pendingBooking;

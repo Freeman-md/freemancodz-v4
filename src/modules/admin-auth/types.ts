@@ -1,6 +1,6 @@
 export type AdminIdentity = { id: string; email: string };
 
-export type AdminAuthProviderOperation =
+export type AdminAuthOperation =
   | "get_identity"
   | "find_user_by_email"
   | "create_confirmed_user"
@@ -8,25 +8,31 @@ export type AdminAuthProviderOperation =
   | "confirm_magic_link"
   | "sign_out";
 
-export type AdminAuthProviderFailureContext = {
-  provider: "supabase";
-  operation: AdminAuthProviderOperation;
+export type AdminAuthFailureContext = {
+  provider: "supabase" | "unknown";
+  operation: AdminAuthOperation;
   code: string;
   status: number | null;
 };
 
 export class AdminAuthProviderError extends Error {
-  constructor(readonly context: AdminAuthProviderFailureContext) {
+  constructor(readonly context: AdminAuthFailureContext) {
     super("Admin Auth provider operation failed.");
     this.name = "AdminAuthProviderError";
   }
 }
 
-export interface IAdminAuthProvider {
+export type AdminAuthProvider = {
   getIdentity(): Promise<AdminIdentity | null>;
   findUserByEmail(email: string): Promise<AdminIdentity | null>;
   createConfirmedUser(email: string): Promise<AdminIdentity>;
   requestMagicLink(email: string, redirectTo: string): Promise<void>;
   confirmMagicLink(tokenHash: string): Promise<void>;
   signOut(): Promise<void>;
-}
+};
+
+export type AdminAuthProvisioningResult = {
+  status: "created" | "existing";
+  userId: string;
+  email: string;
+};

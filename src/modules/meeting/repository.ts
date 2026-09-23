@@ -1,12 +1,8 @@
 import "server-only";
 import type { PrismaClient } from "@/generated/prisma/client";
-import type {
-  IMeetingRepository,
-  MeetingRecord,
-  MeetingRecordInput,
-} from "../interfaces/meeting.repository.interface";
+import type { MeetingRecord, MeetingRecordInput, MeetingStore } from "./types";
 
-export class MeetingRepository implements IMeetingRepository {
+export class MeetingRepository implements MeetingStore {
   constructor(private readonly database: PrismaClient) {}
 
   async createMeeting(input: MeetingRecordInput): Promise<MeetingRecord> {

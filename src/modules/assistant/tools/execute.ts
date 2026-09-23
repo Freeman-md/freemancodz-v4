@@ -1,5 +1,4 @@
-import { searchWebsiteSchema } from "../schemas/tools/search-website.schema";
-import { searchWebsite } from "./search-website.tool";
+import { searchWebsite, searchWebsiteSchema } from "./search-website";
 import type { IOpenAIProvider } from "@/infrastructure/openai/interfaces/openai.provider.interface";
 import type { ISiteSearchService } from "@/modules/search-index/public";
 

@@ -1,4 +1,4 @@
-import { CHAT_SYSTEM_PROMPT } from "@/modules/assistant/prompts/portfolio-assistant.prompt";
+import { CHAT_SYSTEM_PROMPT } from "@/modules/assistant/prompt";
 import { createOpenAIClient, getResponseModel } from "@/infrastructure/openai/openai.client";
 import { getEmbeddingModel } from "@/infrastructure/openai/openai.client";
 import { siteSearchService } from "@/modules/composition";

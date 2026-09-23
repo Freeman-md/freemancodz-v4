@@ -3,7 +3,7 @@ import {
   searchIndexWorkerErrorSchema,
   searchIndexWorkerResultSchema,
 } from "@/contracts/search-index-worker.contract";
-import { logger } from "@/modules/composition";
+import { logger } from "@/infrastructure/logging/logger";
 import { getCronSecret } from "@/infrastructure/config/env";
 import type { ILogger } from "@/infrastructure/logging/logger.interface";
 import type { ISearchIndexService } from "@/modules/search-index/public";

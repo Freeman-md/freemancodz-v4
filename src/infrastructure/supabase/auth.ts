@@ -1,16 +1,31 @@
 import "server-only";
 import { isAuthApiError, type SupabaseClient } from "@supabase/supabase-js";
-import type {
-  AdminAuthProviderOperation,
-  AdminIdentity,
-  IAdminAuthProvider,
-} from "../interfaces/admin-auth.provider.interface";
-import { AdminAuthProviderError } from "../interfaces/admin-auth.provider.interface";
+type AdminIdentity = { id: string; email: string };
+type AdminAuthOperation =
+  | "get_identity"
+  | "find_user_by_email"
+  | "create_confirmed_user"
+  | "request_magic_link"
+  | "confirm_magic_link"
+  | "sign_out";
+type AdminAuthFailureContext = {
+  provider: "supabase";
+  operation: AdminAuthOperation;
+  code: string;
+  status: number | null;
+};
+
+export class SupabaseAuthError extends Error {
+  constructor(readonly context: AdminAuthFailureContext) {
+    super("Supabase auth operation failed.");
+    this.name = "SupabaseAuthError";
+  }
+}
 
 type SupabaseAuthClientFactory = () => Promise<SupabaseClient>;
 type SupabaseAdminAuthClientFactory = () => SupabaseClient;
 
-export class SupabaseAuthProvider implements IAdminAuthProvider {
+export class SupabaseAuth {
   constructor(
     private readonly createClient: SupabaseAuthClientFactory,
     private readonly createAdminClient: SupabaseAdminAuthClientFactory,
@@ -117,13 +132,13 @@ export class SupabaseAuthProvider implements IAdminAuthProvider {
   }
 
   private async execute<T>(
-    operation: AdminAuthProviderOperation,
+    operation: AdminAuthOperation,
     callback: () => Promise<T>,
   ): Promise<T> {
     try {
       return await callback();
     } catch (error) {
-      if (error instanceof AdminAuthProviderError) {
+      if (error instanceof SupabaseAuthError) {
         throw error;
       }
 
@@ -132,11 +147,11 @@ export class SupabaseAuthProvider implements IAdminAuthProvider {
   }
 
   private toProviderError(
-    operation: AdminAuthProviderOperation,
+    operation: AdminAuthOperation,
     error?: unknown,
-  ): AdminAuthProviderError {
+  ): SupabaseAuthError {
     if (isAuthApiError(error)) {
-      return new AdminAuthProviderError({
+      return new SupabaseAuthError({
         provider: "supabase",
         operation,
         code: error.code ?? "auth_api_error",
@@ -144,7 +159,7 @@ export class SupabaseAuthProvider implements IAdminAuthProvider {
       });
     }
 
-    return new AdminAuthProviderError({
+    return new SupabaseAuthError({
       provider: "supabase",
       operation,
       code: "auth_client_error",

@@ -11,3 +11,5 @@ export class ConsoleLogger implements ILogger {
     console.log(message, context);
   }
 }
+
+export const logger: ILogger = new ConsoleLogger();

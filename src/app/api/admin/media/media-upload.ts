@@ -3,8 +3,10 @@ import {
   mediaMetadataSchema,
   mediaOwnerSchema,
 } from "@/contracts/portfolio-admin.contract";
-import type { IAdminAuthService } from "@/modules/admin-auth/public";
-import { AdminAuthenticationError } from "@/modules/admin-auth/public";
+import {
+  AdminAuthenticationError,
+  type AdminAuthService,
+} from "@/modules/admin-auth/service";
 import { type IPortfolioMediaService, PortfolioCacheTag } from "@/modules/portfolio/public";
 
 const mediaExtensions: Record<string, string> = {
@@ -19,7 +21,7 @@ const mediaExtensions: Record<string, string> = {
 class MediaRequestTooLargeError extends Error {}
 
 export type MediaUploadDependencies = {
-  auth: Pick<IAdminAuthService, "requireAdmin">;
+  auth: Pick<AdminAuthService, "requireAdmin">;
   media: IPortfolioMediaService;
   revalidate: (tag: string) => void;
 };

@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { IGoogleCalendarProvider } from "@/infrastructure/google-calendar/interfaces/google-calendar.provider.interface";
-import type { IMeetingRepository } from "@/modules/meeting/interfaces/meeting.repository.interface";
-import { MeetingService } from "@/modules/meeting/services/meeting.service";
+import type { MeetingStore } from "@/modules/meeting/types";
+import { MeetingService } from "@/modules/meeting/service";
 import { MeetingBookingWorkflowDefinition } from "@/modules/workflow/definitions/meeting-booking/meeting-booking.definition";
 
 test("today is accepted while a wholly past availability range is rejected", async () => {
@@ -66,7 +66,7 @@ test("elapsed slots are unavailable without querying Calendar", async () => {
     createEvent: async () => ({ id: "event", htmlLink: null, payload: {} }),
   };
 
-  const repository: IMeetingRepository = {
+  const repository: MeetingStore = {
     createMeeting: async () => {
       throw new Error("not used");
     },
