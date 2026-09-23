@@ -93,7 +93,16 @@ test("Resend client uses the current Email API request shape without exposing re
 test("Resend client bounds stalled provider requests", async () => {
   const request = ((_input: string | URL | Request, init?: RequestInit) =>
     new Promise<Response>((_resolve, reject) => {
-      init?.signal?.addEventListener("abort", () => reject(init.signal?.reason), { once: true });
+      const keepAlive = setTimeout(() => undefined, 1_000);
+
+      init?.signal?.addEventListener(
+        "abort",
+        () => {
+          clearTimeout(keepAlive);
+          reject(init.signal?.reason);
+        },
+        { once: true },
+      );
     })) as typeof fetch;
 
   const client = new ResendClient(
