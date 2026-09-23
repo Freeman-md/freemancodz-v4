@@ -8,7 +8,7 @@ import { cn } from "@/shared/utils/class-names";
 import {
   getPortfolioActionMode,
   type PortfolioAction as PortfolioActionModel,
-} from "../models/portfolio-presentation";
+} from "../types";
 import { PortfolioIcon } from "./PortfolioIcon";
 
 const actionVariant = {

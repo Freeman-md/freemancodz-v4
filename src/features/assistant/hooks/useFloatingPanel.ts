@@ -4,7 +4,7 @@ import { useEffect, useEffectEvent, useRef, useState, useSyncExternalStore } fro
 import { useReducedMotion, type Transition } from "framer-motion";
 import { OPEN_PORTFOLIO_CHAT_EVENT, type OpenPortfolioChatDetail } from "../assistant.events";
 import { stageWhenOpening } from "../state/assistant-conversation";
-import type { ChatMessage, ChatStage } from "../models/chat-message";
+import type { ChatMessage, ChatStage } from "../types";
 import type { AssistantWorkflowStart } from "@/contracts/assistant.contract";
 
 interface UseFloatingPanelOptions {

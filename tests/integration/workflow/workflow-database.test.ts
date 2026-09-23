@@ -6,8 +6,8 @@ import test from "node:test";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { Client } from "pg";
 import { PrismaClient } from "@/generated/prisma/client";
-import { WorkflowInstanceRepositoryError } from "@/server/modules/workflow/interfaces/workflow-instance.repository.interface";
-import { WorkflowInstanceRepository } from "@/server/modules/workflow/repositories/workflow-instance.repository";
+import { WorkflowInstanceStoreError } from "@/modules/workflow/types";
+import { WorkflowInstanceRepository } from "@/modules/workflow/repository";
 
 const adminConnectionUrl = process.env.PORTFOLIO_TEST_DATABASE_URL;
 
@@ -192,7 +192,7 @@ test(
           completedAt: null,
         }),
         (error: unknown) =>
-          error instanceof WorkflowInstanceRepositoryError && error.code === "terminal",
+          error instanceof WorkflowInstanceStoreError && error.code === "terminal",
       );
       assert.deepEqual(await repository.findById(created.id), completed);
     } finally {

@@ -7,7 +7,7 @@ import test from "node:test";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { Client } from "pg";
 import { PrismaClient } from "@/generated/prisma/client";
-import { AuditRequestRepository } from "@/server/modules/audit/repositories/audit-request.repository";
+import { AuditRequestRepository } from "@/modules/audit/repository";
 
 const adminConnectionUrl = process.env.PORTFOLIO_TEST_DATABASE_URL;
 

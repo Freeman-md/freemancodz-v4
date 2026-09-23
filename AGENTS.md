@@ -6,6 +6,8 @@ This file defines repository-wide engineering rules and the entry point for the 
 
 Before planning, implementing, reviewing, or refactoring any Next.js code, read and follow `.agents/skills/nextjs-architecture/SKILL.md`. Treat it as the authoritative architectural standard for all Next.js implementations, milestones, and refactors.
 
+The architecture skill defines the canonical `src/` layout. Legacy `src/server` paths are not an allowed alternative.
+
 Validate every proposed file location, name, interface, dependency, service boundary, architectural role, and client/server boundary against that skill before writing code and again before completion. Do not introduce an exception without explicit user approval. Existing repository inconsistencies do not override the skill.
 
 Before making a framework-specific decision:
@@ -94,59 +96,17 @@ For any Next.js implementation or refactor, also use the architecture completion
 - Do not rewrite working algorithms merely to make a diff look architectural.
 - Do not merge pull requests as an agent.
 
-## Milestone workflow trigger
+## Freeman milestone workflow
 
-When Freeman says:
-
-```text
-Run the active milestone.
-```
-
-execute the complete workflow defined by:
-
-- this file
-- `.agents/skills/nextjs-architecture/SKILL.md`
-- `.ai/README.md`
-- `.ai/prompts/orchestrator.md`
-- `.ai/workflow/lifecycle.md`
-- `.ai/workflow/branch-lifecycle.md`
-- the active contract in `.ai/milestones/`
-- any active amendment for that milestone
-- the current Git, pull-request, review, and CI state
-
-Resume from the current state. Do not restart completed work.
-
-Continue until one of these terminal states is reached:
-
-- `ready_for_human`
-- `blocked`
-- `escalated`
-
-Do not merge the pull request.
-Do not create duplicate branches or pull requests.
-Do not modify checklist boxes in milestone contracts.
-Do not begin a future milestone.
-
-## Post-merge cleanup trigger
-
-After Freeman has merged the completed milestone pull request and deleted its remote feature branch, when Freeman says:
-
-```text
-Sync after merge.
-```
-
-execute `.ai/workflow/post-merge-cleanup.md`.
-
-This workflow must:
-
-- verify the pull request was merged
-- protect uncommitted and unmerged work
-- fetch and prune the remotes
-- switch to the repository's local default branch
-- fast-forward it from the remote default branch
-- delete the completed local milestone branch only when it is fully merged
-- confirm the local default branch matches the remote
-- stop without creating or starting the next milestone
+- When Freeman says **Run Active Milestone**, use the global `milestone-workflow` Skill in run mode.
+- When Freeman says **Sync After Merge**, use the same Skill in post-merge sync mode.
+- Use the separate global `milestone-authoring` Skill only when Freeman asks to create or amend a milestone.
+- The current worktree's only active contract lives at `.agents/milestones/active.md`.
+- Completed milestone and amendment contracts live at `.agents/milestones/archive/`.
+- Do not merge pull requests as an agent.
+- Do not create duplicate branches or pull requests.
+- Do not modify acceptance-criteria checkboxes in milestone contracts.
+- Do not begin a future milestone while another contract remains active.
 
 ## Instruction precedence
 
@@ -154,12 +114,9 @@ When instructions conflict, use this order:
 
 1. platform and security constraints
 2. this `AGENTS.md`, including its mandatory architectural skill
-3. `.ai/architecture/*.md`, when present
-4. `.ai/workflow/*.md`
-5. the active parent milestone
-6. an active amendment, only for sections it changes
-7. implementation, review, and quality prompts
-8. pull-request descriptions and agent summaries
-9. Future branches must not contain a `codex/` prefix. For example, use `feat/milestone-5-architecture-simplification`, not `codex/feat/milestone-5-architecture-simplification`.
+3. the active milestone or amendment contract
+4. implementation and review instructions from the milestone workflow
+5. pull-request descriptions and agent summaries
+6. Future branches must not contain a `codex/` prefix. For example, use `feat/milestone-5-architecture-simplification`, not `codex/feat/milestone-5-architecture-simplification`.
 
 Pull-request descriptions and summaries are not evidence of correctness.

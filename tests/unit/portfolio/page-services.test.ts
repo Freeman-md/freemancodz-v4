@@ -1,19 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import type { IContentBlockRepository } from "@/server/modules/portfolio/interfaces/content-block.repository.interface";
-import type { IExperienceRepository } from "@/server/modules/portfolio/interfaces/experience.repository.interface";
-import type { IProfileRepository } from "@/server/modules/portfolio/interfaces/profile.repository.interface";
-import type { IProjectRepository } from "@/server/modules/portfolio/interfaces/project.repository.interface";
-import { AboutService } from "@/server/modules/portfolio/services/about.service";
-import { AuditService } from "@/server/modules/portfolio/services/audit.service";
-import { HomeService } from "@/server/modules/portfolio/services/home.service";
-import { WorkService } from "@/server/modules/portfolio/services/work.service";
+import { PortfolioService } from "@/modules/portfolio/service";
 import type {
   ContentBlockNode,
   ExperienceWithIcons,
   ProfileWithCollections,
   ProjectWithCover,
-} from "@/server/modules/portfolio/models/portfolio-records";
+} from "@/modules/portfolio/types";
 
 const profile = {
   id: "global",
@@ -80,33 +73,35 @@ const experiences = ["Pay4Me", "The Hippodrome Casino", "Beyond the interface", 
 
 const pages: string[] = [];
 
-const contentBlocks: IContentBlockRepository = {
-  findPageTree: async (page) => {
+const contentBlocks = {
+  findPageTree: async (page: "/" | "/work" | "/about" | "/audit") => {
     pages.push(page);
 
     return pageBlocks[page];
   },
 };
 
-const profiles: IProfileRepository = { findSingleton: async () => profile };
+const profiles = { findSingleton: async () => profile };
 
-const projectRepository: IProjectRepository = {
+const projectRepository = {
   findAll: async () => projects,
   findFeatured: async () => [projects[0]!],
-  findBySlug: async (slug) => projects.find((project) => project.slug === slug) ?? null,
-  findBySlugs: async (slugs) => projects.filter((project) => slugs.includes(project.slug)),
+  findBySlug: async (slug: string) => projects.find((project) => project.slug === slug) ?? null,
+  findBySlugs: async (slugs: string[]) => projects.filter((project) => slugs.includes(project.slug)),
 };
 
-const experienceRepository: IExperienceRepository = { findAll: async () => experiences };
+const experienceRepository = { findAll: async () => experiences };
 
 test("page services compose canonical independent records and ordered block trees", async () => {
-  const home = await new HomeService(profiles, contentBlocks, projectRepository).getPageData();
+  const service = new PortfolioService(profiles, contentBlocks, projectRepository, experienceRepository);
 
-  const work = await new WorkService(profiles, contentBlocks, projectRepository).getPageData();
+  const home = await service.getHomePageData();
 
-  const about = await new AboutService(profiles, contentBlocks, experienceRepository).getPageData();
+  const work = await service.getWorkPageData();
 
-  const audit = await new AuditService(contentBlocks, projectRepository).getPageData();
+  const about = await service.getAboutPageData();
+
+  const audit = await service.getAuditPageData();
 
   assert.deepEqual(
     home.projects.map(({ slug }) => slug),

@@ -1,8 +1,8 @@
 import { notFound } from "next/navigation";
-import type { ContentBlockNode } from "@/server/modules/portfolio/models/portfolio-records";
-import { adminAuthService, portfolioAdministrationService } from "@/server/composition-root";
+import type { ContentBlockNode } from "@/modules/portfolio/types";
+import { adminAuthService, portfolioAdministrationService } from "@/modules/composition";
 import { portfolioPageSchema } from "@/contracts/portfolio-admin.contract";
-import { ContentBlockEditor } from "../../../_components/AdminEditors";
+import { ContentBlockEditor } from "@/features/admin/components/AdminEditors";
 
 const paths = { home: "/", work: "/work", about: "/about", audit: "/audit" } as const;
 

@@ -2,20 +2,20 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import type { WorkflowInstance } from "@/generated/prisma/client";
-import type { OpenAIResponseTool } from "@/server/infrastructure/openai/models/openai-response-request";
-import type { IWorkflowInstanceRepository } from "@/server/modules/workflow/interfaces/workflow-instance.repository.interface";
-import { WorkflowInstanceRepositoryError } from "@/server/modules/workflow/interfaces/workflow-instance.repository.interface";
-import type { IWorkflowDefinition } from "@/server/modules/workflow/interfaces/workflow-definition.interface";
-import { WorkflowDefinitionRegistry } from "@/server/modules/workflow/workflow-definition.registry";
+import type { OpenAIResponseTool } from "@/infrastructure/openai/types";
+import type { WorkflowInstanceStore } from "@/modules/workflow/types";
+import { WorkflowInstanceStoreError } from "@/modules/workflow/types";
+import type { WorkflowDefinition } from "@/modules/workflow/types";
+import { WorkflowDefinitionRegistry } from "@/modules/workflow/registry";
 import type {
   CreateWorkflowInstanceInput,
   SaveWorkflowInstanceInput,
-} from "@/server/modules/workflow/workflow.types";
-import { WorkflowService } from "@/server/modules/workflow/services/workflow.service";
+} from "@/modules/workflow/types";
+import { WorkflowService } from "@/modules/workflow/service";
 import {
   CANCEL_WORKFLOW_TOOL_NAME,
   START_WORKFLOW_TOOL_NAME,
-} from "@/server/modules/workflow/workflow.constants";
+} from "@/modules/workflow/constants";
 import { z } from "zod";
 
 const FIRST_INSTANCE_ID = "11111111-1111-4111-8111-111111111111";
@@ -44,7 +44,7 @@ function createDefinition(
     invalidReturnedCount?: boolean;
     toolName?: string;
   } = {},
-): IWorkflowDefinition<TestState> {
+): WorkflowDefinition<TestState> {
   return {
     id: "test-workflow",
     version,
@@ -365,7 +365,7 @@ function createInstance(overrides: Partial<WorkflowInstance> = {}): WorkflowInst
   };
 }
 
-class MemoryWorkflowInstanceRepository implements IWorkflowInstanceRepository {
+class MemoryWorkflowInstanceRepository implements WorkflowInstanceStore {
   private readonly instances = new Map<string, WorkflowInstance>();
 
   createCalls = 0;
@@ -404,11 +404,11 @@ class MemoryWorkflowInstanceRepository implements IWorkflowInstanceRepository {
     const current = this.instances.get(input.id);
 
     if (!current) {
-      throw new WorkflowInstanceRepositoryError("not_found", "not found");
+      throw new WorkflowInstanceStoreError("not_found", "not found");
     }
 
     if (current.status !== "active") {
-      throw new WorkflowInstanceRepositoryError("terminal", "terminal");
+      throw new WorkflowInstanceStoreError("terminal", "terminal");
     }
 
     this.saveCalls += 1;

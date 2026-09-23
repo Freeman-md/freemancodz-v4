@@ -75,40 +75,40 @@ const config = [
       "no-restricted-imports": [
         "error",
         {
-          patterns: ["@/app/*", "@/server/*"],
+          patterns: ["@/app/*", "@/modules/*", "@/infrastructure/*"],
         },
       ],
     },
   },
 
   {
-    files: ["src/server/**/*.{ts,tsx}"],
+    files: ["src/modules/**/*.{ts,tsx}"],
     rules: {
       "no-restricted-imports": [
         "error",
         {
-          patterns: ["@/features/*", "@/app/*"],
+          patterns: ["@/features/*", "@/app/*", "@/modules/composition"],
         },
       ],
     },
   },
 
   {
-    files: ["src/app/api/**/*.{ts,tsx}", "src/server/entrypoints/**/*.{ts,tsx}"],
+    files: ["src/app/**/*.{ts,tsx}", "src/entrypoints/**/*.{ts,tsx}"],
     rules: {
       "no-restricted-imports": [
         "error",
         {
           patterns: [
-            "@/server/modules/*/repositories/*",
-            "@/server/modules/*/providers/*",
-            "@/server/modules/*/mappers/*",
-            "@/server/modules/*/factories/*",
-            "@/server/modules/*/services/*",
-            "@/server/modules/*/models/*",
-            "@/server/modules/*/schemas/*",
-            "@/server/modules/*/prompts/*",
-            "@/server/modules/*/*.constants",
+            "@/modules/*/repositories/*",
+            "@/modules/*/providers/*",
+            "@/modules/*/mappers/*",
+            "@/modules/*/factories/*",
+            "@/modules/*/services/*",
+            "@/modules/*/models/*",
+            "@/modules/*/schemas/*",
+            "@/modules/*/prompts/*",
+            "@/modules/*/*.constants",
           ],
         },
       ],
@@ -121,7 +121,7 @@ const config = [
       "no-restricted-imports": [
         "error",
         {
-          patterns: ["@/app/*", "@/features/*", "@/server/*"],
+          patterns: ["@/app/*", "@/features/*", "@/modules/*", "@/infrastructure/*"],
         },
       ],
     },
@@ -137,7 +137,8 @@ const config = [
         "error",
         {
           patterns: [
-            "@/server/*",
+            "@/modules/*",
+            "@/infrastructure/*",
             "@/generated/prisma/*",
             "@/lib/db",
             "@/lib/env",

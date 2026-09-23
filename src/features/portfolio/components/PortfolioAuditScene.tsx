@@ -1,7 +1,7 @@
 import { ArrowUpRight, Check } from "lucide-react";
-import { AuditButton } from "@/features/audit/components/AuditButton";
 import { AssistantTriggerButton } from "@/features/assistant/components/AssistantTriggerButton";
-import type { AuditPresentationData, HomePresentationData } from "../models/portfolio-presentation";
+import { PortfolioAction } from "./PortfolioAction";
+import type { AuditPresentationData, HomePresentationData } from "../types";
 import { StoryDisclosure } from "./StoryDisclosure";
 
 export function PortfolioAuditScene({
@@ -30,9 +30,15 @@ export function PortfolioAuditScene({
             </h2>
             <p>{audit.hero.copy}</p>
             {audit.hero.actions.map((action) => (
-              <AuditButton
+              <PortfolioAction
                 action={action}
-                entryPoint="audit-hero-cta"
+                assistantDetail={{
+                  workflowStart: {
+                    workflowId: "audit",
+                    originPage: "/audit",
+                    originEntry: "audit-hero-cta",
+                  },
+                }}
                 className="story-button story-audit-button"
                 key={action.label}
               />

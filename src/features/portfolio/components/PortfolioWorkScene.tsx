@@ -1,5 +1,5 @@
 import { ArrowUpRight } from "lucide-react";
-import type { WorkPresentationData } from "../models/portfolio-presentation";
+import type { WorkPresentationData } from "../types";
 import { StoryImage } from "./StoryImage";
 import { StoryDisclosure } from "./StoryDisclosure";
 import { StoryProjectDetail } from "./StoryProjectDetail";

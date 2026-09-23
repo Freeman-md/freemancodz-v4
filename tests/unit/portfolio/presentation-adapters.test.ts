@@ -11,13 +11,13 @@ import {
   createHomePresentationData,
   createWorkPresentationData,
 } from "@/features/portfolio/portfolio-presentation.mapper";
-import { getPortfolioActionMode } from "@/features/portfolio/models/portfolio-presentation";
+import { getPortfolioActionMode } from "@/features/portfolio/types";
 import type {
   PortfolioContentSource,
   PortfolioExperienceSource,
   PortfolioProfileSource,
   PortfolioProjectSource,
-} from "@/features/portfolio/models/portfolio-presentation-source";
+} from "@/features/portfolio/types";
 import {
   experienceSeeds,
   iconSeeds,

@@ -1,4 +1,4 @@
-import type { WorkPresentationData } from "../models/portfolio-presentation";
+import type { WorkPresentationData } from "../types";
 import { StoryDisclosure } from "./StoryDisclosure";
 import { StoryImage } from "./StoryImage";
 import { StoryProjectDetail } from "./StoryProjectDetail";

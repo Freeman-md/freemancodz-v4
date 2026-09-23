@@ -3,9 +3,12 @@ import {
   mediaMetadataSchema,
   mediaOwnerSchema,
 } from "@/contracts/portfolio-admin.contract";
-import type { IAdminAuthService } from "@/server/modules/admin-auth/public";
-import { AdminAuthenticationError } from "@/server/modules/admin-auth/public";
-import { type IPortfolioMediaService, PortfolioCacheTag } from "@/server/modules/portfolio/public";
+import {
+  AdminAuthenticationError,
+  type AdminAuthService,
+} from "@/modules/admin-auth/service";
+import type { PortfolioMedia } from "@/modules/portfolio/types";
+import { PortfolioCacheTag } from "@/modules/portfolio/cache";
 
 const mediaExtensions: Record<string, string> = {
   "image/jpeg": "jpg",
@@ -19,13 +22,13 @@ const mediaExtensions: Record<string, string> = {
 class MediaRequestTooLargeError extends Error {}
 
 export type MediaUploadDependencies = {
-  auth: Pick<IAdminAuthService, "requireAdmin">;
-  media: IPortfolioMediaService;
+  auth: Pick<AdminAuthService, "requireAdmin">;
+  media: PortfolioMedia;
   revalidate: (tag: string) => void;
 };
 
 function getOwnerCacheTag(
-  owner: Parameters<IPortfolioMediaService["replaceMedia"]>[0]["owner"],
+  owner: Parameters<PortfolioMedia["replaceMedia"]>[0]["owner"],
   projectSlug?: string,
 ) {
   if (projectSlug) {

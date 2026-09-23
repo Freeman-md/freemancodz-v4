@@ -51,11 +51,11 @@ Provider errors are normalized before reaching a client. Request correctness doe
 - `src/contracts/portfolio-admin.contract.ts`: admin trust-boundary schemas and inferred types.
 - `src/app/admin`: login, protected semantic editors and Server Actions.
 - `src/app/api/admin/media/route.ts`: protected upload boundary.
-- `src/server/modules/admin-auth`: auth provider and authorization service.
-- `src/server/modules/portfolio`: read/write repositories, administration/media services and cache tags.
-- `src/server/modules/search-index`: singleton job lifecycle, current-portfolio mapping, deterministic chunking and whole-snapshot replacement.
+- `src/modules/admin-auth`: authorization service; Supabase implementation remains in infrastructure.
+- `src/modules/portfolio`: read/write repositories, administration/media services and cache tags.
+- `src/modules/search-index`: singleton job lifecycle, current-portfolio mapping, deterministic chunking and whole-snapshot replacement.
 - `src/app/api/internal/search-index-worker/route.ts`: `CRON_SECRET`-protected one-shot scheduled adapter.
-- `src/server/entrypoints/jobs/run-search-index-worker.ts`: shared local/production one-shot command.
+- `src/entrypoints/jobs/run-search-index-worker.ts`: shared local/production one-shot command.
 - `prisma/migrations` and `prisma/portfolio-seed-data.ts`: migration and bootstrap sources of truth.
 
 ## 5. Domain Model Summary

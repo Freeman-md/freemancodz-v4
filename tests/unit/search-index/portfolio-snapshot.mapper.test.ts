@@ -4,7 +4,7 @@ import test from "node:test";
 import {
   mapPortfolioSnapshot,
   stripMarkdownUrlDestinations,
-} from "@/server/modules/search-index/mappers/portfolio-snapshot.mapper";
+} from "@/modules/search-index/mappers/portfolio-snapshot.mapper";
 import { createPortfolioSnapshotFixture } from "./search-index.fixture";
 
 function assertAppearsBefore(values: string[], first: string, second: string): void {

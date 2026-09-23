@@ -5,8 +5,8 @@ import { runAuthorizedAdminMutation } from "@/app/admin/admin-action-boundary";
 import { invalidateProjectUpdate } from "@/app/admin/project-cache-invalidation";
 import { invalidateReusableBlockUpdate } from "@/app/admin/reusable-block-cache-invalidation";
 import { handlePortfolioMediaUpload } from "@/app/api/admin/media/media-upload";
-import { AdminAuthenticationError } from "@/server/modules/admin-auth/public";
-import type { IPortfolioMediaService } from "@/server/modules/portfolio/interfaces/portfolio-media.service.interface";
+import { AdminAuthenticationError } from "@/modules/admin-auth/service";
+import type { PortfolioMedia } from "@/modules/portfolio/types";
 
 test("direct admin mutation boundary rejects before executing a write", async () => {
   let writes = 0;
@@ -81,7 +81,7 @@ test("Action and Media metadata updates invalidate subtype and shared IconBlock 
 test("media route boundary rejects unauthorised and over-limit requests before media writes", async () => {
   let writes = 0;
 
-  const media: IPortfolioMediaService = {
+  const media: PortfolioMedia = {
     createMediaBlock: async () => ({ id: "media-id", source: "https://storage.test/new.webp", cleanupWarning: false }),
     replaceMedia: async () => {
       writes += 1;

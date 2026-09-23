@@ -1,19 +1,19 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import type { ILogger } from "@/server/infrastructure/logging/logger.interface";
+import type { Logger } from "@/infrastructure/logging/logger";
 import {
   AdminAuthProviderError,
-  type IAdminAuthProvider,
-} from "@/server/modules/admin-auth/interfaces/admin-auth.provider.interface";
+  type AdminAuthProvider,
+} from "@/modules/admin-auth/types";
 import {
   AdminAuthProvisioningError,
   AdminAuthService,
   AdminAuthenticationError,
-} from "@/server/modules/admin-auth/services/admin-auth.service";
+} from "@/modules/admin-auth/service";
 
 const approvedEmail = "freemanmadudili@gmail.com";
 
-type FakeLogger = ILogger & { entries: Array<{ event: string; context: unknown }> };
+type FakeLogger = Logger & { entries: Array<{ event: string; context: unknown }> };
 
 function logger(): FakeLogger {
   const entries: Array<{ event: string; context: unknown }> = [];
@@ -27,7 +27,7 @@ function logger(): FakeLogger {
 
 function provider(
   identity: { id: string; email: string } | null,
-): IAdminAuthProvider & { requested: string[] } {
+): AdminAuthProvider & { requested: string[] } {
   const requested: string[] = [];
 
   return {
@@ -43,7 +43,7 @@ function provider(
   };
 }
 
-function service(fake: IAdminAuthProvider, fakeLogger = logger()): {
+function service(fake: AdminAuthProvider, fakeLogger = logger()): {
   service: AdminAuthService;
   logger: FakeLogger;
 } {

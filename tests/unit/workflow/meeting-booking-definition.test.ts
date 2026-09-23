@@ -1,15 +1,15 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { MeetingBookingWorkflowDefinition } from "@/server/modules/workflow/definitions/meeting-booking/meeting-booking.definition";
+import { MeetingBookingWorkflowDefinition } from "@/modules/workflow/definitions/meeting-booking/meeting-booking.definition";
 import {
   findMeetingSlotsSchema,
   prepareMeetingSchema,
-} from "@/server/modules/workflow/definitions/meeting-booking/meeting-booking.schema";
-import type { IMeetingService } from "@/server/modules/meeting/public";
-import type { IGoogleCalendarProvider } from "@/server/infrastructure/google-calendar/interfaces/google-calendar.provider.interface";
-import type { IMeetingRepository } from "@/server/modules/meeting/interfaces/meeting.repository.interface";
-import { MeetingService } from "@/server/modules/meeting/services/meeting.service";
+} from "@/modules/workflow/definitions/meeting-booking/meeting-booking.schema";
+import type { MeetingServiceClient } from "@/modules/meeting/types";
+import type { CalendarClient } from "@/infrastructure/google-calendar/types";
+import type { MeetingStore } from "@/modules/meeting/types";
+import { MeetingService } from "@/modules/meeting/service";
 
 const slot = {
   start: "2099-09-15T11:00:00.000Z",
@@ -33,7 +33,7 @@ const CONFIRMATION_INTERACTION = {
   interactionId: "44444444-4444-4444-8444-444444444444",
 };
 
-function createMeetingService(overrides: Partial<IMeetingService> = {}): IMeetingService {
+function createMeetingService(overrides: Partial<MeetingServiceClient> = {}): MeetingServiceClient {
   return {
     findAvailableSlots: async () => [slot],
     isSlotAvailable: async () => true,
@@ -141,7 +141,7 @@ test("a persistence retry reconciles one created event without exposing provider
 
   let persistedEventUrl: string | null | undefined;
 
-  const calendar: IGoogleCalendarProvider = {
+  const calendar: CalendarClient = {
     getBusyPeriods: async () => [],
     createEvent: async (input) => {
       createEventCalls += 1;
@@ -155,7 +155,7 @@ test("a persistence retry reconciles one created event without exposing provider
     },
   };
 
-  const repository: IMeetingRepository = {
+  const repository: MeetingStore = {
     createMeeting: async (input) => {
       persistenceAttempts += 1;
       persistedTimezone = input.timezone;

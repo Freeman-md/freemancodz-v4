@@ -1,4 +1,4 @@
-import type { PortfolioSnapshot } from "@/server/modules/search-index/mappers/portfolio-snapshot.mapper";
+import type { PortfolioSnapshot } from "@/modules/search-index/mappers/portfolio-snapshot.mapper";
 
 const CREATED_AT = new Date("2026-08-18T08:00:00.000Z");
 

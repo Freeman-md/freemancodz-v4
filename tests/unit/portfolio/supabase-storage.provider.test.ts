@@ -5,7 +5,7 @@ import {
   PORTFOLIO_MEDIA_BUCKET,
   PortfolioStorageError,
   SupabaseStorageProvider,
-} from "@/server/modules/portfolio/providers/supabase-storage.provider";
+} from "@/infrastructure/supabase/storage";
 
 function client(
   options: {

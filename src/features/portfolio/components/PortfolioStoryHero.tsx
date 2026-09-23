@@ -1,6 +1,6 @@
 import { ArrowDown, ArrowUpRight, MessageCircle } from "lucide-react";
 import { AssistantTriggerButton } from "@/features/assistant/components/AssistantTriggerButton";
-import type { HomePresentationData, PortfolioProject } from "../models/portfolio-presentation";
+import type { HomePresentationData, PortfolioProject } from "../types";
 import { StoryImage } from "./StoryImage";
 
 export function PortfolioStoryHero({

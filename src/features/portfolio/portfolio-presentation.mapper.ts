@@ -7,13 +7,13 @@ import type {
   PortfolioProject,
   PortfolioSection,
   WorkPresentationData,
-} from "./models/portfolio-presentation";
+} from "./types";
 import type {
   PortfolioContentSource,
   PortfolioExperienceSource,
   PortfolioProfileSource,
   PortfolioProjectSource,
-} from "./models/portfolio-presentation-source";
+} from "./types";
 
 const [
   pay4MeSlug,

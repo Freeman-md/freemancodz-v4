@@ -11,10 +11,10 @@ import {
   seedPortfolio,
   verifyPortfolio,
 } from "../../../prisma/portfolio-bootstrap";
-import type { ISupabaseStorageProvider } from "@/server/modules/portfolio/interfaces/supabase-storage.provider.interface";
-import { ContentBlockRepository } from "@/server/modules/portfolio/repositories/content-block.repository";
-import { MediaBlockRepository } from "@/server/modules/portfolio/repositories/media-block.repository";
-import { ProjectRepository } from "@/server/modules/portfolio/repositories/project.repository";
+import type { PortfolioStorage } from "@/modules/portfolio/types";
+import { ContentBlockRepository } from "@/modules/portfolio/repositories/content-block.repository";
+import { MediaBlockRepository } from "@/modules/portfolio/repositories/media-block.repository";
+import { ProjectRepository } from "@/modules/portfolio/repositories/project.repository";
 
 const adminConnectionUrl = process.env.PORTFOLIO_TEST_DATABASE_URL;
 
@@ -211,7 +211,7 @@ test(
 
       await resetPortfolio(prisma);
 
-      const storage: ISupabaseStorageProvider = {
+      const storage: PortfolioStorage = {
         ensurePublicBucket: async () => undefined,
         getPublicUrl: (objectPath) => `https://portfolio.test/${objectPath}`,
       };

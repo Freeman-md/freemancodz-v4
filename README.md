@@ -9,11 +9,11 @@ See [Workflow Foundation](docs/workflow-foundation.md) for versioned workflow de
 
 - `src/app` contains routes, pages, layouts, and thin HTTP adapters.
 - `src/features` owns browser-facing assistant and portfolio UI; client interactions use feature API adapters.
-- `src/server/modules` owns portfolio, assistant, workflow, Meeting, and search-index capabilities. Pages, routes, and other modules import only a module's `public.ts` API.
-- `src/server/infrastructure` owns Prisma, environment, OpenAI, and logging configuration; `src/server/entrypoints` owns one-shot job and maintenance adapters.
+- `src/modules` owns portfolio, assistant, workflow, meeting, rate-limit, and search-index capabilities. `src/modules/composition.ts` is the single server-only dependency assembly point for pages, routes, and entrypoints.
+- `src/infrastructure` owns Prisma, environment, vendor clients, and logging configuration; `src/entrypoints` owns one-shot job and maintenance adapters.
 - `src/shared` contains domain-free layout, UI primitives, configuration, and utilities. `src/contracts` owns runtime-validated HTTP and stream shapes.
 - `prisma/portfolio-seed-data.ts` is the canonical one-time bootstrap input transcribed from the approved Notion artifacts; runtime content comes from the database.
-  New UI belongs in its feature; backend use cases, persistence, and providers belong in the owning server module. Server Components call module `public.ts` directly, while browser code flows through feature API → Route Handler → module `public.ts`. Process entrypoints are thin adapters over the same public services. See `.agents/skills/nextjs-architecture/SKILL.md` for the authoritative standard.
+  New UI belongs in its feature; backend use cases and persistence belong in the owning module. Server Components and Route Handlers select configured services from `src/modules/composition.ts`, while browser code flows through feature API → Route Handler. Process entrypoints are thin adapters over the same configured services. See `.agents/skills/nextjs-architecture/SKILL.md` for the authoritative standard.
 
 ## Local development
 

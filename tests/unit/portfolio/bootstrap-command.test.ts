@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { resolve } from "node:path";
 import test from "node:test";
-import { parsePortfolioBootstrapArguments } from "@/server/entrypoints/maintenance/bootstrap-portfolio.arguments";
+import { parsePortfolioBootstrapArguments } from "@/entrypoints/maintenance/bootstrap-portfolio.arguments";
 
 test("production confirmation must be supplied separately by the operator", () => {
   assert.throws(
@@ -17,7 +17,7 @@ test("production confirmation must be supplied separately by the operator", () =
 test("an unconfirmed production invocation exits before configuration or mutation", async () => {
   const entrypoint = resolve(
     process.cwd(),
-    "src/server/entrypoints/maintenance/bootstrap-portfolio.ts",
+    "src/entrypoints/maintenance/bootstrap-portfolio.ts",
   );
 
   const result = await new Promise<{ code: number | null; stderr: string }>((resolveResult) => {

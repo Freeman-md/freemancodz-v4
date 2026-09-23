@@ -1,14 +1,14 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { requiredPortfolioProjectSlugs } from "@/contracts/portfolio-presentation.contract";
-import type { IActionBlockAdministrationRepository } from "@/server/modules/portfolio/interfaces/action-block.repository.interface";
-import type { IContentBlockAdministrationRepository } from "@/server/modules/portfolio/interfaces/content-block.repository.interface";
-import type { IExperienceAdministrationRepository } from "@/server/modules/portfolio/interfaces/experience.repository.interface";
-import type { IIconBlockAdministrationRepository } from "@/server/modules/portfolio/interfaces/icon-block.repository.interface";
-import type { IMediaBlockAdministrationRepository } from "@/server/modules/portfolio/interfaces/media-block.repository.interface";
-import type { IProfileAdministrationRepository } from "@/server/modules/portfolio/interfaces/profile.repository.interface";
-import type { IProjectAdministrationRepository } from "@/server/modules/portfolio/interfaces/project.repository.interface";
-import { PortfolioAdministrationService } from "@/server/modules/portfolio/services/portfolio-administration.service";
+import type { ActionBlockStore } from "@/modules/portfolio/types";
+import type { ContentBlockStore } from "@/modules/portfolio/types";
+import type { ExperienceStore } from "@/modules/portfolio/types";
+import type { IconBlockStore } from "@/modules/portfolio/types";
+import type { MediaBlockStore } from "@/modules/portfolio/types";
+import type { ProfileStore } from "@/modules/portfolio/types";
+import type { ProjectStore } from "@/modules/portfolio/types";
+import { PortfolioAdministrationService } from "@/modules/portfolio/administration";
 
 const now = new Date("2026-08-12T00:00:00.000Z");
 
@@ -39,7 +39,7 @@ function setup(references = 0, project = canonicalProject) {
 
   const deletedIcons: string[] = [];
 
-  const profiles: IProfileAdministrationRepository = {
+  const profiles: ProfileStore = {
     findSingleton: async () => {
       throw new Error("unused");
     },
@@ -48,7 +48,7 @@ function setup(references = 0, project = canonicalProject) {
     replaceCollection: async () => undefined,
   };
 
-  const content: IContentBlockAdministrationRepository = {
+  const content: ContentBlockStore = {
     findPageTree: async () => [],
     update: async () => undefined,
     replaceChildren: async () => undefined,
@@ -57,7 +57,7 @@ function setup(references = 0, project = canonicalProject) {
     replaceActions: async () => undefined,
   };
 
-  const icons: IIconBlockAdministrationRepository = {
+  const icons: IconBlockStore = {
     findById: async () => null,
     findAll: async () => [],
     create: async () => "icon",
@@ -73,7 +73,7 @@ function setup(references = 0, project = canonicalProject) {
     }),
   };
 
-  const actions: IActionBlockAdministrationRepository = {
+  const actions: ActionBlockStore = {
     findById: async () => null,
     findAll: async () => [],
     create: async () => "action",
@@ -81,7 +81,7 @@ function setup(references = 0, project = canonicalProject) {
     delete: async () => undefined,
   };
 
-  const media: IMediaBlockAdministrationRepository = {
+  const media: MediaBlockStore = {
     findById: async () => null,
     findAll: async () => [],
     countSourceReferences: async () => 0,
@@ -91,7 +91,7 @@ function setup(references = 0, project = canonicalProject) {
     delete: async () => undefined,
   };
 
-  const projects: IProjectAdministrationRepository = {
+  const projects: ProjectStore = {
     findAll: async () => [project],
     findById: async () => project,
     findBySlug: async () => project,
@@ -106,7 +106,7 @@ function setup(references = 0, project = canonicalProject) {
     },
   };
 
-  const experiences: IExperienceAdministrationRepository = {
+  const experiences: ExperienceStore = {
     findAll: async () => [],
     create: async () => "experience",
     update: async () => undefined,

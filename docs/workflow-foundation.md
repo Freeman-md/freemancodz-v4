@@ -47,8 +47,8 @@ Add a definition only after its workflow is proven and required:
 
 1. define a strict Zod state schema and infer its state type;
 2. implement one positive integer version with its own instructions, tools, and semantic execution;
-3. inject only the capability service interfaces that execution needs;
-4. register the new definition in `src/server/composition/workflow.composition.ts`, retaining executable older versions; and
+3. inject only the capability behaviour that execution needs;
+4. register the new definition in `src/modules/composition.ts`, retaining executable older versions; and
 5. add focused registry, lifecycle, definition, adapter, and database regression coverage.
 
 A new workflow does not require a definition table, generic lead model, condition language, or a second workflow service.
