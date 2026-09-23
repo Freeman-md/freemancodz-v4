@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMemo, useState } from "react";
+import { createContext, useContext, useMemo, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import type { z } from "zod";
 import {
@@ -30,28 +30,7 @@ import { Input } from "@/shared/components/ui/Input";
 import { Label } from "@/shared/components/ui/Label";
 import { Select } from "@/shared/components/ui/Select";
 import { Textarea } from "@/shared/components/ui/Textarea";
-import type { AdminActionResult } from "@/entrypoints/admin/actions";
-import {
-  createActionBlockAction,
-  createExperienceAction,
-  createIconBlockAction,
-  createProjectAction,
-  updateActionBlockAction,
-  updateContentBlockAction,
-  updateExperienceAction,
-  updateIconBlockAction,
-  updateMediaBlockAction,
-  updateProfileAction,
-  updateProjectAction,
-  updateContentRelationsAction,
-  updateExperienceIconsAction,
-  updateProfileCollectionAction,
-  deleteActionBlockAction,
-  deleteExperienceAction,
-  deleteIconBlockAction,
-  deleteMediaBlockAction,
-  deleteProjectAction,
-} from "@/entrypoints/admin/actions";
+import type { AdminActionResult, AdminActions } from "@/features/admin/types";
 import { MediaUploader } from "./MediaUploader";
 
 type ProfileValues = z.input<typeof updateProfileSchema>;
@@ -64,6 +43,28 @@ type ContentValues = z.input<typeof updateContentBlockSchema>;
 type Submitter<T> = (input: T) => Promise<AdminActionResult>;
 type RelationOption = { id: string; label: string };
 type SelectedRelation = RelationOption & { order: number };
+
+const AdminActionsContext = createContext<AdminActions | null>(null);
+
+export function AdminActionsProvider({
+  actions,
+  children,
+}: {
+  actions: AdminActions;
+  children: React.ReactNode;
+}) {
+  return <AdminActionsContext value={actions}>{children}</AdminActionsContext>;
+}
+
+function useAdminActions() {
+  const actions = useContext(AdminActionsContext);
+
+  if (!actions) {
+    throw new Error("Admin actions are unavailable.");
+  }
+
+  return actions;
+}
 
 function Field({
   label,
@@ -155,6 +156,8 @@ function FormCard({
 }
 
 export function ProfileEditor({ profile }: { profile: ProfileValues }) {
+  const actions = useAdminActions();
+
   const [result, setResult] = useState<AdminActionResult | null>(null);
 
   const form = useForm<ProfileValues>({
@@ -169,7 +172,7 @@ export function ProfileEditor({ profile }: { profile: ProfileValues }) {
     >
       <form
         className="grid gap-5 md:grid-cols-2"
-        onSubmit={form.handleSubmit(async (values) => setResult(await updateProfileAction(values)))}
+        onSubmit={form.handleSubmit(async (values) => setResult(await actions.updateProfileAction(values)))}
       >
         <Field label="Name" error={form.formState.errors.name?.message}>
           <Input {...form.register("name")} />
@@ -225,6 +228,8 @@ export function RelationEditor({
     | { type: "content"; id: string; relation: "children" | "icons" | "media" | "actions" }
     | { type: "experience"; id: string };
 }) {
+  const actions = useAdminActions();
+
   const [selected, setSelected] = useState(() => [...initial].sort((a, b) => a.order - b.order));
 
   const [result, setResult] = useState<AdminActionResult | null>(null);
@@ -257,17 +262,17 @@ export function RelationEditor({
     const items = selected.map(({ id }, order) => ({ id, order }));
 
     if (owner.type === "profile") {
-      setResult(await updateProfileCollectionAction({ collection: owner.collection, items }));
+      setResult(await actions.updateProfileCollectionAction({ collection: owner.collection, items }));
     }
 
     if (owner.type === "content") {
       setResult(
-        await updateContentRelationsAction({ id: owner.id, relation: owner.relation, items }),
+        await actions.updateContentRelationsAction({ id: owner.id, relation: owner.relation, items }),
       );
     }
 
     if (owner.type === "experience") {
-      setResult(await updateExperienceIconsAction({ id: owner.id, items }));
+      setResult(await actions.updateExperienceIconsAction({ id: owner.id, items }));
     }
   }
 
@@ -347,6 +352,8 @@ export function ContentBlockEditor({
   block: AdminContentBlock;
   options: ReusableOptions;
 }) {
+  const actions = useAdminActions();
+
   const [result, setResult] = useState<AdminActionResult | null>(null);
 
   const form = useForm<ContentValues>({
@@ -363,7 +370,7 @@ export function ContentBlockEditor({
         <form
           className="grid gap-4 md:grid-cols-2"
           onSubmit={form.handleSubmit(async (values) =>
-            setResult(await updateContentBlockAction(values)),
+            setResult(await actions.updateContentBlockAction(values)),
           )}
         >
           <input type="hidden" {...form.register("id")} />
@@ -490,6 +497,8 @@ export function IconPicker({
 }
 
 export function IconEditor({ item }: { item?: IconValues & { id: string } }) {
+  const actions = useAdminActions();
+
   const [result, setResult] = useState<AdminActionResult | null>(null);
 
   const form = useForm<IconValues>({
@@ -500,8 +509,8 @@ export function IconEditor({ item }: { item?: IconValues & { id: string } }) {
   const selectedIcon = useWatch({ control: form.control, name: "iconName" });
 
   const submit: Submitter<IconValues> = item
-    ? (values) => updateIconBlockAction({ ...values, id: item.id })
-    : createIconBlockAction;
+    ? (values) => actions.updateIconBlockAction({ ...values, id: item.id })
+    : actions.createIconBlockAction;
 
   return (
     <FormCard title={item ? item.label : "New reusable icon"}>
@@ -524,7 +533,7 @@ export function IconEditor({ item }: { item?: IconValues & { id: string } }) {
         <div className="flex flex-wrap gap-4">
           <Button type="submit">{item ? "Save icon" : "Create icon"}</Button>
           {item ? (
-            <DeleteButton id={item.id} label={item.label} action={deleteIconBlockAction} />
+            <DeleteButton id={item.id} label={item.label} action={actions.deleteIconBlockAction} />
           ) : null}
           <Result result={result} />
         </div>
@@ -540,6 +549,8 @@ export function ProjectEditor({
   item?: ProjectValues & { id: string };
   cover?: { source: string; type: "IMAGE" | "VIDEO" } | null;
 }) {
+  const actions = useAdminActions();
+
   const [result, setResult] = useState<AdminActionResult | null>(null);
 
   const defaults: ProjectValues = item || {
@@ -563,8 +574,8 @@ export function ProjectEditor({
   });
 
   const submit = item
-    ? (values: ProjectValues) => updateProjectAction({ ...values, id: item.id })
-    : createProjectAction;
+    ? (values: ProjectValues) => actions.updateProjectAction({ ...values, id: item.id })
+    : actions.createProjectAction;
 
   return (
     <FormCard title={item ? item.title : "New project"} description={item?.slug}>
@@ -646,7 +657,7 @@ export function ProjectEditor({
         <div className="flex flex-wrap items-end gap-4">
           <Button type="submit">{item ? "Save project" : "Create project"}</Button>
           {item ? (
-            <DeleteButton id={item.id} label={item.title} action={deleteProjectAction} />
+            <DeleteButton id={item.id} label={item.title} action={actions.deleteProjectAction} />
           ) : null}
           <Result result={result} />
         </div>
@@ -664,6 +675,8 @@ export function ExperienceEditor({
     endDate: string | null;
   };
 }) {
+  const actions = useAdminActions();
+
   const [result, setResult] = useState<AdminActionResult | null>(null);
 
   const defaults = item || {
@@ -683,8 +696,8 @@ export function ExperienceEditor({
   });
 
   const submit = item
-    ? (values: ExperienceValues) => updateExperienceAction({ ...values, id: item.id })
-    : createExperienceAction;
+    ? (values: ExperienceValues) => actions.updateExperienceAction({ ...values, id: item.id })
+    : actions.createExperienceAction;
 
   return (
     <FormCard title={item ? item.title : "New experience"}>
@@ -733,7 +746,7 @@ export function ExperienceEditor({
         <div className="flex flex-wrap items-end gap-4">
           <Button type="submit">{item ? "Save experience" : "Create experience"}</Button>
           {item ? (
-            <DeleteButton id={item.id} label={item.title} action={deleteExperienceAction} />
+            <DeleteButton id={item.id} label={item.title} action={actions.deleteExperienceAction} />
           ) : null}
           <Result result={result} />
         </div>
@@ -743,6 +756,8 @@ export function ExperienceEditor({
 }
 
 export function ActionEditor({ item }: { item?: ActionValues & { id: string } }) {
+  const actions = useAdminActions();
+
   const [result, setResult] = useState<AdminActionResult | null>(null);
 
   const defaults: ActionValues = item || {
@@ -763,8 +778,8 @@ export function ActionEditor({ item }: { item?: ActionValues & { id: string } })
   const selectedIcon = useWatch({ control: form.control, name: "iconName" });
 
   const submit = item
-    ? (values: ActionValues) => updateActionBlockAction({ ...values, id: item.id })
-    : createActionBlockAction;
+    ? (values: ActionValues) => actions.updateActionBlockAction({ ...values, id: item.id })
+    : actions.createActionBlockAction;
 
   return (
     <FormCard title={item ? item.label : "New action"}>
@@ -804,7 +819,7 @@ export function ActionEditor({ item }: { item?: ActionValues & { id: string } })
         </div>
         <Button type="submit">{item ? "Save action" : "Create action"}</Button>
         {item ? (
-          <DeleteButton id={item.id} label={item.label} action={deleteActionBlockAction} />
+          <DeleteButton id={item.id} label={item.label} action={actions.deleteActionBlockAction} />
         ) : null}
         <Result result={result} />
       </form>
@@ -817,6 +832,8 @@ export function MediaMetadataEditor({
 }: {
   item: MediaValues & { id: string; source: string; type: "IMAGE" | "VIDEO" };
 }) {
+  const actions = useAdminActions();
+
   const [result, setResult] = useState<AdminActionResult | null>(null);
 
   const form = useForm<MediaValues>({
@@ -837,7 +854,7 @@ export function MediaMetadataEditor({
       <form
         className="grid gap-4 md:grid-cols-2"
         onSubmit={form.handleSubmit(async (values) =>
-          setResult(await updateMediaBlockAction({ ...values, id: item.id })),
+          setResult(await actions.updateMediaBlockAction({ ...values, id: item.id })),
         )}
       >
         <Field label="Label">
@@ -862,7 +879,7 @@ export function MediaMetadataEditor({
           </Field>
         </div>
         <Button type="submit">Save metadata</Button>
-        <DeleteButton id={item.id} label={item.label} action={deleteMediaBlockAction} />
+        <DeleteButton id={item.id} label={item.label} action={actions.deleteMediaBlockAction} />
         <Result result={result} />
       </form>
     </FormCard>

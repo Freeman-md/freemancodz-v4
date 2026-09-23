@@ -21,13 +21,9 @@ import { PortfolioCacheTag } from "@/modules/portfolio/cache";
 import { invalidateProjectUpdate } from "./project-cache-invalidation";
 import { invalidateReusableBlockUpdate } from "./reusable-block-cache-invalidation";
 import { runAuthorizedAdminMutation } from "./admin-action-boundary";
+import type { AdminActionResult, AdminActions } from "@/features/admin/types";
 
-export type AdminActionResult = {
-  status: "idle" | "success" | "error";
-  message: string;
-  fieldErrors?: Record<string, string[]>;
-  id?: string;
-};
+export type { AdminActionResult } from "@/features/admin/types";
 
 const success = (message: string, id?: string): AdminActionResult => ({
   status: "success",
@@ -213,6 +209,28 @@ export async function deleteMediaBlockAction(input: unknown) {
     return success("Media reference deleted.");
   });
 }
+
+export const adminActions: AdminActions = {
+  updateProfileAction,
+  updateProfileCollectionAction,
+  updateContentBlockAction,
+  updateContentRelationsAction,
+  updateExperienceIconsAction,
+  createIconBlockAction,
+  updateIconBlockAction,
+  deleteIconBlockAction,
+  createProjectAction,
+  updateProjectAction,
+  deleteProjectAction,
+  createExperienceAction,
+  updateExperienceAction,
+  deleteExperienceAction,
+  createActionBlockAction,
+  updateActionBlockAction,
+  deleteActionBlockAction,
+  updateMediaBlockAction,
+  deleteMediaBlockAction,
+};
 
 export async function createProjectAction(input: unknown) {
   return run(async () => {

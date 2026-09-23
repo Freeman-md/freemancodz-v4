@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { MAX_PORTFOLIO_MEDIA_REQUEST_BYTES } from "@/contracts/portfolio-admin.contract";
-import { runAuthorizedAdminMutation } from "@/entrypoints/admin/admin-action-boundary";
-import { invalidateProjectUpdate } from "@/entrypoints/admin/project-cache-invalidation";
-import { invalidateReusableBlockUpdate } from "@/entrypoints/admin/reusable-block-cache-invalidation";
+import { runAuthorizedAdminMutation } from "@/app/admin/admin-action-boundary";
+import { invalidateProjectUpdate } from "@/app/admin/project-cache-invalidation";
+import { invalidateReusableBlockUpdate } from "@/app/admin/reusable-block-cache-invalidation";
 import { handlePortfolioMediaUpload } from "@/app/api/admin/media/media-upload";
 import { AdminAuthenticationError } from "@/modules/admin-auth/service";
 import type { PortfolioMedia } from "@/modules/portfolio/types";

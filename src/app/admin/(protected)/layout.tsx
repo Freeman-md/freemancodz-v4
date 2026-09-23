@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
+import { AdminActionsProvider } from "@/features/admin/components/AdminEditors";
 import { adminAuthService } from "@/modules/composition";
 import { Container } from "@/shared/components/layout/Container";
 import { Button } from "@/shared/components/ui/Button";
+import { adminActions } from "../actions";
 import { signOutAdmin } from "../login/actions";
 
 const navigation = [
@@ -50,7 +52,9 @@ export default async function ProtectedAdminLayout({ children }: { children: Rea
           </Button>
         </form>
       </aside>
-      <main className="min-w-0 bg-white p-5 sm:p-8 lg:p-10">{children}</main>
+      <main className="min-w-0 bg-white p-5 sm:p-8 lg:p-10">
+        <AdminActionsProvider actions={adminActions}>{children}</AdminActionsProvider>
+      </main>
     </Container>
   );
 }
