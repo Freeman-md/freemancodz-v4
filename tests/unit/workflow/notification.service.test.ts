@@ -80,6 +80,7 @@ test("Resend client uses the current Email API request shape without exposing re
     new Headers(capturedInit?.headers).get("Idempotency-Key"),
     "contact-submitted/contact-1",
   );
+  assert.ok(capturedInit?.signal instanceof AbortSignal);
   assert.deepEqual(JSON.parse(String(capturedInit?.body)), {
     from: "Portfolio <from@example.com>",
     to: ["owner@example.com"],
@@ -87,6 +88,31 @@ test("Resend client uses the current Email API request shape without exposing re
     subject: "New message",
     text: "Message body",
   });
+});
+
+test("Resend client bounds stalled provider requests", async () => {
+  const request = ((_input: string | URL | Request, init?: RequestInit) =>
+    new Promise<Response>((_resolve, reject) => {
+      init?.signal?.addEventListener("abort", () => reject(init.signal?.reason), { once: true });
+    })) as typeof fetch;
+
+  const client = new ResendClient(
+    () => ({ apiKey: "test-api-key", fromEmail: "Portfolio <from@example.com>" }),
+    request,
+    5,
+  );
+
+  await assert.rejects(
+    client.send({
+      from: "Portfolio <from@example.com>",
+      to: "owner@example.com",
+      replyTo: "visitor@example.com",
+      subject: "New message",
+      text: "Message body",
+      idempotencyKey: "contact-submitted/contact-1",
+    }),
+    (error: unknown) => error instanceof Error && "category" in error && error.category === "network",
+  );
 });
 
 test("owner notifications use configured addressing, useful content, reply-to and stable keys", async () => {

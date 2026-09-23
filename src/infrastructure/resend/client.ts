@@ -18,6 +18,7 @@ export class ResendClient {
   constructor(
     private readonly getConfig: () => ResendConfig,
     private readonly request: typeof fetch = fetch,
+    private readonly timeoutMs = 5_000,
   ) {}
 
   async send(input: ResendEmailInput): Promise<void> {
@@ -46,6 +47,7 @@ export class ResendClient {
           subject: input.subject,
           text: input.text,
         }),
+        signal: AbortSignal.timeout(this.timeoutMs),
       });
     } catch {
       throw new ResendClientError("network");
