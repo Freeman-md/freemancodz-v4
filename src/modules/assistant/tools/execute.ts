@@ -1,4 +1,4 @@
-import { searchWebsite, searchWebsiteSchema } from "./search-website";
+import { searchWebsite, searchWebsiteSchema } from "./implementations/search-website";
 import type { OpenAITransport } from "@/infrastructure/openai/types";
 import type { SiteSearch } from "@/modules/search-index/types";
 
