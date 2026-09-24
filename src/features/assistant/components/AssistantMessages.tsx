@@ -8,9 +8,51 @@ import { ScrollArea } from "@/shared/components/ui/ScrollArea";
 import { cn } from "@/shared/utils/class-names";
 import type { ChatMessage } from "@/features/assistant/types";
 import { AssistantMarkdown } from "./AssistantMarkdown";
-import { StarterActions, type StarterAction } from "./StarterActions";
+import type { AssistantWorkflowStart } from "@/contracts/assistant.contract";
+import { Button } from "@/shared/components/ui/Button";
 
-type ChatConversationProps = {
+export type StarterAction = {
+  label: string;
+  message: string;
+  workflowStart: AssistantWorkflowStart | null;
+};
+
+const ASSISTANT_STARTER_ACTIONS: readonly StarterAction[] = [
+  {
+    label: "Ask about my work",
+    message: "Tell me about Freeman's work.",
+    workflowStart: null,
+  },
+  {
+    label: "Request a free audit",
+    message: "I'd like to request a free audit.",
+    workflowStart: {
+      workflowId: "audit",
+      originPage: "/",
+      originEntry: "assistant-starter-audit",
+    },
+  },
+  {
+    label: "Book a meeting",
+    message: "I'd like to book a meeting with Freeman.",
+    workflowStart: {
+      workflowId: "meeting-booking",
+      originPage: "/",
+      originEntry: "assistant-starter-meeting",
+    },
+  },
+  {
+    label: "Leave a message",
+    message: "I'd like to leave Freeman a message.",
+    workflowStart: {
+      workflowId: "contact",
+      originPage: "/",
+      originEntry: "assistant-starter-contact",
+    },
+  },
+];
+
+type AssistantMessagesProps = {
   className?: string;
   headerActions?: ReactNode;
   isLoading: boolean;
@@ -20,7 +62,7 @@ type ChatConversationProps = {
   onStarterAction: (action: StarterAction) => void;
 };
 
-export function ChatConversation({
+export function AssistantMessages({
   className,
   headerActions,
   isLoading,
@@ -28,7 +70,7 @@ export function ChatConversation({
   messagesEndRef,
   shouldReduceMotion,
   onStarterAction,
-}: ChatConversationProps) {
+}: AssistantMessagesProps) {
   return (
     <div
       className={cn(
@@ -69,7 +111,20 @@ export function ChatConversation({
                   on now.
                 </p>
                 <div className="mt-4">
-                  <StarterActions disabled={isLoading} onSelect={onStarterAction} />
+                  <div className="grid gap-2" aria-label="Start a conversation">
+                    {ASSISTANT_STARTER_ACTIONS.map((action) => (
+                      <Button
+                        key={action.label}
+                        type="button"
+                        variant="outline"
+                        className="h-auto justify-start whitespace-normal px-4 py-3 text-left"
+                        disabled={isLoading}
+                        onClick={() => onStarterAction(action)}
+                      >
+                        {action.label}
+                      </Button>
+                    ))}
+                  </div>
                 </div>
               </motion.div>
             ) : null}

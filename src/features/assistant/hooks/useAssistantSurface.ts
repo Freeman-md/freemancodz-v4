@@ -1,18 +1,18 @@
 "use client";
 
 import { useEffect, useEffectEvent, useRef, useState, useSyncExternalStore } from "react";
-import { useReducedMotion, type Transition } from "framer-motion";
+import type { Transition } from "framer-motion";
 import { OPEN_PORTFOLIO_CHAT_EVENT, type OpenPortfolioChatDetail } from "../assistant.events";
-import { stageWhenOpening } from "../state/assistant-conversation";
-import type { ChatMessage, ChatStage } from "../types";
+import type { ChatMessage } from "../types";
 import type { AssistantWorkflowStart } from "@/contracts/assistant.contract";
 
-interface UseFloatingPanelOptions {
+type UseAssistantSurfaceOptions = {
   clearError: () => void;
   isLoading: boolean;
   messages: ChatMessage[];
+  shouldReduceMotion: boolean | null;
   submitMessage: (message: string, workflowStart?: AssistantWorkflowStart | null) => Promise<void>;
-}
+};
 
 const MOBILE_MEDIA_QUERY = "(max-width: 639px)";
 
@@ -32,25 +32,24 @@ function getServerMobileViewportSnapshot() {
   return false;
 }
 
-export function useFloatingPanel({
+export function useAssistantSurface({
   clearError,
   isLoading,
   messages,
+  shouldReduceMotion,
   submitMessage,
-}: UseFloatingPanelOptions) {
-  const [stage, setStage] = useState<ChatStage>("launcher");
+}: UseAssistantSurfaceOptions) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  const [shouldRestoreLauncherFocus, setShouldRestoreLauncherFocus] = useState(false);
 
   const isMobile = useSyncExternalStore(
     subscribeToMobileViewport,
     getMobileViewportSnapshot,
     getServerMobileViewportSnapshot,
   );
-
-  const [isSheetExpanded, setIsSheetExpanded] = useState(false);
-
-  const [shouldRestoreLauncherFocus, setShouldRestoreLauncherFocus] = useState(false);
-
-  const shouldReduceMotion = useReducedMotion();
 
   const shellRef = useRef<HTMLDivElement | null>(null);
 
@@ -62,23 +61,15 @@ export function useFloatingPanel({
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
-  const isOpen = stage !== "launcher";
-
-  const isConversation = stage === "conversation";
-
   function openChat() {
-    setStage(stageWhenOpening(messages));
+    setIsOpen(true);
   }
 
   function closeChat() {
     shouldIgnoreLauncherFocusRef.current = true;
-    setStage("launcher");
-    setIsSheetExpanded(false);
+    setIsOpen(false);
+    setIsExpanded(false);
     setShouldRestoreLauncherFocus(true);
-  }
-
-  function showConversation() {
-    setStage("conversation");
   }
 
   function handleLauncherFocus() {
@@ -94,21 +85,17 @@ export function useFloatingPanel({
     }
   }
 
-  function toggleSheetExpanded() {
-    setIsSheetExpanded((expanded) => !expanded);
+  function toggleExpanded() {
+    setIsExpanded((expanded) => !expanded);
   }
 
   const handleTriggerOpen = useEffectEvent(async (detail?: OpenPortfolioChatDetail) => {
     clearError();
+    openChat();
 
     if (detail?.message) {
-      showConversation();
       await submitMessage(detail.message, detail.workflowStart ?? null);
-
-      return;
     }
-
-    openChat();
   });
 
   useEffect(() => {
@@ -122,26 +109,44 @@ export function useFloatingPanel({
   }, []);
 
   useEffect(() => {
-    if (!isMobile && stage !== "launcher") {
+    const mediaQuery = window.matchMedia(MOBILE_MEDIA_QUERY);
+
+    function resetExpansionOnDesktop() {
+      if (!mediaQuery.matches) {
+        setIsExpanded(false);
+      }
+    }
+
+    mediaQuery.addEventListener("change", resetExpansionOnDesktop);
+
+    return () => mediaQuery.removeEventListener("change", resetExpansionOnDesktop);
+  }, []);
+
+  useEffect(() => {
+    if (isOpen && !isMobile) {
       textareaRef.current?.focus();
     }
-  }, [isMobile, stage]);
+  }, [isMobile, isOpen]);
 
   useEffect(() => {
-    if (stage === "launcher" && shouldRestoreLauncherFocus) {
+    if (!isOpen && shouldRestoreLauncherFocus) {
       launcherRef.current?.focus();
     }
-  }, [shouldRestoreLauncherFocus, stage]);
+  }, [isOpen, shouldRestoreLauncherFocus]);
 
   useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
     messagesEndRef.current?.scrollIntoView({
       block: "end",
       behavior: shouldReduceMotion ? "auto" : "smooth",
     });
-  }, [messages, isLoading, stage, shouldReduceMotion]);
+  }, [isLoading, isOpen, messages, shouldReduceMotion]);
 
   useEffect(() => {
-    if (stage === "launcher") {
+    if (!isOpen) {
       return;
     }
 
@@ -169,7 +174,7 @@ export function useFloatingPanel({
       document.removeEventListener("pointerdown", handlePointerDown);
       document.removeEventListener("keydown", handleEscape);
     };
-  }, [isMobile, stage]);
+  }, [isMobile, isOpen]);
 
   const surfaceTransition: Transition = shouldReduceMotion
     ? { duration: 0 }
@@ -178,19 +183,15 @@ export function useFloatingPanel({
   return {
     closeChat,
     handleLauncherFocus,
+    isExpanded,
     isMobile,
-    isConversation,
     isOpen,
-    isSheetExpanded,
     launcherRef,
     messagesEndRef,
     openChat,
     shellRef,
-    showConversation,
-    shouldReduceMotion,
-    stage,
     surfaceTransition,
     textareaRef,
-    toggleSheetExpanded,
+    toggleExpanded,
   };
 }

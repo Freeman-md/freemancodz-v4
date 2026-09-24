@@ -7,27 +7,32 @@ import { Textarea } from "@/shared/components/ui/Textarea";
 import { cn } from "@/shared/utils/class-names";
 import { MAX_MESSAGE_LENGTH } from "../constants";
 
-type ChatComposerProps = {
+type AssistantComposerProps = {
   canSubmit: boolean;
   errorMessage: string | null;
   input: string;
   onClose: () => void;
   onInputChange: (value: string) => void;
-  onKeyDown: (event: KeyboardEvent<HTMLTextAreaElement>) => void;
-  onSubmit: () => void;
+  onSubmit: () => void | Promise<void>;
   textareaRef: RefObject<HTMLTextAreaElement | null>;
 };
 
-export function ChatComposer({
+export function AssistantComposer({
   canSubmit,
   errorMessage,
   input,
   onClose,
   onInputChange,
-  onKeyDown,
   onSubmit,
   textareaRef,
-}: ChatComposerProps) {
+}: AssistantComposerProps) {
+  function handleKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      void onSubmit();
+    }
+  }
+
   return (
     <form
       className="flex min-h-16 items-center gap-3 px-4 py-3 pb-[max(env(safe-area-inset-bottom),0.75rem)] sm:h-16 sm:px-5 sm:py-0"
@@ -39,7 +44,7 @@ export function ChatComposer({
       <label htmlFor="portfolio-chat-input" className="sr-only">
         Ask a question about Freeman&apos;s portfolio
       </label>
-      <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-ink text-accent">
+      <span className="flex size-10 shrink-0 items-center justify-center rounded-full border border-signal-100 bg-signal-50 text-signal-700">
         <MessageSquareIcon aria-hidden="true" className="size-4.5" />
       </span>
 
@@ -57,7 +62,7 @@ export function ChatComposer({
           onChange={(event) => {
             onInputChange(event.target.value);
           }}
-          onKeyDown={onKeyDown}
+          onKeyDown={handleKeyDown}
           maxLength={MAX_MESSAGE_LENGTH}
         />
       </div>

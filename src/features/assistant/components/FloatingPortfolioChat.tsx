@@ -2,17 +2,14 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import { Dialog } from "@base-ui/react/dialog";
-import { Maximize2Icon, Minimize2Icon, XIcon } from "lucide-react";
-import type { KeyboardEvent } from "react";
+import { Maximize2Icon, MessageSquareIcon, Minimize2Icon, XIcon } from "lucide-react";
 import { Button } from "@/shared/components/ui/Button";
 import { CardContent } from "@/shared/components/ui/Card";
 import { cn } from "@/shared/utils/class-names";
-import { ChatComposer } from "./ChatComposer";
-import { ChatConversation } from "./ChatConversation";
-import { ChatLauncher } from "./ChatLauncher";
+import { AssistantComposer } from "./AssistantComposer";
+import { AssistantMessages, type StarterAction } from "./AssistantMessages";
 import { useAssistant } from "../hooks/useAssistant";
-import { useFloatingPanel } from "../hooks/useFloatingPanel";
-import type { StarterAction } from "./StarterActions";
+import { useAssistantSurface } from "../hooks/useAssistantSurface";
 
 export function FloatingPortfolioChat() {
   const {
@@ -24,54 +21,44 @@ export function FloatingPortfolioChat() {
     input,
     isLoading,
     messages,
+    shouldReduceMotion,
     submitMessage,
   } = useAssistant();
 
   const {
     closeChat,
     handleLauncherFocus,
+    isExpanded,
     isMobile,
-    isConversation,
     isOpen,
-    isSheetExpanded,
     launcherRef,
     messagesEndRef,
     openChat,
     shellRef,
-    showConversation,
-    shouldReduceMotion,
-    stage,
     surfaceTransition,
     textareaRef,
-    toggleSheetExpanded,
-  } = useFloatingPanel({ clearError, isLoading, messages, submitMessage });
+    toggleExpanded,
+  } = useAssistantSurface({
+    clearError,
+    isLoading,
+    messages,
+    shouldReduceMotion,
+    submitMessage,
+  });
 
   const isMobileSheet = isMobile && isOpen;
 
   const launcherWidth = isMobile ? 52 : 154;
 
   async function handleSubmit() {
-    if (!canSubmit) {
-      return;
+    if (canSubmit) {
+      await submitInput();
     }
-
-    showConversation();
-    await submitInput();
   }
 
   async function handleStarterAction(action: StarterAction) {
-    if (isLoading || messages.length > 0) {
-      return;
-    }
-
-    showConversation();
-    await submitMessage(action.message, action.workflowStart);
-  }
-
-  function handleKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
-    if (event.key === "Enter" && !event.shiftKey) {
-      event.preventDefault();
-      void handleSubmit();
+    if (!isLoading && messages.length === 0) {
+      await submitMessage(action.message, action.workflowStart);
     }
   }
 
@@ -83,7 +70,7 @@ export function FloatingPortfolioChat() {
         maxWidth: isOpen ? 640 : launcherWidth,
         backgroundColor: isOpen ? "#ffffff" : "var(--brand-primary)",
         borderColor:
-          isMobileSheet && isSheetExpanded
+          isMobileSheet && isExpanded
             ? "rgba(0,0,0,0)"
             : isOpen
               ? "rgba(0,0,0,0.12)"
@@ -102,45 +89,37 @@ export function FloatingPortfolioChat() {
       className={cn(
         "portfolio-chat-surface pointer-events-auto flex w-full flex-col overflow-hidden border",
         isMobileSheet
-          ? isSheetExpanded
+          ? isExpanded
             ? "h-dvh max-w-none rounded-none bg-white"
             : "h-[75dvh] max-w-none rounded-t-[2rem] rounded-b-none bg-white"
           : "rounded-[2rem]",
-        !isMobileSheet &&
-          (isConversation
-            ? "h-[min(72vh,38rem)] sm:h-[min(52vh,38rem)]"
-            : isOpen
-              ? "h-16"
-              : "h-12"),
+        !isMobileSheet && (isOpen ? "h-[min(72vh,38rem)] sm:h-[min(52vh,38rem)]" : "h-12"),
       )}
     >
-      {stage === "launcher" ? (
-        <ChatLauncher buttonRef={launcherRef} onFocus={handleLauncherFocus} onOpen={openChat} />
-      ) : (
+      {isOpen ? (
         <motion.div
           initial={isMobileSheet && !shouldReduceMotion ? { opacity: 0, y: 24 } : false}
           animate={{ opacity: 1, y: 0 }}
           transition={shouldReduceMotion ? { duration: 0 } : { duration: isMobileSheet ? 0.2 : 0 }}
           className="flex min-h-0 flex-1 flex-col"
         >
-          <ChatConversation
-            className={isConversation ? undefined : "sm:hidden"}
+          <AssistantMessages
             headerActions={
               <>
                 <Button
                   type="button"
                   aria-label={
-                    isSheetExpanded
+                    isExpanded
                       ? "Return portfolio chat to default height"
                       : "Expand portfolio chat to full screen"
                   }
-                  aria-expanded={isSheetExpanded}
+                  aria-expanded={isExpanded}
                   variant="ghost"
                   size="icon-sm"
                   className="rounded-full"
-                  onClick={toggleSheetExpanded}
+                  onClick={toggleExpanded}
                 >
-                  {isSheetExpanded ? (
+                  {isExpanded ? (
                     <Minimize2Icon aria-hidden="true" />
                   ) : (
                     <Maximize2Icon aria-hidden="true" />
@@ -166,18 +145,30 @@ export function FloatingPortfolioChat() {
           />
 
           <CardContent className="shrink-0 p-0">
-            <ChatComposer
+            <AssistantComposer
               canSubmit={canSubmit}
               errorMessage={errorMessage}
               input={input}
               onClose={closeChat}
               onInputChange={handleInputChange}
-              onKeyDown={handleKeyDown}
               onSubmit={handleSubmit}
               textareaRef={textareaRef}
             />
           </CardContent>
         </motion.div>
+      ) : (
+        <Button
+          ref={launcherRef}
+          type="button"
+          aria-label="Open portfolio chat"
+          onClick={openChat}
+          onFocus={handleLauncherFocus}
+          variant="ghost"
+          className="h-12 w-full justify-center gap-2 rounded-none px-4 text-left text-ink hover:bg-black/5 hover:text-ink"
+        >
+          <MessageSquareIcon aria-hidden="true" className="size-4" />
+          <span className="hidden text-[13px] font-medium sm:inline">Ask assistant</span>
+        </Button>
       )}
     </motion.div>
   );
@@ -211,11 +202,7 @@ export function FloatingPortfolioChat() {
         )}
       >
         {isMobileSheet ? (
-          <Dialog.Popup
-            render={surface}
-            aria-labelledby="portfolio-chat-title"
-            finalFocus={launcherRef}
-          />
+          <Dialog.Popup render={surface} aria-labelledby="portfolio-chat-title" finalFocus={launcherRef} />
         ) : (
           surface
         )}

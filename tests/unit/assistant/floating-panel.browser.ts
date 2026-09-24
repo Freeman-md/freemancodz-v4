@@ -3,11 +3,14 @@ import test from "node:test";
 import { JSDOM } from "jsdom";
 import { act, createElement } from "react";
 import { AssistantTriggerButton } from "@/features/assistant/components/AssistantTriggerButton";
-import { ChatComposer } from "@/features/assistant/components/ChatComposer";
+import { FloatingPortfolioChat } from "@/features/assistant/components/FloatingPortfolioChat";
 import { dispatchOpenPortfolioChat } from "@/features/assistant/assistant.events";
-import { useFloatingPanel } from "@/features/assistant/hooks/useFloatingPanel";
 
-test("generic assistant entry opens without submitting, and pending responses remain dismissible", async () => {
+function doneResponse() {
+  return new Response(new ReadableStream({ start: (controller) => controller.close() }));
+}
+
+test("assistant surface opens without submitting and remains dismissible while a response is processing", async () => {
   const dom = new JSDOM("<!doctype html><html><body><main></main></body></html>", {
     url: "http://localhost:3000",
   });
@@ -30,51 +33,29 @@ test("generic assistant entry opens without submitting, and pending responses re
   Object.defineProperty(dom.window, "matchMedia", {
     value: () => ({ matches: false, addEventListener() {}, removeEventListener() {} }),
   });
-  const submitted: string[] = [];
+  dom.window.HTMLElement.prototype.scrollIntoView = () => {};
+
+  const originalFetch = globalThis.fetch;
+
+  const requestBodies: string[] = [];
+
+  let resolvePendingResponse: (response: Response) => void = (_response) => {
+    throw new Error("Assistant request did not start.");
+  };
+
+  globalThis.fetch = async (_input, init) => {
+    requestBodies.push(String(init?.body));
+
+    return new Promise<Response>((resolve) => {
+      resolvePendingResponse = resolve;
+    });
+  };
 
   const container = dom.window.document.querySelector("main")!;
 
   const { createRoot } = await import("react-dom/client");
 
   const root = createRoot(container);
-
-  function Panel({ isLoading }: { isLoading: boolean }) {
-    const panel = useFloatingPanel({
-      clearError() {},
-      isLoading,
-      messages: [],
-      async submitMessage(message) {
-        submitted.push(message);
-      },
-    });
-
-    return createElement(
-      "div",
-      { ref: panel.shellRef },
-      createElement("output", { "aria-label": "Panel state" }, panel.stage),
-      panel.isOpen
-        ? createElement(ChatComposer, {
-            canSubmit: false,
-            errorMessage: null,
-            input: "",
-            textareaRef: panel.textareaRef,
-            onInputChange() {},
-            onKeyDown() {},
-            onSubmit() {},
-            onClose: panel.closeChat,
-          })
-        : null,
-    );
-  }
-
-  const render = (isLoading: boolean) =>
-    createElement(
-      "div",
-      null,
-      createElement(AssistantTriggerButton, null, "Ask my assistant"),
-      createElement(AssistantTriggerButton, null, "Ask your own question"),
-      createElement(Panel, { isLoading }),
-    );
 
   function button(label: string) {
     const found = Array.from(container.querySelectorAll("button")).find(
@@ -87,64 +68,68 @@ test("generic assistant entry opens without submitting, and pending responses re
     return found;
   }
 
-  const state = () => container.querySelector("output")?.textContent;
+  function surfaceIsOpen() {
+    return Boolean(container.querySelector("#portfolio-chat-input"));
+  }
 
   try {
     await act(async () => {
-      root.render(render(false));
+      root.render(
+        createElement(
+          "div",
+          null,
+          createElement(AssistantTriggerButton, null, "Ask my assistant"),
+          createElement(AssistantTriggerButton, null, "Ask your own question"),
+          createElement(FloatingPortfolioChat),
+        ),
+      );
     });
+
     await act(async () => {
       button("Ask my assistant").click();
     });
-    assert.equal(state(), "conversation");
-    assert.deepEqual(submitted, []);
+    assert.equal(surfaceIsOpen(), true);
+    assert.deepEqual(requestBodies, []);
     assert.equal(button("Send message").disabled, true);
+
     await act(async () => {
       button("Collapse portfolio chat").click();
     });
-    assert.equal(state(), "launcher");
+    assert.equal(surfaceIsOpen(), false);
+
     await act(async () => {
       button("Ask your own question").click();
     });
-    assert.equal(state(), "conversation");
-    assert.deepEqual(submitted, []);
+    assert.equal(surfaceIsOpen(), true);
 
     await act(async () => {
-      root.render(render(true));
+      button("Collapse portfolio chat").click();
+      dispatchOpenPortfolioChat({ message: "Explicit audit intent" });
+      await Promise.resolve();
     });
+    assert.equal(surfaceIsOpen(), true);
+    assert.deepEqual(requestBodies.map((body) => JSON.parse(body)), [
+      {
+        message: "Explicit audit intent",
+        previousResponseId: null,
+        workflowInstanceId: null,
+      },
+    ]);
     assert.equal(button("Collapse portfolio chat").disabled, false);
+
     await act(async () => {
       button("Collapse portfolio chat").click();
     });
-    assert.equal(state(), "launcher");
-    await act(async () => {
-      dispatchOpenPortfolioChat();
-    });
-    await act(async () => {
-      dom.window.document.dispatchEvent(new dom.window.KeyboardEvent("keydown", { key: "Escape" }));
-    });
-    assert.equal(state(), "launcher");
-    await act(async () => {
-      dispatchOpenPortfolioChat();
-    });
-    await act(async () => {
-      dom.window.document.body.dispatchEvent(
-        new dom.window.Event("pointerdown", { bubbles: true }),
-      );
-    });
-    assert.equal(state(), "launcher");
+    assert.equal(surfaceIsOpen(), false);
 
-    await act(async () => {
-      root.render(render(false));
-      dispatchOpenPortfolioChat({ message: "Explicit audit intent" });
-    });
-    assert.equal(state(), "conversation");
-    assert.deepEqual(submitted, ["Explicit audit intent"]);
+    resolvePendingResponse(doneResponse());
   } finally {
     await act(async () => {
       root.unmount();
     });
+    globalThis.fetch = originalFetch;
     dom.window.close();
+
     for (const [name, descriptor] of previous) {
       if (descriptor) {
         Object.defineProperty(globalThis, name, descriptor);

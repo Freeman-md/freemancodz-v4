@@ -1,11 +1,9 @@
 import type {
   AssistantSource,
-  AssistantStreamEvent,
   WorkflowPublicInstance,
 } from "@/contracts/assistant.contract";
 
 export type ChatSource = AssistantSource;
-export type ChatStreamEvent = AssistantStreamEvent;
 
 export type StreamChatResponseHandlers = {
   onDelta: (delta: string) => void;
@@ -13,8 +11,6 @@ export type StreamChatResponseHandlers = {
   onWorkflow: (instance: WorkflowPublicInstance) => void;
   onSources: (sources: ChatSource[]) => void;
 };
-
-export type ChatStage = "launcher" | "composer" | "conversation";
 
 export type ChatMessage = {
   id: string;

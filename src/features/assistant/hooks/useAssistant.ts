@@ -1,16 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useReducedMotion } from "framer-motion";
 import { streamChatResponse } from "../api/stream-assistant-response";
-import {
-  appendAssistantDelta,
-  attachAssistantSources,
-  replaceAssistantWithError,
-} from "../state/assistant-conversation";
 import { MAX_MESSAGE_LENGTH } from "../constants";
-import type { ChatMessage } from "../types";
-import { activeWorkflowInstanceId } from "../state/active-workflow-instance";
+import type { ChatMessage, ChatSource } from "../types";
 import type { AssistantWorkflowStart } from "@/contracts/assistant.contract";
 
 const REVEAL_INTERVAL_MS = 16;
@@ -25,6 +19,30 @@ function getRevealLength(backlogLength: number) {
   }
 
   return backlogLength;
+}
+
+function appendAssistantDelta(messages: ChatMessage[], messageId: string, delta: string) {
+  return messages.map((message) =>
+    message.id === messageId ? { ...message, content: message.content + delta } : message,
+  );
+}
+
+function attachAssistantSources(
+  messages: ChatMessage[],
+  messageId: string,
+  sources: ChatSource[],
+) {
+  return messages.map((message) => (message.id === messageId ? { ...message, sources } : message));
+}
+
+function replaceAssistantWithError(
+  messages: ChatMessage[],
+  messageId: string,
+  error: ChatMessage,
+) {
+  return messages.map((message) =>
+    message.id === messageId ? { ...error, id: messageId } : message,
+  );
 }
 
 export function useAssistant() {
@@ -191,7 +209,7 @@ export function useAssistant() {
             },
             onWorkflow(instance) {
               if (isMountedRef.current && activeRequestIdRef.current === requestId) {
-                setWorkflowInstanceId(activeWorkflowInstanceId(instance));
+                setWorkflowInstanceId(instance.status === "active" ? instance.id : null);
               }
             },
             onSources(sources) {
@@ -253,19 +271,11 @@ export function useAssistant() {
     await submitMessage(input);
   }
 
-  function handleKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
-    if (event.key === "Enter" && !event.shiftKey) {
-      event.preventDefault();
-      void handleSubmit();
-    }
-  }
-
   return {
     canSubmit,
     clearError,
     errorMessage,
     handleInputChange,
-    handleKeyDown,
     handleSubmit,
     input,
     isLoading,

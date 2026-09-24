@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { streamChatResponse } from "@/features/assistant/api/stream-assistant-response";
-import { activeWorkflowInstanceId } from "@/features/assistant/state/active-workflow-instance";
 
 function streamResponse(lines: string[]) {
   const encoder = new TextEncoder();
@@ -132,16 +131,4 @@ test("assistant client reports non-2xx and provider errors safely", async () => 
   } finally {
     globalThis.fetch = originalFetch;
   }
-});
-
-test("terminal workflow metadata clears the active browser reference", () => {
-  const instance = {
-    id: "11111111-1111-4111-8111-111111111111",
-    workflowId: "meeting-booking",
-    workflowVersion: 1,
-  } as const;
-
-  assert.equal(activeWorkflowInstanceId({ ...instance, status: "active" }), instance.id);
-  assert.equal(activeWorkflowInstanceId({ ...instance, status: "completed" }), null);
-  assert.equal(activeWorkflowInstanceId({ ...instance, status: "cancelled" }), null);
 });

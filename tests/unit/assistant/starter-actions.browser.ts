@@ -1,8 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { JSDOM } from "jsdom";
-import { act, createElement, useState } from "react";
-import { StarterActions, type StarterAction } from "@/features/assistant/components/StarterActions";
+import { act, createElement, useRef, useState } from "react";
+import {
+  AssistantMessages,
+  type StarterAction,
+} from "@/features/assistant/components/AssistantMessages";
 
 test("shared starter actions dispatch exact starts, disappear after conversation begins, and disable while loading", async () => {
   const dom = new JSDOM("<!doctype html><html><body><main></main></body></html>");
@@ -31,15 +34,18 @@ test("shared starter actions dispatch exact starts, disappear after conversation
   function Harness({ loading = false }: { loading?: boolean }) {
     const [hasMessages, setHasMessages] = useState(false);
 
-    return hasMessages
-      ? createElement("output", null, "conversation")
-      : createElement(StarterActions, {
-          disabled: loading,
-          onSelect(action) {
-            selected.push(action);
-            setHasMessages(true);
-          },
-        });
+    const messagesEndRef = useRef<HTMLDivElement>(null);
+
+    return createElement(AssistantMessages, {
+      isLoading: loading,
+      messages: hasMessages ? [{ id: "user", role: "user", content: "Question" }] : [],
+      messagesEndRef,
+      shouldReduceMotion: true,
+      onStarterAction(action) {
+        selected.push(action);
+        setHasMessages(true);
+      },
+    });
   }
 
   function button(label: string) {
@@ -95,7 +101,7 @@ test("shared starter actions dispatch exact starts, disappear after conversation
         expected.map(({ label }) => label),
       );
       await act(async () => button(action.label).click());
-      assert.equal(container.textContent, "conversation");
+      assert.equal(container.querySelector('[aria-label="Start a conversation"]'), null);
     }
 
     assert.deepEqual(selected, expected);
