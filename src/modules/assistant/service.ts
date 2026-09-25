@@ -39,7 +39,7 @@ export class AssistantService {
     return new ReadableStream<Uint8Array>({
       start: async (controller) => {
         const write = (event: AssistantStreamEvent) =>
-          controller.enqueue(encoder.encode(`${JSON.stringify(event)}\\n`));
+          controller.enqueue(encoder.encode(`${JSON.stringify(event)}\n`));
 
         let didStreamText = false;
 

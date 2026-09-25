@@ -194,6 +194,18 @@ test("allowed chat requests consume the configured rules and stream without mand
   assert.match(output, /A grounded answer\./);
   assert.match(output, /"sources":\[\]/);
   assert.match(output, /resp_current/);
+  assert.deepEqual(
+    output
+      .trim()
+      .split("\n")
+      .map((line) => JSON.parse(line) as unknown),
+    [
+      { type: "delta", delta: "A grounded answer." },
+      { type: "sources", sources: [] },
+      { type: "response_id", responseId: "resp_current" },
+      { type: "done" },
+    ],
+  );
 });
 
 test("follow-up question preserves the previous response id and streams the new response", async () => {
