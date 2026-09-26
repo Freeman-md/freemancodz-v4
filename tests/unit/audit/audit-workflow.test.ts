@@ -79,8 +79,8 @@ test("one update records several fields and reports only remaining required deta
 
   const initial = definition.createInitialState({
     originChannel: "web",
-    originPage: "/audit",
-    originEntry: "audit-hero-cta",
+    originPage: "/",
+    originEntry: "home-audit-cta",
   });
 
   const updated = await definition.executeTool(
@@ -108,8 +108,8 @@ test("preparation requires complete data and submission requires a later interac
 
   const initial = definition.createInitialState({
     originChannel: "web",
-    originPage: "/audit",
-    originEntry: "audit-hero-cta",
+    originPage: "/",
+    originEntry: "home-audit-cta",
   });
 
   const incomplete = await definition.executeTool(
@@ -172,8 +172,8 @@ test("changing a prepared detail invalidates its confirmation", async () => {
 
   const initial = definition.createInitialState({
     originChannel: "web",
-    originPage: "/audit",
-    originEntry: "audit-footer-cta",
+    originPage: "/",
+    originEntry: "home-audit-cta",
   });
 
   const updated = await definition.executeTool(
@@ -228,8 +228,8 @@ test("retry after the request is created but workflow save fails returns one req
 
   const instance = await workflow.start("audit", {
     originChannel: "web",
-    originPage: "/audit",
-    originEntry: "audit-hero-cta",
+    originPage: "/",
+    originEntry: "home-audit-cta",
   });
 
   await workflow.executeTool(instance.id, {
@@ -277,8 +277,8 @@ test("cancellation creates no audit request", async () => {
 
   const instance = await workflow.start("audit", {
     originChannel: "web",
-    originPage: "/audit",
-    originEntry: "audit-navbar-cta",
+    originPage: "/",
+    originEntry: "home-audit-cta",
   });
 
   const cancelled = await workflow.cancel(instance.id);

@@ -130,8 +130,8 @@ test(
           status: "active",
           state: {},
           originChannel: "web",
-          originPage: "/audit",
-          originEntry: "audit-hero-cta",
+          originPage: "/",
+          originEntry: "home-audit-cta",
         },
       });
 

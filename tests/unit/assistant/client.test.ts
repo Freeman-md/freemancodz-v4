@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { streamChatResponse } from "@/features/assistant/api/stream-assistant-response";
+import { streamAssistant } from "@/features/assistant/api/stream-assistant-response";
+import type { AssistantRequest, AssistantStreamEvent } from "@/contracts/assistant.contract";
 
 function streamResponse(lines: string[]) {
   const encoder = new TextEncoder();
@@ -19,16 +20,18 @@ function streamResponse(lines: string[]) {
   );
 }
 
+async function collectResponse(request: AssistantRequest) {
+  const events: AssistantStreamEvent[] = [];
+
+  for await (const event of streamAssistant(request)) {
+    events.push(event);
+  }
+
+  return events;
+}
+
 test("assistant client handles a buffered final event and associates stream values", async () => {
   const originalFetch = globalThis.fetch;
-
-  const deltas: string[] = [];
-
-  let responseId = "";
-
-  let sourceTitle = "";
-
-  let workflowInstanceId = "";
 
   let requestBody = "";
 
@@ -43,27 +46,33 @@ test("assistant client handles a buffered final event and associates stream valu
     ]);
   };
 
+  let events: AssistantStreamEvent[];
+
   try {
-    await streamChatResponse("Hello", null, null, {
-      onDelta: (delta) => deltas.push(delta),
-      onResponseId: (id) => {
-        responseId = id;
-      },
-      onSources: (sources) => {
-        sourceTitle = sources[0]?.title || "";
-      },
-      onWorkflow: (instance) => {
-        workflowInstanceId = instance.id;
-      },
+    events = await collectResponse({
+      message: "Hello",
+      previousResponseId: null,
+      workflowInstanceId: null,
     });
   } finally {
     globalThis.fetch = originalFetch;
   }
 
-  assert.deepEqual(deltas, ["Hello"]);
-  assert.equal(sourceTitle, "Work");
-  assert.equal(responseId, "resp_1");
-  assert.equal(workflowInstanceId, "11111111-1111-4111-8111-111111111111");
+  assert.deepEqual(events, [
+    { type: "delta", delta: "Hello" },
+    { type: "sources", sources: [{ id: "1", title: "Work", url: "/work" }] },
+    { type: "response_id", responseId: "resp_1" },
+    {
+      type: "workflow_instance",
+      instance: {
+        id: "11111111-1111-4111-8111-111111111111",
+        workflowId: "meeting-booking",
+        workflowVersion: 1,
+        status: "active",
+      },
+    },
+    { type: "done" },
+  ]);
   assert.deepEqual(JSON.parse(requestBody), {
     message: "Hello",
     previousResponseId: null,
@@ -78,11 +87,10 @@ test("assistant client rejects malformed stream events with a safe error", async
   try {
     await assert.rejects(
       () =>
-        streamChatResponse("Hello", null, null, {
-          onDelta: () => undefined,
-          onResponseId: () => undefined,
-          onSources: () => undefined,
-          onWorkflow: () => undefined,
+        collectResponse({
+          message: "Hello",
+          previousResponseId: null,
+          workflowInstanceId: null,
         }),
       /invalid response/,
     );
@@ -101,11 +109,10 @@ test("assistant client reports non-2xx and provider errors safely", async () => 
   try {
     await assert.rejects(
       () =>
-        streamChatResponse("Hello", null, null, {
-          onDelta: () => undefined,
-          onResponseId: () => undefined,
-          onSources: () => undefined,
-          onWorkflow: () => undefined,
+        collectResponse({
+          message: "Hello",
+          previousResponseId: null,
+          workflowInstanceId: null,
         }),
       /Request rejected/,
     );
@@ -115,18 +122,17 @@ test("assistant client reports non-2xx and provider errors safely", async () => 
         '{"type":"workflow_instance","instance":{"id":"11111111-1111-4111-8111-111111111111","workflowId":"meeting-booking","workflowVersion":1,"status":"active"}}\n',
         '{"type":"error","error":"The assistant could not respond."}\n',
       ]);
-    await assert.rejects(
-      () =>
-        streamChatResponse("Hello", null, null, {
-          onDelta: () => undefined,
-          onResponseId: () => undefined,
-          onSources: () => undefined,
-          onWorkflow: (instance) => {
-            recoveredWorkflowInstanceId = instance.id;
-          },
-        }),
-      /could not respond/,
-    );
+    await assert.rejects(async () => {
+      for await (const event of streamAssistant({
+        message: "Hello",
+        previousResponseId: null,
+        workflowInstanceId: null,
+      })) {
+        if (event.type === "workflow_instance") {
+          recoveredWorkflowInstanceId = event.instance.id;
+        }
+      }
+    }, /could not respond/);
     assert.equal(recoveredWorkflowInstanceId, "11111111-1111-4111-8111-111111111111");
   } finally {
     globalThis.fetch = originalFetch;

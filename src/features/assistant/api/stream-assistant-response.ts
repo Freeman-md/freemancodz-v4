@@ -1,8 +1,8 @@
 import {
   assistantStreamEventSchema,
-  type AssistantWorkflowStart,
+  type AssistantRequest,
+  type AssistantStreamEvent,
 } from "@/contracts/assistant.contract";
-import type { StreamChatResponseHandlers } from "../types";
 
 async function getErrorMessage(response: Response) {
   try {
@@ -18,24 +18,31 @@ async function getErrorMessage(response: Response) {
   return "The assistant request failed.";
 }
 
-export async function streamChatResponse(
-  message: string,
-  previousResponseId: string | null,
-  workflowInstanceId: string | null,
-  handlers: StreamChatResponseHandlers,
-  workflowStart: AssistantWorkflowStart | null = null,
-) {
+function parseEvent(line: string) {
+  let parsed: unknown;
+
+  try {
+    parsed = JSON.parse(line);
+  } catch {
+    throw new Error("The assistant returned an invalid response.");
+  }
+
+  const result = assistantStreamEventSchema.safeParse(parsed);
+
+  if (!result.success) {
+    throw new Error("The assistant returned an invalid response.");
+  }
+
+  return result.data;
+}
+
+export async function* streamAssistant(
+  request: AssistantRequest,
+): AsyncGenerator<AssistantStreamEvent> {
   const response = await fetch("/api/chat", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      message,
-      previousResponseId,
-      workflowInstanceId,
-      ...(workflowStart ? { workflowStart } : {}),
-    }),
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(request),
   });
 
   if (!response.ok) {
@@ -49,58 +56,6 @@ export async function streamChatResponse(
   const reader = response.body.pipeThrough(new TextDecoderStream()).getReader();
 
   let buffer = "";
-
-  function handleLine(line: string) {
-    if (!line.trim()) {
-      return false;
-    }
-
-    let parsed: unknown;
-
-    try {
-      parsed = JSON.parse(line);
-    } catch {
-      throw new Error("The assistant returned an invalid response.");
-    }
-
-    const result = assistantStreamEventSchema.safeParse(parsed);
-
-    if (!result.success) {
-      throw new Error("The assistant returned an invalid response.");
-    }
-
-    const event = result.data;
-
-    if (event.type === "sources") {
-      handlers.onSources(event.sources);
-
-      return false;
-    }
-
-    if (event.type === "delta") {
-      handlers.onDelta(event.delta);
-
-      return false;
-    }
-
-    if (event.type === "response_id") {
-      handlers.onResponseId(event.responseId);
-
-      return false;
-    }
-
-    if (event.type === "workflow_instance") {
-      handlers.onWorkflow(event.instance);
-
-      return false;
-    }
-
-    if (event.type === "error") {
-      throw new Error(event.error);
-    }
-
-    return event.type === "done";
-  }
 
   try {
     while (true) {
@@ -116,14 +71,32 @@ export async function streamChatResponse(
       buffer = lines.pop() ?? "";
 
       for (const line of lines) {
-        if (handleLine(line)) {
+        if (!line.trim()) {
+          continue;
+        }
+
+        const event = parseEvent(line);
+
+        if (event.type === "error") {
+          throw new Error(event.error);
+        }
+
+        yield event;
+
+        if (event.type === "done") {
           return;
         }
       }
     }
 
     if (buffer.trim()) {
-      handleLine(buffer);
+      const event = parseEvent(buffer);
+
+      if (event.type === "error") {
+        throw new Error(event.error);
+      }
+
+      yield event;
     }
   } finally {
     await reader.cancel();

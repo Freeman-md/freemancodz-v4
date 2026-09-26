@@ -4,12 +4,10 @@ import type { KeyboardEvent, RefObject } from "react";
 import { ArrowUpIcon, MessageSquareIcon, XIcon } from "lucide-react";
 import { Button } from "@/shared/components/ui/Button";
 import { Textarea } from "@/shared/components/ui/Textarea";
-import { cn } from "@/shared/utils/class-names";
 import { MAX_MESSAGE_LENGTH } from "../constants";
 
 type AssistantComposerProps = {
   canSubmit: boolean;
-  errorMessage: string | null;
   input: string;
   onClose: () => void;
   onInputChange: (value: string) => void;
@@ -19,7 +17,6 @@ type AssistantComposerProps = {
 
 export function AssistantComposer({
   canSubmit,
-  errorMessage,
   input,
   onClose,
   onInputChange,
@@ -54,11 +51,8 @@ export function AssistantComposer({
           ref={textareaRef}
           value={input}
           aria-label="Ask a question about Freeman's portfolio"
-          placeholder={errorMessage || "Ask me a question"}
-          className={cn(
-            "h-10 max-h-10 min-h-10 resize-none overflow-y-auto border-0 bg-transparent px-0 py-2 text-base leading-6 text-ink shadow-none placeholder:text-sm placeholder:text-muted focus-visible:outline-0 focus-visible:ring-0",
-            errorMessage ? "placeholder:text-red-700" : null,
-          )}
+          placeholder="Ask me a question"
+          className="h-10 max-h-10 min-h-10 resize-none overflow-y-auto border-0 bg-transparent px-0 py-2 text-base leading-6 text-ink shadow-none placeholder:text-sm placeholder:text-muted focus-visible:outline-0 focus-visible:ring-0"
           onChange={(event) => {
             onInputChange(event.target.value);
           }}

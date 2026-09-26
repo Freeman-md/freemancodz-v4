@@ -320,8 +320,8 @@ test("an Audit CTA starts deterministically with bounded origin metadata", async
         message: "I would like to claim my free customer journey and workflow audit.",
         workflowStart: {
           workflowId: "audit",
-          originPage: "/audit",
-          originEntry: "audit-hero-cta",
+          originPage: "/",
+          originEntry: "home-audit-cta",
         },
       }),
     ),
@@ -332,8 +332,8 @@ test("an Audit CTA starts deterministically with bounded origin metadata", async
   assert.equal(stored?.workflowId, "audit");
   assert.equal(stored?.workflowVersion, 1);
   assert.equal(stored?.originChannel, "web");
-  assert.equal(stored?.originPage, "/audit");
-  assert.equal(stored?.originEntry, "audit-hero-cta");
+  assert.equal(stored?.originPage, "/");
+  assert.equal(stored?.originEntry, "home-audit-cta");
   assert.deepEqual(
     inputs[0]?.tools.map(({ name }) => name),
     ["search_website", "cancel_workflow", "update_audit_context"],

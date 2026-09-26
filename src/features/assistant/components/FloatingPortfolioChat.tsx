@@ -1,6 +1,6 @@
 "use client";
 
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Dialog } from "@base-ui/react/dialog";
 import { Maximize2Icon, MessageSquareIcon, Minimize2Icon, XIcon } from "lucide-react";
 import { Button } from "@/shared/components/ui/Button";
@@ -12,18 +12,9 @@ import { useAssistant } from "../hooks/useAssistant";
 import { useAssistantSurface } from "../hooks/useAssistantSurface";
 
 export function FloatingPortfolioChat() {
-  const {
-    canSubmit,
-    clearError,
-    errorMessage,
-    handleInputChange,
-    handleSubmit: submitInput,
-    input,
-    isLoading,
-    messages,
-    shouldReduceMotion,
-    submitMessage,
-  } = useAssistant();
+  const { canSubmit, input, isLoading, messages, setInput, submitMessage } = useAssistant();
+
+  const shouldReduceMotion = useReducedMotion();
 
   const {
     closeChat,
@@ -39,7 +30,6 @@ export function FloatingPortfolioChat() {
     textareaRef,
     toggleExpanded,
   } = useAssistantSurface({
-    clearError,
     isLoading,
     messages,
     shouldReduceMotion,
@@ -52,7 +42,7 @@ export function FloatingPortfolioChat() {
 
   async function handleSubmit() {
     if (canSubmit) {
-      await submitInput();
+      await submitMessage(input);
     }
   }
 
@@ -147,10 +137,9 @@ export function FloatingPortfolioChat() {
           <CardContent className="shrink-0 p-0">
             <AssistantComposer
               canSubmit={canSubmit}
-              errorMessage={errorMessage}
               input={input}
               onClose={closeChat}
-              onInputChange={handleInputChange}
+              onInputChange={setInput}
               onSubmit={handleSubmit}
               textareaRef={textareaRef}
             />
@@ -202,7 +191,11 @@ export function FloatingPortfolioChat() {
         )}
       >
         {isMobileSheet ? (
-          <Dialog.Popup render={surface} aria-labelledby="portfolio-chat-title" finalFocus={launcherRef} />
+          <Dialog.Popup
+            render={surface}
+            aria-labelledby="portfolio-chat-title"
+            finalFocus={launcherRef}
+          />
         ) : (
           surface
         )}

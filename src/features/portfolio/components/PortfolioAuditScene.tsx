@@ -35,8 +35,8 @@ export function PortfolioAuditScene({
                 assistantDetail={{
                   workflowStart: {
                     workflowId: "audit",
-                    originPage: "/audit",
-                    originEntry: "audit-hero-cta",
+                    originPage: "/",
+                    originEntry: "home-audit-cta",
                   },
                 }}
                 className="story-button story-audit-button"

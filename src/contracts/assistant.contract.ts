@@ -25,22 +25,8 @@ const workflowStartSchema = z.discriminatedUnion("originEntry", [
   z
     .object({
       workflowId: z.literal("audit"),
-      originPage: z.literal("/audit"),
-      originEntry: z.literal("audit-hero-cta"),
-    })
-    .strict(),
-  z
-    .object({
-      workflowId: z.literal("audit"),
-      originPage: z.literal("/audit"),
-      originEntry: z.literal("audit-footer-cta"),
-    })
-    .strict(),
-  z
-    .object({
-      workflowId: z.literal("audit"),
-      originPage: z.literal("/audit"),
-      originEntry: z.literal("audit-navbar-cta"),
+      originPage: z.literal("/"),
+      originEntry: z.literal("home-audit-cta"),
     })
     .strict(),
   z

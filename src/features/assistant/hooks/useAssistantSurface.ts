@@ -7,7 +7,6 @@ import type { ChatMessage } from "../types";
 import type { AssistantWorkflowStart } from "@/contracts/assistant.contract";
 
 type UseAssistantSurfaceOptions = {
-  clearError: () => void;
   isLoading: boolean;
   messages: ChatMessage[];
   shouldReduceMotion: boolean | null;
@@ -33,7 +32,6 @@ function getServerMobileViewportSnapshot() {
 }
 
 export function useAssistantSurface({
-  clearError,
   isLoading,
   messages,
   shouldReduceMotion,
@@ -90,7 +88,6 @@ export function useAssistantSurface({
   }
 
   const handleTriggerOpen = useEffectEvent(async (detail?: OpenPortfolioChatDetail) => {
-    clearError();
     openChat();
 
     if (detail?.message) {

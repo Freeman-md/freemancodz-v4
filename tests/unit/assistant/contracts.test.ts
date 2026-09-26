@@ -30,13 +30,13 @@ test("assistant request recovers from malformed previous response IDs", () => {
   );
 });
 
-test("deterministic Audit start accepts only real Audit-page CTA origins", () => {
+test("deterministic Audit start accepts only the homepage Audit CTA origin", () => {
   const request = {
     message: "Start my audit",
     workflowStart: {
       workflowId: "audit",
-      originPage: "/audit",
-      originEntry: "audit-navbar-cta",
+      originPage: "/",
+      originEntry: "home-audit-cta",
     },
   };
 
@@ -51,7 +51,7 @@ test("deterministic Audit start accepts only real Audit-page CTA origins", () =>
   assert.equal(
     assistantRequestSchema.safeParse({
       ...request,
-      workflowStart: { ...request.workflowStart, originEntry: "home-audit-cta" },
+      workflowStart: { ...request.workflowStart, originEntry: "unknown-audit-cta" },
     }).success,
     false,
   );

@@ -5,10 +5,7 @@ import { AssistantTriggerButton } from "@/features/assistant/components/Assistan
 import type { AssistantTriggerDetail } from "@/contracts/assistant.contract";
 import { buttonVariants } from "@/shared/components/ui/Button";
 import { cn } from "@/shared/utils/class-names";
-import {
-  getPortfolioActionMode,
-  type PortfolioAction as PortfolioActionModel,
-} from "../types";
+import type { PortfolioAction as PortfolioActionModel } from "../types";
 import { PortfolioIcon } from "./PortfolioIcon";
 
 const actionVariant = {
@@ -24,6 +21,18 @@ const assistantVariant = {
   PRIMARY: "marketing",
   SECONDARY: "ghost",
 } as const;
+
+function getPortfolioActionMode(action: PortfolioActionModel) {
+  if (action.assistantMessage) {
+    return "assistant" as const;
+  }
+
+  if (action.url) {
+    return "link" as const;
+  }
+
+  return "hidden" as const;
+}
 
 export function PortfolioAction({
   action,

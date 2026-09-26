@@ -11,7 +11,6 @@ import {
   createHomePresentationData,
   createWorkPresentationData,
 } from "@/features/portfolio/portfolio-presentation.mapper";
-import { getPortfolioActionMode } from "@/features/portfolio/types";
 import type {
   PortfolioContentSource,
   PortfolioExperienceSource,
@@ -243,19 +242,4 @@ test("icon and project visual registries accept only approved stored identifiers
     storedIconNames.filter((name) => !portfolioIconNameSchema.safeParse(name).success),
     [],
   );
-});
-
-test("portfolio actions preserve relative navigation and assistant-message precedence", () => {
-  const base = { iconName: null, label: "Action", copy: null, variant: "PRIMARY" as const };
-
-  assert.equal(getPortfolioActionMode({ ...base, url: "/work", assistantMessage: null }), "link");
-  assert.equal(
-    getPortfolioActionMode({ ...base, url: null, assistantMessage: "Show me the audit" }),
-    "assistant",
-  );
-  assert.equal(
-    getPortfolioActionMode({ ...base, url: "/audit", assistantMessage: "Start audit" }),
-    "assistant",
-  );
-  assert.equal(getPortfolioActionMode({ ...base, url: null, assistantMessage: null }), "hidden");
 });

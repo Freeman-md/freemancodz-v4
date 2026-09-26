@@ -1,49 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useReducedMotion } from "framer-motion";
-import { streamChatResponse } from "../api/stream-assistant-response";
+import { useCallback, useRef, useState } from "react";
+import { streamAssistant } from "../api/stream-assistant-response";
 import { MAX_MESSAGE_LENGTH } from "../constants";
-import type { ChatMessage, ChatSource } from "../types";
+import type { ChatMessage } from "../types";
 import type { AssistantWorkflowStart } from "@/contracts/assistant.contract";
-
-const REVEAL_INTERVAL_MS = 16;
-
-function getRevealLength(backlogLength: number) {
-  if (backlogLength > 160) {
-    return 96;
-  }
-
-  if (backlogLength > 48) {
-    return 48;
-  }
-
-  return backlogLength;
-}
-
-function appendAssistantDelta(messages: ChatMessage[], messageId: string, delta: string) {
-  return messages.map((message) =>
-    message.id === messageId ? { ...message, content: message.content + delta } : message,
-  );
-}
-
-function attachAssistantSources(
-  messages: ChatMessage[],
-  messageId: string,
-  sources: ChatSource[],
-) {
-  return messages.map((message) => (message.id === messageId ? { ...message, sources } : message));
-}
-
-function replaceAssistantWithError(
-  messages: ChatMessage[],
-  messageId: string,
-  error: ChatMessage,
-) {
-  return messages.map((message) =>
-    message.id === messageId ? { ...error, id: messageId } : message,
-  );
-}
 
 export function useAssistant() {
   const [input, setInput] = useState("");
@@ -52,235 +13,95 @@ export function useAssistant() {
 
   const [isLoading, setIsLoading] = useState(false);
 
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const previousResponseId = useRef<string | null>(null);
 
-  const [previousResponseId, setPreviousResponseId] = useState<string | null>(null);
+  const workflowInstanceId = useRef<string | null>(null);
 
-  const [workflowInstanceId, setWorkflowInstanceId] = useState<string | null>(null);
-
-  const shouldReduceMotion = useReducedMotion();
-
-  const reduceMotionImmediately =
-    shouldReduceMotion ||
-    (typeof window !== "undefined" &&
-      window.matchMedia?.("(prefers-reduced-motion: reduce)").matches);
-
-  const bufferedTextRef = useRef("");
-
-  const revealTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const revealCompleteRef = useRef<(() => void) | null>(null);
-
-  const isMountedRef = useRef(true);
-
-  const activeRequestIdRef = useRef(0);
-
-  const submissionInProgressRef = useRef(false);
-
-  const clearRevealWork = useCallback(() => {
-    bufferedTextRef.current = "";
-
-    if (revealTimerRef.current) {
-      clearTimeout(revealTimerRef.current);
-      revealTimerRef.current = null;
-    }
-
-    revealCompleteRef.current?.();
-    revealCompleteRef.current = null;
-  }, []);
-
-  const cancelPendingRequest = useCallback(() => {
-    activeRequestIdRef.current += 1;
-    clearRevealWork();
-  }, [clearRevealWork]);
-
-  useEffect(() => {
-    isMountedRef.current = true;
-
-    return () => {
-      isMountedRef.current = false;
-      cancelPendingRequest();
-    };
-  }, [cancelPendingRequest]);
-
-  const canSubmit = useMemo(() => {
-    const trimmed = input.trim();
-
-    return trimmed.length > 0 && trimmed.length <= MAX_MESSAGE_LENGTH && !isLoading;
-  }, [input, isLoading]);
+  const submissionInProgress = useRef(false);
 
   const submitMessage = useCallback(
     async (rawMessage: string, workflowStart: AssistantWorkflowStart | null = null) => {
       const message = rawMessage.trim();
 
-      if (!message || message.length > MAX_MESSAGE_LENGTH || submissionInProgressRef.current) {
+      if (!message || message.length > MAX_MESSAGE_LENGTH || submissionInProgress.current) {
         return;
       }
 
-      submissionInProgressRef.current = true;
+      submissionInProgress.current = true;
+      setIsLoading(true);
+      setInput("");
 
-      const assistantMessage: ChatMessage = {
-        id: `assistant-${Date.now()}`,
-        role: "assistant",
-        content: "",
-        sources: [],
-      };
+      const timestamp = Date.now();
 
-      const requestId = activeRequestIdRef.current + 1;
-
-      activeRequestIdRef.current = requestId;
-
-      let scheduleReveal: (() => void) | undefined;
-
-      function waitForRevealToFinish() {
-        if (!bufferedTextRef.current && !revealTimerRef.current) {
-          return Promise.resolve();
-        }
-
-        return new Promise<void>((resolve) => {
-          revealCompleteRef.current = resolve;
-        });
-      }
-
-      function revealNextChunk() {
-        revealTimerRef.current = null;
-
-        const chunkLength = getRevealLength(bufferedTextRef.current.length);
-
-        const chunk = bufferedTextRef.current.slice(0, chunkLength);
-
-        bufferedTextRef.current = bufferedTextRef.current.slice(chunkLength);
-
-        if (chunk && isMountedRef.current) {
-          setMessages((current) => appendAssistantDelta(current, assistantMessage.id, chunk));
-        }
-
-        if (bufferedTextRef.current) {
-          scheduleReveal?.();
-
-          return;
-        }
-
-        revealCompleteRef.current?.();
-        revealCompleteRef.current = null;
-      }
-
-      scheduleReveal = () => {
-        if (!revealTimerRef.current) {
-          revealTimerRef.current = setTimeout(revealNextChunk, REVEAL_INTERVAL_MS);
-        }
-      };
+      const assistantMessageId = `assistant-${timestamp}`;
 
       setMessages((current) => [
         ...current,
-        { id: `user-${Date.now()}`, role: "user", content: message },
-        assistantMessage,
+        { id: `user-${timestamp}`, role: "user", content: message },
+        { id: assistantMessageId, role: "assistant", content: "", sources: [] },
       ]);
-      setInput("");
-      setIsLoading(true);
-      setErrorMessage(null);
+
+      const updateAssistantMessage = (update: (message: ChatMessage) => ChatMessage) => {
+        setMessages((current) =>
+          current.map((item) => (item.id === assistantMessageId ? update(item) : item)),
+        );
+      };
 
       try {
-        await streamChatResponse(
+        for await (const event of streamAssistant({
           message,
-          previousResponseId,
-          workflowInstanceId,
-          {
-            onDelta(delta) {
-              if (!isMountedRef.current || activeRequestIdRef.current !== requestId) {
-                return;
-              }
+          previousResponseId: previousResponseId.current,
+          workflowInstanceId: workflowInstanceId.current,
+          ...(workflowStart ? { workflowStart } : {}),
+        })) {
+          if (event.type === "delta") {
+            updateAssistantMessage((current) => ({
+              ...current,
+              content: current.content + event.delta,
+            }));
+          }
 
-              if (reduceMotionImmediately) {
-                setMessages((current) => appendAssistantDelta(current, assistantMessage.id, delta));
+          if (event.type === "sources") {
+            updateAssistantMessage((current) => ({ ...current, sources: event.sources }));
+          }
 
-                return;
-              }
+          if (event.type === "response_id") {
+            previousResponseId.current = event.responseId;
+          }
 
-              bufferedTextRef.current += delta;
-              scheduleReveal?.();
-            },
-            onResponseId(responseId) {
-              if (!isMountedRef.current || activeRequestIdRef.current !== requestId) {
-                return;
-              }
-
-              setPreviousResponseId(responseId);
-            },
-            onWorkflow(instance) {
-              if (isMountedRef.current && activeRequestIdRef.current === requestId) {
-                setWorkflowInstanceId(instance.status === "active" ? instance.id : null);
-              }
-            },
-            onSources(sources) {
-              if (!isMountedRef.current || activeRequestIdRef.current !== requestId) {
-                return;
-              }
-
-              setMessages((current) =>
-                attachAssistantSources(current, assistantMessage.id, sources),
-              );
-            },
-          },
-          workflowStart,
-        );
-
-        if (!reduceMotionImmediately) {
-          await waitForRevealToFinish();
+          if (event.type === "workflow_instance") {
+            workflowInstanceId.current =
+              event.instance.status === "active" ? event.instance.id : null;
+          }
         }
       } catch (error) {
-        cancelPendingRequest();
         const messageText =
           error instanceof Error
             ? error.message
             : "Something went wrong while fetching a response.";
 
-        const errorResponse: ChatMessage = {
-          id: `assistant-error-${Date.now()}`,
-          role: "assistant",
+        updateAssistantMessage((current) => ({
+          ...current,
           content: messageText,
+          sources: [],
           error: true,
-        };
-
-        if (isMountedRef.current) {
-          setErrorMessage(messageText);
-          setMessages((current) =>
-            replaceAssistantWithError(current, assistantMessage.id, errorResponse),
-          );
-        }
+        }));
       } finally {
-        submissionInProgressRef.current = false;
-        if (isMountedRef.current) {
-          setIsLoading(false);
-        }
+        submissionInProgress.current = false;
+        setIsLoading(false);
       }
     },
-    [cancelPendingRequest, previousResponseId, reduceMotionImmediately, workflowInstanceId],
+    [],
   );
 
-  const clearError = useCallback(() => setErrorMessage(null), []);
-
-  function handleInputChange(value: string) {
-    setInput(value);
-    if (errorMessage) {
-      setErrorMessage(null);
-    }
-  }
-
-  async function handleSubmit() {
-    await submitMessage(input);
-  }
+  const trimmedInput = input.trim();
 
   return {
-    canSubmit,
-    clearError,
-    errorMessage,
-    handleInputChange,
-    handleSubmit,
+    canSubmit: trimmedInput.length > 0 && trimmedInput.length <= MAX_MESSAGE_LENGTH && !isLoading,
     input,
     isLoading,
     messages,
-    shouldReduceMotion,
+    setInput,
     submitMessage,
   };
 }
