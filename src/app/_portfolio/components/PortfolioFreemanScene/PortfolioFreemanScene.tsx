@@ -1,6 +1,6 @@
-import type { AboutPresentationData, HomePresentationData } from "../types";
-import { StoryDisclosure } from "./StoryDisclosure";
-import { StoryImage } from "./StoryImage";
+import type { AboutPresentationData, HomePresentationData } from "../../data/types";
+import { StoryDisclosure } from "../StoryDisclosure/StoryDisclosure";
+import { StoryImage } from "../StoryImage/StoryImage";
 
 export function PortfolioFreemanScene({
   about,

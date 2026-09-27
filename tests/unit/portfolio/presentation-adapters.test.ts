@@ -10,13 +10,13 @@ import {
   createAuditPresentationData,
   createHomePresentationData,
   createWorkPresentationData,
-} from "@/app/_portfolio/presentation.mapper";
+} from "@/app/_portfolio/data/presentation.mapper";
 import type {
   PortfolioContentSource,
   PortfolioExperienceSource,
   PortfolioProfileSource,
   PortfolioProjectSource,
-} from "@/app/_portfolio/types";
+} from "@/app/_portfolio/data/types";
 import {
   experienceSeeds,
   iconSeeds,

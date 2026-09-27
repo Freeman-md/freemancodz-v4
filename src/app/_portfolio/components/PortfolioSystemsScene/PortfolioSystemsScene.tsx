@@ -1,9 +1,9 @@
 import { ArrowUpRight, Inbox, MessageCircle, Send } from "lucide-react";
 import { AssistantTriggerButton } from "@/app/_assistant/components/AssistantTriggerButton";
-import type { HomePresentationData, WorkPresentationData } from "../types";
-import { resolvePortfolioIcon } from "./PortfolioIcon";
-import { StoryDisclosure } from "./StoryDisclosure";
-import { StoryProjectDetail } from "./StoryProjectDetail";
+import type { HomePresentationData, WorkPresentationData } from "../../data/types";
+import { resolvePortfolioIcon } from "../PortfolioIcon";
+import { StoryDisclosure } from "../StoryDisclosure/StoryDisclosure";
+import { StoryProjectDetail } from "../StoryProjectDetail/StoryProjectDetail";
 
 export function PortfolioSystemsScene({
   home,

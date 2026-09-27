@@ -1,0 +1,19 @@
+/* Styles owned by the project portfolio presentation boundary. */
+.story-project-detail {
+  display: grid;
+  gap: 20px;
+}
+.story-project-detail h4 {
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+.story-project-detail p {
+  font-size: 14px;
+  color: var(--story-muted);
+}
+.story-project-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+}

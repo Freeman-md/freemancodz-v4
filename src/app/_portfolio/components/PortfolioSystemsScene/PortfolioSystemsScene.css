@@ -1,0 +1,286 @@
+/* Styles owned by the systems portfolio presentation boundary. */
+.story-systems {
+  background: var(--story-night);
+  color: #f4f6fc;
+  padding-block: 104px;
+  --story-line: var(--brand-line);
+  --story-muted: var(--story-night-muted);
+}
+.story-systems h2 span {
+  color: var(--brand-primary);
+}
+.story-systems .story-section-intro {
+  margin-bottom: 80px;
+}
+.story-assistant-scene {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  align-items: center;
+  gap: 110px;
+}
+.story-assistant-object {
+  --story-ink: var(--brand-secondary);
+  --story-muted: #536277;
+  color-scheme: light;
+  background: #fafbff;
+  color: var(--story-ink);
+  padding: 30px;
+  border-radius: 16px;
+  transform: rotate(-2deg);
+  box-shadow: 0 32px 70px -25px rgb(0 0 0 / 40%);
+}
+.story-assistant-heading {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  font-size: 13px;
+}
+.story-assistant-heading > svg {
+  color: var(--brand-link);
+}
+.story-live-label {
+  margin-left: auto;
+  color: #596271;
+  font-size: 11px;
+}
+.story-assistant-object h3 {
+  margin-top: 42px;
+  font-size: 36px;
+}
+.story-assistant-object > p {
+  color: #596271;
+  margin-top: 10px;
+  font-size: 14px;
+}
+.story-prompt-list {
+  margin-top: 24px;
+  display: grid;
+}
+.story-prompt {
+  border: 0;
+  border-radius: 0;
+  border-bottom: 1px solid #dce1e9;
+  width: 100%;
+  min-height: 56px;
+  height: auto;
+  justify-content: space-between;
+  gap: 20px;
+  background: none;
+  padding: 15px 0;
+  text-align: left;
+  white-space: normal;
+  font-family: var(--font-inter), sans-serif;
+  font-size: 13px;
+  letter-spacing: 0;
+  font-weight: 400;
+  color: var(--story-ink);
+  box-shadow: none;
+}
+.story-prompt:hover {
+  background: none;
+  color: var(--brand-link);
+}
+.story-assistant-compose {
+  display: flex;
+  width: 100%;
+  min-height: 48px;
+  height: auto;
+  justify-content: space-between;
+  padding: 20px 0 0;
+  font-family: var(--font-inter), sans-serif;
+  font-size: 13px;
+  letter-spacing: 0;
+  color: var(--brand-link);
+}
+.story-systems-copy > p:not(.story-category) {
+  font-size: 16px;
+  color: var(--story-muted);
+  margin: 24px 0;
+}
+.story-systems-copy h3 {
+  font-size: 37px;
+}
+.story-systems-copy .story-text-link {
+  color: var(--brand-primary);
+}
+.story-workflow-scene {
+  display: grid;
+  grid-template-columns: 1fr 1.1fr;
+  align-items: center;
+  gap: 110px;
+  margin-top: 120px;
+}
+.story-workflow-object {
+  padding: 16px 28px;
+}
+.story-flow-start {
+  display: flex;
+  gap: 18px;
+  align-items: center;
+  padding-bottom: 20px;
+  font-size: 14px;
+}
+.story-flow-path {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0 0 24px 8px;
+  color: var(--brand-primary);
+}
+.story-flow-path span {
+  height: 1px;
+  background: #284e50;
+}
+.story-flow-path > svg {
+  flex-shrink: 0;
+  transform: rotate(45deg);
+}
+.story-flow-path span:first-child {
+  width: 35%;
+}
+.story-flow-path span:last-child {
+  flex: 1;
+}
+.story-workflow-object ol {
+  padding: 0;
+  list-style: none;
+  margin: 0 0 0 26px;
+  border-left: 1px solid #284e50;
+}
+.story-workflow-object li {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 14px 0 14px 30px;
+  font-size: 14px;
+}
+.story-workflow-object li::before {
+  position: absolute;
+  content: "";
+  top: 50%;
+  left: 0;
+  width: 18px;
+  height: 1px;
+  background: #284e50;
+}
+.story-workflow-object li svg {
+  flex-shrink: 0;
+  color: var(--brand-primary);
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.story-workflow-object figcaption {
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--story-night-muted);
+  margin-top: 26px;
+}
+@media (max-width: 1100px) {
+  .story-assistant-scene,
+  .story-workflow-scene,
+  .story-person,
+  .story-audit-grid {
+    gap: 55px;
+  }
+}
+@media (max-width: 700px) {
+  .story-systems {
+    padding-block: 64px;
+  }
+  .story-systems .story-section-intro {
+    margin-bottom: 40px;
+  }
+  .story-assistant-scene,
+  .story-workflow-scene {
+    grid-template-columns: 1fr;
+    gap: 38px;
+  }
+  .story-assistant-object {
+    padding: 23px;
+    transform: rotate(-1deg);
+  }
+  .story-assistant-object h3 {
+    font-size: 31px;
+    margin-top: 32px;
+  }
+  .story-systems-copy h3 {
+    font-size: 30px;
+  }
+  .story-systems-copy > p:not(.story-category) {
+    font-size: 15px;
+    margin-block: 20px;
+  }
+  .story-workflow-scene {
+    margin-top: 68px;
+    gap: 30px;
+  }
+  .story-workflow-object {
+    padding: 0;
+  }
+}
+.story-systems :focus-visible,
+.story-audit :focus-visible {
+  outline-color: var(--brand-secondary);
+}
+.story-assistant-object :focus-visible,
+.story-audit-paper :focus-visible {
+  outline-color: var(--brand-link);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .story-assistant-object {
+    translate: 0 calc((0.5 - var(--object-progress, 0.5)) * 40px);
+    --object-angle: -2deg;
+  }
+  .story-flow-path > svg {
+    translate: calc((var(--object-progress, 0.5) - 0.5) * 32px) 0;
+  }
+  [data-motion-ready] .story-assistant-object:not([data-arrived]),
+  [data-motion-ready] .story-audit-paper:not([data-arrived]) {
+    transform: translateY(28px) rotate(var(--object-angle));
+  }
+  [data-motion-ready] .story-workflow-object:not([data-arrived]) .story-flow-path > svg {
+    transform: translateX(-30px) rotate(45deg);
+  }
+  .story-assistant-object[data-arrived] {
+    animation: story-object-settle 650ms var(--story-ease) both;
+  }
+  .story-workflow-object[data-arrived] .story-flow-path > svg {
+    animation: story-plane-send 650ms var(--story-ease) both;
+  }
+  .story-workflow-object[data-arrived] li svg {
+    animation: story-step-pop 200ms var(--story-ease) both;
+  }
+  .story-workflow-object[data-arrived] li:nth-child(2) svg {
+    animation-delay: 80ms;
+  }
+  .story-workflow-object[data-arrived] li:nth-child(3) svg {
+    animation-delay: 160ms;
+  }
+  .story-workflow-object[data-arrived] li:nth-child(4) svg {
+    animation-delay: 240ms;
+  }
+}
+@media (max-width: 700px) and (prefers-reduced-motion: no-preference) {
+  .story-assistant-object {
+    --object-angle: -1deg;
+  }
+}
+@keyframes story-object-settle {
+  from {
+    transform: translateY(28px) rotate(var(--object-angle));
+  }
+  to {
+    transform: translateY(0) rotate(var(--object-angle));
+  }
+}
+@keyframes story-step-pop {
+  from {
+    opacity: 0;
+    transform: translateY(3px) scale(0.85);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}

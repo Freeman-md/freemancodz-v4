@@ -1,8 +1,8 @@
 import { ArrowUpRight, Check } from "lucide-react";
 import { AssistantTriggerButton } from "@/app/_assistant/components/AssistantTriggerButton";
-import { PortfolioAction } from "./PortfolioAction";
-import type { AuditPresentationData, HomePresentationData } from "../types";
-import { StoryDisclosure } from "./StoryDisclosure";
+import { PortfolioAction } from "../PortfolioAction";
+import type { AuditPresentationData, HomePresentationData } from "../../data/types";
+import { StoryDisclosure } from "../StoryDisclosure/StoryDisclosure";
 
 export function PortfolioAuditScene({
   audit,

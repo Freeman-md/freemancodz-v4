@@ -1,8 +1,8 @@
 import { ArrowUpRight } from "lucide-react";
-import type { WorkPresentationData } from "../types";
-import { StoryImage } from "./StoryImage";
-import { StoryDisclosure } from "./StoryDisclosure";
-import { StoryProjectDetail } from "./StoryProjectDetail";
+import type { WorkPresentationData } from "../../data/types";
+import { StoryImage } from "../StoryImage/StoryImage";
+import { StoryDisclosure } from "../StoryDisclosure/StoryDisclosure";
+import { StoryProjectDetail } from "../StoryProjectDetail/StoryProjectDetail";
 
 export function PortfolioWorkScene({ work }: { work: WorkPresentationData }) {
   const project = work.projects.pay4Me;

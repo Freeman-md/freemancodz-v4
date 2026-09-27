@@ -5,7 +5,7 @@ import { AssistantTriggerButton } from "@/app/_assistant/components/AssistantTri
 import type { AssistantTriggerDetail } from "@/contracts/assistant.contract";
 import { buttonVariants } from "@/app/_components/ui/Button";
 import { cn } from "@/app/_utils/class-names";
-import type { PortfolioAction as PortfolioActionModel } from "../types";
+import type { PortfolioAction as PortfolioActionModel } from "../data/types";
 import { PortfolioIcon } from "./PortfolioIcon";
 
 const actionVariant = {

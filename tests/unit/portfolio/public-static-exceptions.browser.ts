@@ -3,13 +3,13 @@ import test from "node:test";
 import { createElement, isValidElement, type ReactElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { PortfolioAction } from "@/app/_portfolio/components/PortfolioAction";
-import { PortfolioStoryHero } from "@/app/_portfolio/components/PortfolioStoryHero";
-import { PortfolioWorkScene } from "@/app/_portfolio/components/PortfolioWorkScene";
-import { PortfolioSystemsScene } from "@/app/_portfolio/components/PortfolioSystemsScene";
-import { PortfolioMoreWork } from "@/app/_portfolio/components/PortfolioMoreWork";
-import { PortfolioFreemanScene } from "@/app/_portfolio/components/PortfolioFreemanScene";
-import { PortfolioAuditScene } from "@/app/_portfolio/components/PortfolioAuditScene";
-import { StoryProjectDetail } from "@/app/_portfolio/components/StoryProjectDetail";
+import { PortfolioStoryHero } from "@/app/_portfolio/components/PortfolioStoryHero/PortfolioStoryHero";
+import { PortfolioWorkScene } from "@/app/_portfolio/components/PortfolioWorkScene/PortfolioWorkScene";
+import { PortfolioSystemsScene } from "@/app/_portfolio/components/PortfolioSystemsScene/PortfolioSystemsScene";
+import { PortfolioMoreWork } from "@/app/_portfolio/components/PortfolioMoreWork/PortfolioMoreWork";
+import { PortfolioFreemanScene } from "@/app/_portfolio/components/PortfolioFreemanScene/PortfolioFreemanScene";
+import { PortfolioAuditScene } from "@/app/_portfolio/components/PortfolioAuditScene/PortfolioAuditScene";
+import { StoryProjectDetail } from "@/app/_portfolio/components/StoryProjectDetail/StoryProjectDetail";
 import {
   portfolioIconRegistry,
   resolvePortfolioIcon,
@@ -22,7 +22,7 @@ import type {
   PortfolioAction as Action,
   PortfolioProject,
   PortfolioSection,
-} from "@/app/_portfolio/types";
+} from "@/app/_portfolio/data/types";
 
 const section = (title: string): PortfolioSection => ({
   eyebrow: "",

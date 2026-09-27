@@ -1,7 +1,7 @@
-import type { WorkPresentationData } from "../types";
-import { StoryDisclosure } from "./StoryDisclosure";
-import { StoryImage } from "./StoryImage";
-import { StoryProjectDetail } from "./StoryProjectDetail";
+import type { WorkPresentationData } from "../../data/types";
+import { StoryDisclosure } from "../StoryDisclosure/StoryDisclosure";
+import { StoryImage } from "../StoryImage/StoryImage";
+import { StoryProjectDetail } from "../StoryProjectDetail/StoryProjectDetail";
 
 export function PortfolioMoreWork({ work }: { work: WorkPresentationData }) {
   const projects = [

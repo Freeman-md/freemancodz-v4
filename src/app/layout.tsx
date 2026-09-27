@@ -6,7 +6,7 @@ import { FloatingPortfolioChat } from "./_assistant/components/FloatingPortfolio
 import { Analytics } from "@vercel/analytics/next";
 import { siteConfig } from "./_config/site-metadata";
 import { THEME_INIT_SCRIPT } from "./_config/theme";
-import { getCachedPublicProfile } from "./_portfolio/cached-public-data";
+import { getCachedPublicProfile } from "./_portfolio/data/cached-public-data";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
