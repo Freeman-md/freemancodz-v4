@@ -1,23 +1,23 @@
-import { PortfolioStoryHero } from "@/features/portfolio/components/PortfolioStoryHero";
-import { PortfolioWorkScene } from "@/features/portfolio/components/PortfolioWorkScene";
-import { PortfolioSystemsScene } from "@/features/portfolio/components/PortfolioSystemsScene";
-import { PortfolioMoreWork } from "@/features/portfolio/components/PortfolioMoreWork";
-import { PortfolioFreemanScene } from "@/features/portfolio/components/PortfolioFreemanScene";
-import { PortfolioAuditScene } from "@/features/portfolio/components/PortfolioAuditScene";
-import { StoryMotion } from "@/features/portfolio/components/StoryMotion";
-import "@/features/portfolio/components/portfolio-story.css";
+import { PortfolioStoryHero } from "./_portfolio/components/PortfolioStoryHero";
+import { PortfolioWorkScene } from "./_portfolio/components/PortfolioWorkScene";
+import { PortfolioSystemsScene } from "./_portfolio/components/PortfolioSystemsScene";
+import { PortfolioMoreWork } from "./_portfolio/components/PortfolioMoreWork";
+import { PortfolioFreemanScene } from "./_portfolio/components/PortfolioFreemanScene";
+import { PortfolioAuditScene } from "./_portfolio/components/PortfolioAuditScene";
+import { StoryMotion } from "./_portfolio/components/StoryMotion";
+import "./_portfolio/portfolio-story.css";
 import {
   createHomePresentationData,
   createWorkPresentationData,
   createAboutPresentationData,
   createAuditPresentationData,
-} from "@/features/portfolio/portfolio-presentation.mapper";
+} from "./_portfolio/presentation.mapper";
 import {
   getCachedHomePageData,
   getCachedWorkPageData,
   getCachedAboutPageData,
   getCachedAuditPageData,
-} from "./_portfolio/portfolio-page-cache";
+} from "./_portfolio/cached-public-data";
 
 export default async function HomePage() {
   const [homeData, workData, aboutData, auditData] = await Promise.all([

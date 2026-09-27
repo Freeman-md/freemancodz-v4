@@ -1,5 +1,5 @@
 import { auditRequestService } from "@/modules/composition";
-import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/Card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/app/_components/ui/Card";
 
 export default async function AdminAuditsPage() {
   const requests = await auditRequestService.listRequests();

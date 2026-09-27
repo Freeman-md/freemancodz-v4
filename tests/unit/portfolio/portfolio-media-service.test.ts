@@ -5,7 +5,7 @@ import type { MediaBlockStore } from "@/modules/portfolio/types";
 import type { ProfileStore } from "@/modules/portfolio/types";
 import type { ProjectStore } from "@/modules/portfolio/types";
 import type { PortfolioMediaStorage } from "@/modules/portfolio/types";
-import { PortfolioMediaService } from "@/modules/portfolio/media";
+import { PortfolioMediaService } from "@/modules/portfolio/services/media.service";
 
 const profile = {
   id: "global",

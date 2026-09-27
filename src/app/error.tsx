@@ -1,7 +1,7 @@
 "use client";
 
-import { Container } from "@/shared/components/layout/Container";
-import { Button } from "@/shared/components/ui/Button";
+import { Container } from "./_components/layout/Container";
+import { Button } from "./_components/ui/Button";
 
 export default function GlobalError({ reset }: { reset: () => void }) {
   return (

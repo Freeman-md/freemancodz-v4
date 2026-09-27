@@ -1,9 +1,9 @@
 "use client";
 
 import { useActionState } from "react";
-import { Button } from "@/shared/components/ui/Button";
-import { Input } from "@/shared/components/ui/Input";
-import { Label } from "@/shared/components/ui/Label";
+import { Button } from "@/app/_components/ui/Button";
+import { Input } from "@/app/_components/ui/Input";
+import { Label } from "@/app/_components/ui/Label";
 import { requestAdminMagicLink } from "./actions";
 
 type LoginState = { status: "idle" | "success" | "error"; message: string };

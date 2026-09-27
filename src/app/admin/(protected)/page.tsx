@@ -5,7 +5,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/shared/components/ui/Card";
+} from "@/app/_components/ui/Card";
 
 const areas = [
   ["Audit requests", "Review submitted customer journey and workflow audits.", "/admin/audits"],

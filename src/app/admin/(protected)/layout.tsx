@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
-import { AdminActionsProvider } from "@/features/admin/components/AdminEditors";
-import type { AdminActions } from "@/features/admin/types";
+import { AdminActionsProvider } from "../_components/AdminEditors";
+import type { AdminActions } from "../types";
 import { adminAuthService } from "@/modules/composition";
-import { Container } from "@/shared/components/layout/Container";
-import { Button } from "@/shared/components/ui/Button";
+import { Container } from "@/app/_components/layout/Container";
+import { Button } from "@/app/_components/ui/Button";
 import {
   createActionBlockAction,
   createExperienceAction,

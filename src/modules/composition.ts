@@ -40,9 +40,9 @@ import { MediaBlockRepository } from "./portfolio/repositories/media-block.repos
 import { ProfileRepository } from "./portfolio/repositories/profile.repository";
 import { ProjectRepository } from "./portfolio/repositories/project.repository";
 import { SupabaseStorageProvider } from "@/infrastructure/supabase/storage";
-import { PortfolioAdministrationService } from "./portfolio/administration";
-import { PortfolioMediaService } from "./portfolio/media";
-import { PortfolioService } from "./portfolio/service";
+import { PortfolioAdministrationService } from "./portfolio/services/administration.service";
+import { PortfolioMediaService } from "./portfolio/services/media.service";
+import { PortfolioReadService } from "./portfolio/services/read.service";
 import { RateLimitRepository } from "./rate-limit/repository";
 import { RateLimitService } from "./rate-limit/service";
 import { SearchIndexJobRepository } from "./search-index/repositories/search-index-job.repository";
@@ -55,6 +55,8 @@ import { MeetingBookingWorkflowDefinition } from "./workflow/definitions/meeting
 import { WorkflowInstanceRepository } from "./workflow/repository";
 import { WorkflowService } from "./workflow/service";
 import { WorkflowDefinitionRegistry } from "./workflow/registry";
+
+export { PortfolioAdministrationError } from "./portfolio/services/administration.service";
 
 const openAIProvider = new OpenAIClient(createOpenAIClient, getEmbeddingModel, getResponseModel);
 
@@ -105,7 +107,7 @@ const mediaBlockRepository = new MediaBlockRepository(prisma);
 
 const actionBlockRepository = new ActionBlockRepository(prisma);
 
-export const portfolioService = new PortfolioService(
+export const portfolioReadService = new PortfolioReadService(
   profileRepository,
   contentBlockRepository,
   projectRepository,
@@ -133,7 +135,7 @@ const chunkRepository = new SiteChunkRepository(prisma);
 const jobRepository = new SearchIndexJobRepository(prisma);
 
 export const searchIndexService = new SearchIndexService(
-  portfolioService,
+  portfolioReadService,
   chunkRepository,
   jobRepository,
   openAIProvider,

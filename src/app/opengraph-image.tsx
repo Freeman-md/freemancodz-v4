@@ -1,5 +1,5 @@
 import { ImageResponse } from "next/og";
-import { siteConfig } from "@/shared/config/site-metadata";
+import { siteConfig } from "./_config/site-metadata";
 
 export const alt = `${siteConfig.shortName} portfolio hero section`;
 export const size = {

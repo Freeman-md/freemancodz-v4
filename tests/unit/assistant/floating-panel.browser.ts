@@ -2,9 +2,9 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { JSDOM } from "jsdom";
 import { act, createElement } from "react";
-import { AssistantTriggerButton } from "@/features/assistant/components/AssistantTriggerButton";
-import { FloatingPortfolioChat } from "@/features/assistant/components/FloatingPortfolioChat";
-import { dispatchOpenPortfolioChat } from "@/features/assistant/assistant.events";
+import { AssistantTriggerButton } from "@/app/_assistant/components/AssistantTriggerButton";
+import { FloatingPortfolioChat } from "@/app/_assistant/components/FloatingPortfolioChat";
+import { dispatchOpenPortfolioChat } from "@/app/_assistant/assistant.events";
 
 function doneResponse() {
   return new Response(new ReadableStream({ start: (controller) => controller.close() }));

@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono, Manrope } from "next/font/google";
 import "./globals.css";
-import { SiteLayout } from "@/shared/components/layout/SiteLayout";
-import { FloatingPortfolioChat } from "@/features/assistant/components/FloatingPortfolioChat";
+import { SiteLayout } from "./_components/layout/SiteLayout";
+import { FloatingPortfolioChat } from "./_assistant/components/FloatingPortfolioChat";
 import { Analytics } from "@vercel/analytics/next";
-import { siteConfig } from "@/shared/config/site-metadata";
-import { THEME_INIT_SCRIPT } from "@/shared/config/theme";
-import { getCachedPublicProfile } from "./_portfolio/portfolio-page-cache";
+import { siteConfig } from "./_config/site-metadata";
+import { THEME_INIT_SCRIPT } from "./_config/theme";
+import { getCachedPublicProfile } from "./_portfolio/cached-public-data";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 

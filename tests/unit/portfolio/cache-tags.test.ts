@@ -1,6 +1,5 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { registerPortfolioCacheTags } from "@/app/_portfolio/register-portfolio-cache-tags";
 import type {
   ContentBlockNode,
   ExperienceWithIcons,
@@ -13,7 +12,7 @@ import {
   getHomePageCacheTags,
   getWorkPageCacheTags,
   PortfolioCacheTag,
-} from "@/modules/portfolio/cache";
+} from "@/modules/portfolio/cache-tags";
 
 const now = new Date("2026-08-12T00:00:00.000Z");
 
@@ -165,18 +164,4 @@ test("public cache dependencies contain portfolio content identity only, never a
     tags.some((tag) => /admin|auth|session/i.test(tag)),
     false,
   );
-});
-
-test("cache tags are deduplicated deterministically and registered in supported chunks", () => {
-  const calls: string[][] = [];
-
-  const tags = Array.from({ length: 260 }, (_, index) => `portfolio:test:${index}`);
-
-  registerPortfolioCacheTags([...tags, tags[5], tags[129]], (...chunk) => calls.push(chunk));
-
-  assert.deepEqual(
-    calls.map(({ length }) => length),
-    [128, 128, 4],
-  );
-  assert.deepEqual(calls.flat(), tags);
 });

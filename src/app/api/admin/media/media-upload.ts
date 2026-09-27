@@ -8,7 +8,7 @@ import {
   type AdminAuthService,
 } from "@/modules/admin-auth/service";
 import type { PortfolioMedia } from "@/modules/portfolio/types";
-import { PortfolioCacheTag } from "@/modules/portfolio/cache";
+import { PortfolioCacheTag } from "@/modules/portfolio/cache-tags";
 
 const mediaExtensions: Record<string, string> = {
   "image/jpeg": "jpg",

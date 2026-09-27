@@ -1,5 +1,5 @@
 import type { ProjectUpdateResult } from "@/modules/portfolio/types";
-import { PortfolioCacheTag } from "@/modules/portfolio/cache";
+import { PortfolioCacheTag } from "@/modules/portfolio/cache-tags";
 
 export function invalidateProjectUpdate(
   result: ProjectUpdateResult,

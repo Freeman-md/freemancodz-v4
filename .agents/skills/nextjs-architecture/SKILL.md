@@ -20,14 +20,12 @@ Apply this skill to all Next.js implementation, milestone, review, and refactor 
 ```text
 src/
 ├── app/
-├── features/
 ├── modules/
 │   └── composition.ts
 ├── infrastructure/
 ├── entrypoints/
 ├── contracts/
 ├── generated/
-├── shared/
 └── proxy.ts
 ```
 
@@ -35,14 +33,12 @@ Create only directories with real code. `src/server` is not a valid production s
 
 | Location | Owns | Must not own |
 | --- | --- | --- |
-| `src/app` | Next routes, pages, layouts, metadata, framework boundaries, and thin HTTP/Server Action adapters | dependency construction, persistence, provider SDK work, reusable workflows, or product policy |
-| `src/features` | Browser-facing UI, hooks, browser API adapters, and feature-owned presentation types | modules, infrastructure, Prisma, secrets, or server-only code |
+| `src/app` | Next routes, pages, layouts, metadata, framework boundaries, thin HTTP/Server Action adapters, and route-owned UI colocated in private folders | dependency construction, persistence, provider SDK work, reusable workflows, or product policy |
 | `src/modules` | Capability-owned business behaviour, persistence access, workflows, prompts, and private server types | React UI, HTTP parsing/responses, provider configuration, or framework concerns |
 | `src/infrastructure` | Environment access, Prisma, logging, and configured vendor clients/adapters | product policy, feature UI, or module orchestration |
 | `src/modules/composition.ts` | Server-only dependency assembly and configured module services | request handling, provider work, or business decisions |
 | `src/entrypoints` | Thin jobs, maintenance commands, and their terminal adapters | reusable business logic or dependency construction |
 | `src/contracts` | Runtime-validated data crossing an HTTP, stream, action, webhook, or browser/server trust boundary | private module models, persistence, or business logic |
-| `src/shared` | Domain-free, frontend-safe code genuinely shared by unrelated features | feature behaviour, backend code, or technical infrastructure |
 | `src/generated` | Generated code only | hand-authored code |
 
 `src/proxy.ts` owns the version-supported Next proxy boundary. Keep its redirect and matching behaviour externally stable unless a task explicitly changes it.
@@ -56,17 +52,16 @@ modules/composition.ts
         ↓
 modules + infrastructure
 
-features → contracts + shared
-modules  → contracts + own code
-infrastructure → technical clients and configuration
+route-owned app UI → contracts + app-owned UI primitives
+modules            → contracts + own code
+infrastructure     → technical clients and configuration
 ```
 
 Enforce these restrictions:
 
-- `features` must not import `app`, `modules`, `infrastructure`, Prisma, server-only code, or secrets.
-- `shared` must not import `app`, `features`, `modules`, or `infrastructure`.
-- `infrastructure` must not import `app`, `features`, or business module implementation.
-- Modules other than `modules/composition.ts` must not import `app`, `features`, or composition.
+- Route-owned browser UI in private `app` folders must not import `modules`, `infrastructure`, Prisma, server-only code, or secrets.
+- `infrastructure` must not import `app` or business module implementation.
+- Modules other than `modules/composition.ts` must not import `app` or composition.
 - Only `app` and `entrypoints` may import `modules/composition.ts`.
 - App adapters and entrypoints select configured services; they must not construct repositories, infrastructure clients, or module services.
 - A module may use another module only through a deliberately exposed public type or injected dependency, never by reaching into its persistence implementation.
@@ -83,11 +78,11 @@ Keep `src/app` thin.
 - Keep request work bounded. Send long-running or retryable work through a durable entrypoint when the product has one.
 - Never expose raw database, provider, stack-trace, or secret-bearing errors to clients.
 
-## Feature code
+## Route-owned UI
 
-Use feature folders only for browser-facing product concerns. A feature may contain `components`, `hooks`, `api`, `state`, and `types` where each is needed; do not create empty role folders.
+Colocate browser-facing product concerns in a private folder under the narrowest owning `app` segment. A private app area may contain `components`, `hooks`, `api`, `state`, and `types` where each is needed; do not create empty role folders. Use a top-level private app folder for UI mounted by the root layout or shared by the root route.
 
-Client code communicates with app routes or actions through a small feature API adapter. Pass only serializable data to Client Components. Browser state belongs as locally as practical and must not import a server model merely for convenience.
+Client code communicates with app routes or actions through a small colocated browser API adapter. Pass only serializable data to Client Components. Browser state belongs as locally as practical and must not import a server model merely for convenience.
 
 ## Modules
 
@@ -95,15 +90,16 @@ A module owns a cohesive capability, not a mechanical layer. Use the smallest cl
 
 ```text
 modules/portfolio/
-  service.ts
-  administration.ts
-  media.ts
-  cache.ts
+  services/
+    read.service.ts
+    administration.service.ts
+    media.service.ts
+  cache-tags.ts
   repository.ts
   types.ts
 ```
 
-Use separate files only for distinct responsibilities or independently meaningful integrations. Avoid ceremonial `services/`, `repositories/`, `providers/`, `interfaces/`, `models/`, or `public.ts` directories and barrels when they add no boundary.
+Use separate files only for distinct responsibilities or independently meaningful integrations. A nested `services` directory is appropriate when a module owns several distinct services; do not create it for a single service. Avoid ceremonial `repositories`, `providers`, `interfaces`, `models`, or `public.ts` directories and barrels when they add no boundary.
 
 - A service owns use cases and policy for its capability.
 - A repository owns database operations for a coherent persistence subject.
@@ -145,7 +141,7 @@ Infrastructure configures technical clients, accesses central environment config
 
 Use `src/contracts` only for runtime-validated data that crosses a trust or runtime boundary. Infer TypeScript types from a runtime schema when that schema is the source of truth. Do not cast parsed JSON directly to trusted application types.
 
-Keep private server types in their owning module and frontend presentation types in their feature. Do not create a schema for trusted server-only data. Generated Prisma types remain generated and are not automatically domain or public API models.
+Keep private server types in their owning module and frontend presentation types in their owning private app area. Do not create a schema for trusted server-only data. Generated Prisma types remain generated and are not automatically domain or public API models.
 
 ## Naming
 
@@ -163,9 +159,9 @@ Test public behaviour and important boundaries. Use small fakes through public c
 Before completion, verify:
 
 1. Every file has a clear owner and runtime boundary.
-2. `src/server` and all old import paths are gone without compatibility wrappers.
+2. `src/server`, `src/features`, and all old import paths are gone without compatibility wrappers.
 3. App adapters and entrypoints are thin; composition is the only production construction point.
-4. Features, modules, infrastructure, contracts, and shared code follow the dependency direction above.
+4. App-owned UI, modules, infrastructure, and contracts follow the dependency direction above.
 5. Client graphs contain no server-only dependencies or secrets.
 6. Raw provider/database errors and secrets are not exposed or logged.
 7. Tests protect observable behaviour rather than architecture trivia.

@@ -1,6 +1,6 @@
 import { portfolioIconNameSchema } from "@/contracts/portfolio-presentation.contract";
 import { adminAuthService, portfolioAdministrationService } from "@/modules/composition";
-import { ActionEditor, IconEditor } from "@/features/admin/components/AdminEditors";
+import { ActionEditor, IconEditor } from "../../_components/AdminEditors";
 
 const iconName = (value: string | null) => portfolioIconNameSchema.safeParse(value).data || null;
 

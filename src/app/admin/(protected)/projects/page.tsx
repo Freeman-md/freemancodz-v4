@@ -1,5 +1,5 @@
 import { adminAuthService, portfolioAdministrationService } from "@/modules/composition";
-import { ProjectEditor } from "@/features/admin/components/AdminEditors";
+import { ProjectEditor } from "../../_components/AdminEditors";
 
 export default async function AdminProjectsPage() {
   await adminAuthService.requireAdmin();

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { streamAssistant } from "@/features/assistant/api/stream-assistant-response";
+import { streamAssistant } from "@/app/_assistant/api/stream-assistant-response";
 import type { AssistantRequest, AssistantStreamEvent } from "@/contracts/assistant.contract";
 
 function streamResponse(lines: string[]) {

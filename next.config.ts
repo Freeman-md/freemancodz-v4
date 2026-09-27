@@ -1,5 +1,5 @@
 import type { NextConfig } from "next";
-import { resolvePublicSupabaseUrl } from "./src/shared/config/public-supabase-url";
+import { resolvePublicSupabaseUrl } from "./src/infrastructure/supabase/public-url";
 
 const supabaseUrl = resolvePublicSupabaseUrl();
 

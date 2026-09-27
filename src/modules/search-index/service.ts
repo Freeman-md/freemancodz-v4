@@ -3,7 +3,7 @@ import "server-only";
 import type { SearchIndexWorkerResult } from "@/contracts/search-index-worker.contract";
 import type { Logger } from "@/infrastructure/logging/logger";
 import type { OpenAITransport } from "@/infrastructure/openai/types";
-import type { PortfolioService } from "@/modules/portfolio/service";
+import type { PortfolioReadService } from "@/modules/portfolio/services/read.service";
 import type { SearchIndexJobStore } from "./types";
 import type { SiteChunkStore } from "./types";
 import { mapPortfolioSnapshot } from "./mappers/portfolio-snapshot.mapper";
@@ -100,7 +100,7 @@ function buildEmbeddedChunks(
 export class SearchIndexService {
   constructor(
     private readonly portfolio: Pick<
-      PortfolioService,
+      PortfolioReadService,
       "getHomePageData" | "getWorkPageData" | "getAboutPageData" | "getAuditPageData"
     >,
     private readonly chunks: SiteChunkStore,

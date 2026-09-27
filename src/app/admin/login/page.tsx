@@ -4,8 +4,8 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/shared/components/ui/Card";
-import { Container } from "@/shared/components/layout/Container";
+} from "@/app/_components/ui/Card";
+import { Container } from "@/app/_components/layout/Container";
 import { AdminLoginForm } from "./AdminLoginForm";
 
 export default async function AdminLoginPage({

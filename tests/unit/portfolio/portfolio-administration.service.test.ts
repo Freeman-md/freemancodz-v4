@@ -8,7 +8,7 @@ import type { IconBlockStore } from "@/modules/portfolio/types";
 import type { MediaBlockStore } from "@/modules/portfolio/types";
 import type { ProfileStore } from "@/modules/portfolio/types";
 import type { ProjectStore } from "@/modules/portfolio/types";
-import { PortfolioAdministrationService } from "@/modules/portfolio/administration";
+import { PortfolioAdministrationService } from "@/modules/portfolio/services/administration.service";
 
 const now = new Date("2026-08-12T00:00:00.000Z");
 

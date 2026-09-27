@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { PortfolioService } from "@/modules/portfolio/service";
+import { PortfolioReadService } from "@/modules/portfolio/services/read.service";
 import type {
   ContentBlockNode,
   ExperienceWithIcons,
@@ -93,7 +93,12 @@ const projectRepository = {
 const experienceRepository = { findAll: async () => experiences };
 
 test("page services compose canonical independent records and ordered block trees", async () => {
-  const service = new PortfolioService(profiles, contentBlocks, projectRepository, experienceRepository);
+  const service = new PortfolioReadService(
+    profiles,
+    contentBlocks,
+    projectRepository,
+    experienceRepository,
+  );
 
   const home = await service.getHomePageData();
 

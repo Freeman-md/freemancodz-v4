@@ -70,24 +70,12 @@ const config = [
   },
 
   {
-    files: ["src/features/**/*.{ts,tsx}"],
-    rules: {
-      "no-restricted-imports": [
-        "error",
-        {
-          patterns: ["@/app/*", "@/modules/*", "@/infrastructure/*"],
-        },
-      ],
-    },
-  },
-
-  {
     files: ["src/modules/**/*.{ts,tsx}"],
     rules: {
       "no-restricted-imports": [
         "error",
         {
-          patterns: ["@/features/*", "@/app/*", "@/modules/composition"],
+          patterns: ["@/app/*", "@/modules/composition"],
         },
       ],
     },
@@ -116,20 +104,11 @@ const config = [
   },
 
   {
-    files: ["src/shared/**/*.{ts,tsx}"],
-    rules: {
-      "no-restricted-imports": [
-        "error",
-        {
-          patterns: ["@/app/*", "@/features/*", "@/modules/*", "@/infrastructure/*"],
-        },
-      ],
-    },
-  },
-
-  {
     files: [
-      "src/features/**/{components,hooks,api,state,models}/**/*.{ts,tsx}",
+      "src/app/_components/**/*.{ts,tsx}",
+      "src/app/_assistant/**/*.{ts,tsx}",
+      "src/app/_portfolio/components/**/*.{ts,tsx}",
+      "src/app/admin/_components/**/*.{ts,tsx}",
       "src/app/**/error.tsx",
     ],
     rules: {

@@ -1,0 +1,134 @@
+import { createElement, type ComponentProps } from "react";
+import type { LucideIcon } from "lucide-react";
+import {
+  ArrowLeftRight,
+  Bell,
+  BellRing,
+  BookOpen,
+  Box,
+  Braces,
+  Brain,
+  BriefcaseBusiness,
+  CheckCircle2,
+  CircleCheck,
+  ClipboardCheck,
+  ClipboardList,
+  Clock3,
+  Cloud,
+  Code2,
+  Copy,
+  Download,
+  Dumbbell,
+  Eye,
+  FileText,
+  Folder,
+  GitBranch,
+  Handshake,
+  Inbox,
+  Layers3,
+  Lightbulb,
+  Link2,
+  LockKeyhole,
+  Mail,
+  Map,
+  MessageCircleQuestion,
+  MessageSquareCheck,
+  MousePointer2,
+  Network,
+  NotebookPen,
+  PersonStanding,
+  Puzzle,
+  Repeat2,
+  Scale,
+  Search,
+  Send,
+  Share2,
+  ShieldCheck,
+  SlidersHorizontal,
+  Smartphone,
+  Sparkles,
+  SquareTerminal,
+  Target,
+  UserRound,
+  Users,
+  UsersRound,
+  Zap,
+} from "lucide-react";
+import {
+  portfolioIconNameSchema,
+  type PortfolioIconName,
+} from "@/contracts/portfolio-presentation.contract";
+
+export const portfolioIconRegistry = {
+  ArrowLeftRight,
+  Bell,
+  BellRing,
+  BookOpen,
+  Box,
+  Braces,
+  Brain,
+  BriefcaseBusiness,
+  CheckCircle2,
+  CircleCheck,
+  ClipboardCheck,
+  ClipboardList,
+  Clock3,
+  Cloud,
+  Code2,
+  Copy,
+  Download,
+  Dumbbell,
+  Eye,
+  FileText,
+  Folder,
+  GitBranch,
+  Handshake,
+  Inbox,
+  Layers3,
+  Lightbulb,
+  Link2,
+  LockKeyhole,
+  Mail,
+  Map,
+  MessageCircleQuestion,
+  MessageSquareCheck,
+  MousePointer2,
+  Network,
+  NotebookPen,
+  PersonStanding,
+  Puzzle,
+  Repeat2,
+  Scale,
+  Search,
+  Send,
+  Share2,
+  ShieldCheck,
+  SlidersHorizontal,
+  Smartphone,
+  Sparkles,
+  SquareTerminal,
+  Target,
+  UserRound,
+  Users,
+  UsersRound,
+  Zap,
+} satisfies Record<PortfolioIconName, LucideIcon>;
+
+export function isPortfolioIconName(
+  value: string | null | undefined,
+): value is PortfolioIconName {
+  return portfolioIconNameSchema.safeParse(value).success;
+}
+
+export function resolvePortfolioIcon(value: string | null | undefined): LucideIcon | null {
+  return isPortfolioIconName(value) ? portfolioIconRegistry[value] : null;
+}
+
+export function PortfolioIcon({
+  name,
+  ...props
+}: Omit<ComponentProps<"svg">, "name"> & { name: string | null }) {
+  const Icon = resolvePortfolioIcon(name);
+
+  return Icon ? createElement(Icon, props) : null;
+}

@@ -7,13 +7,13 @@ See [Workflow Foundation](docs/workflow-foundation.md) for versioned workflow de
 
 ## Structure
 
-- `src/app` contains routes, pages, layouts, and thin HTTP adapters.
-- `src/features` owns browser-facing assistant and portfolio UI; client interactions use feature API adapters.
+- `src/app` contains routes, pages, layouts, thin HTTP adapters, and private folders for application UI, configuration, and frontend utilities.
+- Private folders under `src/app` own route- and layout-facing UI; browser interactions use colocated API adapters.
 - `src/modules` owns portfolio, assistant, workflow, meeting, rate-limit, and search-index capabilities. `src/modules/composition.ts` is the single server-only dependency assembly point for pages, routes, and entrypoints.
 - `src/infrastructure` owns Prisma, environment, vendor clients, and logging configuration; `src/entrypoints` owns one-shot job and maintenance adapters.
-- `src/shared` contains domain-free layout, UI primitives, configuration, and utilities. `src/contracts` owns runtime-validated HTTP and stream shapes.
+- `src/contracts` owns runtime-validated HTTP and stream shapes.
 - `prisma/portfolio-seed-data.ts` is the canonical one-time bootstrap input transcribed from the approved Notion artifacts; runtime content comes from the database.
-  New UI belongs in its feature; backend use cases and persistence belong in the owning module. Server Components and Route Handlers select configured services from `src/modules/composition.ts`, while browser code flows through feature API → Route Handler. Process entrypoints are thin adapters over the same configured services. See `.agents/skills/nextjs-architecture/SKILL.md` for the authoritative standard.
+  New UI belongs in the narrowest owning private app folder; backend use cases and persistence belong in the owning module. Server Components and Route Handlers select configured services from `src/modules/composition.ts`, while browser code flows through a colocated API adapter to a Route Handler. Process entrypoints are thin adapters over the same configured services. See `.agents/skills/nextjs-architecture/SKILL.md` for the authoritative standard.
 
 ## Local development
 

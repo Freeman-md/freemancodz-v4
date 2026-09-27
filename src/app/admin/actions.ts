@@ -15,15 +15,18 @@ import {
   mediaMetadataSchema,
   upsertProjectSchema,
 } from "@/contracts/portfolio-admin.contract";
-import { adminAuthService, portfolioAdministrationService } from "@/modules/composition";
-import { PortfolioAdministrationError } from "@/modules/portfolio/administration";
-import { PortfolioCacheTag } from "@/modules/portfolio/cache";
+import {
+  adminAuthService,
+  PortfolioAdministrationError,
+  portfolioAdministrationService,
+} from "@/modules/composition";
+import { PortfolioCacheTag } from "@/modules/portfolio/cache-tags";
 import { invalidateProjectUpdate } from "./project-cache-invalidation";
 import { invalidateReusableBlockUpdate } from "./reusable-block-cache-invalidation";
 import { runAuthorizedAdminMutation } from "./admin-action-boundary";
-import type { AdminActionResult } from "@/features/admin/types";
+import type { AdminActionResult } from "./types";
 
-export type { AdminActionResult } from "@/features/admin/types";
+export type { AdminActionResult } from "./types";
 
 const success = (message: string, id?: string): AdminActionResult => ({
   status: "success",

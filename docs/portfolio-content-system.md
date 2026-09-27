@@ -45,8 +45,8 @@ Provider errors are normalized before reaching a client. Request correctness doe
 
 ## 4. Important Folders / Files
 
-- `src/app/_portfolio/portfolio-page-cache.ts`: four cached public reads.
-- `src/features/portfolio/portfolio-presentation.mapper.ts`: deterministic backend-to-view adapters.
+- `src/app/_portfolio/cached-public-data.ts`: cached public reads and their cache-tag registration.
+- `src/app/_portfolio/presentation.mapper.ts`: deterministic backend-to-view adapters.
 - `src/contracts/portfolio-presentation.contract.ts`: closed icon and project-visual identifiers.
 - `src/contracts/portfolio-admin.contract.ts`: admin trust-boundary schemas and inferred types.
 - `src/app/admin`: login, protected semantic editors and Server Actions.
@@ -74,7 +74,7 @@ The approved sources define no colour token palette, so the admin preserves the 
 
 `/work`, `/about` and `/audit` remain compatibility entry points. A small client component preserves the incoming URL fragment and replaces the URL with its corresponding section at `/`. Project and content anchors remain available for assistant citations; a linked disclosure opens automatically. The public sitemap and canonical URLs point to `/`. The assistant, audit workflow provenance, booking flow, admin, and indexing sources remain unchanged.
 
-The visual story lives in `src/features/portfolio/components/Portfolio*Scene.tsx`, with shared tokens in `portfolio-story.css` and isolated browser motion in `StoryMotion.tsx`. Editorial headings belong to the frontend; project facts, profile, experience, media, reusable actions and detailed service copy retain their managed sources. Media failure presents a contextual fallback while leaving the stored URL intact.
+The visual story lives in `src/app/_portfolio/components/Portfolio*Scene.tsx`, with shared tokens in `portfolio-story.css` and isolated browser motion in `StoryMotion.tsx`. Editorial headings belong to the frontend; project facts, profile, experience, media, reusable actions and detailed service copy retain their managed sources. Media failure presents a contextual fallback while leaving the stored URL intact.
 
 `next build` may execute database-backed cached reads while prerendering public routes, so the build environment requires a reachable migrated and bootstrapped `DATABASE_URL`. After deployment, cached entries serve static-like output until their dependency tags are invalidated; they are not build-only content requiring redeployment. Admin/auth data is outside these cached functions and is private and dynamic.
 

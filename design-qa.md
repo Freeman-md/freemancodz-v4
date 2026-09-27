@@ -148,7 +148,7 @@ size to their content instead of stretching across the card.
 ### Relevant Work checkpoint
 
 - Scope: added one featured product and two supporting projects using the portfolio feature's existing case-study badges, points, links, and preview illustrations.
-- Ownership: the reused case-study presentation remains in `features/portfolio` because Home and Work belong to the same product capability; no domain-specific UI was moved into generic shared ownership.
+- Ownership: the homepage case-study presentation is colocated in `app/_portfolio` because the public portfolio now has one route; only the icon renderer shared with Admin lives in shared UI.
 - Desktop: the featured narrative and wide WithRadius visual sit side by side, followed by two balanced supporting cards.
 - Mobile: the featured preview enters the reading order before the problem/solution/outcome detail, while supporting project content and previews remain contained and readable.
 - Responsive review: inspected at 1440px and 390px with real destinations for case-study, website, assistant, and repository actions.

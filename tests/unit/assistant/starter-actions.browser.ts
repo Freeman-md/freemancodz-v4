@@ -5,7 +5,7 @@ import { act, createElement, useRef, useState } from "react";
 import {
   AssistantMessages,
   type StarterAction,
-} from "@/features/assistant/components/AssistantMessages";
+} from "@/app/_assistant/components/AssistantMessages";
 
 test("shared starter actions dispatch exact starts, disappear after conversation begins, and disable while loading", async () => {
   const dom = new JSDOM("<!doctype html><html><body><main></main></body></html>");

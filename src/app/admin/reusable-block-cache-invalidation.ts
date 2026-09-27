@@ -1,4 +1,4 @@
-import { PortfolioCacheTag } from "@/modules/portfolio/cache";
+import { PortfolioCacheTag } from "@/modules/portfolio/cache-tags";
 
 export function invalidateReusableBlockUpdate(
   type: "action" | "media",

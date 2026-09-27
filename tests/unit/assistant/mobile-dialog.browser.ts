@@ -53,7 +53,7 @@ test("mobile assistant restores page scrolling after every dismissal and unmount
   dom.window.document.body.style.overflowY = "auto";
   const { createRoot } = await import("react-dom/client");
 
-  const { FloatingPortfolioChat } = await import("@/features/assistant/components/FloatingPortfolioChat");
+  const { FloatingPortfolioChat } = await import("@/app/_assistant/components/FloatingPortfolioChat");
 
   const root = createRoot(dom.window.document.querySelector("main")!);
 

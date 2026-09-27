@@ -1,6 +1,6 @@
 import { adminAuthService, portfolioAdministrationService } from "@/modules/composition";
-import { ProfileEditor, RelationEditor } from "@/features/admin/components/AdminEditors";
-import { MediaUploader } from "@/features/admin/components/MediaUploader";
+import { ProfileEditor, RelationEditor } from "../../_components/AdminEditors";
+import { MediaUploader } from "../../_components/MediaUploader";
 
 const collections = [
   "AUDIENCE",

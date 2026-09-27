@@ -2,18 +2,18 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { createElement, isValidElement, type ReactElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { PortfolioAction } from "@/features/portfolio/components/PortfolioAction";
-import { PortfolioStoryHero } from "@/features/portfolio/components/PortfolioStoryHero";
-import { PortfolioWorkScene } from "@/features/portfolio/components/PortfolioWorkScene";
-import { PortfolioSystemsScene } from "@/features/portfolio/components/PortfolioSystemsScene";
-import { PortfolioMoreWork } from "@/features/portfolio/components/PortfolioMoreWork";
-import { PortfolioFreemanScene } from "@/features/portfolio/components/PortfolioFreemanScene";
-import { PortfolioAuditScene } from "@/features/portfolio/components/PortfolioAuditScene";
-import { StoryProjectDetail } from "@/features/portfolio/components/StoryProjectDetail";
+import { PortfolioAction } from "@/app/_portfolio/components/PortfolioAction";
+import { PortfolioStoryHero } from "@/app/_portfolio/components/PortfolioStoryHero";
+import { PortfolioWorkScene } from "@/app/_portfolio/components/PortfolioWorkScene";
+import { PortfolioSystemsScene } from "@/app/_portfolio/components/PortfolioSystemsScene";
+import { PortfolioMoreWork } from "@/app/_portfolio/components/PortfolioMoreWork";
+import { PortfolioFreemanScene } from "@/app/_portfolio/components/PortfolioFreemanScene";
+import { PortfolioAuditScene } from "@/app/_portfolio/components/PortfolioAuditScene";
+import { StoryProjectDetail } from "@/app/_portfolio/components/StoryProjectDetail";
 import {
   portfolioIconRegistry,
   resolvePortfolioIcon,
-} from "@/features/portfolio/portfolio-icon.registry";
+} from "@/app/_portfolio/components/PortfolioIcon";
 import type {
   AboutPresentationData,
   AuditPresentationData,
@@ -22,7 +22,7 @@ import type {
   PortfolioAction as Action,
   PortfolioProject,
   PortfolioSection,
-} from "@/features/portfolio/types";
+} from "@/app/_portfolio/types";
 
 const section = (title: string): PortfolioSection => ({
   eyebrow: "",
