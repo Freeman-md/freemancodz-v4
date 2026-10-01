@@ -1,11 +1,11 @@
-import type { WorkflowDefinition } from "./interfaces";
+import type { IWorkflowDefinition } from "./interfaces";
 
 export class WorkflowDefinitionRegistry {
-  private readonly definitions = new Map<string, WorkflowDefinition>();
+  private readonly definitions = new Map<string, IWorkflowDefinition>();
 
-  private readonly latest = new Map<string, WorkflowDefinition>();
+  private readonly latest = new Map<string, IWorkflowDefinition>();
 
-  constructor(definitions: readonly WorkflowDefinition[]) {
+  constructor(definitions: readonly IWorkflowDefinition[]) {
     for (const definition of definitions) {
       if (
         !definition.id.trim() ||
@@ -33,15 +33,15 @@ export class WorkflowDefinitionRegistry {
     }
   }
 
-  get(workflowId: string, version: number): WorkflowDefinition | undefined {
+  get(workflowId: string, version: number): IWorkflowDefinition | undefined {
     return this.definitions.get(definitionKey(workflowId, version));
   }
 
-  getLatest(workflowId: string): WorkflowDefinition | undefined {
+  getLatest(workflowId: string): IWorkflowDefinition | undefined {
     return this.latest.get(workflowId);
   }
 
-  listRoutable(): readonly WorkflowDefinition[] {
+  listRoutable(): readonly IWorkflowDefinition[] {
     return [...this.latest.values()].sort((left, right) => left.id.localeCompare(right.id));
   }
 }

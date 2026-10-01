@@ -5,8 +5,8 @@ import type { WorkflowInstance } from "@/generated/prisma/client";
 import type { OpenAIResponseTool } from "@/infrastructure/openai/types";
 import { WorkflowInstanceStoreError } from "@/modules/workflow/errors";
 import type {
-  WorkflowDefinition,
-  WorkflowInstanceStore,
+  IWorkflowDefinition,
+  IWorkflowInstanceRepository,
 } from "@/modules/workflow/interfaces";
 import { WorkflowDefinitionRegistry } from "@/modules/workflow/registry";
 import type {
@@ -46,7 +46,7 @@ function createDefinition(
     invalidReturnedCount?: boolean;
     toolName?: string;
   } = {},
-): WorkflowDefinition<TestState> {
+): IWorkflowDefinition<TestState> {
   return {
     id: "test-workflow",
     version,
@@ -379,7 +379,7 @@ function createInstance(overrides: Partial<WorkflowInstance> = {}): WorkflowInst
   };
 }
 
-class MemoryWorkflowInstanceRepository implements WorkflowInstanceStore {
+class MemoryWorkflowInstanceRepository implements IWorkflowInstanceRepository {
   private readonly instances = new Map<string, WorkflowInstance>();
 
   createCalls = 0;

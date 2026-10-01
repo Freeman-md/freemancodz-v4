@@ -3,8 +3,9 @@ import test from "node:test";
 
 import type { AuditRequest, WorkflowInstance } from "@/generated/prisma/client";
 import type { AuditService } from "@/modules/audit/service";
-import type { WorkflowInstanceStore } from "@/modules/workflow/interfaces";
+import type { IWorkflowInstanceRepository } from "@/modules/workflow/interfaces";
 import { AuditWorkflowDefinition } from "@/modules/workflow/definitions/audit/audit.definition";
+import { AuditWorkflowProgressProjector } from "@/modules/workflow/definitions/audit/audit.progress";
 import { WorkflowDefinitionRegistry } from "@/modules/workflow/registry";
 import type {
   CreateWorkflowInstanceInput,
@@ -14,6 +15,8 @@ import type {
 import { WorkflowService } from "@/modules/workflow/service";
 
 const INSTANCE_ID = "11111111-1111-4111-8111-111111111111";
+
+const auditWorkflowProgress = new AuditWorkflowProgressProjector();
 
 const PREPARATION_CONTEXT: WorkflowExecutionContext = {
   workflowInstanceId: INSTANCE_ID,
@@ -75,7 +78,7 @@ function createAuditService() {
 test("one update records several fields and reports only remaining required details", async () => {
   const audit = createAuditService();
 
-  const definition = new AuditWorkflowDefinition(audit.service);
+  const definition = new AuditWorkflowDefinition(audit.service, auditWorkflowProgress);
 
   const initial = definition.createInitialState({
     originChannel: "web",
@@ -104,7 +107,7 @@ test("one update records several fields and reports only remaining required deta
 test("preparation requires complete data and submission requires a later interaction", async () => {
   const audit = createAuditService();
 
-  const definition = new AuditWorkflowDefinition(audit.service);
+  const definition = new AuditWorkflowDefinition(audit.service, auditWorkflowProgress);
 
   const initial = definition.createInitialState({
     originChannel: "web",
@@ -168,7 +171,7 @@ test("preparation requires complete data and submission requires a later interac
 test("changing a prepared detail invalidates its confirmation", async () => {
   const audit = createAuditService();
 
-  const definition = new AuditWorkflowDefinition(audit.service);
+  const definition = new AuditWorkflowDefinition(audit.service, auditWorkflowProgress);
 
   const initial = definition.createInitialState({
     originChannel: "web",
@@ -221,7 +224,9 @@ test("retry after the request is created but workflow save fails returns one req
   const repository = new MemoryWorkflowRepository();
 
   const workflow = new WorkflowService(
-    new WorkflowDefinitionRegistry([new AuditWorkflowDefinition(audit.service)]),
+    new WorkflowDefinitionRegistry([
+      new AuditWorkflowDefinition(audit.service, auditWorkflowProgress),
+    ]),
     repository,
     ["search_website"],
   );
@@ -270,7 +275,9 @@ test("cancellation creates no audit request", async () => {
   const audit = createAuditService();
 
   const workflow = new WorkflowService(
-    new WorkflowDefinitionRegistry([new AuditWorkflowDefinition(audit.service)]),
+    new WorkflowDefinitionRegistry([
+      new AuditWorkflowDefinition(audit.service, auditWorkflowProgress),
+    ]),
     new MemoryWorkflowRepository(),
     [],
   );
@@ -287,7 +294,7 @@ test("cancellation creates no audit request", async () => {
   assert.equal(audit.createdCount, 0);
 });
 
-class MemoryWorkflowRepository implements WorkflowInstanceStore {
+class MemoryWorkflowRepository implements IWorkflowInstanceRepository {
   private readonly instances = new Map<string, WorkflowInstance>();
 
   failNextSave = false;

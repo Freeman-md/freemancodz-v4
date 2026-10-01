@@ -50,8 +50,11 @@ import { SiteChunkRepository } from "./search-index/repositories/site-chunk.repo
 import { SearchIndexService } from "./search-index/service";
 import { SiteSearchService } from "./search-index/search";
 import { AuditWorkflowDefinition } from "./workflow/definitions/audit/audit.definition";
+import { AuditWorkflowProgressProjector } from "./workflow/definitions/audit/audit.progress";
 import { ContactWorkflowDefinition } from "./workflow/definitions/contact/contact.definition";
+import { ContactWorkflowProgressProjector } from "./workflow/definitions/contact/contact.progress";
 import { MeetingBookingWorkflowDefinition } from "./workflow/definitions/meeting-booking/meeting-booking.definition";
+import { MeetingBookingWorkflowProgressProjector } from "./workflow/definitions/meeting-booking/meeting-booking.progress";
 import { WorkflowInstanceRepository } from "./workflow/repository";
 import { WorkflowService } from "./workflow/service";
 import { WorkflowDefinitionRegistry } from "./workflow/registry";
@@ -148,10 +151,16 @@ export const searchIndexService = new SearchIndexService(
 export const siteSearchService = new SiteSearchService(chunkRepository);
 
 // Workflows
+const auditWorkflowProgress = new AuditWorkflowProgressProjector();
+
+const contactWorkflowProgress = new ContactWorkflowProgressProjector();
+
+const meetingBookingWorkflowProgress = new MeetingBookingWorkflowProgressProjector();
+
 const workflowRegistry = new WorkflowDefinitionRegistry([
-  new AuditWorkflowDefinition(auditRequestService),
-  new ContactWorkflowDefinition(contactService),
-  new MeetingBookingWorkflowDefinition(meetingService),
+  new AuditWorkflowDefinition(auditRequestService, auditWorkflowProgress),
+  new ContactWorkflowDefinition(contactService, contactWorkflowProgress),
+  new MeetingBookingWorkflowDefinition(meetingService, meetingBookingWorkflowProgress),
 ]);
 
 export const workflowService = new WorkflowService(

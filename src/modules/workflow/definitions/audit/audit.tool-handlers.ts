@@ -1,5 +1,6 @@
 import type { Prisma } from "@/generated/prisma/client";
 import type { AuditService } from "@/modules/audit/service";
+import type { IWorkflowProgressProjector } from "../../interfaces";
 import type { WorkflowExecutionContext, WorkflowExecutionResult } from "../../types";
 import {
   auditStateSchema,
@@ -13,10 +14,10 @@ import {
   SUBMIT_AUDIT_TOOL,
   UPDATE_AUDIT_CONTEXT_TOOL,
 } from "./audit.tools";
-import { missingAuditFields } from "./audit.progress";
 
 type ExecuteAuditToolInput = {
   auditService: Pick<AuditService, "submit">;
+  progress: IWorkflowProgressProjector<AuditState>;
   name: string;
   rawArguments: string;
   state: AuditState;
@@ -25,6 +26,7 @@ type ExecuteAuditToolInput = {
 
 export async function executeAuditTool({
   auditService,
+  progress,
   name,
   rawArguments,
   state,
@@ -40,19 +42,19 @@ export async function executeAuditTool({
     const parsed = updateAuditContextSchema.safeParse(args);
 
     return parsed.success
-      ? updateContext(state, parsed.data.updates)
+      ? updateContext(progress, state, parsed.data.updates)
       : active(state, invalidArguments());
   }
 
   if (name === PREPARE_AUDIT_SUBMISSION_TOOL.name) {
     return noAuditArgumentsSchema.safeParse(args).success
-      ? prepareSubmission(state, context)
+      ? prepareSubmission(progress, state, context)
       : active(state, invalidArguments());
   }
 
   if (name === SUBMIT_AUDIT_TOOL.name) {
     return noAuditArgumentsSchema.safeParse(args).success
-      ? submitAudit(auditService, state, context)
+      ? submitAudit(auditService, progress, state, context)
       : active(state, invalidArguments());
   }
 
@@ -63,6 +65,7 @@ export async function executeAuditTool({
 }
 
 function updateContext(
+  progress: IWorkflowProgressProjector<AuditState>,
   state: AuditState,
   updates: Array<{ field: AuditUpdateField; value: string | null }>,
 ): WorkflowExecutionResult<AuditState> {
@@ -94,19 +97,20 @@ function updateContext(
 
   return active(nextState, {
     kind: "context_updated",
-    missingRequiredFields: missingAuditFields(nextState),
+    missingRequiredFields: progress.getMissingRequiredFields(nextState),
     message:
-      missingAuditFields(nextState).length > 0
+      progress.getMissingRequiredFields(nextState).length > 0
         ? "Ask only for the remaining required audit details."
         : "All required audit details are available. Prepare the submission summary next.",
   });
 }
 
 function prepareSubmission(
+  progress: IWorkflowProgressProjector<AuditState>,
   state: AuditState,
   context: WorkflowExecutionContext,
 ): WorkflowExecutionResult<AuditState> {
-  const missing = missingAuditFields(state);
+  const missing = progress.getMissingRequiredFields(state);
 
   if (missing.length > 0) {
     return active(state, {
@@ -128,10 +132,11 @@ function prepareSubmission(
 
 async function submitAudit(
   auditService: Pick<AuditService, "submit">,
+  progress: IWorkflowProgressProjector<AuditState>,
   state: AuditState,
   context: WorkflowExecutionContext,
 ): Promise<WorkflowExecutionResult<AuditState>> {
-  const missing = missingAuditFields(state);
+  const missing = progress.getMissingRequiredFields(state);
 
   if (missing.length > 0 || !state.preparedInteractionId) {
     return active(state, {

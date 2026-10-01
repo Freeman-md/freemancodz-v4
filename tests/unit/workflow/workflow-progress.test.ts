@@ -1,14 +1,20 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { getAuditProgress } from "@/modules/workflow/definitions/audit/audit.progress";
-import { getContactProgress } from "@/modules/workflow/definitions/contact/contact.progress";
-import { getMeetingBookingProgress } from "@/modules/workflow/definitions/meeting-booking/meeting-booking.progress";
+import { AuditWorkflowProgressProjector } from "@/modules/workflow/definitions/audit/audit.progress";
+import { ContactWorkflowProgressProjector } from "@/modules/workflow/definitions/contact/contact.progress";
+import { MeetingBookingWorkflowProgressProjector } from "@/modules/workflow/definitions/meeting-booking/meeting-booking.progress";
 
 const interactionId = "11111111-1111-4111-8111-111111111111";
 
+const auditWorkflowProgress = new AuditWorkflowProgressProjector();
+
+const contactWorkflowProgress = new ContactWorkflowProgressProjector();
+
+const meetingBookingWorkflowProgress = new MeetingBookingWorkflowProgressProjector();
+
 test("contact progress exposes ordered public fields and accurate missing requirements", () => {
-  const collecting = getContactProgress(
+  const collecting = contactWorkflowProgress.getProgress(
     {
       name: "Jonathan",
       email: null,
@@ -30,7 +36,7 @@ test("contact progress exposes ordered public fields and accurate missing requir
     missingRequiredFields: ["email", "message"],
   });
 
-  const prepared = getContactProgress(
+  const prepared = contactWorkflowProgress.getProgress(
     {
       name: "Jonathan",
       email: "jonathan@example.com",
@@ -47,7 +53,7 @@ test("contact progress exposes ordered public fields and accurate missing requir
 });
 
 test("audit progress exposes only its nine approved visitor fields", () => {
-  const collecting = getAuditProgress(
+  const collecting = auditWorkflowProgress.getProgress(
     {
       focus: "Checkout",
       currentProcess: null,
@@ -85,7 +91,7 @@ test("audit progress exposes only its nine approved visitor fields", () => {
   ]);
   assert.equal(JSON.stringify(collecting).includes("preparedInteractionId"), false);
 
-  const completed = getAuditProgress(
+  const completed = auditWorkflowProgress.getProgress(
     {
       focus: "Checkout",
       currentProcess: "Manual review",
@@ -112,7 +118,7 @@ test("meeting progress exposes the selected slot without provider recovery state
     timezone: "Europe/London",
   };
 
-  const progress = getMeetingBookingProgress(
+  const progress = meetingBookingWorkflowProgress.getProgress(
     {
       step: "confirmed",
       name: "Visitor",

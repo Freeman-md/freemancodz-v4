@@ -2,10 +2,10 @@ import "server-only";
 
 import type { PrismaClient, WorkflowInstance } from "@/generated/prisma/client";
 import { WorkflowInstanceStoreError } from "./errors";
-import type { WorkflowInstanceStore } from "./interfaces";
+import type { IWorkflowInstanceRepository } from "./interfaces";
 import type { CreateWorkflowInstanceInput, SaveWorkflowInstanceInput } from "./types";
 
-export class WorkflowInstanceRepository implements WorkflowInstanceStore {
+export class WorkflowInstanceRepository implements IWorkflowInstanceRepository {
   constructor(private readonly database: PrismaClient) {}
 
   async create(input: CreateWorkflowInstanceInput): Promise<WorkflowInstance> {

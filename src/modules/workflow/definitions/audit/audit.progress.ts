@@ -1,4 +1,5 @@
 import type { WorkflowProgress } from "@/contracts/workflow-progress.contract";
+import type { IWorkflowProgressProjector } from "../../interfaces";
 import type { WorkflowInstanceStatus } from "../../types";
 import type { AuditState } from "./audit.schema";
 
@@ -15,30 +16,34 @@ const OPTIONAL_FIELDS = ["businessName", "websiteUrl", "additionalContext"] as c
 
 export type RequiredAuditField = (typeof REQUIRED_FIELDS)[number];
 
-export function getAuditProgress(
-  state: AuditState,
-  status: WorkflowInstanceStatus,
-): WorkflowProgress {
-  const missingRequiredFields = missingAuditFields(state);
+export class AuditWorkflowProgressProjector
+  implements IWorkflowProgressProjector<AuditState>
+{
+  getProgress(state: AuditState, status: WorkflowInstanceStatus): WorkflowProgress {
+    const missingRequiredFields = this.getMissingRequiredFields(state);
 
-  return {
-    phase: getPhase(state, status),
-    fields: [
-      ...REQUIRED_FIELDS.map((key) => ({ key, required: true, value: state[key] })),
-      ...OPTIONAL_FIELDS.map((key) => ({ key, required: false, value: state[key] })),
-    ],
-    missingRequiredFields,
-  };
-}
-
-export function missingAuditFields(state: AuditState): RequiredAuditField[] {
-  return REQUIRED_FIELDS.filter((field) => !state[field]);
-}
-
-function getPhase(state: AuditState, status: WorkflowInstanceStatus): WorkflowProgress["phase"] {
-  if (status !== "active") {
-    return status;
+    return {
+      phase: this.getPhase(state, status),
+      fields: [
+        ...REQUIRED_FIELDS.map((key) => ({ key, required: true, value: state[key] })),
+        ...OPTIONAL_FIELDS.map((key) => ({ key, required: false, value: state[key] })),
+      ],
+      missingRequiredFields,
+    };
   }
 
-  return state.preparedInteractionId ? "awaiting_confirmation" : "collecting";
+  getMissingRequiredFields(state: AuditState): RequiredAuditField[] {
+    return REQUIRED_FIELDS.filter((field) => !state[field]);
+  }
+
+  private getPhase(
+    state: AuditState,
+    status: WorkflowInstanceStatus,
+  ): WorkflowProgress["phase"] {
+    if (status !== "active") {
+      return status;
+    }
+
+    return state.preparedInteractionId ? "awaiting_confirmation" : "collecting";
+  }
 }

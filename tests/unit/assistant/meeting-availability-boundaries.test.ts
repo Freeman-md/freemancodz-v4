@@ -4,6 +4,7 @@ import type { CalendarClient } from "@/infrastructure/google-calendar/types";
 import type { MeetingStore } from "@/modules/meeting/types";
 import { MeetingService } from "@/modules/meeting/service";
 import { MeetingBookingWorkflowDefinition } from "@/modules/workflow/definitions/meeting-booking/meeting-booking.definition";
+import { MeetingBookingWorkflowProgressProjector } from "@/modules/workflow/definitions/meeting-booking/meeting-booking.progress";
 
 test("today is accepted while a wholly past availability range is rejected", async () => {
   const today = new Intl.DateTimeFormat("en-CA", {
@@ -22,7 +23,10 @@ test("today is accepted while a wholly past availability range is rejected", asy
     reconcileMeeting: async () => ({ googleEventId: "event", googleEventUrl: null }),
   };
 
-  const workflow = new MeetingBookingWorkflowDefinition(service);
+  const workflow = new MeetingBookingWorkflowDefinition(
+    service,
+    new MeetingBookingWorkflowProgressProjector(),
+  );
 
   const state = workflow.createInitialState({
     originChannel: "test",

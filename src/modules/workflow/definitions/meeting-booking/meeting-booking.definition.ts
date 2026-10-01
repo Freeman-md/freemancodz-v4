@@ -2,7 +2,7 @@ import "server-only";
 
 import type { OpenAIResponseTool } from "@/infrastructure/openai/types";
 import type { MeetingServiceClient } from "@/modules/meeting/types";
-import type { WorkflowDefinition } from "../../interfaces";
+import type { IWorkflowDefinition, IWorkflowProgressProjector } from "../../interfaces";
 import type {
   WorkflowExecutionContext,
   WorkflowExecutionResult,
@@ -16,11 +16,10 @@ import {
   FIND_MEETING_SLOTS_TOOL,
   PREPARE_MEETING_TOOL,
 } from "./meeting-booking.tools";
-import { getMeetingBookingProgress } from "./meeting-booking.progress";
 
 export const MEETING_BOOKING_WORKFLOW_ID = "meeting-booking";
 
-export class MeetingBookingWorkflowDefinition implements WorkflowDefinition<MeetingBookingState> {
+export class MeetingBookingWorkflowDefinition implements IWorkflowDefinition<MeetingBookingState> {
   readonly id = MEETING_BOOKING_WORKFLOW_ID;
 
   readonly version = 1;
@@ -29,7 +28,10 @@ export class MeetingBookingWorkflowDefinition implements WorkflowDefinition<Meet
 
   readonly stateSchema = meetingBookingStateSchema;
 
-  constructor(private readonly meetingService: MeetingServiceClient) {}
+  constructor(
+    private readonly meetingService: MeetingServiceClient,
+    private readonly progress: IWorkflowProgressProjector<MeetingBookingState>,
+  ) {}
 
   createInitialState(_context: WorkflowStartContext): MeetingBookingState {
     return {
@@ -46,7 +48,7 @@ export class MeetingBookingWorkflowDefinition implements WorkflowDefinition<Meet
   }
 
   getProgress(state: MeetingBookingState, status: "active" | "completed" | "cancelled") {
-    return getMeetingBookingProgress(state, status);
+    return this.progress.getProgress(state, status);
   }
 
   getInstructions(state: MeetingBookingState): string {

@@ -14,7 +14,7 @@ import type {
   WorkflowToolExecutionResult,
 } from "./types";
 
-export interface WorkflowDefinition<State extends Prisma.JsonObject = Prisma.JsonObject> {
+export interface IWorkflowDefinition<State extends Prisma.JsonObject = Prisma.JsonObject> {
   readonly id: string;
   readonly version: number;
   readonly description: string;
@@ -31,13 +31,18 @@ export interface WorkflowDefinition<State extends Prisma.JsonObject = Prisma.Jso
   ): Promise<WorkflowExecutionResult<State>>;
 }
 
-export interface WorkflowInstanceStore {
+export interface IWorkflowProgressProjector<State extends Prisma.JsonObject> {
+  getProgress(state: State, status: WorkflowPublicInstance["status"]): WorkflowProgress;
+  getMissingRequiredFields(state: State): string[];
+}
+
+export interface IWorkflowInstanceRepository {
   create(input: CreateWorkflowInstanceInput): Promise<WorkflowInstance>;
   findById(id: string): Promise<WorkflowInstance | null>;
   save(input: SaveWorkflowInstanceInput): Promise<WorkflowInstance>;
 }
 
-export interface WorkflowServiceClient {
+export interface IWorkflowService {
   start(workflowId: string, context: WorkflowStartContext): Promise<WorkflowPublicInstance>;
   getAssistantContext(instanceId: string | null): Promise<WorkflowAssistantContext>;
   executeTool(

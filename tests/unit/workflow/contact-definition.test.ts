@@ -4,11 +4,14 @@ import test from "node:test";
 import type { ContactRequest } from "@/generated/prisma/client";
 import type { ContactService } from "@/modules/contact/service";
 import { ContactWorkflowDefinition } from "@/modules/workflow/definitions/contact/contact.definition";
+import { ContactWorkflowProgressProjector } from "@/modules/workflow/definitions/contact/contact.progress";
 
 const PREPARATION = {
   workflowInstanceId: "11111111-1111-4111-8111-111111111111",
   interactionId: "22222222-2222-4222-8222-222222222222",
 };
+
+const contactWorkflowProgress = new ContactWorkflowProgressProjector();
 
 const CONFIRMATION = {
   workflowInstanceId: PREPARATION.workflowInstanceId,
@@ -55,7 +58,7 @@ function createContactService() {
 test("Contact collects all supplied details and asks only for missing required fields", async () => {
   const contact = createContactService();
 
-  const definition = new ContactWorkflowDefinition(contact.service);
+  const definition = new ContactWorkflowDefinition(contact.service, contactWorkflowProgress);
 
   const initial = definition.createInitialState({
     originChannel: "web",
@@ -85,7 +88,7 @@ test("Contact collects all supplied details and asks only for missing required f
 test("Contact requires preparation and later confirmation, invalidates corrections, and stays idempotent", async () => {
   const contact = createContactService();
 
-  const definition = new ContactWorkflowDefinition(contact.service);
+  const definition = new ContactWorkflowDefinition(contact.service, contactWorkflowProgress);
 
   const initial = definition.createInitialState({
     originChannel: "web",

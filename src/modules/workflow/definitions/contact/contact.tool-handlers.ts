@@ -1,5 +1,6 @@
 import type { Prisma } from "@/generated/prisma/client";
 import type { ContactService } from "@/modules/contact/service";
+import type { IWorkflowProgressProjector } from "../../interfaces";
 import type { WorkflowExecutionContext, WorkflowExecutionResult } from "../../types";
 import {
   contactStateSchema,
@@ -13,16 +14,17 @@ import {
   SUBMIT_CONTACT_TOOL,
   UPDATE_CONTACT_CONTEXT_TOOL,
 } from "./contact.tools";
-import { missingContactFields } from "./contact.progress";
 
 export async function executeContactTool({
   contactService,
+  progress,
   name,
   rawArguments,
   state,
   context,
 }: {
   contactService: Pick<ContactService, "submit">;
+  progress: IWorkflowProgressProjector<ContactState>;
   name: string;
   rawArguments: string;
   state: ContactState;
@@ -38,19 +40,19 @@ export async function executeContactTool({
     const parsed = updateContactContextSchema.safeParse(args);
 
     return parsed.success
-      ? updateContext(state, parsed.data.updates)
+      ? updateContext(progress, state, parsed.data.updates)
       : active(state, invalidArguments());
   }
 
   if (name === PREPARE_CONTACT_SUBMISSION_TOOL.name) {
     return noContactArgumentsSchema.safeParse(args).success
-      ? prepareSubmission(state, context)
+      ? prepareSubmission(progress, state, context)
       : active(state, invalidArguments());
   }
 
   if (name === SUBMIT_CONTACT_TOOL.name) {
     return noContactArgumentsSchema.safeParse(args).success
-      ? submitContact(contactService, state, context)
+      ? submitContact(contactService, progress, state, context)
       : active(state, invalidArguments());
   }
 
@@ -61,6 +63,7 @@ export async function executeContactTool({
 }
 
 function updateContext(
+  progress: IWorkflowProgressProjector<ContactState>,
   state: ContactState,
   updates: Array<{ field: ContactUpdateField; value: string | null }>,
 ): WorkflowExecutionResult<ContactState> {
@@ -90,7 +93,7 @@ function updateContext(
 
   const nextState = changed ? { ...validated.data, preparedInteractionId: null } : validated.data;
 
-  const missing = missingContactFields(nextState);
+  const missing = progress.getMissingRequiredFields(nextState);
 
   return active(nextState, {
     kind: "context_updated",
@@ -103,10 +106,11 @@ function updateContext(
 }
 
 function prepareSubmission(
+  progress: IWorkflowProgressProjector<ContactState>,
   state: ContactState,
   context: WorkflowExecutionContext,
 ): WorkflowExecutionResult<ContactState> {
-  const missing = missingContactFields(state);
+  const missing = progress.getMissingRequiredFields(state);
 
   if (missing.length > 0) {
     return active(state, {
@@ -133,10 +137,14 @@ function prepareSubmission(
 
 async function submitContact(
   contactService: Pick<ContactService, "submit">,
+  progress: IWorkflowProgressProjector<ContactState>,
   state: ContactState,
   context: WorkflowExecutionContext,
 ): Promise<WorkflowExecutionResult<ContactState>> {
-  if (missingContactFields(state).length > 0 || !state.preparedInteractionId) {
+  if (
+    progress.getMissingRequiredFields(state).length > 0 ||
+    !state.preparedInteractionId
+  ) {
     return active(state, {
       error: "preparation_required",
       message: "Prepare a complete contact summary before submission.",

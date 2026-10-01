@@ -2,7 +2,7 @@ import "server-only";
 
 import type { OpenAIResponseTool } from "@/infrastructure/openai/types";
 import type { ContactService } from "@/modules/contact/service";
-import type { WorkflowDefinition } from "../../interfaces";
+import type { IWorkflowDefinition, IWorkflowProgressProjector } from "../../interfaces";
 import type {
   WorkflowExecutionContext,
   WorkflowExecutionResult,
@@ -15,11 +15,10 @@ import {
   SUBMIT_CONTACT_TOOL,
   UPDATE_CONTACT_CONTEXT_TOOL,
 } from "./contact.tools";
-import { getContactProgress, missingContactFields } from "./contact.progress";
 
 export const CONTACT_WORKFLOW_ID = "contact";
 
-export class ContactWorkflowDefinition implements WorkflowDefinition<ContactState> {
+export class ContactWorkflowDefinition implements IWorkflowDefinition<ContactState> {
   readonly id = CONTACT_WORKFLOW_ID;
 
   readonly version = 1;
@@ -28,7 +27,10 @@ export class ContactWorkflowDefinition implements WorkflowDefinition<ContactStat
 
   readonly stateSchema = contactStateSchema;
 
-  constructor(private readonly contactService: Pick<ContactService, "submit">) {}
+  constructor(
+    private readonly contactService: Pick<ContactService, "submit">,
+    private readonly progress: IWorkflowProgressProjector<ContactState>,
+  ) {}
 
   createInitialState(_context: WorkflowStartContext): ContactState {
     return {
@@ -41,11 +43,11 @@ export class ContactWorkflowDefinition implements WorkflowDefinition<ContactStat
   }
 
   getProgress(state: ContactState, status: "active" | "completed" | "cancelled") {
-    return getContactProgress(state, status);
+    return this.progress.getProgress(state, status);
   }
 
   getInstructions(state: ContactState): string {
-    const missing = missingContactFields(state);
+    const missing = this.progress.getMissingRequiredFields(state);
 
     if (state.preparedInteractionId) {
       return `${CONTACT_INSTRUCTIONS}\nA complete summary has been prepared. Present it and wait for explicit confirmation in a later visitor message before calling submit_contact. If the visitor corrects anything, save every correction first and prepare a new summary.`;
@@ -63,7 +65,7 @@ export class ContactWorkflowDefinition implements WorkflowDefinition<ContactStat
       return [UPDATE_CONTACT_CONTEXT_TOOL, PREPARE_CONTACT_SUBMISSION_TOOL, SUBMIT_CONTACT_TOOL];
     }
 
-    return missingContactFields(state).length === 0
+    return this.progress.getMissingRequiredFields(state).length === 0
       ? [UPDATE_CONTACT_CONTEXT_TOOL, PREPARE_CONTACT_SUBMISSION_TOOL]
       : [UPDATE_CONTACT_CONTEXT_TOOL];
   }
@@ -76,6 +78,7 @@ export class ContactWorkflowDefinition implements WorkflowDefinition<ContactStat
   ): Promise<WorkflowExecutionResult<ContactState>> {
     return executeContactTool({
       contactService: this.contactService,
+      progress: this.progress,
       name,
       rawArguments,
       state,

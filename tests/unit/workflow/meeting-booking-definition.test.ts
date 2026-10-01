@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { MeetingBookingWorkflowDefinition } from "@/modules/workflow/definitions/meeting-booking/meeting-booking.definition";
+import { MeetingBookingWorkflowProgressProjector } from "@/modules/workflow/definitions/meeting-booking/meeting-booking.progress";
 import {
   findMeetingSlotsSchema,
   prepareMeetingSchema,
@@ -16,6 +17,8 @@ const slot = {
   end: "2099-09-15T11:30:00.000Z",
   timezone: "Europe/London",
 };
+
+const meetingBookingWorkflowProgress = new MeetingBookingWorkflowProgressProjector();
 
 const startContext = {
   originChannel: "test",
@@ -77,6 +80,7 @@ test("preparation requires a later explicit confirmation transition before booki
         return { googleEventId: "event_test", googleEventUrl: null };
       },
     }),
+    meetingBookingWorkflowProgress,
   );
 
   const prepared = await prepareDefinition(definition);
@@ -205,7 +209,10 @@ test("a persistence retry reconciles one created event without exposing provider
     },
   );
 
-  const definition = new MeetingBookingWorkflowDefinition(meetingService);
+  const definition = new MeetingBookingWorkflowDefinition(
+    meetingService,
+    meetingBookingWorkflowProgress,
+  );
 
   const prepared = await prepareDefinition(definition);
 
@@ -257,6 +264,7 @@ test("a persistence retry reconciles one created event without exposing provider
 test("an unavailable confirmed slot forces a fresh availability check", async () => {
   const definition = new MeetingBookingWorkflowDefinition(
     createMeetingService({ isSlotAvailable: async () => false }),
+    meetingBookingWorkflowProgress,
   );
 
   const prepared = await prepareDefinition(definition);

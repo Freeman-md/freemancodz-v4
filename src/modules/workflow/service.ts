@@ -8,9 +8,9 @@ import {
 } from "@/contracts/workflow-progress.contract";
 import { WorkflowInstanceStoreError, WorkflowServiceError } from "./errors";
 import type {
-  WorkflowDefinition,
-  WorkflowInstanceStore,
-  WorkflowServiceClient,
+  IWorkflowDefinition,
+  IWorkflowInstanceRepository,
+  IWorkflowService,
 } from "./interfaces";
 import {
   type WorkflowAssistantContext,
@@ -28,17 +28,21 @@ import {
   WorkflowInstanceStatusSchema,
   WorkflowStartContextSchema,
 } from "./schemas/workflow-control.schema";
-import { CANCEL_WORKFLOW_TOOL_NAME, START_WORKFLOW_TOOL_NAME } from "./constants";
+import {
+  CANCEL_WORKFLOW_TOOL_NAME,
+  START_WORKFLOW_TOOL_NAME,
+  SWITCH_WORKFLOW_TOOL_NAME,
+} from "./constants";
 
 const INSTANCE_ID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-export class WorkflowService implements WorkflowServiceClient {
+export class WorkflowService implements IWorkflowService {
   private readonly globalToolNames: ReadonlySet<string>;
 
   constructor(
     private readonly registry: WorkflowDefinitionRegistry,
-    private readonly repository: WorkflowInstanceStore,
+    private readonly repository: IWorkflowInstanceRepository,
     globalToolNames: readonly string[],
     private readonly clock: () => Date = () => new Date(),
   ) {
@@ -46,7 +50,8 @@ export class WorkflowService implements WorkflowServiceClient {
 
     if (
       this.globalToolNames.has(START_WORKFLOW_TOOL_NAME) ||
-      this.globalToolNames.has(CANCEL_WORKFLOW_TOOL_NAME)
+      this.globalToolNames.has(CANCEL_WORKFLOW_TOOL_NAME) ||
+      this.globalToolNames.has(SWITCH_WORKFLOW_TOOL_NAME)
     ) {
       throw new WorkflowServiceError(
         "configuration_error",
@@ -117,7 +122,11 @@ export class WorkflowService implements WorkflowServiceClient {
 
     return {
       instructions: this.getDefinitionInstructions(definition, state),
-      tools: [createCancelWorkflowTool(), ...this.getDefinitionTools(definition, state)],
+      tools: [
+        createCancelWorkflowTool(),
+        ...createSwitchWorkflowTools(this.registry.listRoutable(), instance.workflowId),
+        ...this.getDefinitionTools(definition, state),
+      ],
       instance: publicInstance,
     };
   }
@@ -151,6 +160,10 @@ export class WorkflowService implements WorkflowServiceClient {
     const definition = this.resolveDefinition(instance);
 
     const state = this.validateState(definition, instance.state);
+
+    if (toolCall.name === SWITCH_WORKFLOW_TOOL_NAME) {
+      return this.switchWorkflow(instance, state, toolCall);
+    }
 
     if (toolCall.name === CANCEL_WORKFLOW_TOOL_NAME) {
       parseControlArguments(toolCall.rawArguments, CancelWorkflowArgumentsSchema);
@@ -283,6 +296,48 @@ export class WorkflowService implements WorkflowServiceClient {
     );
   }
 
+  private async switchWorkflow(
+    instance: WorkflowInstance,
+    state: Prisma.JsonObject,
+    toolCall: WorkflowToolCall,
+  ): Promise<WorkflowToolExecutionResult> {
+    if (!toolCall.startContext) {
+      throw new WorkflowServiceError("invalid_request", "The workflow origin is required.");
+    }
+
+    const { workflowId } = parseControlArguments(
+      toolCall.rawArguments,
+      StartWorkflowArgumentsSchema,
+    );
+
+    if (workflowId === instance.workflowId) {
+      const definition = this.resolveDefinition(instance);
+
+      return {
+        output: { message: "That workflow is already active.", workflowId },
+        instance: toWorkflowPublicInstance(
+          instance,
+          this.getDefinitionProgress(definition, state, "active"),
+        ),
+      };
+    }
+
+    if (!this.registry.getLatest(workflowId)) {
+      throw new WorkflowServiceError(
+        "unavailable_definition",
+        "The requested workflow is unavailable.",
+      );
+    }
+
+    await this.cancelLoadedInstance(instance, state);
+    const replacement = await this.start(workflowId, toolCall.startContext);
+
+    return {
+      output: { message: "The workflow was switched.", workflowId: replacement.workflowId },
+      instance: replacement,
+    };
+  }
+
   private async loadInstance(instanceId: string): Promise<WorkflowInstance> {
     if (!INSTANCE_ID_PATTERN.test(instanceId)) {
       throw new WorkflowServiceError("not_found", "The workflow instance was not found.");
@@ -297,7 +352,7 @@ export class WorkflowService implements WorkflowServiceClient {
     return instance;
   }
 
-  private resolveDefinition(instance: WorkflowInstance): WorkflowDefinition {
+  private resolveDefinition(instance: WorkflowInstance): IWorkflowDefinition {
     const definition = this.registry.get(instance.workflowId, instance.workflowVersion);
 
     if (!definition) {
@@ -311,7 +366,7 @@ export class WorkflowService implements WorkflowServiceClient {
   }
 
   private createInitialState(
-    definition: WorkflowDefinition,
+    definition: IWorkflowDefinition,
     context: WorkflowStartContext,
   ): Prisma.JsonObject {
     try {
@@ -327,7 +382,7 @@ export class WorkflowService implements WorkflowServiceClient {
     }
   }
 
-  private validateState(definition: WorkflowDefinition, state: unknown): Prisma.JsonObject {
+  private validateState(definition: IWorkflowDefinition, state: unknown): Prisma.JsonObject {
     const result = definition.stateSchema.safeParse(state);
 
     if (!result.success) {
@@ -338,7 +393,7 @@ export class WorkflowService implements WorkflowServiceClient {
   }
 
   private getDefinitionInstructions(
-    definition: WorkflowDefinition,
+    definition: IWorkflowDefinition,
     state: Prisma.JsonObject,
   ): string {
     try {
@@ -353,7 +408,7 @@ export class WorkflowService implements WorkflowServiceClient {
   }
 
   private getDefinitionTools(
-    definition: WorkflowDefinition,
+    definition: IWorkflowDefinition,
     state: Prisma.JsonObject,
   ): OpenAIResponseTool[] {
     let tools: OpenAIResponseTool[];
@@ -370,6 +425,7 @@ export class WorkflowService implements WorkflowServiceClient {
       if (
         tool.name === START_WORKFLOW_TOOL_NAME ||
         tool.name === CANCEL_WORKFLOW_TOOL_NAME ||
+        tool.name === SWITCH_WORKFLOW_TOOL_NAME ||
         this.globalToolNames.has(tool.name)
       ) {
         throw new WorkflowServiceError(
@@ -383,7 +439,7 @@ export class WorkflowService implements WorkflowServiceClient {
   }
 
   private getDefinitionProgress(
-    definition: WorkflowDefinition,
+    definition: IWorkflowDefinition,
     state: Prisma.JsonObject,
     status: WorkflowPublicInstance["status"],
   ): WorkflowProgress {
@@ -412,7 +468,7 @@ export class WorkflowService implements WorkflowServiceClient {
   }
 
   private async executeDefinitionTool(
-    definition: WorkflowDefinition,
+    definition: IWorkflowDefinition,
     toolCall: WorkflowToolCall,
     state: Prisma.JsonObject,
     workflowInstanceId: string,
@@ -491,7 +547,7 @@ function parseControlArguments<Output>(
   return result.data;
 }
 
-function createStartWorkflowTool(definitions: readonly WorkflowDefinition[]): OpenAIResponseTool {
+function createStartWorkflowTool(definitions: readonly IWorkflowDefinition[]): OpenAIResponseTool {
   return {
     type: "function",
     name: START_WORKFLOW_TOOL_NAME,
@@ -558,4 +614,38 @@ function createCancelWorkflowTool(): OpenAIResponseTool {
       properties: {},
     },
   };
+}
+
+function createSwitchWorkflowTools(
+  definitions: readonly IWorkflowDefinition[],
+  activeWorkflowId: string,
+): OpenAIResponseTool[] {
+  const workflowIds = definitions
+    .filter(({ id }) => id !== activeWorkflowId)
+    .map(({ id }) => id);
+
+  if (workflowIds.length === 0) {
+    return [];
+  }
+
+  return [
+    {
+      type: "function",
+      name: SWITCH_WORKFLOW_TOOL_NAME,
+      description:
+        "Cancel the active workflow and start another one only after the visitor explicitly chooses to switch.",
+      strict: true,
+      parameters: {
+        type: "object",
+        additionalProperties: false,
+        required: ["workflowId"],
+        properties: {
+          workflowId: {
+            type: "string",
+            enum: workflowIds,
+          },
+        },
+      },
+    },
+  ];
 }

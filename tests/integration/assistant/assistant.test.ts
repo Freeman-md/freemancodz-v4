@@ -12,11 +12,14 @@ import type {
   RateLimitResult,
 } from "@/modules/rate-limit/rate-limit.types";
 import type { RateLimitService } from "@/modules/rate-limit/service";
-import type { WorkflowInstanceStore } from "@/modules/workflow/interfaces";
+import type { IWorkflowInstanceRepository } from "@/modules/workflow/interfaces";
 import type { WorkflowInstance } from "@/generated/prisma/client";
 import { MeetingBookingWorkflowDefinition } from "@/modules/workflow/definitions/meeting-booking/meeting-booking.definition";
+import { MeetingBookingWorkflowProgressProjector } from "@/modules/workflow/definitions/meeting-booking/meeting-booking.progress";
 import { AuditWorkflowDefinition } from "@/modules/workflow/definitions/audit/audit.definition";
+import { AuditWorkflowProgressProjector } from "@/modules/workflow/definitions/audit/audit.progress";
 import { ContactWorkflowDefinition } from "@/modules/workflow/definitions/contact/contact.definition";
+import { ContactWorkflowProgressProjector } from "@/modules/workflow/definitions/contact/contact.progress";
 import { WorkflowDefinitionRegistry } from "@/modules/workflow/registry";
 import type {
   CreateWorkflowInstanceInput,
@@ -123,15 +126,18 @@ function createAssistant({
           ...input,
           createdAt: new Date("2026-08-20T10:00:00.000Z"),
         }),
-      }),
+      }, new AuditWorkflowProgressProjector()),
       new ContactWorkflowDefinition({
         submit: async (input) => ({
           id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
           ...input,
           createdAt: new Date("2026-08-20T10:00:00.000Z"),
         }),
-      }),
-      new MeetingBookingWorkflowDefinition(meetingService),
+      }, new ContactWorkflowProgressProjector()),
+      new MeetingBookingWorkflowDefinition(
+        meetingService,
+        new MeetingBookingWorkflowProgressProjector(),
+      ),
     ]),
     workflowRepository,
     ["search_website"],
@@ -194,8 +200,8 @@ test("allowed chat requests consume the configured rules and stream without mand
       scope: "chat",
       identifier: "test-client",
       rules: [
-        { id: "short", limit: 10, windowMs: 10 * 60 * 1000 },
-        { id: "daily", limit: 30, windowMs: 24 * 60 * 60 * 1000 },
+        { id: "short", limit: 20, windowMs: 10 * 60 * 1000 },
+        { id: "daily", limit: 50, windowMs: 24 * 60 * 60 * 1000 },
       ],
     },
   ]);
@@ -359,7 +365,7 @@ test("starting a workflow changes instructions and tools on the next iteration i
   assert.match(JSON.stringify(inputs[0]?.tools[1]?.parameters), /"audit"/);
   assert.deepEqual(
     inputs[1]?.tools.map(({ name }) => name),
-    ["search_website", "cancel_workflow", "find_meeting_slots"],
+    ["search_website", "cancel_workflow", "switch_workflow", "find_meeting_slots"],
   );
   assert.doesNotMatch(inputs[0]?.instructions ?? "", /meeting-booking workflow/i);
   assert.match(inputs[1]?.instructions ?? "", /meeting-booking workflow/i);
@@ -396,7 +402,7 @@ test("an Audit CTA starts deterministically with bounded origin metadata", async
   assert.equal(stored?.originEntry, "home-audit-cta");
   assert.deepEqual(
     inputs[0]?.tools.map(({ name }) => name),
-    ["search_website", "cancel_workflow", "update_audit_context"],
+    ["search_website", "cancel_workflow", "switch_workflow", "update_audit_context"],
   );
   assert.match(inputs[0]?.instructions ?? "", /free customer journey and workflow Audit/);
   assert.match(output, /"workflowId":"audit"/);
@@ -433,6 +439,135 @@ test("an explicit start replaces a restored terminal workflow instance", async (
   assert.equal(started?.status, "active");
   assert.match(output, /"id":"00000000-0000-4000-8000-000000000002"/);
   assert.match(output, /"status":"active"/);
+});
+
+test("a repeated deterministic start reuses the active workflow instance", async () => {
+  const { post, workflowRepository, workflowService } = createAssistant();
+
+  const active = await workflowService.start("contact", {
+    originChannel: "web",
+    originPage: "/",
+    originEntry: "assistant-starter-contact",
+  });
+
+  const output = await readChatResponse(
+    await post(
+      chatRequest({
+        message: "I'd like to leave Freeman a message.",
+        workflowInstanceId: active.id,
+        workflowStart: {
+          workflowId: "contact",
+          originPage: "/",
+          originEntry: "assistant-starter-contact",
+        },
+      }),
+    ),
+  );
+
+  assert.equal(
+    await workflowRepository.findById("00000000-0000-4000-8000-000000000002"),
+    null,
+  );
+  assert.match(output, new RegExp(active.id));
+  assert.match(output, /"workflowId":"contact"/);
+});
+
+test("a different workflow request asks for a choice before cancelling and switching", async () => {
+  const { inputs, post, workflowRepository, workflowService } = createAssistant({
+    response: async (request) => {
+      const toolNames = request.tools.map(({ name }) => name);
+
+      if (toolNames.length === 0) {
+        return events(
+          { type: "response.created", response: { id: "resp_workflow_choice" } },
+          {
+            type: "response.output_text.delta",
+            delta: "Continue your message, or cancel it and switch to the audit?",
+          },
+          { type: "response.completed", response: { id: "resp_workflow_choice" } },
+        );
+      }
+
+      if (toolNames.includes("update_audit_context")) {
+        return events(
+          { type: "response.created", response: { id: "resp_switched" } },
+          { type: "response.output_text.delta", delta: "Let's start your audit." },
+          { type: "response.completed", response: { id: "resp_switched" } },
+        );
+      }
+
+      if (toolNames.includes("switch_workflow")) {
+        return events(
+          { type: "response.created", response: { id: "resp_switch_workflow" } },
+          {
+            type: "response.output_item.done",
+            item: {
+              type: "function_call",
+              call_id: "call_switch_workflow",
+              name: "switch_workflow",
+              arguments: '{"workflowId":"audit"}',
+            },
+          },
+          { type: "response.completed", response: { id: "resp_switch_workflow" } },
+        );
+      }
+
+      throw new Error(`Unexpected tools: ${toolNames.join(", ")}`);
+    },
+  });
+
+  const active = await workflowService.start("contact", {
+    originChannel: "web",
+    originPage: "/",
+    originEntry: "assistant-starter-contact",
+  });
+
+  const choiceOutput = await readChatResponse(
+    await post(
+      chatRequest({
+        message: "I'd like to request a free audit.",
+        workflowInstanceId: active.id,
+        workflowStart: {
+          workflowId: "audit",
+          originPage: "/",
+          originEntry: "assistant-starter-audit",
+        },
+      }),
+    ),
+  );
+
+  assert.deepEqual(inputs[0]?.tools, []);
+  assert.match(inputs[0]?.instructions ?? "", /exactly two choices/);
+  assert.match(
+    inputs[0]?.input[0]?.type === "user_message" ? inputs[0].input[0].content : "",
+    /"activeWorkflowId":"contact","requestedWorkflowId":"audit"/,
+  );
+  assert.match(choiceOutput, /Continue your message/);
+  assert.equal((await workflowRepository.findById(active.id))?.status, "active");
+  assert.equal(
+    await workflowRepository.findById("00000000-0000-4000-8000-000000000002"),
+    null,
+  );
+
+  const switchedOutput = await readChatResponse(
+    await post(
+      chatRequest({
+        message: "Switch.",
+        previousResponseId: "resp_workflow_choice",
+        workflowInstanceId: active.id,
+      }),
+    ),
+  );
+
+  const replacement = await workflowRepository.findById(
+    "00000000-0000-4000-8000-000000000002",
+  );
+
+  assert.equal((await workflowRepository.findById(active.id))?.status, "cancelled");
+  assert.equal(replacement?.workflowId, "audit");
+  assert.equal(replacement?.status, "active");
+  assert.match(switchedOutput, /"id":"00000000-0000-4000-8000-000000000002"/);
+  assert.match(switchedOutput, /Let's start your audit\./);
 });
 
 test("provider failure after a durable start still streams the safe active instance ID", async () => {
@@ -603,6 +738,7 @@ test("terminal workflow metadata clears the active surface without streaming pri
     [
       "search_website",
       "cancel_workflow",
+      "switch_workflow",
       "find_meeting_slots",
       "prepare_meeting",
       "confirm_meeting",
@@ -610,7 +746,7 @@ test("terminal workflow metadata clears the active surface without streaming pri
   );
   assert.deepEqual(
     inputs[1]?.tools.map(({ name }) => name),
-    ["search_website", "cancel_workflow", "book_meeting"],
+    ["search_website", "cancel_workflow", "switch_workflow", "book_meeting"],
   );
   assert.deepEqual(
     inputs[2]?.tools.map(({ name }) => name),
@@ -734,7 +870,7 @@ test("denied chat requests return the current limit response without invoking th
   const rateLimit: Pick<RateLimitService, "consume"> = {
     consume: async (): Promise<RateLimitResult> => ({
       allowed: false,
-      limit: 10,
+      limit: 20,
       remaining: 0,
       resetAt: Date.now() + 60_000,
     }),
@@ -748,7 +884,7 @@ test("denied chat requests return the current limit response without invoking th
   assert.deepEqual(await response.json(), {
     error: "Too many messages. Please try again in a few minutes.",
   });
-  assert.equal(response.headers.get("X-RateLimit-Limit"), "10");
+  assert.equal(response.headers.get("X-RateLimit-Limit"), "20");
   assert.equal(response.headers.get("X-RateLimit-Remaining"), "0");
   assert.ok(Number(response.headers.get("Retry-After")) >= 1);
   assert.equal(inputs.length, 0);
@@ -778,7 +914,7 @@ test("rate-limit failures return a generic unavailable response without invoking
   ]);
 });
 
-class MemoryWorkflowInstanceRepository implements WorkflowInstanceStore {
+class MemoryWorkflowInstanceRepository implements IWorkflowInstanceRepository {
   private readonly instances = new Map<string, WorkflowInstance>();
 
   private sequence = 0;
