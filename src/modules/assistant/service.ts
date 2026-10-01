@@ -11,8 +11,8 @@ import type { SiteSearch } from "@/modules/search-index/types";
 import type { Logger } from "@/infrastructure/logging/logger";
 import type { AssistantSource, AssistantStreamEvent } from "@/contracts/assistant.contract";
 import { START_WORKFLOW_TOOL_NAME } from "@/modules/workflow/constants";
+import type { WorkflowServiceClient } from "@/modules/workflow/interfaces";
 import type {
-  WorkflowServiceClient,
   WorkflowAssistantContext,
   WorkflowPublicInstance,
 } from "@/modules/workflow/types";

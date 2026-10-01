@@ -12,7 +12,7 @@ import type {
   RateLimitResult,
 } from "@/modules/rate-limit/rate-limit.types";
 import type { RateLimitService } from "@/modules/rate-limit/service";
-import type { WorkflowInstanceStore } from "@/modules/workflow/types";
+import type { WorkflowInstanceStore } from "@/modules/workflow/interfaces";
 import type { WorkflowInstance } from "@/generated/prisma/client";
 import { MeetingBookingWorkflowDefinition } from "@/modules/workflow/definitions/meeting-booking/meeting-booking.definition";
 import { AuditWorkflowDefinition } from "@/modules/workflow/definitions/audit/audit.definition";

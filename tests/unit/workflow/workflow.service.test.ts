@@ -3,9 +3,11 @@ import test from "node:test";
 
 import type { WorkflowInstance } from "@/generated/prisma/client";
 import type { OpenAIResponseTool } from "@/infrastructure/openai/types";
-import type { WorkflowInstanceStore } from "@/modules/workflow/types";
-import { WorkflowInstanceStoreError } from "@/modules/workflow/types";
-import type { WorkflowDefinition } from "@/modules/workflow/types";
+import { WorkflowInstanceStoreError } from "@/modules/workflow/errors";
+import type {
+  WorkflowDefinition,
+  WorkflowInstanceStore,
+} from "@/modules/workflow/interfaces";
 import { WorkflowDefinitionRegistry } from "@/modules/workflow/registry";
 import type {
   CreateWorkflowInstanceInput,

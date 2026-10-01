@@ -58,16 +58,19 @@ import { WorkflowDefinitionRegistry } from "./workflow/registry";
 
 export { PortfolioAdministrationError } from "./portfolio/services/administration.service";
 
+// Shared infrastructure
 const openAIProvider = new OpenAIClient(createOpenAIClient, getEmbeddingModel, getResponseModel);
 
 export { logger };
 
+// Admin authentication
 export const adminAuthService = new AdminAuthService(
   new SupabaseAuth(createSupabaseAuthClient, createSupabaseAdminAuthClient),
   getAdminEmail(),
   logger,
 );
 
+// Notifications
 const resendClient = new ResendClient(getResendConfig);
 
 const notificationService = new NotificationService(
@@ -76,16 +79,15 @@ const notificationService = new NotificationService(
   logger,
 );
 
+// Audit, contact, and meetings
 export const auditRequestService = new AuditRequestService(
   new AuditRequestRepository(prisma),
   notificationService,
 );
-
 export const contactService = new ContactService(
   new ContactRequestRepository(prisma),
   notificationService,
 );
-
 export const meetingService = new MeetingService(
   new GoogleCalendarClient(getGoogleCalendarConfig),
   new MeetingRepository(prisma),
@@ -93,6 +95,7 @@ export const meetingService = new MeetingService(
   notificationService,
 );
 
+// Portfolio
 const contentBlockRepository = new ContentBlockRepository(prisma);
 
 const experienceRepository = new ExperienceRepository(prisma);
@@ -130,6 +133,7 @@ export const portfolioMediaService = new PortfolioMediaService(
   logger,
 );
 
+// Search indexing
 const chunkRepository = new SiteChunkRepository(prisma);
 
 const jobRepository = new SearchIndexJobRepository(prisma);
@@ -143,6 +147,7 @@ export const searchIndexService = new SearchIndexService(
 );
 export const siteSearchService = new SiteSearchService(chunkRepository);
 
+// Workflows
 const workflowRegistry = new WorkflowDefinitionRegistry([
   new AuditWorkflowDefinition(auditRequestService),
   new ContactWorkflowDefinition(contactService),
@@ -155,11 +160,13 @@ export const workflowService = new WorkflowService(
   GLOBAL_ASSISTANT_TOOLS.map(({ name }) => name),
 );
 
+// Rate limiting
 export const rateLimitService = new RateLimitService(
   new RateLimitRepository(prisma),
   getRateLimitHmacSecret,
 );
 
+// Assistant
 export const assistantService = new AssistantService(
   openAIProvider,
   siteSearchService,

@@ -1,4 +1,4 @@
-import type { WorkflowDefinition } from "./types";
+import type { WorkflowDefinition } from "./interfaces";
 
 export class WorkflowDefinitionRegistry {
   private readonly definitions = new Map<string, WorkflowDefinition>();

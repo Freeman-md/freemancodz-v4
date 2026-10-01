@@ -1,7 +1,5 @@
 import type { Prisma } from "@/generated/prisma/client";
 import type { OpenAIResponseTool } from "@/infrastructure/openai/types";
-import type { WorkflowInstance } from "@/generated/prisma/client";
-import type { z } from "zod";
 
 export const WORKFLOW_INSTANCE_STATUSES = ["active", "completed", "cancelled"] as const;
 
@@ -60,71 +58,4 @@ export type WorkflowToolCall = {
 export type WorkflowToolExecutionResult = {
   output: Prisma.JsonObject;
   instance: WorkflowPublicInstance;
-};
-
-export type WorkflowServiceErrorCode =
-  | "configuration_error"
-  | "execution_failed"
-  | "invalid_request"
-  | "invalid_state"
-  | "invalid_transition"
-  | "not_found"
-  | "persistence_failed"
-  | "unavailable_definition"
-  | "unavailable_tool";
-
-export class WorkflowServiceError extends Error {
-  constructor(
-    readonly code: WorkflowServiceErrorCode,
-    message: string,
-    options?: ErrorOptions,
-  ) {
-    super(message, options);
-    this.name = "WorkflowServiceError";
-  }
-}
-
-export type WorkflowDefinition<State extends Prisma.JsonObject = Prisma.JsonObject> = {
-  readonly id: string;
-  readonly version: number;
-  readonly description: string;
-  readonly stateSchema: z.ZodType<State>;
-  createInitialState(context: WorkflowStartContext): State;
-  getInstructions(state: State): string;
-  getTools(state: State): OpenAIResponseTool[];
-  executeTool(
-    name: string,
-    rawArguments: string,
-    state: State,
-    context: WorkflowExecutionContext,
-  ): Promise<WorkflowExecutionResult<State>>;
-};
-
-export type WorkflowInstanceStore = {
-  create(input: CreateWorkflowInstanceInput): Promise<WorkflowInstance>;
-  findById(id: string): Promise<WorkflowInstance | null>;
-  save(input: SaveWorkflowInstanceInput): Promise<WorkflowInstance>;
-};
-
-export type WorkflowInstanceStoreErrorCode = "not_found" | "terminal" | "unavailable";
-
-export class WorkflowInstanceStoreError extends Error {
-  constructor(
-    readonly code: WorkflowInstanceStoreErrorCode,
-    message: string,
-    options?: ErrorOptions,
-  ) {
-    super(message, options);
-    this.name = "WorkflowInstanceStoreError";
-  }
-}
-
-export type WorkflowServiceClient = {
-  start(workflowId: string, context: WorkflowStartContext): Promise<WorkflowPublicInstance>;
-  getAssistantContext(instanceId: string | null): Promise<WorkflowAssistantContext>;
-  executeTool(
-    instanceId: string | null,
-    toolCall: WorkflowToolCall,
-  ): Promise<WorkflowToolExecutionResult>;
-  cancel(instanceId: string): Promise<WorkflowPublicInstance>;
 };

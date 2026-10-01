@@ -2,12 +2,13 @@ import "server-only";
 
 import type { Prisma, WorkflowInstance } from "@/generated/prisma/client";
 import type { OpenAIResponseTool } from "@/infrastructure/openai/types";
-import type { WorkflowDefinition } from "./types";
-import type { WorkflowInstanceStore } from "./types";
-import { WorkflowInstanceStoreError } from "./types";
-import type { WorkflowServiceClient } from "./types";
+import { WorkflowInstanceStoreError, WorkflowServiceError } from "./errors";
+import type {
+  WorkflowDefinition,
+  WorkflowInstanceStore,
+  WorkflowServiceClient,
+} from "./interfaces";
 import {
-  WorkflowServiceError,
   type WorkflowAssistantContext,
   type WorkflowExecutionResult,
   type WorkflowPublicInstance,

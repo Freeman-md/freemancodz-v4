@@ -3,7 +3,7 @@ import test from "node:test";
 
 import type { AuditRequest, WorkflowInstance } from "@/generated/prisma/client";
 import type { AuditService } from "@/modules/audit/service";
-import type { WorkflowInstanceStore } from "@/modules/workflow/types";
+import type { WorkflowInstanceStore } from "@/modules/workflow/interfaces";
 import { AuditWorkflowDefinition } from "@/modules/workflow/definitions/audit/audit.definition";
 import { WorkflowDefinitionRegistry } from "@/modules/workflow/registry";
 import type {

@@ -1,10 +1,8 @@
 import "server-only";
 
 import type { PrismaClient, WorkflowInstance } from "@/generated/prisma/client";
-import {
-  WorkflowInstanceStoreError,
-  type WorkflowInstanceStore,
-} from "./types";
+import { WorkflowInstanceStoreError } from "./errors";
+import type { WorkflowInstanceStore } from "./interfaces";
 import type { CreateWorkflowInstanceInput, SaveWorkflowInstanceInput } from "./types";
 
 export class WorkflowInstanceRepository implements WorkflowInstanceStore {

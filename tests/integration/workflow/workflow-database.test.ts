@@ -6,7 +6,7 @@ import test from "node:test";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { Client } from "pg";
 import { PrismaClient } from "@/generated/prisma/client";
-import { WorkflowInstanceStoreError } from "@/modules/workflow/types";
+import { WorkflowInstanceStoreError } from "@/modules/workflow/errors";
 import { WorkflowInstanceRepository } from "@/modules/workflow/repository";
 
 const adminConnectionUrl = process.env.PORTFOLIO_TEST_DATABASE_URL;

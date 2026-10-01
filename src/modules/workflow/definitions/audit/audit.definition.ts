@@ -2,8 +2,8 @@ import "server-only";
 
 import type { OpenAIResponseTool } from "@/infrastructure/openai/types";
 import type { AuditService } from "@/modules/audit/service";
+import type { WorkflowDefinition } from "../../interfaces";
 import type {
-  WorkflowDefinition,
   WorkflowExecutionContext,
   WorkflowExecutionResult,
   WorkflowStartContext,
