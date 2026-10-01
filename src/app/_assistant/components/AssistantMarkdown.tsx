@@ -4,7 +4,7 @@ export function AssistantMarkdown({ content }: { content: string }) {
   return (
     <Markdown
       className="
-        leading-snug
+        leading-6
 
         [&_h1]:my-3
         [&_h1]:font-semibold

@@ -53,7 +53,8 @@ test("mobile assistant restores page scrolling after every dismissal and unmount
   dom.window.document.body.style.overflowY = "auto";
   const { createRoot } = await import("react-dom/client");
 
-  const { FloatingPortfolioChat } = await import("@/app/_assistant/components/FloatingPortfolioChat");
+  const { FloatingPortfolioChat } =
+    await import("@/app/_assistant/components/FloatingPortfolioChat");
 
   const root = createRoot(dom.window.document.querySelector("main")!);
 
@@ -89,6 +90,20 @@ test("mobile assistant restores page scrolling after every dismissal and unmount
       root.render(createElement(FloatingPortfolioChat));
     });
 
+    await open();
+    assert.equal(button("Expand assistant").getAttribute("aria-expanded"), "false");
+
+    await act(async () => {
+      button("Expand assistant").click();
+    });
+    assert.equal(button("Minimise assistant").getAttribute("aria-expanded"), "true");
+
+    await act(async () => {
+      button("Minimise assistant").click();
+      button("Close assistant", true).click();
+    });
+    await settleScrollLock();
+
     for (const dismissal of ["close", "backdrop", "escape"]) {
       await open();
       await act(async () => {
@@ -100,7 +115,7 @@ test("mobile assistant restores page scrolling after every dismissal and unmount
           return;
         }
 
-        button("Close portfolio chat", dismissal === "close").click();
+        button("Close assistant", dismissal === "close").click();
       });
       await settleScrollLock();
       assert.equal(dom.window.document.body.style.overflowY, "auto", dismissal);

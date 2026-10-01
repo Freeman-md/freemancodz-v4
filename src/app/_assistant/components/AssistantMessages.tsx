@@ -1,15 +1,14 @@
 "use client";
 
-import type { ReactNode, RefObject } from "react";
+import type { RefObject } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import Link from "next/link";
-import { CardContent, CardHeader, CardTitle } from "@/app/_components/ui/Card";
+import { ArrowRightIcon } from "lucide-react";
 import { ScrollArea } from "@/app/_components/ui/ScrollArea";
 import { cn } from "@/app/_utils/class-names";
 import type { ChatMessage } from "../types";
 import { AssistantMarkdown } from "./AssistantMarkdown";
+import { AssistantSources } from "./AssistantSources";
 import type { AssistantWorkflowStart } from "@/contracts/assistant.contract";
-import { Button } from "@/app/_components/ui/Button";
 
 export type StarterAction = {
   label: string;
@@ -54,7 +53,6 @@ const ASSISTANT_STARTER_ACTIONS: readonly StarterAction[] = [
 
 type AssistantMessagesProps = {
   className?: string;
-  headerActions?: ReactNode;
   isLoading: boolean;
   messages: ChatMessage[];
   messagesEndRef: RefObject<HTMLDivElement | null>;
@@ -64,7 +62,6 @@ type AssistantMessagesProps = {
 
 export function AssistantMessages({
   className,
-  headerActions,
   isLoading,
   messages,
   messagesEndRef,
@@ -72,131 +69,86 @@ export function AssistantMessages({
   onStarterAction,
 }: AssistantMessagesProps) {
   return (
-    <div
-      className={cn(
-        "flex min-h-0 flex-1 flex-col overflow-hidden overscroll-contain border-b border-black/8 bg-[#fbfbfa]",
-        className,
-      )}
-    >
-      <CardHeader className="relative border-b border-black/8 bg-white px-4 py-3 sm:px-5">
-        <div className="min-w-0 pr-20 sm:pr-0">
-          <CardTitle
-            id="portfolio-chat-title"
-            className="font-sans text-[15px] font-medium text-ink"
+    <ScrollArea className={cn("min-h-40 flex-1 overscroll-contain bg-[#fbfbfa]", className)}>
+      <div className="flex min-h-full flex-col gap-5 px-4 py-5 sm:px-6 sm:py-6">
+        {messages.length === 0 ? (
+          <motion.div
+            initial={shouldReduceMotion ? false : { opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex flex-1 flex-col justify-center gap-7 py-8"
           >
-            Portfolio Chat
-          </CardTitle>
-          <p className="mt-1 font-mono text-[11px] tracking-[0.03em] text-muted">
-            Ask about projects, experience, or current research.
-          </p>
-        </div>
-        {headerActions ? (
-          <div className="absolute right-3 top-3 flex items-center gap-1 sm:hidden">
-            {headerActions}
-          </div>
-        ) : null}
-      </CardHeader>
-
-      <CardContent className="flex min-h-0 flex-1 px-0">
-        <ScrollArea className="h-full w-full">
-          <div className="flex min-h-full flex-col gap-4 px-4 py-4 sm:px-5">
-            {messages.length === 0 ? (
-              <motion.div
-                initial={shouldReduceMotion ? false : { opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="rounded-2xl border border-dashed border-black/10 bg-black/[0.02] px-4 py-4"
-              >
-                <p className="text-sm leading-6 text-muted">
-                  Ask about selected work, systems thinking, AI projects, or what Freeman is focused
-                  on now.
-                </p>
-                <div className="mt-4">
-                  <div className="grid gap-2" aria-label="Start a conversation">
-                    {ASSISTANT_STARTER_ACTIONS.map((action) => (
-                      <Button
-                        key={action.label}
-                        type="button"
-                        variant="outline"
-                        className="h-auto justify-start whitespace-normal px-4 py-3 text-left"
-                        disabled={isLoading}
-                        onClick={() => onStarterAction(action)}
-                      >
-                        {action.label}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-              </motion.div>
-            ) : null}
-
-            <AnimatePresence initial={false}>
-              {messages.map((message) => (
-                <motion.article
-                  key={message.id}
-                  initial={
-                    shouldReduceMotion
-                      ? false
-                      : message.role === "user"
-                        ? { opacity: 0, x: 20, y: 10, scale: 0.98 }
-                        : { opacity: 0, x: -18, y: 12, scale: 0.985 }
-                  }
-                  animate={{ opacity: 1, x: 0, y: 0, scale: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={
-                    shouldReduceMotion
-                      ? { duration: 0 }
-                      : { type: "spring", stiffness: 360, damping: 28 }
-                  }
-                  className={cn(
-                    "max-w-[90%] rounded-2xl px-4 py-3 shadow-[0_8px_24px_-18px_rgba(0,0,0,0.2)]",
-                    message.role === "user"
-                      ? "ml-auto bg-black text-white"
-                      : message.error
-                        ? "border border-red-200 bg-red-50 text-red-950"
-                        : "border border-black/10 bg-white text-black",
-                  )}
+            <div className="flex flex-col gap-2">
+              <h2 className="text-balance font-sans text-2xl font-semibold tracking-tight text-ink">
+                What brings you here?
+              </h2>
+              <p className="max-w-[38ch] text-pretty text-base/7 text-muted">
+                Ask about Freeman’s work, or start a request.
+              </p>
+            </div>
+            <div aria-label="Start a conversation" className="divide-y divide-black/8">
+              {ASSISTANT_STARTER_ACTIONS.map((action) => (
+                <button
+                  key={action.label}
+                  type="button"
+                  className="group relative flex min-h-14 w-full items-center justify-between gap-3 py-3 text-left outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-signal-400/40 disabled:cursor-not-allowed disabled:opacity-50"
+                  disabled={isLoading}
+                  onClick={() => onStarterAction(action)}
                 >
-                  <div className="whitespace-pre-wrap text-sm leading-6">
-                    {message.content ? (
-                      <AssistantMarkdown content={message.content} />
-                    ) : message.role === "assistant" && isLoading && !message.error ? (
-                      "Thinking…"
-                    ) : null}
-                  </div>
-
-                  {message.sources?.length ? (
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {message.sources.map((source) =>
-                        /^https?:\/\//.test(source.url) ? (
-                          <a
-                            key={source.id}
-                            href={source.url}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="rounded-full border border-black/10 bg-white px-3 py-1.5 font-mono text-[11px] font-medium text-ink transition hover:border-black/20 hover:bg-black/[0.03]"
-                          >
-                            {source.title}
-                          </a>
-                        ) : (
-                          <Link
-                            key={source.id}
-                            href={source.url}
-                            className="rounded-full border border-black/10 bg-white px-3 py-1.5 font-mono text-[11px] font-medium text-ink transition hover:border-black/20 hover:bg-black/[0.03]"
-                          >
-                            {source.title}
-                          </Link>
-                        ),
-                      )}
-                    </div>
-                  ) : null}
-                </motion.article>
+                  <span className="block font-sans text-base/6 font-medium text-ink">
+                    {action.label}
+                  </span>
+                  <ArrowRightIcon
+                    aria-hidden="true"
+                    className="size-4 shrink-0 stroke-muted group-hover:stroke-ink"
+                  />
+                </button>
               ))}
-            </AnimatePresence>
+            </div>
+          </motion.div>
+        ) : null}
 
-            <div ref={messagesEndRef} />
-          </div>
-        </ScrollArea>
-      </CardContent>
-    </div>
+        <AnimatePresence initial={false}>
+          {messages.map((message) => (
+            <motion.article
+              key={message.id}
+              initial={
+                shouldReduceMotion
+                  ? false
+                  : message.role === "user"
+                    ? { opacity: 0, x: 20, y: 10, scale: 0.98 }
+                    : { opacity: 0, x: -18, y: 12, scale: 0.985 }
+              }
+              animate={{ opacity: 1, x: 0, y: 0, scale: 1 }}
+              exit={{ opacity: 0 }}
+              transition={
+                shouldReduceMotion
+                  ? { duration: 0 }
+                  : { type: "spring", stiffness: 360, damping: 28 }
+              }
+              className={cn(
+                "flex flex-col gap-3",
+                message.role === "user"
+                  ? "ml-auto max-w-[85%] rounded-xl bg-[#F5F5F7] px-4 py-3 text-ink"
+                  : message.error
+                    ? "w-full rounded-xl bg-red-50 px-4 py-3 text-red-950 ring-1 ring-red-950/10"
+                    : "w-full text-ink",
+              )}
+            >
+              <div className="whitespace-pre-wrap text-base/6">
+                {message.content ? (
+                  <AssistantMarkdown content={message.content} />
+                ) : message.role === "assistant" && isLoading && !message.error ? (
+                  "Thinking…"
+                ) : null}
+              </div>
+
+              {message.sources ? <AssistantSources sources={message.sources} /> : null}
+            </motion.article>
+          ))}
+        </AnimatePresence>
+
+        <div ref={messagesEndRef} />
+      </div>
+    </ScrollArea>
   );
 }

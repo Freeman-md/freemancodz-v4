@@ -93,7 +93,7 @@ test("assistant surface opens without submitting and remains dismissible while a
     assert.equal(button("Send message").disabled, true);
 
     await act(async () => {
-      button("Collapse portfolio chat").click();
+      button("Close assistant").click();
     });
     assert.equal(surfaceIsOpen(), false);
 
@@ -103,22 +103,25 @@ test("assistant surface opens without submitting and remains dismissible while a
     assert.equal(surfaceIsOpen(), true);
 
     await act(async () => {
-      button("Collapse portfolio chat").click();
+      button("Close assistant").click();
       dispatchOpenPortfolioChat({ message: "Explicit audit intent" });
       await Promise.resolve();
     });
     assert.equal(surfaceIsOpen(), true);
-    assert.deepEqual(requestBodies.map((body) => JSON.parse(body)), [
-      {
-        message: "Explicit audit intent",
-        previousResponseId: null,
-        workflowInstanceId: null,
-      },
-    ]);
-    assert.equal(button("Collapse portfolio chat").disabled, false);
+    assert.deepEqual(
+      requestBodies.map((body) => JSON.parse(body)),
+      [
+        {
+          message: "Explicit audit intent",
+          previousResponseId: null,
+          workflowInstanceId: null,
+        },
+      ],
+    );
+    assert.equal(button("Close assistant").disabled, false);
 
     await act(async () => {
-      button("Collapse portfolio chat").click();
+      button("Close assistant").click();
     });
     assert.equal(surfaceIsOpen(), false);
 

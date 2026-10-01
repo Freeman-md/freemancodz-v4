@@ -7,6 +7,7 @@ import type { ChatMessage } from "../types";
 import {
   workflowInstanceIdSchema,
   type AssistantWorkflowStart,
+  type WorkflowPublicInstance,
 } from "@/contracts/assistant.contract";
 
 export function useAssistant() {
@@ -15,6 +16,8 @@ export function useAssistant() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
 
   const [isLoading, setIsLoading] = useState(false);
+
+  const [workflowInstance, setWorkflowInstance] = useState<WorkflowPublicInstance | null>(null);
 
   const previousResponseId = useRef<string | null>(null);
 
@@ -89,6 +92,8 @@ export function useAssistant() {
           }
 
           if (event.type === "workflow_instance") {
+            setWorkflowInstance(event.instance);
+
             if (event.instance.status === "active") {
               workflowInstanceId.current = event.instance.id;
               window.sessionStorage.setItem(
@@ -130,5 +135,6 @@ export function useAssistant() {
     messages,
     setInput,
     submitMessage,
+    workflowInstance,
   };
 }

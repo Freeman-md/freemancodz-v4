@@ -100,6 +100,7 @@ test("active workflow IDs survive remounts until the workflow finishes", async (
       dom.window.sessionStorage.getItem(ACTIVE_WORKFLOW_INSTANCE_STORAGE_KEY),
       FIRST_WORKFLOW_ID,
     );
+    assert.equal(currentAssistant().workflowInstance?.id, FIRST_WORKFLOW_ID);
     assert.equal(currentAssistant().messages.length, 2);
 
     await act(async () => root.unmount());
@@ -110,6 +111,7 @@ test("active workflow IDs survive remounts until the workflow finishes", async (
     root = createRoot(remountedContainer);
     await act(async () => root.render(createElement(Harness)));
     assert.deepEqual(currentAssistant().messages, []);
+    assert.equal(currentAssistant().workflowInstance, null);
 
     responses.push(
       streamResponse([workflowEvent(FIRST_WORKFLOW_ID, "completed"), { type: "done" }]),
@@ -118,10 +120,9 @@ test("active workflow IDs survive remounts until the workflow finishes", async (
     assert.equal(requests[1]?.workflowInstanceId, FIRST_WORKFLOW_ID);
     assert.equal(requests[1]?.previousResponseId, null);
     assert.equal(dom.window.sessionStorage.getItem(ACTIVE_WORKFLOW_INSTANCE_STORAGE_KEY), null);
+    assert.equal(currentAssistant().workflowInstance?.status, "completed");
 
-    responses.push(
-      streamResponse([workflowEvent(SECOND_WORKFLOW_ID, "active"), { type: "done" }]),
-    );
+    responses.push(streamResponse([workflowEvent(SECOND_WORKFLOW_ID, "active"), { type: "done" }]));
     await act(async () => currentAssistant().submitMessage("Start another workflow"));
     assert.equal(
       dom.window.sessionStorage.getItem(ACTIVE_WORKFLOW_INSTANCE_STORAGE_KEY),
@@ -133,6 +134,7 @@ test("active workflow IDs survive remounts until the workflow finishes", async (
     );
     await act(async () => currentAssistant().submitMessage("Cancel the workflow"));
     assert.equal(dom.window.sessionStorage.getItem(ACTIVE_WORKFLOW_INSTANCE_STORAGE_KEY), null);
+    assert.equal(currentAssistant().workflowInstance?.status, "cancelled");
   } finally {
     await act(async () => root.unmount());
     globalThis.fetch = originalFetch;
