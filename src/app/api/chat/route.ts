@@ -11,12 +11,12 @@ const CHAT_RATE_LIMIT_SCOPE = "chat";
 const CHAT_RATE_LIMIT_RULES = [
   {
     id: "short",
-    limit: 10,
+    limit: 20,
     windowMs: 10 * 60 * 1000,
   },
   {
     id: "daily",
-    limit: 30,
+    limit: 50,
     windowMs: 24 * 60 * 60 * 1000,
   },
 ] as const satisfies readonly RateLimitRule[];
