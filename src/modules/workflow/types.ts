@@ -1,5 +1,6 @@
 import type { Prisma } from "@/generated/prisma/client";
 import type { OpenAIResponseTool } from "@/infrastructure/openai/types";
+import type { WorkflowProgress } from "@/contracts/workflow-progress.contract";
 
 export const WORKFLOW_INSTANCE_STATUSES = ["active", "completed", "cancelled"] as const;
 
@@ -16,6 +17,7 @@ export type WorkflowPublicInstance = {
   workflowId: string;
   workflowVersion: number;
   status: WorkflowInstanceStatus;
+  progress: WorkflowProgress;
 };
 
 export type CreateWorkflowInstanceInput = WorkflowStartContext & {

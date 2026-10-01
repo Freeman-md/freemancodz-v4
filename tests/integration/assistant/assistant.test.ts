@@ -16,6 +16,7 @@ import type { WorkflowInstanceStore } from "@/modules/workflow/interfaces";
 import type { WorkflowInstance } from "@/generated/prisma/client";
 import { MeetingBookingWorkflowDefinition } from "@/modules/workflow/definitions/meeting-booking/meeting-booking.definition";
 import { AuditWorkflowDefinition } from "@/modules/workflow/definitions/audit/audit.definition";
+import { ContactWorkflowDefinition } from "@/modules/workflow/definitions/contact/contact.definition";
 import { WorkflowDefinitionRegistry } from "@/modules/workflow/registry";
 import type {
   CreateWorkflowInstanceInput,
@@ -123,6 +124,13 @@ function createAssistant({
           createdAt: new Date("2026-08-20T10:00:00.000Z"),
         }),
       }),
+      new ContactWorkflowDefinition({
+        submit: async (input) => ({
+          id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+          ...input,
+          createdAt: new Date("2026-08-20T10:00:00.000Z"),
+        }),
+      }),
       new MeetingBookingWorkflowDefinition(meetingService),
     ]),
     workflowRepository,
@@ -225,6 +233,57 @@ test("follow-up question preserves the previous response id and streams the new 
   assert.match(output, /"type":"done"/);
 });
 
+test("a restored workflow supplies known progress to the model and public stream", async () => {
+  const { inputs, post, workflowService } = createAssistant();
+
+  const instance = await workflowService.start("contact", {
+    originChannel: "web",
+    originPage: "/",
+    originEntry: "assistant-starter-contact",
+  });
+
+  await workflowService.executeTool(instance.id, {
+    name: "update_contact_context",
+    rawArguments: JSON.stringify({
+      updates: [
+        { field: "name", value: "Jonathan" },
+        { field: "email", value: "jonathan@example.com" },
+        { field: "message", value: "Audit" },
+      ],
+    }),
+    interactionId: "33333333-3333-4333-8333-333333333333",
+  });
+  await workflowService.executeTool(instance.id, {
+    name: "prepare_contact_submission",
+    rawArguments: "{}",
+    interactionId: "44444444-4444-4444-8444-444444444444",
+  });
+
+  const output = await readChatResponse(
+    await post(
+      chatRequest({
+        message: "What details do you already have?",
+        workflowInstanceId: instance.id,
+      }),
+    ),
+  );
+
+  const modelInput = inputs[0]?.input[0];
+
+  assert.equal(modelInput?.type, "user_message");
+  assert.match(modelInput?.type === "user_message" ? modelInput.content : "", /Jonathan/);
+  assert.match(
+    modelInput?.type === "user_message" ? modelInput.content : "",
+    /jonathan@example\.com/,
+  );
+  assert.match(modelInput?.type === "user_message" ? modelInput.content : "", /Audit/);
+  assert.match(modelInput?.type === "user_message" ? modelInput.content : "", /visitor-provided data/);
+  assert.match(output, /"missingRequiredFields":\[\]/);
+  assert.match(output, /"phase":"awaiting_confirmation"/);
+  assert.match(output, /jonathan@example\.com/);
+  assert.doesNotMatch(output, /preparedInteractionId/);
+});
+
 test("website tool results are accumulated and supplied to the next response", async () => {
   const { inputs, post } = createAssistant({
     response: async (request) =>
@@ -308,6 +367,7 @@ test("starting a workflow changes instructions and tools on the next iteration i
   assert.match(output, /Which dates work for you\?/);
   assert.match(output, /"type":"workflow_instance"/);
   assert.match(output, /"status":"active"/);
+  assert.match(output, /"phase":"collecting"/);
   assert.doesNotMatch(output, /availableSlots|pendingBooking|visitor@example\.com/);
 });
 
@@ -557,7 +617,13 @@ test("terminal workflow metadata clears the active surface without streaming pri
     ["search_website"],
   );
   assert.match(output, /"status":"completed"/);
-  assert.doesNotMatch(output, /availableSlots|pendingBooking|visitor@example\.com/);
+  assert.match(output, /"phase":"processing"/);
+  assert.match(output, /"phase":"completed"/);
+  assert.match(output, /visitor@example\.com/);
+  assert.doesNotMatch(
+    output,
+    /availableSlots|availabilityCheckedAt|preparedInteractionId|pendingBooking|googleEvent|rawProviderPayload/,
+  );
 });
 
 test("a search with no results still lets the model respond", async () => {

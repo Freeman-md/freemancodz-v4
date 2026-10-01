@@ -4,6 +4,18 @@ import test from "node:test";
 import { streamAssistant } from "@/app/_assistant/api/stream-assistant-response";
 import type { AssistantRequest, AssistantStreamEvent } from "@/contracts/assistant.contract";
 
+const workflowInstance = {
+  id: "11111111-1111-4111-8111-111111111111",
+  workflowId: "meeting-booking",
+  workflowVersion: 1,
+  status: "active",
+  progress: {
+    phase: "collecting",
+    fields: [],
+    missingRequiredFields: ["name", "email", "reason", "selectedSlot"],
+  },
+} as const;
+
 function streamResponse(lines: string[]) {
   const encoder = new TextEncoder();
 
@@ -42,7 +54,7 @@ test("assistant client handles a buffered final event and associates stream valu
       '{"type":"delta","delta":"Hello"}\n',
       '{"type":"sources","sources":[{"id":"1","title":"Work","url":"/work"}]}\n',
       '{"type":"response_id","responseId":"resp_1"}\n',
-      '{"type":"workflow_instance","instance":{"id":"11111111-1111-4111-8111-111111111111","workflowId":"meeting-booking","workflowVersion":1,"status":"active"}}\n{"type":"done"}',
+      `${JSON.stringify({ type: "workflow_instance", instance: workflowInstance })}\n{"type":"done"}`,
     ]);
   };
 
@@ -64,12 +76,7 @@ test("assistant client handles a buffered final event and associates stream valu
     { type: "response_id", responseId: "resp_1" },
     {
       type: "workflow_instance",
-      instance: {
-        id: "11111111-1111-4111-8111-111111111111",
-        workflowId: "meeting-booking",
-        workflowVersion: 1,
-        status: "active",
-      },
+      instance: workflowInstance,
     },
     { type: "done" },
   ]);
@@ -119,7 +126,7 @@ test("assistant client reports non-2xx and provider errors safely", async () => 
 
     globalThis.fetch = async () =>
       streamResponse([
-        '{"type":"workflow_instance","instance":{"id":"11111111-1111-4111-8111-111111111111","workflowId":"meeting-booking","workflowVersion":1,"status":"active"}}\n',
+        `${JSON.stringify({ type: "workflow_instance", instance: workflowInstance })}\n`,
         '{"type":"error","error":"The assistant could not respond."}\n',
       ]);
     await assert.rejects(async () => {

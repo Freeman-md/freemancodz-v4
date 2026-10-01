@@ -53,6 +53,11 @@ function createDefinition(
     description: "Exercise the generic workflow lifecycle.",
     stateSchema: StateSchema,
     createInitialState: () => ({ step: "collecting", count: options.initialCount ?? 0 }),
+    getProgress: (state, status) => ({
+      phase: status === "active" ? "collecting" : status,
+      fields: [{ key: "count", required: true, value: String(state.count) }],
+      missingRequiredFields: [],
+    }),
     getInstructions: (state) => `version-${version}-${state.step}`,
     getTools: (state) => {
       if (options.toolName) {
@@ -129,6 +134,11 @@ test("starts the latest version with supplied origin and exposes only safe publi
     workflowId: "test-workflow",
     workflowVersion: 2,
     status: "active",
+    progress: {
+      phase: "collecting",
+      fields: [{ key: "count", required: true, value: "0" }],
+      missingRequiredFields: [],
+    },
   });
 
   const stored = await repository.findById(FIRST_INSTANCE_ID);
@@ -268,8 +278,10 @@ test("persists completion and cancellation as terminal states and rejects later 
   });
 
   assert.equal(completed.instance.status, "completed");
+  assert.equal(completed.instance.progress.phase, "completed");
   assert.equal((await repository.findById(FIRST_INSTANCE_ID))?.completedAt, completedAt);
   assert.equal(cancelled.instance.status, "cancelled");
+  assert.equal(cancelled.instance.progress.phase, "cancelled");
   assert.equal((await repository.findById(SECOND_INSTANCE_ID))?.completedAt, null);
 
   await assert.rejects(

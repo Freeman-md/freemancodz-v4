@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { workflowProgressSchema } from "./workflow-progress.contract";
 
 const MAX_MESSAGE_LENGTH = 500;
 
@@ -20,6 +21,7 @@ const workflowInstanceSchema = z
     workflowId: z.string().min(1),
     workflowVersion: z.number().int().positive(),
     status: z.enum(["active", "completed", "cancelled"]),
+    progress: workflowProgressSchema,
   })
   .strict();
 

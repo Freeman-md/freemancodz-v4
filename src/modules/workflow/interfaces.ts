@@ -1,5 +1,6 @@
 import type { Prisma, WorkflowInstance } from "@/generated/prisma/client";
 import type { OpenAIResponseTool } from "@/infrastructure/openai/types";
+import type { WorkflowProgress } from "@/contracts/workflow-progress.contract";
 import type { z } from "zod";
 import type {
   CreateWorkflowInstanceInput,
@@ -19,6 +20,7 @@ export interface WorkflowDefinition<State extends Prisma.JsonObject = Prisma.Jso
   readonly description: string;
   readonly stateSchema: z.ZodType<State>;
   createInitialState(context: WorkflowStartContext): State;
+  getProgress(state: State, status: WorkflowPublicInstance["status"]): WorkflowProgress;
   getInstructions(state: State): string;
   getTools(state: State): OpenAIResponseTool[];
   executeTool(

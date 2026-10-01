@@ -2,6 +2,10 @@ import "server-only";
 
 import type { Prisma, WorkflowInstance } from "@/generated/prisma/client";
 import type { OpenAIResponseTool } from "@/infrastructure/openai/types";
+import {
+  workflowProgressSchema,
+  type WorkflowProgress,
+} from "@/contracts/workflow-progress.contract";
 import { WorkflowInstanceStoreError, WorkflowServiceError } from "./errors";
 import type {
   WorkflowDefinition,
@@ -11,6 +15,7 @@ import type {
 import {
   type WorkflowAssistantContext,
   type WorkflowExecutionResult,
+  type WorkflowInstanceStatus,
   type WorkflowPublicInstance,
   type WorkflowStartContext,
   type WorkflowToolCall,
@@ -70,6 +75,7 @@ export class WorkflowService implements WorkflowServiceClient {
 
     this.getDefinitionInstructions(definition, initialState);
     this.getDefinitionTools(definition, initialState);
+    const progress = this.getDefinitionProgress(definition, initialState, "active");
 
     const instance = await this.runRepositoryOperation(() =>
       this.repository.create({
@@ -80,7 +86,7 @@ export class WorkflowService implements WorkflowServiceClient {
       }),
     );
 
-    return toWorkflowPublicInstance(instance);
+    return toWorkflowPublicInstance(instance, progress);
   }
 
   async getAssistantContext(instanceId: string | null): Promise<WorkflowAssistantContext> {
@@ -94,18 +100,25 @@ export class WorkflowService implements WorkflowServiceClient {
 
     const state = this.validateState(definition, instance.state);
 
+    const status = parseWorkflowInstanceStatus(instance.status);
+
+    const publicInstance = toWorkflowPublicInstance(
+      instance,
+      this.getDefinitionProgress(definition, state, status),
+    );
+
     if (instance.status !== "active") {
       return {
         instructions: "",
         tools: [],
-        instance: toWorkflowPublicInstance(instance),
+        instance: publicInstance,
       };
     }
 
     return {
       instructions: this.getDefinitionInstructions(definition, state),
       tools: [createCancelWorkflowTool(), ...this.getDefinitionTools(definition, state)],
-      instance: toWorkflowPublicInstance(instance),
+      instance: publicInstance,
     };
   }
 
@@ -135,19 +148,22 @@ export class WorkflowService implements WorkflowServiceClient {
       );
     }
 
-    if (toolCall.name === CANCEL_WORKFLOW_TOOL_NAME) {
-      parseControlArguments(toolCall.rawArguments, CancelWorkflowArgumentsSchema);
-      const cancelled = await this.cancelLoadedInstance(instance);
-
-      return {
-        output: { message: "The workflow was cancelled." },
-        instance: toWorkflowPublicInstance(cancelled),
-      };
-    }
-
     const definition = this.resolveDefinition(instance);
 
     const state = this.validateState(definition, instance.state);
+
+    if (toolCall.name === CANCEL_WORKFLOW_TOOL_NAME) {
+      parseControlArguments(toolCall.rawArguments, CancelWorkflowArgumentsSchema);
+      const cancelled = await this.cancelLoadedInstance(instance, state);
+
+      return {
+        output: { message: "The workflow was cancelled." },
+        instance: toWorkflowPublicInstance(
+          cancelled,
+          this.getDefinitionProgress(definition, state, "cancelled"),
+        ),
+      };
+    }
 
     const currentTools = this.getDefinitionTools(definition, state);
 
@@ -169,6 +185,8 @@ export class WorkflowService implements WorkflowServiceClient {
       this.getDefinitionTools(definition, nextState);
     }
 
+    const progress = this.getDefinitionProgress(definition, nextState, status);
+
     const completedAt = status === "completed" ? this.clock() : null;
 
     const saved = await this.runRepositoryOperation(() =>
@@ -180,7 +198,7 @@ export class WorkflowService implements WorkflowServiceClient {
       }),
     );
 
-    return { output, instance: toWorkflowPublicInstance(saved) };
+    return { output, instance: toWorkflowPublicInstance(saved, progress) };
   }
 
   async cancel(instanceId: string): Promise<WorkflowPublicInstance> {
@@ -193,7 +211,16 @@ export class WorkflowService implements WorkflowServiceClient {
       );
     }
 
-    return toWorkflowPublicInstance(await this.cancelLoadedInstance(instance));
+    const definition = this.resolveDefinition(instance);
+
+    const state = this.validateState(definition, instance.state);
+
+    const cancelled = await this.cancelLoadedInstance(instance, state);
+
+    return toWorkflowPublicInstance(
+      cancelled,
+      this.getDefinitionProgress(definition, state, "cancelled"),
+    );
   }
 
   private createStartContext(): WorkflowAssistantContext {
@@ -242,11 +269,10 @@ export class WorkflowService implements WorkflowServiceClient {
     };
   }
 
-  private async cancelLoadedInstance(instance: WorkflowInstance): Promise<WorkflowInstance> {
-    const definition = this.resolveDefinition(instance);
-
-    const state = this.validateState(definition, instance.state);
-
+  private async cancelLoadedInstance(
+    instance: WorkflowInstance,
+    state: Prisma.JsonObject,
+  ): Promise<WorkflowInstance> {
     return this.runRepositoryOperation(() =>
       this.repository.save({
         id: instance.id,
@@ -356,6 +382,35 @@ export class WorkflowService implements WorkflowServiceClient {
     return tools;
   }
 
+  private getDefinitionProgress(
+    definition: WorkflowDefinition,
+    state: Prisma.JsonObject,
+    status: WorkflowPublicInstance["status"],
+  ): WorkflowProgress {
+    let progress: unknown;
+
+    try {
+      progress = definition.getProgress(state, status);
+    } catch (error) {
+      throw new WorkflowServiceError(
+        "configuration_error",
+        "The workflow progress is unavailable.",
+        { cause: error },
+      );
+    }
+
+    const result = workflowProgressSchema.safeParse(progress);
+
+    if (!result.success || !progressPhaseMatchesStatus(result.data.phase, status)) {
+      throw new WorkflowServiceError(
+        "configuration_error",
+        "The workflow progress is invalid.",
+      );
+    }
+
+    return result.data;
+  }
+
   private async executeDefinitionTool(
     definition: WorkflowDefinition,
     toolCall: WorkflowToolCall,
@@ -456,19 +511,38 @@ function createStartWorkflowTool(definitions: readonly WorkflowDefinition[]): Op
   };
 }
 
-function toWorkflowPublicInstance(instance: WorkflowInstance): WorkflowPublicInstance {
-  const status = WorkflowInstanceStatusSchema.safeParse(instance.status);
-
-  if (!status.success) {
-    throw new WorkflowServiceError("invalid_state", "The workflow status is invalid.");
-  }
-
+function toWorkflowPublicInstance(
+  instance: WorkflowInstance,
+  progress: WorkflowProgress,
+): WorkflowPublicInstance {
   return {
     id: instance.id,
     workflowId: instance.workflowId,
     workflowVersion: instance.workflowVersion,
-    status: status.data,
+    status: parseWorkflowInstanceStatus(instance.status),
+    progress,
   };
+}
+
+function parseWorkflowInstanceStatus(status: string): WorkflowInstanceStatus {
+  const result = WorkflowInstanceStatusSchema.safeParse(status);
+
+  if (!result.success) {
+    throw new WorkflowServiceError("invalid_state", "The workflow status is invalid.");
+  }
+
+  return result.data;
+}
+
+function progressPhaseMatchesStatus(
+  phase: WorkflowProgress["phase"],
+  status: WorkflowPublicInstance["status"],
+) {
+  if (status === "active") {
+    return phase !== "completed" && phase !== "cancelled";
+  }
+
+  return phase === status;
 }
 
 function createCancelWorkflowTool(): OpenAIResponseTool {

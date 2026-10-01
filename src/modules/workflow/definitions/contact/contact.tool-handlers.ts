@@ -13,12 +13,7 @@ import {
   SUBMIT_CONTACT_TOOL,
   UPDATE_CONTACT_CONTEXT_TOOL,
 } from "./contact.tools";
-
-const REQUIRED_FIELDS = ["name", "email", "message"] as const;
-
-export function missingContactFields(state: ContactState) {
-  return REQUIRED_FIELDS.filter((field) => !state[field]);
-}
+import { missingContactFields } from "./contact.progress";
 
 export async function executeContactTool({
   contactService,

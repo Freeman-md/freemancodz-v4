@@ -16,7 +16,17 @@ function streamResponse(events: unknown[]) {
 function workflowEvent(id: string, status: "active" | "completed" | "cancelled") {
   return {
     type: "workflow_instance",
-    instance: { id, workflowId: "contact", workflowVersion: 1, status },
+    instance: {
+      id,
+      workflowId: "contact",
+      workflowVersion: 1,
+      status,
+      progress: {
+        phase: status === "active" ? "collecting" : status,
+        fields: [],
+        missingRequiredFields: [],
+      },
+    },
   };
 }
 

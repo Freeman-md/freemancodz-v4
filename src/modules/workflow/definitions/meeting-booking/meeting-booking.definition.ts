@@ -16,6 +16,7 @@ import {
   FIND_MEETING_SLOTS_TOOL,
   PREPARE_MEETING_TOOL,
 } from "./meeting-booking.tools";
+import { getMeetingBookingProgress } from "./meeting-booking.progress";
 
 export const MEETING_BOOKING_WORKFLOW_ID = "meeting-booking";
 
@@ -42,6 +43,10 @@ export class MeetingBookingWorkflowDefinition implements WorkflowDefinition<Meet
       preparedInteractionId: null,
       pendingBooking: null,
     };
+  }
+
+  getProgress(state: MeetingBookingState, status: "active" | "completed" | "cancelled") {
+    return getMeetingBookingProgress(state, status);
   }
 
   getInstructions(state: MeetingBookingState): string {

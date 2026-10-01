@@ -9,7 +9,8 @@ import type {
   WorkflowStartContext,
 } from "../../types";
 import { auditStateSchema, type AuditState } from "./audit.schema";
-import { executeAuditTool, missingAuditFields } from "./audit.tool-handlers";
+import { executeAuditTool } from "./audit.tool-handlers";
+import { getAuditProgress, missingAuditFields } from "./audit.progress";
 import {
   PREPARE_AUDIT_SUBMISSION_TOOL,
   SUBMIT_AUDIT_TOOL,
@@ -42,6 +43,10 @@ export class AuditWorkflowDefinition implements WorkflowDefinition<AuditState> {
       additionalContext: null,
       preparedInteractionId: null,
     };
+  }
+
+  getProgress(state: AuditState, status: "active" | "completed" | "cancelled") {
+    return getAuditProgress(state, status);
   }
 
   getInstructions(state: AuditState): string {

@@ -9,12 +9,13 @@ import type {
   WorkflowStartContext,
 } from "../../types";
 import { contactStateSchema, type ContactState } from "./contact.schema";
-import { executeContactTool, missingContactFields } from "./contact.tool-handlers";
+import { executeContactTool } from "./contact.tool-handlers";
 import {
   PREPARE_CONTACT_SUBMISSION_TOOL,
   SUBMIT_CONTACT_TOOL,
   UPDATE_CONTACT_CONTEXT_TOOL,
 } from "./contact.tools";
+import { getContactProgress, missingContactFields } from "./contact.progress";
 
 export const CONTACT_WORKFLOW_ID = "contact";
 
@@ -37,6 +38,10 @@ export class ContactWorkflowDefinition implements WorkflowDefinition<ContactStat
       businessName: null,
       preparedInteractionId: null,
     };
+  }
+
+  getProgress(state: ContactState, status: "active" | "completed" | "cancelled") {
+    return getContactProgress(state, status);
   }
 
   getInstructions(state: ContactState): string {

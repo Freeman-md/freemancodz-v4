@@ -13,17 +13,7 @@ import {
   SUBMIT_AUDIT_TOOL,
   UPDATE_AUDIT_CONTEXT_TOOL,
 } from "./audit.tools";
-
-const REQUIRED_FIELDS = [
-  "focus",
-  "currentProcess",
-  "friction",
-  "desiredOutcome",
-  "name",
-  "email",
-] as const;
-
-type RequiredAuditField = (typeof REQUIRED_FIELDS)[number];
+import { missingAuditFields } from "./audit.progress";
 
 type ExecuteAuditToolInput = {
   auditService: Pick<AuditService, "submit">;
@@ -70,10 +60,6 @@ export async function executeAuditTool({
     error: "unknown_tool",
     message: "The requested workflow action is not available.",
   });
-}
-
-export function missingAuditFields(state: AuditState): RequiredAuditField[] {
-  return REQUIRED_FIELDS.filter((field) => !state[field]);
 }
 
 function updateContext(
