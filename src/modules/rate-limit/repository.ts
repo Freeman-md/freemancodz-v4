@@ -7,6 +7,7 @@ import type {
   RateLimitResult,
   RateLimitStore,
 } from "./rate-limit.types";
+import { validateStoredRateLimitInput } from "./validation";
 
 type StoredRateLimit = {
   ruleId: string;
@@ -14,50 +15,13 @@ type StoredRateLimit = {
   resetAt: Date;
 };
 
-function requireNonEmpty(value: string, name: string) {
-  if (!value.trim()) {
-    throw new Error(`${name} must not be empty.`);
-  }
-}
-
-function validateInput(input: ConsumeStoredRateLimitInput) {
-  requireNonEmpty(input.scope, "Rate-limit scope");
-  requireNonEmpty(input.keyHash, "Rate-limit key hash");
-
-  if (!Number.isFinite(input.now.getTime())) {
-    throw new Error("Rate-limit time must be valid.");
-  }
-
-  if (!input.rules.length) {
-    throw new Error("At least one rate-limit rule is required.");
-  }
-
-  const ruleIds = new Set<string>();
-
-  for (const rule of input.rules) {
-    requireNonEmpty(rule.id, "Rate-limit rule id");
-
-    if (ruleIds.has(rule.id)) {
-      throw new Error("Rate-limit rule ids must be unique.");
-    }
-
-    if (!Number.isInteger(rule.limit) || rule.limit <= 0) {
-      throw new Error("Rate-limit rule limits must be positive integers.");
-    }
-
-    if (!Number.isFinite(rule.windowMs) || rule.windowMs <= 0) {
-      throw new Error("Rate-limit rule windows must be positive finite durations.");
-    }
-
-    if (!Number.isFinite(input.now.getTime() + rule.windowMs)) {
-      throw new Error("Rate-limit rule window exceeds the supported time range.");
-    }
-
-    ruleIds.add(rule.id);
-  }
-}
+type RateLimitRecord = {
+  rule: RateLimitRule;
+  record: StoredRateLimit;
+};
 
 function sortRules(rules: readonly RateLimitRule[]) {
+  // Always lock rules in the same order so two requests do not wait on each other.
   return [...rules].sort((left, right) => left.id.localeCompare(right.id));
 }
 
@@ -75,93 +39,140 @@ export class RateLimitRepository implements RateLimitStore {
   constructor(private readonly database: PrismaClient) {}
 
   async consume(input: ConsumeStoredRateLimitInput): Promise<RateLimitResult> {
-    validateInput(input);
+    validateStoredRateLimitInput(input);
 
     const rules = sortRules(input.rules);
 
-    const now = input.now;
-
     return this.database.$transaction(async (transaction) => {
-      await transaction.$executeRaw(
-        Prisma.sql`
-          INSERT INTO public.rate_limits (scope, key_hash, rule_id, count, reset_at, updated_at)
-          VALUES ${Prisma.join(
-            rules.map((rule) =>
-              toInsertValues(
-                input.scope,
-                input.keyHash,
-                rule,
-                new Date(now.getTime() + rule.windowMs),
-                now,
-              ),
-            ),
-          )}
-          ON CONFLICT (scope, key_hash, rule_id) DO NOTHING
-        `,
-      );
+      const records = await this.createAndLockRecords(transaction, input, rules);
 
-      const records = await transaction.$queryRaw<StoredRateLimit[]>(Prisma.sql`
-        SELECT rule_id AS "ruleId", count, reset_at AS "resetAt"
-        FROM public.rate_limits
-        WHERE scope = ${input.scope}
-          AND key_hash = ${input.keyHash}
-          AND rule_id IN (${Prisma.join(rules.map((rule) => rule.id))})
-        ORDER BY rule_id
-        FOR UPDATE
-      `);
+      await this.resetExpiredRecords(transaction, input, records);
 
-      if (records.length !== rules.length) {
-        throw new Error("Rate-limit records could not be locked.");
-      }
+      const exhaustedRecord = this.findExhaustedRecord(records);
 
-      const recordsByRuleId = new Map(records.map((record) => [record.ruleId, record]));
-
-      for (const rule of rules) {
-        const record = recordsByRuleId.get(rule.id);
-
-        if (!record) {
-          throw new Error("Rate-limit record is missing.");
-        }
-
-        if (record.resetAt.getTime() <= now.getTime()) {
-          record.count = 0;
-          record.resetAt = new Date(now.getTime() + rule.windowMs);
-
-          await transaction.$executeRaw`
-            UPDATE public.rate_limits
-            SET count = 0, reset_at = ${record.resetAt}, updated_at = ${now}
-            WHERE scope = ${input.scope}
-              AND key_hash = ${input.keyHash}
-              AND rule_id = ${rule.id}
-          `;
-        }
-      }
-
-      const exhausted = rules
-        .map((rule) => ({ rule, record: recordsByRuleId.get(rule.id)! }))
-        .filter(({ rule, record }) => record.count >= rule.limit)
-        .sort((left, right) => right.record.resetAt.getTime() - left.record.resetAt.getTime())[0];
-
-      if (exhausted) {
+      if (exhaustedRecord) {
         return {
           allowed: false,
-          limit: exhausted.rule.limit,
+          limit: exhaustedRecord.rule.limit,
           remaining: 0,
-          resetAt: exhausted.record.resetAt.getTime(),
+          resetAt: exhaustedRecord.record.resetAt.getTime(),
         };
       }
 
-      for (const rule of rules) {
+      await this.incrementRecords(transaction, input, records);
+
+      return { allowed: true };
+    });
+  }
+
+  private async createAndLockRecords(
+    transaction: Prisma.TransactionClient,
+    input: ConsumeStoredRateLimitInput,
+    rules: readonly RateLimitRule[],
+  ): Promise<RateLimitRecord[]> {
+    const now = input.now;
+
+    const nowMs = now.getTime();
+
+    await transaction.$executeRaw(
+      Prisma.sql`
+        INSERT INTO public.rate_limits (scope, key_hash, rule_id, count, reset_at, updated_at)
+        VALUES ${Prisma.join(
+          rules.map((rule) =>
+            toInsertValues(
+              input.scope,
+              input.keyHash,
+              rule,
+              new Date(nowMs + rule.windowMs),
+              now,
+            ),
+          ),
+        )}
+        ON CONFLICT (scope, key_hash, rule_id) DO NOTHING
+      `,
+    );
+
+    const records = await transaction.$queryRaw<StoredRateLimit[]>(Prisma.sql`
+      SELECT rule_id AS "ruleId", count, reset_at AS "resetAt"
+      FROM public.rate_limits
+      WHERE scope = ${input.scope}
+        AND key_hash = ${input.keyHash}
+        AND rule_id IN (${Prisma.join(rules.map((rule) => rule.id))})
+      ORDER BY rule_id
+      FOR UPDATE
+    `);
+
+    const recordsByRuleId = new Map(records.map((record) => [record.ruleId, record]));
+
+    return rules.map((rule) => {
+      const record = recordsByRuleId.get(rule.id);
+
+      if (!record) {
+        throw new Error("Rate-limit record could not be locked.");
+      }
+
+      return { rule, record };
+    });
+  }
+
+  private async resetExpiredRecords(
+    transaction: Prisma.TransactionClient,
+    input: ConsumeStoredRateLimitInput,
+    records: readonly RateLimitRecord[],
+  ) {
+    const now = input.now;
+
+    const nowMs = now.getTime();
+
+    for (const { rule, record } of records) {
+      if (record.resetAt.getTime() <= nowMs) {
+        record.count = 0;
+        record.resetAt = new Date(nowMs + rule.windowMs);
+
         await transaction.$executeRaw`
           UPDATE public.rate_limits
-          SET count = count + 1, updated_at = ${now}
+          SET count = 0, reset_at = ${record.resetAt}, updated_at = ${now}
           WHERE scope = ${input.scope}
             AND key_hash = ${input.keyHash}
             AND rule_id = ${rule.id}
         `;
       }
+    }
+  }
 
-      return { allowed: true };
-    });
+  private findExhaustedRecord(records: readonly RateLimitRecord[]) {
+    let exhaustedRecord: RateLimitRecord | undefined;
+
+    for (const candidate of records) {
+      if (candidate.record.count < candidate.rule.limit) {
+        continue;
+      }
+
+      // If several limits are full, wait for the one that resets last.
+      if (
+        !exhaustedRecord ||
+        candidate.record.resetAt.getTime() > exhaustedRecord.record.resetAt.getTime()
+      ) {
+        exhaustedRecord = candidate;
+      }
+    }
+
+    return exhaustedRecord;
+  }
+
+  private async incrementRecords(
+    transaction: Prisma.TransactionClient,
+    input: ConsumeStoredRateLimitInput,
+    records: readonly RateLimitRecord[],
+  ) {
+    for (const { rule } of records) {
+      await transaction.$executeRaw`
+        UPDATE public.rate_limits
+        SET count = count + 1, updated_at = ${input.now}
+        WHERE scope = ${input.scope}
+          AND key_hash = ${input.keyHash}
+          AND rule_id = ${rule.id}
+      `;
+    }
   }
 }
