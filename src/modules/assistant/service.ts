@@ -61,14 +61,14 @@ export class AssistantService {
               ? await this.workflow.getAssistantContext(activeWorkflowInstanceId)
               : null;
 
-            if (
-              existingContext?.instance &&
-              existingContext.instance.workflowId !== workflowStart.workflowId
-            ) {
+            const activeInstance =
+              existingContext?.instance?.status === "active" ? existingContext.instance : null;
+
+            if (activeInstance && activeInstance.workflowId !== workflowStart.workflowId) {
               throw new Error("Another workflow is already active.");
             }
 
-            if (!existingContext?.instance) {
+            if (!activeInstance) {
               const started = await this.workflow.start(workflowStart.workflowId, {
                 originChannel: "web",
                 originPage: workflowStart.originPage,

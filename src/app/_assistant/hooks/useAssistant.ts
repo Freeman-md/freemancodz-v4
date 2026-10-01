@@ -1,10 +1,13 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { streamAssistant } from "../api/stream-assistant-response";
-import { MAX_MESSAGE_LENGTH } from "../constants";
+import { ACTIVE_WORKFLOW_INSTANCE_STORAGE_KEY, MAX_MESSAGE_LENGTH } from "../constants";
 import type { ChatMessage } from "../types";
-import type { AssistantWorkflowStart } from "@/contracts/assistant.contract";
+import {
+  workflowInstanceIdSchema,
+  type AssistantWorkflowStart,
+} from "@/contracts/assistant.contract";
 
 export function useAssistant() {
   const [input, setInput] = useState("");
@@ -18,6 +21,22 @@ export function useAssistant() {
   const workflowInstanceId = useRef<string | null>(null);
 
   const submissionInProgress = useRef(false);
+
+  useEffect(() => {
+    const storedId = window.sessionStorage.getItem(ACTIVE_WORKFLOW_INSTANCE_STORAGE_KEY);
+
+    const parsedId = workflowInstanceIdSchema.safeParse(storedId);
+
+    if (parsedId.success) {
+      workflowInstanceId.current = parsedId.data;
+
+      return;
+    }
+
+    if (storedId !== null) {
+      window.sessionStorage.removeItem(ACTIVE_WORKFLOW_INSTANCE_STORAGE_KEY);
+    }
+  }, []);
 
   const submitMessage = useCallback(
     async (rawMessage: string, workflowStart: AssistantWorkflowStart | null = null) => {
@@ -70,8 +89,16 @@ export function useAssistant() {
           }
 
           if (event.type === "workflow_instance") {
-            workflowInstanceId.current =
-              event.instance.status === "active" ? event.instance.id : null;
+            if (event.instance.status === "active") {
+              workflowInstanceId.current = event.instance.id;
+              window.sessionStorage.setItem(
+                ACTIVE_WORKFLOW_INSTANCE_STORAGE_KEY,
+                event.instance.id,
+              );
+            } else {
+              workflowInstanceId.current = null;
+              window.sessionStorage.removeItem(ACTIVE_WORKFLOW_INSTANCE_STORAGE_KEY);
+            }
           }
         }
       } catch (error) {

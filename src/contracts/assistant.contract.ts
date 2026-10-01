@@ -4,6 +4,8 @@ const MAX_MESSAGE_LENGTH = 500;
 
 export const assistantTriggerEvent = "portfolio-chat:open";
 
+export const workflowInstanceIdSchema = z.string().uuid();
+
 const sourceSchema = z
   .object({
     id: z.string(),
@@ -14,7 +16,7 @@ const sourceSchema = z
 
 const workflowInstanceSchema = z
   .object({
-    id: z.string().uuid(),
+    id: workflowInstanceIdSchema,
     workflowId: z.string().min(1),
     workflowVersion: z.number().int().positive(),
     status: z.enum(["active", "completed", "cancelled"]),
@@ -56,7 +58,7 @@ export const assistantRequestSchema = z
   .object({
     message: z.string().trim().min(1, "Message is required.").max(MAX_MESSAGE_LENGTH),
     previousResponseId: z.string().nullable().optional().transform(normalizePreviousResponseId),
-    workflowInstanceId: z.string().uuid().nullable().optional(),
+    workflowInstanceId: workflowInstanceIdSchema.nullable().optional(),
     workflowStart: workflowStartSchema.nullable().optional(),
   })
   .strict();

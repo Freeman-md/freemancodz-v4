@@ -342,6 +342,39 @@ test("an Audit CTA starts deterministically with bounded origin metadata", async
   assert.match(output, /"workflowId":"audit"/);
 });
 
+test("an explicit start replaces a restored terminal workflow instance", async () => {
+  const { post, workflowRepository, workflowService } = createAssistant();
+
+  const finished = await workflowService.start("meeting-booking", {
+    originChannel: "web",
+    originPage: "/",
+    originEntry: "assistant-starter-meeting",
+  });
+
+  await workflowService.cancel(finished.id);
+
+  const output = await readChatResponse(
+    await post(
+      chatRequest({
+        message: "I would like to request an audit.",
+        workflowInstanceId: finished.id,
+        workflowStart: {
+          workflowId: "audit",
+          originPage: "/",
+          originEntry: "assistant-starter-audit",
+        },
+      }),
+    ),
+  );
+
+  const started = await workflowRepository.findById("00000000-0000-4000-8000-000000000002");
+
+  assert.equal(started?.workflowId, "audit");
+  assert.equal(started?.status, "active");
+  assert.match(output, /"id":"00000000-0000-4000-8000-000000000002"/);
+  assert.match(output, /"status":"active"/);
+});
+
 test("provider failure after a durable start still streams the safe active instance ID", async () => {
   const { errors, post } = createAssistant({
     response: async (request) =>
