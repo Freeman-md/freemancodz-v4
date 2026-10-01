@@ -60,7 +60,7 @@ export function AssistantWorkflowProgress({ instance }: AssistantWorkflowProgres
         </span>
         <ChevronDownIcon
           aria-hidden="true"
-          className="size-4 shrink-0 stroke-muted group-data-panel-open:rotate-180 motion-safe:transition-transform"
+          className="size-4 shrink-0 stroke-muted group-data-[panel-open]:rotate-180 motion-safe:transition-transform"
         />
       </Collapsible.Trigger>
 
