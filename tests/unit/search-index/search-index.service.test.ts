@@ -2,10 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import type { Logger } from "@/infrastructure/logging/logger";
-import type {
-  GeneratedEmbedding,
-  OpenAITransport,
-} from "@/infrastructure/openai/types";
+import type { GeneratedEmbedding, OpenAITransport } from "@/infrastructure/openai/types";
 import type { SearchIndexJobStore } from "@/modules/search-index/types";
 import type { SiteChunkStore } from "@/modules/search-index/types";
 import type {
@@ -43,7 +40,10 @@ function settledJob(status: "completed" | "pending"): SearchIndexJob {
 
 type ServiceOptions = {
   claim?: SearchIndexJobClaimResult;
+  claimOperation?: SearchIndexJobStore["claim"];
+  complete?: SearchIndexJobStore["complete"];
   completeStatus?: "completed" | "pending";
+  fail?: SearchIndexJobStore["fail"];
   generated?: (inputs: string[]) => Promise<GeneratedEmbedding[]>;
   replace?: (chunks: EmbeddedSiteChunk[]) => Promise<void>;
   snapshot?: ReturnType<typeof createPortfolioSnapshotFixture>;
@@ -72,18 +72,28 @@ function createService(options: ServiceOptions = {}) {
     requestRebuild: async () => {
       rebuildRequests += 1;
     },
-    claim: async () =>
-      options.claim ?? {
-        job: claimedJob,
-        staleJobRecovered: false,
-      },
+    claim:
+      options.claimOperation ??
+      (async () =>
+        options.claim ?? {
+          job: claimedJob,
+          staleJobRecovered: false,
+        }),
     complete: async (claimedAt) => {
       completedTokens.push(claimedAt);
+
+      if (options.complete) {
+        return options.complete(claimedAt);
+      }
 
       return settledJob(options.completeStatus ?? "completed");
     },
     fail: async (claimedAt, summary) => {
       failed.push({ claimedAt, summary });
+
+      if (options.fail) {
+        return options.fail(claimedAt, summary);
+      }
 
       return settledJob("pending");
     },
@@ -291,4 +301,128 @@ test("provider and replacement failures expose only safe categorized diagnostics
     "The portfolio search snapshot could not be replaced.",
   );
   assert.doesNotMatch(JSON.stringify(replacementFailure.events), /raw-database-stack/);
+});
+
+test("claim failure logs once with safe claim context and does not settle unclaimed work", async () => {
+  const setup = createService({
+    claimOperation: async () => {
+      throw new Error("raw-claim-database-error");
+    },
+  });
+
+  await assert.rejects(setup.service.processPendingJob(), {
+    name: "SearchIndexProcessingError",
+    message: "Search index processing failed.",
+  });
+  assert.deepEqual(setup.pageCalls, []);
+  assert.deepEqual(setup.embeddingInputs, []);
+  assert.deepEqual(setup.replaced, []);
+  assert.deepEqual(setup.completedTokens, []);
+  assert.deepEqual(setup.failed, []);
+
+  const errors = setup.events.filter(({ level }) => level === "error");
+
+  assert.equal(errors.length, 1);
+  assert.equal(errors[0]?.message, "search_index.worker_failed");
+  assert.deepEqual(errors[0]?.context, {
+    attempt: null,
+    stage: "claim",
+    finalState: null,
+    durationMs: assertDuration(errors[0]?.context),
+    errorKind: "Error",
+  });
+  assert.doesNotMatch(JSON.stringify(setup.events), /raw-claim-database-error/);
+});
+
+function assertDuration(context: unknown): number {
+  assert.ok(context && typeof context === "object" && "durationMs" in context);
+  assert.ok(typeof context.durationMs === "number");
+  assert.ok(Number.isFinite(context.durationMs) && context.durationMs >= 0);
+
+  return context.durationMs;
+}
+
+test("invalid claimed attempts settle once without being relogged as claim failures", async () => {
+  const setup = createService({
+    claim: { job: { ...claimedJob, attempts: 0 }, staleJobRecovered: true },
+    fail: async () => {
+      throw new Error("raw-failure-settlement-error");
+    },
+  });
+
+  await assert.rejects(setup.service.processPendingJob(), /Search index processing failed/);
+  assert.deepEqual(setup.pageCalls, []);
+  assert.deepEqual(setup.embeddingInputs, []);
+  assert.deepEqual(setup.replaced, []);
+  assert.deepEqual(setup.completedTokens, []);
+  assert.deepEqual(setup.failed, [
+    {
+      claimedAt: CLAIMED_AT,
+      summary: "Portfolio search documents could not be prepared.",
+    },
+  ]);
+  assert.ok(setup.events.some(({ message }) => message === "search_index.stale_job_recovered"));
+
+  const errors = setup.events.filter(({ level }) => level === "error");
+
+  assert.equal(errors.length, 1);
+  assert.equal(errors[0]?.message, "search_index.worker_failed");
+  assert.deepEqual(errors[0]?.context, {
+    attempt: 0,
+    stage: "snapshot",
+    finalState: null,
+    durationMs: assertDuration(errors[0]?.context),
+    errorKind: "Error",
+  });
+  assert.doesNotMatch(JSON.stringify(setup.events), /raw-failure-settlement-error/);
+});
+
+test("completion failures settle once with the original claim and safe settlement context", async (t) => {
+  const cases: Array<{ name: string; complete: SearchIndexJobStore["complete"] }> = [
+    { name: "missing completion", complete: async () => null },
+    {
+      name: "invalid status",
+      complete: async () => ({ ...settledJob("completed"), status: "failed" }),
+    },
+    {
+      name: "database failure",
+      complete: async () => {
+        throw new Error("raw-completion-error");
+      },
+    },
+  ];
+
+  for (const item of cases) {
+    await t.test(item.name, async () => {
+      const setup = createService({ complete: item.complete });
+
+      await assert.rejects(setup.service.processPendingJob(), /Search index processing failed/);
+      assert.equal(setup.replaced.length, 1);
+      assert.deepEqual(setup.replacementTokens, [CLAIMED_AT]);
+      assert.deepEqual(setup.completedTokens, [CLAIMED_AT]);
+      assert.deepEqual(setup.failed, [
+        {
+          claimedAt: CLAIMED_AT,
+          summary: "Portfolio search processing could not be settled.",
+        },
+      ]);
+      assert.equal(
+        setup.events.some(({ message }) => message === "search_index.worker_completed"),
+        false,
+      );
+
+      const errors = setup.events.filter(({ level }) => level === "error");
+
+      assert.equal(errors.length, 1);
+      assert.equal(errors[0]?.message, "search_index.worker_failed");
+      assert.deepEqual(errors[0]?.context, {
+        attempt: 1,
+        stage: "settlement",
+        finalState: "pending",
+        durationMs: assertDuration(errors[0]?.context),
+        errorKind: "Error",
+      });
+      assert.doesNotMatch(JSON.stringify(setup.events), /raw-completion-error/);
+    });
+  }
 });

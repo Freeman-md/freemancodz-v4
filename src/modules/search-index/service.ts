@@ -118,12 +118,45 @@ export class SearchIndexService {
 
     this.logger.info("search_index.worker_started");
 
+    const job = await this.claimPendingJob(startedAt);
+
+    if (!job) {
+      return { outcome: "skipped" };
+    }
+
+    let stage: Exclude<ProcessingStage, "claim"> = "snapshot";
+
+    try {
+      const { prepared, documentCount } = await this.preparePortfolioSnapshot();
+
+      stage = "embedding";
+
+      const { embedded, embeddingModel } = await this.generateSnapshotEmbeddings(prepared);
+
+      stage = "replacement";
+      await this.chunks.replacePortfolioSnapshot(embedded, job.claimedAt);
+
+      stage = "settlement";
+
+      return await this.completeJob(job, documentCount, embedded.length, embeddingModel, startedAt);
+    } catch (error) {
+      return this.failClaim(job, stage, startedAt, error);
+    }
+  }
+
+  private async claimPendingJob(startedAt: number): Promise<ClaimedSearchIndexJob | null> {
     let claim: Awaited<ReturnType<SearchIndexJobStore["claim"]>>;
 
     try {
       claim = await this.jobs.claim();
     } catch (error) {
-      this.logFailure("claim", null, startedAt, error);
+      this.logger.error("search_index.worker_failed", {
+        attempt: null,
+        stage: "claim",
+        finalState: null,
+        durationMs: Date.now() - startedAt,
+        errorKind: safeErrorKind(error),
+      });
       throw new SearchIndexProcessingError();
     }
 
@@ -134,7 +167,7 @@ export class SearchIndexService {
     if (!claim.job) {
       this.logger.info("search_index.worker_skipped", { durationMs: Date.now() - startedAt });
 
-      return { outcome: "skipped" };
+      return null;
     }
 
     const job = claim.job;
@@ -143,72 +176,77 @@ export class SearchIndexService {
       await this.failClaim(job, "snapshot", startedAt, new Error("Invalid claimed attempt."));
     }
 
-    let stage: Exclude<ProcessingStage, "claim"> = "snapshot";
+    return job;
+  }
 
-    try {
-      const [home, work, about, audit] = await Promise.all([
-        this.portfolio.getHomePageData(),
-        this.portfolio.getWorkPageData(),
-        this.portfolio.getAboutPageData(),
-        this.portfolio.getAuditPageData(),
-      ]);
+  private async preparePortfolioSnapshot() {
+    const [home, work, about, audit] = await Promise.all([
+      this.portfolio.getHomePageData(),
+      this.portfolio.getWorkPageData(),
+      this.portfolio.getAboutPageData(),
+      this.portfolio.getAuditPageData(),
+    ]);
 
-      const documents = mapPortfolioSnapshot({ home, work, about, audit });
+    const documents = mapPortfolioSnapshot({ home, work, about, audit });
 
-      const prepared = documents.flatMap((document) => {
-        const documentChunks = prepareSiteChunks(document);
+    const prepared = documents.flatMap((document) => {
+      const documentChunks = prepareSiteChunks(document);
 
-        if (!documentChunks.length) {
-          throw new Error("Portfolio indexing produced a document without chunks.");
-        }
-
-        return documentChunks;
-      });
-
-      validatePreparedChunks(prepared);
-
-      stage = "embedding";
-
-      const embeddingModel = this.openai.getEmbeddingModel();
-
-      const generated = await this.openai.createEmbeddings(
-        prepared.map((chunk) => chunk.embeddingInput),
-      );
-
-      const embedded = buildEmbeddedChunks(prepared, generated, embeddingModel);
-
-      stage = "replacement";
-      await this.chunks.replacePortfolioSnapshot(embedded, job.claimedAt);
-
-      stage = "settlement";
-
-      const completed = await this.jobs.complete(job.claimedAt);
-
-      if (!completed || (completed.status !== "completed" && completed.status !== "pending")) {
-        throw new Error("Search index completion did not settle the claimed job.");
+      if (!documentChunks.length) {
+        throw new Error("Portfolio indexing produced a document without chunks.");
       }
 
-      const result: SearchIndexWorkerResult = {
-        outcome: "processed",
-        attempt: job.attempts,
-        documentCount: documents.length,
-        chunkCount: embedded.length,
-        finalState: completed.status,
-      };
+      return documentChunks;
+    });
 
-      this.logger.info("search_index.worker_completed", {
-        attempt: job.attempts,
-        documentCount: documents.length,
-        chunkCount: embedded.length,
-        embeddingModel,
-        finalState: completed.status,
-        durationMs: Date.now() - startedAt,
-      });
+    validatePreparedChunks(prepared);
 
-      return result;
-    } catch (error) {
-      return this.failClaim(job, stage, startedAt, error);
+    return { prepared, documentCount: documents.length };
+  }
+
+  private async generateSnapshotEmbeddings(prepared: PreparedSiteChunk[]) {
+    const embeddingModel = this.openai.getEmbeddingModel();
+
+    const generated = await this.openai.createEmbeddings(
+      prepared.map((chunk) => chunk.embeddingInput),
+    );
+
+    const embedded = buildEmbeddedChunks(prepared, generated, embeddingModel);
+
+    return { embedded, embeddingModel };
+  }
+
+  private async completeJob(
+    job: ClaimedSearchIndexJob,
+    documentCount: number,
+    chunkCount: number,
+    embeddingModel: string,
+    startedAt: number,
+  ): Promise<SearchIndexWorkerResult> {
+    const completed = await this.jobs.complete(job.claimedAt);
+
+    if (!completed || (completed.status !== "completed" && completed.status !== "pending")) {
+      throw new Error("Search index completion did not settle the claimed job.");
     }
+
+    const result: SearchIndexWorkerResult = {
+      outcome: "processed",
+      attempt: job.attempts,
+      documentCount,
+      chunkCount,
+      finalState: completed.status,
+    };
+
+    this.logger.info("search_index.worker_completed", {
+      attempt: job.attempts,
+      documentCount,
+      chunkCount,
+      embeddingModel,
+      finalState: completed.status,
+      durationMs: Date.now() - startedAt,
+    });
+
+    return result;
   }
 
   private async failClaim(
@@ -236,20 +274,5 @@ export class SearchIndexService {
     });
 
     throw new SearchIndexProcessingError();
-  }
-
-  private logFailure(
-    stage: ProcessingStage,
-    attempt: number | null,
-    startedAt: number,
-    error: unknown,
-  ): void {
-    this.logger.error("search_index.worker_failed", {
-      attempt,
-      stage,
-      finalState: null,
-      durationMs: Date.now() - startedAt,
-      errorKind: safeErrorKind(error),
-    });
   }
 }
