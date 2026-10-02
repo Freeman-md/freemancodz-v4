@@ -71,6 +71,7 @@ function events(...values: Array<Record<string, unknown>>) {
 function createAssistant({
   chunks = [source],
   embedding = async () => [0.1, 0.2],
+  search = async () => chunks,
   response = async () =>
     events(
       { type: "response.created", response: { id: "resp_current" } },
@@ -81,6 +82,7 @@ function createAssistant({
 }: {
   chunks?: SiteSearchResult[];
   embedding?: OpenAITransport["createEmbedding"];
+  search?: SiteSearch["search"];
   response?: (request: OpenAIResponseRequest) => ReturnType<OpenAITransport["streamResponse"]>;
   rateLimit?: Pick<RateLimitService, "consume">;
 } = {}) {
@@ -107,20 +109,14 @@ function createAssistant({
   };
 
   const siteSearch: SiteSearch = {
-    search: async () => chunks,
+    search,
   };
 
   const meetingService = {
     findAvailableSlots: async () => [meetingSlot],
     isSlotAvailable: async () => true,
-    bookMeeting: async () => ({
-      googleEventId: "event_test",
-      googleEventUrl: null,
-    }),
-    reconcileMeeting: async () => ({
-      googleEventId: "event_test",
-      googleEventUrl: null,
-    }),
+    bookMeeting: async () => ({ googleEventId: "event_test", googleEventUrl: null }),
+    reconcileMeeting: async () => ({ googleEventId: "event_test", googleEventUrl: null }),
   };
 
   const workflowRepository = new MemoryWorkflowInstanceRepository();
@@ -180,10 +176,7 @@ function createAssistant({
 function chatRequest(body: unknown, signal?: AbortSignal) {
   return new Request("http://localhost/api/chat", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-forwarded-for": "test-client",
-    },
+    headers: { "Content-Type": "application/json", "x-forwarded-for": "test-client" },
     body: JSON.stringify(body),
     signal,
   });
@@ -253,6 +246,287 @@ test("follow-up question preserves the previous response id and streams the new 
   assert.equal(inputs[0]?.previousResponseId, "resp_previous");
   assert.match(output, /A grounded answer\./);
   assert.match(output, /"type":"done"/);
+});
+
+test(
+  "concurrent requests keep workflow transitions, sources and response checkpoints isolated",
+  { timeout: 5000 },
+  async () => {
+    let initialRequests = 0;
+
+    let releaseInitial!: () => void;
+
+    const initialBarrier = new Promise<void>((resolve) => {
+      releaseInitial = resolve;
+    });
+
+    const { post, workflowService, workflowRepository, errors } = createAssistant({
+      embedding: async (query) => [query === "Alpha" ? 1 : 2],
+      search: async ([key]) => [
+        {
+          ...source,
+          id: key === 1 ? "alpha-source" : "beta-source",
+          title: key === 1 ? "Alpha evidence" : "Beta evidence",
+        },
+      ],
+      response: async (request) => {
+        if (request.input[0]?.type === "function_call_output") {
+          const label = request.previousResponseId === "resp_Alpha_tools" ? "Alpha" : "Beta";
+
+          assert.match(JSON.stringify(request.input), new RegExp(`${label} company`));
+          assert.doesNotMatch(
+            JSON.stringify(request.input),
+            new RegExp(label === "Alpha" ? "Beta" : "Alpha"),
+          );
+
+          return events(
+            { type: "response.output_text.delta", delta: `${label} answer.` },
+            { type: "response.completed", response: { id: `resp_${label}_final` } },
+          );
+        }
+
+        assert.equal(request.input[0]?.type, "user_message");
+        const content = request.input[0]?.type === "user_message" ? request.input[0].content : "";
+
+        const label = content.includes("Alpha request") ? "Alpha" : "Beta";
+
+        assert.match(content, new RegExp(`${label} Visitor`));
+        assert.doesNotMatch(
+          content,
+          new RegExp(label === "Alpha" ? "Beta Visitor" : "Alpha Visitor"),
+        );
+        initialRequests += 1;
+        if (initialRequests === 2) {
+          releaseInitial();
+        }
+
+        await initialBarrier;
+
+        return events(
+          { type: "response.created", response: { id: `resp_${label}_tools` } },
+          { type: "response.output_text.delta", delta: `${label} searching.` },
+          {
+            type: "response.output_item.done",
+            item: {
+              type: "function_call",
+              call_id: `${label}-update`,
+              name: "update_contact_context",
+              arguments: JSON.stringify({
+                updates: [{ field: "businessName", value: `${label} company` }],
+              }),
+            },
+          },
+          {
+            type: "response.output_item.done",
+            item: {
+              type: "function_call",
+              call_id: `${label}-search`,
+              name: "search_website",
+              arguments: JSON.stringify({ query: label }),
+            },
+          },
+        );
+      },
+    });
+
+    const instances = [];
+
+    for (const label of ["Alpha", "Beta"]) {
+      const instance = await workflowService.start("contact", {
+        originChannel: "test",
+        originPage: null,
+        originEntry: null,
+      });
+
+      await workflowService.executeTool(instance.id, {
+        name: "update_contact_context",
+        rawArguments: JSON.stringify({ updates: [{ field: "name", value: `${label} Visitor` }] }),
+        interactionId: "33333333-3333-4333-8333-333333333333",
+      });
+      instances.push(instance);
+    }
+
+    const outputs = await Promise.all(
+      instances.map(async (instance, index) =>
+        readChatResponse(
+          await post(
+            chatRequest({
+              message: `${index === 0 ? "Alpha" : "Beta"} request`,
+              workflowInstanceId: instance.id,
+            }),
+          ),
+        ),
+      ),
+    );
+
+    for (const [index, output] of outputs.entries()) {
+      const label = index === 0 ? "Alpha" : "Beta";
+
+      const streamed = output
+        .trim()
+        .split("\n")
+        .map((line) => assistantStreamEventSchema.parse(JSON.parse(line)));
+
+      assert.deepEqual(
+        streamed.map(({ type }) => type),
+        [
+          "delta",
+          "workflow_instance",
+          "delta",
+          "sources",
+          "response_id",
+          "workflow_instance",
+          "done",
+        ],
+      );
+      assert.doesNotMatch(
+        output,
+        new RegExp(index === 0 ? "Beta|beta-source" : "Alpha|alpha-source"),
+      );
+      assert.deepEqual(
+        streamed.find((event) => event.type === "response_id"),
+        { type: "response_id", responseId: `resp_${label}_final` },
+      );
+      for (const event of streamed) {
+        if (event.type === "workflow_instance") {
+          assert.equal(event.instance.id, instances[index].id);
+        }
+
+        if (event.type === "sources") {
+          assert.deepEqual(
+            event.sources.map(({ id }) => id),
+            [index === 0 ? "alpha-source" : "beta-source"],
+          );
+        }
+      }
+
+      const saved = await workflowRepository.findById(instances[index].id);
+
+      assert.ok(saved?.state && typeof saved.state === "object" && !Array.isArray(saved.state));
+      assert.equal(saved.state.businessName, `${label} company`);
+    }
+
+    assert.deepEqual(errors, []);
+  },
+);
+
+test("a saved update or cancellation is streamed before a later tool failure", async () => {
+  for (const cancelled of [false, true]) {
+    const { post, workflowService, workflowRepository, errors } = createAssistant({
+      embedding: async () => {
+        const saved = await workflowRepository.findById(instance.id);
+
+        assert.equal(saved?.status, cancelled ? "cancelled" : "active");
+        assert.equal(saved?.revision, 1);
+        throw new Error("private provider details");
+      },
+      response: async () =>
+        events(
+          { type: "response.created", response: { id: "resp_incomplete" } },
+          {
+            type: "response.output_item.done",
+            item: {
+              type: "function_call",
+              call_id: "transition",
+              name: cancelled ? "cancel_workflow" : "update_contact_context",
+              arguments: cancelled
+                ? "{}"
+                : JSON.stringify({ updates: [{ field: "email", value: "saved@example.test" }] }),
+            },
+          },
+          {
+            type: "response.output_item.done",
+            item: {
+              type: "function_call",
+              call_id: "search-after-save",
+              name: "search_website",
+              arguments: '{"query":"Relevant work"}',
+            },
+          },
+        ),
+    });
+
+    const instance = await workflowService.start("contact", {
+      originChannel: "test",
+      originPage: null,
+      originEntry: null,
+    });
+
+    const output = await readChatResponse(
+      await post(chatRequest({ message: "Update this request", workflowInstanceId: instance.id })),
+    );
+
+    const streamed = output
+      .trim()
+      .split("\n")
+      .map((line) => assistantStreamEventSchema.parse(JSON.parse(line)));
+
+    assert.deepEqual(
+      streamed.map(({ type }) => type),
+      ["workflow_instance", "workflow_instance", "error"],
+    );
+    for (const event of streamed) {
+      if (event.type !== "workflow_instance") {
+        continue;
+      }
+
+      assert.equal(event.instance.id, instance.id);
+      assert.equal(event.instance.status, cancelled ? "cancelled" : "active");
+      if (!cancelled) {
+        assert.equal(
+          event.instance.progress.fields.find(({ key }) => key === "email")?.value,
+          "saved@example.test",
+        );
+      }
+    }
+
+    assert.doesNotMatch(output, /private|provider details|resp_incomplete/);
+    assert.deepEqual(errors, [
+      {
+        message: "assistant.response_failed",
+        context: {
+          category: "assistant_request_failed",
+          operation: "tool_execution",
+          workflowInstanceId: cancelled ? null : instance.id,
+        },
+      },
+    ]);
+  }
+});
+
+test("the bounded model loop stops before executing a fourth tool batch", async () => {
+  let searches = 0;
+
+  const { inputs, post } = createAssistant({
+    embedding: async () => {
+      searches += 1;
+
+      return [0.1];
+    },
+    response: async () =>
+      events({
+        type: "response.output_item.done",
+        item: {
+          type: "function_call",
+          call_id: "again",
+          name: "search_website",
+          arguments: '{"query":"Freeman"}',
+        },
+      }),
+  });
+
+  const output = await readChatResponse(await post(chatRequest({ message: "Find relevant work" })));
+
+  assert.equal(inputs.length, 4);
+  assert.equal(searches, 3);
+  assert.deepEqual(
+    output
+      .trim()
+      .split("\n")
+      .map((line) => assistantStreamEventSchema.parse(JSON.parse(line)).type),
+    ["error"],
+  );
+  assert.match(output, /The assistant could not respond/);
 });
 
 test("a restored workflow supplies known progress to the model and public stream", async () => {
@@ -353,24 +627,12 @@ test("starting a workflow changes instructions and tools on the next iteration i
     response: async (request) =>
       request.input[0]?.type === "function_call_output"
         ? events(
-            {
-              type: "response.created",
-              response: { id: "resp_workflow_active" },
-            },
-            {
-              type: "response.output_text.delta",
-              delta: "Which dates work for you?",
-            },
-            {
-              type: "response.completed",
-              response: { id: "resp_workflow_active" },
-            },
+            { type: "response.created", response: { id: "resp_workflow_active" } },
+            { type: "response.output_text.delta", delta: "Which dates work for you?" },
+            { type: "response.completed", response: { id: "resp_workflow_active" } },
           )
         : events(
-            {
-              type: "response.created",
-              response: { id: "resp_workflow_start" },
-            },
+            { type: "response.created", response: { id: "resp_workflow_start" } },
             {
               type: "response.output_item.done",
               item: {
@@ -380,10 +642,7 @@ test("starting a workflow changes instructions and tools on the next iteration i
                 arguments: '{"workflowId":"meeting-booking"}',
               },
             },
-            {
-              type: "response.completed",
-              response: { id: "resp_workflow_start" },
-            },
+            { type: "response.completed", response: { id: "resp_workflow_start" } },
           ),
   });
 
@@ -510,10 +769,7 @@ test("a different workflow request asks for a choice before cancelling and switc
 
       if (request.instructions.includes("The visitor tried to start")) {
         return events(
-          {
-            type: "response.created",
-            response: { id: "resp_workflow_choice" },
-          },
+          { type: "response.created", response: { id: "resp_workflow_choice" } },
           {
             type: "response.output_text.delta",
             delta: "Continue your message, or cancel it and switch to the audit?",
@@ -544,30 +800,21 @@ test("a different workflow request asks for a choice before cancelling and switc
               }),
             },
           },
-          {
-            type: "response.completed",
-            response: { id: "resp_workflow_choice" },
-          },
+          { type: "response.completed", response: { id: "resp_workflow_choice" } },
         );
       }
 
       if (toolNames.includes("update_audit_context")) {
         return events(
           { type: "response.created", response: { id: "resp_switched" } },
-          {
-            type: "response.output_text.delta",
-            delta: "Let's start your audit.",
-          },
+          { type: "response.output_text.delta", delta: "Let's start your audit." },
           { type: "response.completed", response: { id: "resp_switched" } },
         );
       }
 
       if (toolNames.includes("switch_workflow")) {
         return events(
-          {
-            type: "response.created",
-            response: { id: "resp_switch_workflow" },
-          },
+          { type: "response.created", response: { id: "resp_switch_workflow" } },
           {
             type: "response.output_item.done",
             item: {
@@ -577,10 +824,7 @@ test("a different workflow request asks for a choice before cancelling and switc
               arguments: '{"workflowId":"audit"}',
             },
           },
-          {
-            type: "response.completed",
-            response: { id: "resp_switch_workflow" },
-          },
+          { type: "response.completed", response: { id: "resp_switch_workflow" } },
         );
       }
 
@@ -678,13 +922,7 @@ test("presentation ends the tool batch; invalid replies skip the model and valid
         inputType: "email",
         options: null,
       },
-      {
-        component: "TextArea",
-        field: "message",
-        label: "Message",
-        inputType: null,
-        options: null,
-      },
+      { component: "TextArea", field: "message", label: "Message", inputType: null, options: null },
     ],
   };
 
@@ -712,10 +950,7 @@ test("presentation ends the tool batch; invalid replies skip the model and valid
             arguments: JSON.stringify({
               updates: [
                 { field: "email", value: "chat-reply@example.test" },
-                {
-                  field: "message",
-                  value: "A corrected enquiry from ordinary chat",
-                },
+                { field: "message", value: "A corrected enquiry from ordinary chat" },
               ],
             }),
           },
@@ -826,12 +1061,7 @@ test("presentation ends the tool batch; invalid replies skip the model and valid
   assert.equal(inputs.length, 2);
 
   const nextOutput = await readChatResponse(
-    await post(
-      chatRequest({
-        message: "Show inputs again",
-        workflowInstanceId: instance.id,
-      }),
-    ),
+    await post(chatRequest({ message: "Show inputs again", workflowInstanceId: instance.id })),
   );
 
   const next = nextOutput
@@ -892,13 +1122,7 @@ test("conversational inputs validate all supported controls and cannot mutate wo
         inputType: "email",
         options: null,
       },
-      {
-        component: "TextArea",
-        field: "goal",
-        label: "Goal",
-        inputType: null,
-        options: null,
-      },
+      { component: "TextArea", field: "goal", label: "Goal", inputType: null, options: null },
       {
         component: "OptionSelector",
         field: "focus",
@@ -918,10 +1142,7 @@ test("conversational inputs validate all supported controls and cannot mutate wo
         assert.ok(request.input.every((item) => item.type === "function_call_output"));
         assert.match(JSON.stringify(request.input), /unknown_tool/);
 
-        return events({
-          type: "response.output_text.delta",
-          delta: "Here is a separate answer.",
-        });
+        return events({ type: "response.output_text.delta", delta: "Here is a separate answer." });
       }
 
       if (
@@ -948,12 +1169,7 @@ test("conversational inputs validate all supported controls and cannot mutate wo
             "confirm_meeting",
           ].map((name) => ({
             type: "response.output_item.done",
-            item: {
-              type: "function_call",
-              call_id: name,
-              name,
-              arguments: "{}",
-            },
+            item: { type: "function_call", call_id: name, name, arguments: "{}" },
           })),
         );
       }
@@ -999,22 +1215,13 @@ test("conversational inputs validate all supported controls and cannot mutate wo
 
   for (const controls of [
     [...event.interaction.controls, event.interaction.controls[0]],
-    event.interaction.controls.map((control) => ({
-      ...control,
-      maxLength: 9999,
-    })),
-    event.interaction.controls.map((control) => ({
-      ...control,
-      inputType: "text",
-    })),
+    event.interaction.controls.map((control) => ({ ...control, maxLength: 9999 })),
+    event.interaction.controls.map((control) => ({ ...control, inputType: "text" })),
   ]) {
     const rejected = await readChatResponse(
       await post(
         chatRequest({
-          interactionReply: {
-            ...reply,
-            interaction: { ...reply.interaction, controls },
-          },
+          interactionReply: { ...reply, interaction: { ...reply.interaction, controls } },
         }),
       ),
     );
@@ -1037,11 +1244,7 @@ test("conversational inputs validate all supported controls and cannot mutate wo
         workflowInstanceId: active.id,
         interactionReply: {
           ...reply,
-          values: {
-            email: "visitor@example.test",
-            goal: "Find relevant examples",
-            focus: "ai",
-          },
+          values: { email: "visitor@example.test", goal: "Find relevant examples", focus: "ai" },
         },
       }),
     ),
@@ -1108,12 +1311,7 @@ test("invalid presentation arguments fail safely and provider errors never log v
   });
 
   const output = await readChatResponse(
-    await post(
-      chatRequest({
-        message: "visitor@example.test",
-        workflowInstanceId: instance.id,
-      }),
-    ),
+    await post(chatRequest({ message: "visitor@example.test", workflowInstanceId: instance.id })),
   );
 
   assert.match(output, /The assistant could not respond/);
@@ -1159,12 +1357,7 @@ test("continuing through a structured choice cannot confirm a prepared contact s
 
       return events({
         type: "response.output_item.done",
-        item: {
-          type: "function_call",
-          call_id: "send",
-          name: "submit_contact",
-          arguments: "{}",
-        },
+        item: { type: "function_call", call_id: "send", name: "submit_contact", arguments: "{}" },
       });
     },
   });
@@ -1309,29 +1502,14 @@ test("resolving a workflow choice invalidates the remaining calls in that model 
         assert.match(outputs[2].output, /stale_workflow_choice/);
         assert.doesNotMatch(request.instructions, /The visitor tried to start/);
 
-        return events({
-          type: "response.output_text.delta",
-          delta: "We will keep your message.",
-        });
+        return events({ type: "response.output_text.delta", delta: "We will keep your message." });
       }
 
       return events(
         ...[
-          {
-            call_id: "continue",
-            name: "switch_workflow",
-            arguments: '{"workflowId":"contact"}',
-          },
-          {
-            call_id: "switch",
-            name: "switch_workflow",
-            arguments: '{"workflowId":"audit"}',
-          },
-          {
-            call_id: "reopen",
-            name: "present_ui",
-            arguments: JSON.stringify(presentation),
-          },
+          { call_id: "continue", name: "switch_workflow", arguments: '{"workflowId":"contact"}' },
+          { call_id: "switch", name: "switch_workflow", arguments: '{"workflowId":"audit"}' },
+          { call_id: "reopen", name: "present_ui", arguments: JSON.stringify(presentation) },
         ].map((item) => ({
           type: "response.output_item.done",
           item: { type: "function_call", ...item },
@@ -1375,15 +1553,10 @@ test("provider failure after a durable start still streams the safe active insta
       request.input[0]?.type === "function_call_output"
         ? events({
             type: "response.failed",
-            response: {
-              error: { message: "provider unavailable after start" },
-            },
+            response: { error: { message: "provider unavailable after start" } },
           })
         : events(
-            {
-              type: "response.created",
-              response: { id: "resp_workflow_start" },
-            },
+            { type: "response.created", response: { id: "resp_workflow_start" } },
             {
               type: "response.output_item.done",
               item: {
@@ -1393,10 +1566,7 @@ test("provider failure after a durable start still streams the safe active insta
                 arguments: '{"workflowId":"meeting-booking"}',
               },
             },
-            {
-              type: "response.completed",
-              response: { id: "resp_workflow_start" },
-            },
+            { type: "response.completed", response: { id: "resp_workflow_start" } },
           ),
   });
 
@@ -1458,10 +1628,7 @@ test("Calendar availability failure produces a useful reply without inventing sl
 
   const output = await readChatResponse(
     await post(
-      chatRequest({
-        message: "What times are available?",
-        workflowInstanceId: instance.id,
-      }),
+      chatRequest({ message: "What times are available?", workflowInstanceId: instance.id }),
     ),
   );
 
@@ -1499,10 +1666,7 @@ test("a later workflow-call failure in one model batch does not orphan a persist
             arguments: '{"workflowId":"meeting-booking"}',
           },
         },
-        {
-          type: "response.completed",
-          response: { id: "resp_duplicate_start" },
-        },
+        { type: "response.completed", response: { id: "resp_duplicate_start" } },
       ),
   });
 
@@ -1531,10 +1695,7 @@ test("terminal workflow metadata clears the active surface without streaming pri
     response: async (request) => {
       if (request.input[0]?.type !== "function_call_output") {
         return events(
-          {
-            type: "response.created",
-            response: { id: "resp_confirmation_tool" },
-          },
+          { type: "response.created", response: { id: "resp_confirmation_tool" } },
           {
             type: "response.output_item.done",
             item: {
@@ -1544,10 +1705,7 @@ test("terminal workflow metadata clears the active surface without streaming pri
               arguments: "{}",
             },
           },
-          {
-            type: "response.completed",
-            response: { id: "resp_confirmation_tool" },
-          },
+          { type: "response.completed", response: { id: "resp_confirmation_tool" } },
         );
       }
 
@@ -1569,10 +1727,7 @@ test("terminal workflow metadata clears the active surface without streaming pri
 
       return events(
         { type: "response.created", response: { id: "resp_booking_done" } },
-        {
-          type: "response.output_text.delta",
-          delta: "Your meeting is booked.",
-        },
+        { type: "response.output_text.delta", delta: "Your meeting is booked." },
         { type: "response.completed", response: { id: "resp_booking_done" } },
       );
     },
@@ -1692,10 +1847,7 @@ test("retrieval failure returns the existing safe stream error", async () => {
 test("OpenAI streaming failure returns the existing safe stream error", async () => {
   const { errors, post } = createAssistant({
     response: async () =>
-      events({
-        type: "response.failed",
-        response: { error: { message: "provider unavailable" } },
-      }),
+      events({ type: "response.failed", response: { error: { message: "provider unavailable" } } }),
   });
 
   const output = await readChatResponse(
@@ -1776,6 +1928,49 @@ test("aborted request stops without emitting a response", async () => {
   const output = await readChatResponse(response);
 
   assert.equal(output, "");
+});
+
+test("aborting after a streamed delta skips later tools and final events", async () => {
+  const controller = new AbortController();
+
+  let searches = 0;
+
+  const { post, inputs, errors } = createAssistant({
+    embedding: async () => {
+      searches += 1;
+
+      return [0.1];
+    },
+    response: async () =>
+      (async function* () {
+        yield { type: "response.output_text.delta", delta: "Partial answer." };
+        controller.abort();
+        yield {
+          type: "response.output_item.done",
+          item: {
+            type: "function_call",
+            call_id: "after-abort",
+            name: "search_website",
+            arguments: '{"query":"Freeman"}',
+          },
+        };
+      })() as never,
+  });
+
+  const output = await readChatResponse(
+    await post(chatRequest({ message: "Show me the work" }, controller.signal)),
+  );
+
+  assert.deepEqual(
+    output
+      .trim()
+      .split("\n")
+      .map((line) => assistantStreamEventSchema.parse(JSON.parse(line))),
+    [{ type: "delta", delta: "Partial answer." }],
+  );
+  assert.equal(inputs.length, 1);
+  assert.equal(searches, 0);
+  assert.deepEqual(errors, []);
 });
 
 test("invalid public request returns the current safe validation response", async () => {
