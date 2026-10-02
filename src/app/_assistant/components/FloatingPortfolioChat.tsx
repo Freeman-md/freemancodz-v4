@@ -12,8 +12,17 @@ import { useAssistant } from "../hooks/useAssistant";
 import { useAssistantSurface } from "../hooks/useAssistantSurface";
 
 export function FloatingPortfolioChat() {
-  const { canSubmit, input, isLoading, messages, setInput, submitMessage, workflowInstance } =
-    useAssistant();
+  const {
+    canSubmit,
+    input,
+    isLoading,
+    messages,
+    setInput,
+    submitMessage,
+    submitInteraction,
+    updateInteractionValue,
+    workflowInstance,
+  } = useAssistant();
 
   const shouldReduceMotion = useReducedMotion();
 
@@ -59,18 +68,18 @@ export function FloatingPortfolioChat() {
       initial={false}
       animate={{
         maxWidth: isOpen ? 560 : launcherWidth,
-        backgroundColor: isOpen ? "#ffffff" : "var(--brand-primary)",
+        backgroundColor: isOpen ? "var(--assistant-surface, #ffffff)" : "var(--brand-primary)",
         borderColor:
           isMobileSheet && isExpanded
             ? "rgba(0,0,0,0)"
             : isOpen
-              ? "rgba(0,0,0,0.12)"
+              ? "var(--assistant-line, rgba(0,0,0,0.12))"
               : "rgba(255,255,255,0.1)",
         boxShadow: isMobileSheet
-          ? "0 -28px 80px -48px rgba(0,0,0,0.42)"
+          ? "var(--assistant-shadow, 0 -28px 80px -48px rgba(0,0,0,0.42))"
           : isOpen
-            ? "0 28px 80px -38px rgba(0,0,0,0.36)"
-            : "0 26px 80px -34px rgba(0,0,0,0.72)",
+            ? "var(--assistant-shadow, 0 28px 80px -38px rgba(0,0,0,0.36))"
+            : "var(--assistant-shadow, 0 26px 80px -34px rgba(0,0,0,0.72))",
       }}
       transition={surfaceTransition}
       style={{ transformOrigin: "50% 100%" }}
@@ -94,7 +103,7 @@ export function FloatingPortfolioChat() {
           transition={shouldReduceMotion ? { duration: 0 } : { duration: isMobileSheet ? 0.2 : 0 }}
           className="flex min-h-0 flex-1 flex-col"
         >
-          <header className="flex h-[4.5rem] shrink-0 items-center justify-between gap-3 border-b border-black/8 bg-white px-4 py-3 sm:h-[5.5rem] sm:px-6 sm:py-4">
+          <header className="assistant-header flex h-[4.5rem] shrink-0 items-center justify-between gap-3 border-b border-black/8 bg-white px-4 py-3 sm:h-[5.5rem] sm:px-6 sm:py-4">
             <div className="min-w-0">
               <h1 id="portfolio-chat-title" className="font-sans text-lg/6 font-semibold text-ink">
                 Freeman’s assistant
@@ -110,7 +119,7 @@ export function FloatingPortfolioChat() {
                   aria-expanded={isExpanded}
                   variant="ghost"
                   size="icon-sm"
-                  className="relative rounded-full"
+                  className="assistant-control relative rounded-full"
                   onClick={toggleExpanded}
                 >
                   {isExpanded ? (
@@ -129,7 +138,7 @@ export function FloatingPortfolioChat() {
                 aria-label="Close assistant"
                 variant="ghost"
                 size="icon-sm"
-                className="relative rounded-full"
+                className="assistant-control relative rounded-full"
                 onClick={closeChat}
               >
                 <XIcon aria-hidden="true" className="size-4" />
@@ -151,6 +160,8 @@ export function FloatingPortfolioChat() {
             messagesEndRef={messagesEndRef}
             shouldReduceMotion={shouldReduceMotion}
             onStarterAction={(action) => void handleStarterAction(action)}
+            onInteractionSubmit={submitInteraction}
+            onInteractionValueChange={updateInteractionValue}
           />
 
           <AssistantComposer
@@ -169,7 +180,7 @@ export function FloatingPortfolioChat() {
           onClick={openChat}
           onFocus={handleLauncherFocus}
           variant="ghost"
-          className="h-12 w-full justify-center gap-2 rounded-none px-4 text-left text-ink hover:bg-black/5 hover:text-ink"
+          className="assistant-launcher h-12 w-full justify-center gap-2 rounded-none px-4 text-left text-ink hover:bg-black/5 hover:text-ink"
         >
           <MessageSquareIcon aria-hidden="true" className="size-4" />
           <span className="hidden text-[13px] font-medium sm:inline">Ask assistant</span>

@@ -1,0 +1,204 @@
+.portfolio-chat-surface .assistant-interaction-input {
+  border-color: #71808b;
+}
+
+.portfolio-chat-surface .assistant-interaction-input:hover:not(:disabled) {
+  border-color: var(--brand-link);
+}
+
+.portfolio-chat-surface .assistant-interaction-input:focus-visible,
+.portfolio-chat-surface .assistant-interaction-submit:focus-visible {
+  outline: 2px solid var(--brand-link);
+  outline-offset: 2px;
+  --tw-ring-color: transparent;
+}
+
+.portfolio-chat-surface .assistant-interaction-input[aria-invalid="true"]:not(:disabled) {
+  border-color: #991b1b;
+}
+
+.portfolio-chat-surface .assistant-interaction-submit {
+  background: var(--brand-secondary);
+  border-color: var(--brand-secondary);
+  color: white;
+}
+
+.portfolio-chat-surface .assistant-interaction-submit:hover:not(:disabled) {
+  background: #10313a;
+  border-color: #10313a;
+}
+
+.portfolio-chat-surface .assistant-interaction-input:disabled,
+.portfolio-chat-surface .assistant-interaction-submit:disabled {
+  background: #f5f5f7;
+  border-color: #bdc6cc;
+  color: #4b5a64;
+  opacity: 1;
+}
+
+:root[data-theme="dark"] .portfolio-chat-surface {
+  --assistant-canvas: #020c1b;
+  --assistant-surface: #061426;
+  --assistant-text: #eaf4f1;
+  --assistant-muted: #aabec0;
+  --assistant-line: rgb(234 244 241 / 14%);
+  --assistant-accent: #64ffda;
+  --assistant-focus: #9fffea;
+  --assistant-shadow: none;
+  color: var(--assistant-text);
+}
+
+:root[data-theme="dark"] .portfolio-chat-surface .text-ink {
+  color: var(--assistant-text);
+}
+
+:root[data-theme="dark"] .portfolio-chat-surface .text-muted {
+  color: var(--assistant-muted);
+}
+
+:root[data-theme="dark"] .portfolio-chat-surface .stroke-muted {
+  stroke: var(--assistant-muted);
+}
+
+:root[data-theme="dark"] .portfolio-chat-surface .text-signal-700 {
+  color: var(--assistant-accent);
+}
+
+:root[data-theme="dark"] .portfolio-chat-surface .stroke-signal-700 {
+  stroke: var(--assistant-accent);
+}
+
+:root[data-theme="dark"] .portfolio-chat-surface .assistant-header,
+:root[data-theme="dark"] .portfolio-chat-surface .assistant-composer {
+  background: var(--assistant-surface);
+  border-color: var(--assistant-line);
+}
+
+:root[data-theme="dark"] .portfolio-chat-surface .assistant-messages {
+  background: var(--assistant-canvas);
+}
+
+:root[data-theme="dark"] .portfolio-chat-surface .assistant-visitor {
+  background: #10313a;
+}
+
+:root[data-theme="dark"] .portfolio-chat-surface .assistant-starters > button,
+:root[data-theme="dark"] .portfolio-chat-surface .assistant-sources,
+:root[data-theme="dark"] .portfolio-chat-surface .assistant-progress-row {
+  border-color: var(--assistant-line);
+}
+
+:root[data-theme="dark"] .portfolio-chat-surface .assistant-starters button:hover svg {
+  stroke: var(--assistant-text);
+}
+
+:root[data-theme="dark"] .portfolio-chat-surface .assistant-progress {
+  background: #081f2a;
+  border-color: var(--assistant-line);
+}
+
+:root[data-theme="dark"] .portfolio-chat-surface .assistant-progress-row > span {
+  overflow-wrap: anywhere;
+}
+
+:root[data-theme="dark"] .portfolio-chat-surface .assistant-error {
+  background: #33202a;
+  color: #ffb9bf;
+  --tw-ring-color: #8f5260;
+}
+
+:root[data-theme="dark"] .portfolio-chat-surface .assistant-input-line {
+  border-color: #718b99;
+}
+
+:root[data-theme="dark"] .portfolio-chat-surface .assistant-input-line:has(textarea:focus-visible) {
+  border-color: var(--assistant-accent);
+}
+
+:root[data-theme="dark"] .portfolio-chat-surface textarea::placeholder {
+  color: var(--assistant-muted);
+}
+
+:root[data-theme="dark"] .portfolio-chat-surface .assistant-send,
+:root[data-theme="dark"] .portfolio-chat-surface .assistant-launcher {
+  background: var(--assistant-accent);
+  color: var(--assistant-canvas);
+}
+
+:root[data-theme="dark"] .portfolio-chat-surface .assistant-send:hover,
+:root[data-theme="dark"] .portfolio-chat-surface .assistant-launcher:hover {
+  background: var(--assistant-focus);
+}
+
+:root[data-theme="dark"] .portfolio-chat-surface .assistant-send:disabled {
+  background: #0a1a2e;
+  color: #8d9fab;
+}
+
+:root[data-theme="dark"] .portfolio-chat-surface .assistant-control {
+  color: var(--assistant-text);
+}
+
+:root[data-theme="dark"] .portfolio-chat-surface .assistant-control:hover {
+  background: #132d3b;
+}
+
+:root[data-theme="dark"] .portfolio-chat-surface :is(button, a):focus-visible {
+  outline: 2px solid var(--assistant-focus);
+  outline-offset: 2px;
+  --tw-ring-color: transparent;
+}
+
+:root[data-theme="dark"]
+  .portfolio-chat-surface
+  :is(.assistant-starters, .assistant-progress)
+  button:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 2px var(--assistant-focus);
+}
+:root[data-theme="dark"] .portfolio-chat-surface .assistant-interaction {
+  background: var(--assistant-surface);
+  border-color: var(--assistant-line);
+}
+
+:root[data-theme="dark"] .portfolio-chat-surface .assistant-interaction-input {
+  background: var(--assistant-canvas);
+  border-color: #718b99;
+  color: var(--assistant-text);
+}
+
+:root[data-theme="dark"] .portfolio-chat-surface .assistant-interaction-input:hover:not(:disabled) {
+  border-color: var(--assistant-accent);
+}
+
+:root[data-theme="dark"] .portfolio-chat-surface .assistant-interaction-input:focus-visible {
+  outline-color: var(--assistant-focus);
+}
+
+:root[data-theme="dark"]
+  .portfolio-chat-surface
+  .assistant-interaction-input[aria-invalid="true"]:not(:disabled) {
+  border-color: #ffb9bf;
+}
+
+:root[data-theme="dark"] .portfolio-chat-surface .assistant-interaction-submit {
+  background: var(--assistant-accent);
+  border-color: var(--assistant-accent);
+  color: var(--assistant-canvas);
+}
+
+:root[data-theme="dark"] .portfolio-chat-surface .assistant-interaction-submit:hover:not(:disabled) {
+  background: var(--assistant-focus);
+  border-color: var(--assistant-focus);
+}
+
+:root[data-theme="dark"] .portfolio-chat-surface .assistant-interaction-input:disabled,
+:root[data-theme="dark"] .portfolio-chat-surface .assistant-interaction-submit:disabled {
+  background: #0a1a2e;
+  border-color: #526a78;
+  color: var(--assistant-muted);
+}
+
+:root[data-theme="dark"] .portfolio-chat-surface .assistant-interaction-error {
+  color: #ffb9bf;
+}

@@ -11,12 +11,12 @@ const CHAT_RATE_LIMIT_SCOPE = "chat";
 const CHAT_RATE_LIMIT_RULES = [
   {
     id: "short",
-    limit: 20,
+    limit: 40,
     windowMs: 10 * 60 * 1000,
   },
   {
     id: "daily",
-    limit: 50,
+    limit: 90,
     windowMs: 24 * 60 * 60 * 1000,
   },
 ] as const satisfies readonly RateLimitRule[];
@@ -101,6 +101,10 @@ export function createChatPostHandler({
     return new Response(
       assistantService.createResponse({
         message: parsed.data.message,
+        ...(parsed.data.interactionReply ? { interactionReply: parsed.data.interactionReply } : {}),
+        ...(parsed.data.interactionContext
+          ? { interactionContext: parsed.data.interactionContext }
+          : {}),
         previousResponseId: parsed.data.previousResponseId ?? null,
         workflowInstanceId: parsed.data.workflowInstanceId ?? null,
         workflowStart: parsed.data.workflowStart ?? null,

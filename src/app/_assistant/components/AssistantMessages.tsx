@@ -8,6 +8,8 @@ import { cn } from "@/app/_utils/class-names";
 import type { ChatMessage } from "../types";
 import { AssistantMarkdown } from "./AssistantMarkdown";
 import { AssistantSources } from "./AssistantSources";
+import { AssistantInteraction } from "./AssistantInteraction";
+import type { AssistantInteractionReply } from "@/contracts/assistant-ui.contract";
 import type { AssistantWorkflowStart } from "@/contracts/assistant.contract";
 
 export type StarterAction = {
@@ -58,6 +60,8 @@ type AssistantMessagesProps = {
   messagesEndRef: RefObject<HTMLDivElement | null>;
   shouldReduceMotion: boolean | null;
   onStarterAction: (action: StarterAction) => void;
+  onInteractionSubmit?: (reply: AssistantInteractionReply) => Promise<void>;
+  onInteractionValueChange?: (interactionId: string, field: string, value: string) => void;
 };
 
 export function AssistantMessages({
@@ -67,9 +71,16 @@ export function AssistantMessages({
   messagesEndRef,
   shouldReduceMotion,
   onStarterAction,
+  onInteractionSubmit,
+  onInteractionValueChange,
 }: AssistantMessagesProps) {
   return (
-    <ScrollArea className={cn("min-h-40 flex-1 overscroll-contain bg-[#fbfbfa]", className)}>
+    <ScrollArea
+      className={cn(
+        "assistant-messages min-h-40 flex-1 overscroll-contain bg-[#fbfbfa]",
+        className,
+      )}
+    >
       <div className="flex min-h-full flex-col gap-5 px-4 py-5 sm:px-6 sm:py-6">
         {messages.length === 0 ? (
           <motion.div
@@ -85,7 +96,10 @@ export function AssistantMessages({
                 Ask about Freeman’s work, or start a request.
               </p>
             </div>
-            <div aria-label="Start a conversation" className="divide-y divide-black/8">
+            <div
+              aria-label="Start a conversation"
+              className="assistant-starters divide-y divide-black/8"
+            >
               {ASSISTANT_STARTER_ACTIONS.map((action) => (
                 <button
                   key={action.label}
@@ -128,9 +142,9 @@ export function AssistantMessages({
               className={cn(
                 "flex flex-col gap-3",
                 message.role === "user"
-                  ? "ml-auto max-w-[85%] rounded-xl bg-[#F5F5F7] px-4 py-3 text-ink"
+                  ? "assistant-visitor ml-auto max-w-[85%] rounded-xl bg-[#F5F5F7] px-4 py-3 text-ink"
                   : message.error
-                    ? "w-full rounded-xl bg-red-50 px-4 py-3 text-red-950 ring-1 ring-red-950/10"
+                    ? "assistant-error w-full rounded-xl bg-red-50 px-4 py-3 text-red-950 ring-1 ring-red-950/10"
                     : "w-full text-ink",
               )}
             >
@@ -143,6 +157,18 @@ export function AssistantMessages({
               </div>
 
               {message.sources ? <AssistantSources sources={message.sources} /> : null}
+              {message.interaction && onInteractionSubmit && onInteractionValueChange ? (
+                <AssistantInteraction
+                  key={message.interaction.id}
+                  interaction={message.interaction}
+                  values={message.interactionValues ?? {}}
+                  result={message.interactionResult}
+                  uncertain={message.interactionUncertain}
+                  isLoading={isLoading}
+                  onSubmit={onInteractionSubmit}
+                  onValueChange={onInteractionValueChange}
+                />
+              ) : null}
             </motion.article>
           ))}
         </AnimatePresence>

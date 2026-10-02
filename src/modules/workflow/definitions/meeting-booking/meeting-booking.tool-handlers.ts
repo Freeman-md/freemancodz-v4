@@ -1,5 +1,6 @@
 import type { Prisma } from "@/generated/prisma/client";
 import { MEETING_CONFIG } from "@/modules/meeting/config";
+import { CalendarAvailabilityError } from "@/infrastructure/google-calendar/types";
 import {
   MeetingPersistenceError,
   type MeetingServiceClient,
@@ -94,7 +95,31 @@ async function findMeetingSlots(
     });
   }
 
-  const slots = await meetingService.findAvailableSlots(input);
+  let slots: MeetingSlot[];
+
+  try {
+    slots = await meetingService.findAvailableSlots(input);
+  } catch (error) {
+    if (!(error instanceof CalendarAvailabilityError)) {
+      throw error;
+    }
+
+    return active(
+      {
+        ...state,
+        step: "collecting",
+        availableSlots: [],
+        availabilityCheckedAt: null,
+        selectedSlot: null,
+        preparedInteractionId: null,
+      },
+      {
+        error: "meeting_availability_unavailable",
+        message:
+          "Meeting availability is temporarily unavailable. Explain this briefly and ask the visitor to try again later. Do not invent slots, prepare a booking or claim anything was booked.",
+      },
+    );
+  }
 
   return active(
     {
@@ -163,6 +188,13 @@ function confirmMeeting(
   state: MeetingBookingState,
   context: WorkflowExecutionContext,
 ): WorkflowExecutionResult<MeetingBookingState> {
+  if (context.allowConfirmation === false) {
+    return active(state, {
+      error: "separate_confirmation_required",
+      message: "Structured answers cannot confirm booking. Wait for a separate visitor message.",
+    });
+  }
+
   if (
     state.step !== "awaiting_confirmation" ||
     !state.name ||

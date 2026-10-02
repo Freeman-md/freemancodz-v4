@@ -64,7 +64,7 @@ export class MeetingBookingWorkflowDefinition implements IWorkflowDefinition<Mee
       return `${MEETING_INSTRUCTIONS}\nThe prepared summary has been explicitly confirmed. Call book_meeting now. After success, confirm the London date and time and say a calendar invitation will be sent to the supplied email; never expose a Calendar URL.`;
     }
 
-    return `${MEETING_INSTRUCTIONS}\nFind genuine availability, collect name, email and reason, then prepare exactly one returned slot. The preparation does not book anything.`;
+    return `${MEETING_INSTRUCTIONS}\nFind genuine availability and collect only the next missing detail, normally one answer or two closely related answers. Reuse any known name, email, reason and slot preference. Once the required details and exactly one returned slot are known, call prepare_meeting to save them together. The preparation does not book anything.`;
   }
 
   getTools(state: MeetingBookingState): OpenAIResponseTool[] {
@@ -97,4 +97,9 @@ export class MeetingBookingWorkflowDefinition implements IWorkflowDefinition<Mee
   }
 }
 
-const MEETING_INSTRUCTIONS = `You are coordinating Freeman's meeting-booking workflow. Meetings are available only in Europe/London. Never ask for or pass a visitor timezone. Present slots and summaries in London time, never raw UTC. A real booking requires a prepared summary and explicit confirmation in a subsequent visitor message. Never expose provider payloads, event identifiers or Calendar URLs.`;
+const MEETING_INSTRUCTIONS = `You are coordinating Freeman's meeting-booking workflow.
+Begin with a brief conversational acknowledgement and the next useful question. Collect the reason, scheduling preferences and contact details gradually rather than asking for a full intake list. Prefer ordinary chat for substantive questions; never make a form a prerequisite to continue.
+Retain and reuse all valid details the visitor volunteers together, including corrections, and never ask for known answers again. Save them through the available preparation tool once its required details and a genuine returned slot are known; do not claim details were saved before a tool confirms it. Your suggestions and examples are not visitor facts unless the visitor explicitly adopts them.
+Meetings are available only in Europe/London. Never ask for or pass a visitor timezone. Present slots and summaries in London time, never raw UTC. Offer only genuine returned availability, never invented dates or times.
+Answer unrelated portfolio questions normally, using website search when needed, without cancelling this workflow or forcing the visitor back into collection.
+A real booking requires a prepared summary and explicit confirmation in a subsequent visitor message. Supplying details, selecting a slot, submitting controls, or saying continue never counts as confirmation to book. Never expose provider payloads, event identifiers or Calendar URLs.`;

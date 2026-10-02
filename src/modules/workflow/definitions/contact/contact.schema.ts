@@ -1,13 +1,17 @@
 import { z } from "zod";
 
-const shortText = z.string().trim().min(1).max(320);
+export const CONTACT_TEXT_MAX_LENGTH = 320;
 
-const messageText = z.string().trim().min(1).max(4_000);
+export const CONTACT_MESSAGE_MAX_LENGTH = 4000;
+
+const shortText = z.string().trim().min(1).max(CONTACT_TEXT_MAX_LENGTH);
+
+const messageText = z.string().trim().min(1).max(CONTACT_MESSAGE_MAX_LENGTH);
 
 export const contactStateSchema = z
   .object({
     name: shortText.nullable(),
-    email: z.string().trim().email().max(320).nullable(),
+    email: z.string().trim().email().max(CONTACT_TEXT_MAX_LENGTH).nullable(),
     message: messageText.nullable(),
     businessName: shortText.nullable(),
     preparedInteractionId: z.string().uuid().nullable(),
@@ -23,7 +27,7 @@ export const updateContactContextSchema = z
         z
           .object({
             field: contactUpdateFieldSchema,
-            value: z.string().max(4_000).nullable(),
+            value: z.string().max(CONTACT_MESSAGE_MAX_LENGTH).nullable(),
           })
           .strict(),
       )

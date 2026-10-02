@@ -177,6 +177,7 @@ test(
 
       const completed = await repository.save({
         id: created.id,
+        expectedRevision: created.revision,
         status: "completed",
         state: { step: "confirmed" },
         completedAt,
@@ -187,6 +188,7 @@ test(
       await assert.rejects(
         repository.save({
           id: created.id,
+          expectedRevision: completed.revision,
           status: "active",
           state: { step: "reopened" },
           completedAt: null,

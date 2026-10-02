@@ -1,5 +1,12 @@
 export type CalendarBusyPeriod = { start: Date; end: Date };
 import type { Prisma } from "@/generated/prisma/client";
+
+export class CalendarAvailabilityError extends Error {
+  constructor(cause?: unknown) {
+    super("Calendar availability is temporarily unavailable.", { cause });
+  }
+}
+
 export type CreatedCalendarEvent = {
   id: string;
   htmlLink: string | null;

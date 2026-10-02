@@ -136,6 +136,13 @@ async function submitAudit(
   state: AuditState,
   context: WorkflowExecutionContext,
 ): Promise<WorkflowExecutionResult<AuditState>> {
+  if (context.allowConfirmation === false) {
+    return active(state, {
+      error: "separate_confirmation_required",
+      message: "Structured answers cannot confirm submission. Wait for a separate visitor message.",
+    });
+  }
+
   const missing = progress.getMissingRequiredFields(state);
 
   if (missing.length > 0 || !state.preparedInteractionId) {

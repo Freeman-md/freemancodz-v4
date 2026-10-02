@@ -1,6 +1,6 @@
 import "server-only";
 
-import type { PrismaClient, WorkflowInstance } from "@/generated/prisma/client";
+import { Prisma, type PrismaClient, type WorkflowInstance } from "@/generated/prisma/client";
 import { WorkflowInstanceStoreError } from "./errors";
 import type { IWorkflowInstanceRepository } from "./interfaces";
 import type { CreateWorkflowInstanceInput, SaveWorkflowInstanceInput } from "./types";
@@ -44,11 +44,13 @@ export class WorkflowInstanceRepository implements IWorkflowInstanceRepository {
     try {
       return await this.database.$transaction(async (transaction) => {
         const update = await transaction.workflowInstance.updateMany({
-          where: { id: input.id, status: "active" },
+          where: { id: input.id, status: "active", revision: input.expectedRevision },
           data: {
             status: input.status,
             state: input.state,
             completedAt: input.completedAt,
+            revision: { increment: 1 },
+            pendingInteraction: input.pendingInteraction ?? Prisma.DbNull,
           },
         });
 
@@ -66,8 +68,8 @@ export class WorkflowInstanceRepository implements IWorkflowInstanceRepository {
           }
 
           throw new WorkflowInstanceStoreError(
-            "terminal",
-            "The workflow instance is already terminal.",
+            existing.status === "active" ? "stale" : "terminal",
+            "The workflow has changed.",
           );
         }
 
@@ -78,6 +80,16 @@ export class WorkflowInstanceRepository implements IWorkflowInstanceRepository {
             "not_found",
             "The workflow instance was not found after persistence.",
           );
+        }
+
+        if (input.replacement) {
+          if (input.status !== "cancelled") {
+            throw new WorkflowInstanceStoreError("unavailable", "Invalid replacement.");
+          }
+
+          return transaction.workflowInstance.create({
+            data: { ...input.replacement, status: "active" },
+          });
         }
 
         return record;
@@ -106,9 +118,7 @@ function normalizePersistenceError(error: unknown): WorkflowInstanceStoreError {
     return error;
   }
 
-  return new WorkflowInstanceStoreError(
-    "unavailable",
-    "Workflow persistence is unavailable.",
-    { cause: error },
-  );
+  return new WorkflowInstanceStoreError("unavailable", "Workflow persistence is unavailable.", {
+    cause: error,
+  });
 }

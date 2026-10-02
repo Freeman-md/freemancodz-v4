@@ -1,6 +1,7 @@
 import type { Prisma } from "@/generated/prisma/client";
 import type { OpenAIResponseTool } from "@/infrastructure/openai/types";
 import type { WorkflowProgress } from "@/contracts/workflow-progress.contract";
+import type { AssistantInteraction } from "@/contracts/assistant-ui.contract";
 
 export const WORKFLOW_INSTANCE_STATUSES = ["active", "completed", "cancelled"] as const;
 
@@ -28,6 +29,9 @@ export type CreateWorkflowInstanceInput = WorkflowStartContext & {
 
 export type SaveWorkflowInstanceInput = {
   id: string;
+  expectedRevision: number;
+  pendingInteraction?: Prisma.JsonObject;
+  replacement?: CreateWorkflowInstanceInput;
   status: WorkflowInstanceStatus;
   state: Prisma.JsonObject;
   completedAt: Date | null;
@@ -36,6 +40,7 @@ export type SaveWorkflowInstanceInput = {
 export type WorkflowExecutionContext = {
   workflowInstanceId: string;
   interactionId: string;
+  allowConfirmation?: boolean;
 };
 
 export type WorkflowExecutionResult<State extends Prisma.JsonObject> = {
@@ -46,6 +51,8 @@ export type WorkflowExecutionResult<State extends Prisma.JsonObject> = {
 
 export type WorkflowAssistantContext = {
   instructions: string;
+  pendingWorkflowTargetId?: string;
+  inputFields?: Array<Omit<AssistantInteraction["controls"][number], "label" | "options">>;
   tools: OpenAIResponseTool[];
   instance: WorkflowPublicInstance | null;
 };
@@ -54,6 +61,7 @@ export type WorkflowToolCall = {
   name: string;
   rawArguments: string;
   interactionId: string;
+  allowConfirmation?: boolean;
   startContext?: WorkflowStartContext;
 };
 

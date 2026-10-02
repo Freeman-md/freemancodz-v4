@@ -1,6 +1,10 @@
 import "server-only";
 import type { MeetingSlot, MeetingStore, PendingCalendarEvent } from "./types";
-import type { CalendarClient } from "@/infrastructure/google-calendar/types";
+import {
+  CalendarAvailabilityError,
+  type CalendarBusyPeriod,
+  type CalendarClient,
+} from "@/infrastructure/google-calendar/types";
 import type { Logger } from "@/infrastructure/logging/logger";
 import { MEETING_CONFIG } from "./config";
 import { MeetingPersistenceError } from "./types";
@@ -21,10 +25,20 @@ export class MeetingService {
       return [];
     }
 
-    const busy = await this.calendar.getBusyPeriods({
-      start: new Date(candidates[0].start),
-      end: new Date(candidates.at(-1)!.end),
-    });
+    let busy: CalendarBusyPeriod[];
+
+    try {
+      busy = await this.calendar.getBusyPeriods({
+        start: new Date(candidates[0].start),
+        end: new Date(candidates.at(-1)!.end),
+      });
+    } catch (error) {
+      if (error instanceof CalendarAvailabilityError) {
+        this.logger.error("meeting.availability_failed", { category: "calendar_unavailable" });
+      }
+
+      throw error;
+    }
 
     return candidates.filter(
       (slot) =>

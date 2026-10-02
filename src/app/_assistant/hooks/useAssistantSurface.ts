@@ -59,6 +59,8 @@ export function useAssistantSurface({
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
+  const latestMessage = messages.at(-1);
+
   function openChat() {
     setIsOpen(true);
   }
@@ -140,7 +142,15 @@ export function useAssistantSurface({
       block: "end",
       behavior: shouldReduceMotion ? "auto" : "smooth",
     });
-  }, [isLoading, isOpen, messages, shouldReduceMotion]);
+  }, [
+    isLoading,
+    isOpen,
+    messages.length,
+    latestMessage?.content,
+    latestMessage?.interaction,
+    latestMessage?.sources,
+    shouldReduceMotion,
+  ]);
 
   useEffect(() => {
     if (!isOpen) {

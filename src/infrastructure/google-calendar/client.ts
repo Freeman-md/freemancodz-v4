@@ -1,10 +1,11 @@
 import "server-only";
 import { google } from "googleapis";
-import type {
-  CalendarBusyPeriod,
-  CalendarClient,
-  CreatedCalendarEvent,
-  GoogleCalendarConfig,
+import {
+  CalendarAvailabilityError,
+  type CalendarBusyPeriod,
+  type CalendarClient,
+  type CreatedCalendarEvent,
+  type GoogleCalendarConfig,
 } from "./types";
 import { createHash } from "node:crypto";
 
@@ -16,9 +17,9 @@ export class GoogleCalendarClient implements CalendarClient {
   constructor(private readonly getConfig: () => GoogleCalendarConfig) {}
 
   async getBusyPeriods(input: { start: Date; end: Date }): Promise<CalendarBusyPeriod[]> {
-    const { calendar, calendarId } = this.getCalendar();
-
     try {
+      const { calendar, calendarId } = this.getCalendar();
+
       const response = await calendar.freebusy.query({
         requestBody: {
           timeMin: input.start.toISOString(),
@@ -27,15 +28,28 @@ export class GoogleCalendarClient implements CalendarClient {
         },
       });
 
-      const periods = response.data.calendars?.[calendarId]?.busy ?? [];
+      const result = response.data.calendars?.[calendarId];
 
-      return periods.flatMap((period) =>
-        period.start && period.end
-          ? [{ start: new Date(period.start), end: new Date(period.end) }]
-          : [],
-      );
+      // A failed or missing Calendar result is not evidence that the time is free.
+      if (!result || result.errors?.length || !Array.isArray(result.busy)) {
+        throw new CalendarAvailabilityError();
+      }
+
+      const periods = result.busy;
+
+      return periods.map((period) => {
+        const start = new Date(period.start ?? "");
+
+        const end = new Date(period.end ?? "");
+
+        if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime()) || end <= start) {
+          throw new CalendarAvailabilityError();
+        }
+
+        return { start, end };
+      });
     } catch (error) {
-      throw new Error("Google Calendar availability request failed.", { cause: error });
+      throw new CalendarAvailabilityError(error);
     }
   }
 

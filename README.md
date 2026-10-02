@@ -89,6 +89,31 @@ For the Milestone 17 production rollout, pause the cron, deploy the reviewed app
 
 ## Validation
 
+Assistant structured inputs require the additive Prisma migration
+`20261002090000_add_workflow_interactions` before deploying the updated application.
+It preserves workflow records and table permissions while adding revision-checked
+pending interactions. Apply it through the existing reviewed Prisma deployment
+process; do not deploy application code against the old schema. Browser restoration
+remains ID-only: messages and form drafts are never saved in browser storage.
+
+The assistant can present text, email, longer-answer and single-choice controls
+without starting a workflow. Conversational submissions are bounded, validated
+visitor input only; they cannot invoke workflow writes or actions. They are not
+persisted as workflow state or durably replay-protected. The shared form prevents duplicate browser
+submissions and locks uncertain submissions instead of retrying them. Workflow
+answers remain server-bound and revision-checked; collecting details or choosing
+continue never confirms sending, audit submission or booking. Contact fields and
+workflow choices are currently the supported structured workflow inputs; audit
+and meeting details retain their existing conversational collection.
+
+Collection starts conversationally, normally with one useful question or two
+closely related details. Presentations include a brief introduction even when the
+model emits only the presentation tool. Visitors may reply through ordinary chat
+instead; displayed choices are context, not confirmed answers, and older controls
+become inactive. Form drafts survive closing and mobile presentation changes in
+the current chat, but are still cleared on refresh. Continue/switch answers work
+through controls or chat and never grant final-submission permission.
+
 ```bash
 npm run prisma:validate
 npm run prisma:generate

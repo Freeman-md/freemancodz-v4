@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono, Manrope } from "next/font/google";
 import "./globals.css";
+import "./_assistant/assistant.css";
 import { SiteLayout } from "./_components/layout/SiteLayout";
 import { FloatingPortfolioChat } from "./_assistant/components/FloatingPortfolioChat";
 import { Analytics } from "@vercel/analytics/next";

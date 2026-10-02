@@ -20,7 +20,7 @@ export class WorkflowServiceError extends Error {
   }
 }
 
-export type WorkflowInstanceStoreErrorCode = "not_found" | "terminal" | "unavailable";
+export type WorkflowInstanceStoreErrorCode = "not_found" | "terminal" | "stale" | "unavailable";
 
 export class WorkflowInstanceStoreError extends Error {
   constructor(

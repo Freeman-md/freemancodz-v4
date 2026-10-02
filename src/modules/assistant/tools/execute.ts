@@ -1,20 +1,35 @@
 import { searchWebsite, searchWebsiteSchema } from "./implementations/search-website";
 import type { OpenAITransport } from "@/infrastructure/openai/types";
 import type { SiteSearch } from "@/modules/search-index/types";
+import type { IWorkflowService } from "@/modules/workflow/interfaces";
+import {
+  assistantPresentationSchema,
+  type AssistantInteraction,
+} from "@/contracts/assistant-ui.contract";
+import { presentUI } from "./implementations/present-ui";
 
 type AssistantToolDependencies = {
   openai: OpenAITransport;
   siteSearch: SiteSearch;
+  workflow: Pick<IWorkflowService, "prepareInteraction">;
 };
 export type AssistantToolResult = {
   output: Record<string, unknown>;
   sources: Array<{ id: string; title: string; url: string }>;
+  interaction?: AssistantInteraction;
+  introduction?: string;
 };
 
 export async function executeGlobalAssistantTool(
   name: string,
   rawArguments: string,
   dependencies: AssistantToolDependencies,
+  context: {
+    workflowInstanceId: string | null;
+    requestedWorkflowId?: string;
+    conversationOnly?: boolean;
+    workflowFields?: readonly string[];
+  },
 ): Promise<AssistantToolResult> {
   let args: unknown;
 
@@ -25,6 +40,16 @@ export async function executeGlobalAssistantTool(
       output: { error: "invalid_json", message: "Tool arguments must be valid JSON." },
       sources: [],
     };
+  }
+
+  if (name === "present_ui") {
+    const parsed = assistantPresentationSchema.safeParse(args);
+
+    if (!parsed.success) {
+      return invalidArguments();
+    }
+
+    return presentUI(parsed.data, dependencies.workflow, context);
   }
 
   if (name === "search_website") {

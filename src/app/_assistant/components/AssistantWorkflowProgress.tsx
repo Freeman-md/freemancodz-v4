@@ -45,7 +45,7 @@ export function AssistantWorkflowProgress({ instance }: AssistantWorkflowProgres
   const collectedRequiredFields = requiredFields.filter((field) => hasValue(field.value)).length;
 
   return (
-    <Collapsible.Root className="shrink-0 border-b border-emerald-950/8 bg-emerald-50/70">
+    <Collapsible.Root className="assistant-progress shrink-0 border-b border-emerald-950/8 bg-emerald-50/70">
       <Collapsible.Trigger className="group flex min-h-[3.75rem] w-full items-center justify-between gap-3 px-4 py-2.5 text-left outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-700/30 sm:min-h-[4.5rem] sm:px-6 sm:py-3">
         <span className="min-w-0">
           <span className="block font-sans text-base/6 font-medium text-ink">
@@ -72,7 +72,7 @@ export function AssistantWorkflowProgress({ instance }: AssistantWorkflowProgres
             return (
               <li
                 key={field.key}
-                className="grid min-h-12 grid-cols-[7.5rem_minmax(0,1fr)_1rem] items-center gap-3 border-b border-emerald-950/8 py-2 first:border-t last:border-b-0 sm:grid-cols-[9rem_minmax(0,1fr)_1rem]"
+                className="assistant-progress-row grid min-h-12 grid-cols-[7.5rem_minmax(0,1fr)_1rem] items-center gap-3 border-b border-emerald-950/8 py-2 first:border-t last:border-b-0 sm:grid-cols-[9rem_minmax(0,1fr)_1rem]"
               >
                 <span className="block font-sans text-sm/5 font-medium text-ink">
                   {field.required ? (

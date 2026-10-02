@@ -30,7 +30,7 @@ export function AssistantComposer({
 
   return (
     <form
-      className="flex shrink-0 flex-col gap-1 border-t border-black/8 bg-white px-4 pt-3 pb-[max(env(safe-area-inset-bottom),0.75rem)] sm:h-[6.5rem] sm:justify-center sm:px-6 sm:py-4"
+      className="assistant-composer flex shrink-0 flex-col gap-1 border-t border-black/8 bg-white px-4 pt-3 pb-[max(env(safe-area-inset-bottom),0.75rem)] sm:h-[6.5rem] sm:justify-center sm:px-6 sm:py-4"
       onSubmit={(event) => {
         event.preventDefault();
         void onSubmit();
@@ -40,7 +40,7 @@ export function AssistantComposer({
         <label htmlFor="portfolio-chat-input" className="sr-only">
           Ask a question about Freeman&apos;s portfolio
         </label>
-        <div className="min-w-0 flex-1 border-b border-black/12 has-[textarea:focus-visible]:border-signal-700">
+        <div className="assistant-input-line min-w-0 flex-1 border-b border-black/12 has-[textarea:focus-visible]:border-signal-700">
           <Textarea
             id="portfolio-chat-input"
             name="portfolio-chat-input"
@@ -63,7 +63,7 @@ export function AssistantComposer({
           disabled={!canSubmit}
           variant="ghost"
           size="icon"
-          className="relative size-10 shrink-0 rounded-xl bg-ink text-white hover:bg-ink/90 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-signal-500 disabled:bg-[#F5F5F7] disabled:text-[#4B5A64] disabled:opacity-100"
+          className="assistant-send relative size-10 shrink-0 rounded-xl bg-ink text-white hover:bg-ink/90 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-signal-500 disabled:bg-[#F5F5F7] disabled:text-[#4B5A64] disabled:opacity-100"
         >
           <ArrowUpIcon aria-hidden="true" className="size-4" />
           <span

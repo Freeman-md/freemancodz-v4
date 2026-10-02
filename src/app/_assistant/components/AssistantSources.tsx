@@ -14,7 +14,7 @@ export function AssistantSources({ sources }: AssistantSourcesProps) {
   }
 
   return (
-    <section aria-label="Sources" className="mt-5 border-t border-black/8 pt-4">
+    <section aria-label="Sources" className="assistant-sources mt-5 border-t border-black/8 pt-4">
       <p className="font-sans text-sm/5 font-medium text-muted">Sources · {sources.length}</p>
       <ul role="list" className="mt-3 flex flex-col gap-1">
         {sources.map((source) => (

@@ -40,7 +40,7 @@ export async function executeContactTool({
     const parsed = updateContactContextSchema.safeParse(args);
 
     return parsed.success
-      ? updateContext(progress, state, parsed.data.updates)
+      ? updateContactContext(progress, state, parsed.data.updates)
       : active(state, invalidArguments());
   }
 
@@ -62,7 +62,7 @@ export async function executeContactTool({
   });
 }
 
-function updateContext(
+export function updateContactContext(
   progress: IWorkflowProgressProjector<ContactState>,
   state: ContactState,
   updates: Array<{ field: ContactUpdateField; value: string | null }>,
@@ -141,10 +141,14 @@ async function submitContact(
   state: ContactState,
   context: WorkflowExecutionContext,
 ): Promise<WorkflowExecutionResult<ContactState>> {
-  if (
-    progress.getMissingRequiredFields(state).length > 0 ||
-    !state.preparedInteractionId
-  ) {
+  if (context.allowConfirmation === false) {
+    return active(state, {
+      error: "separate_confirmation_required",
+      message: "Structured answers cannot confirm sending. Wait for a separate visitor message.",
+    });
+  }
+
+  if (progress.getMissingRequiredFields(state).length > 0 || !state.preparedInteractionId) {
     return active(state, {
       error: "preparation_required",
       message: "Prepare a complete contact summary before submission.",
