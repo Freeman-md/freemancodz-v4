@@ -73,7 +73,7 @@ test("project navigation supports direct hashes, manual navigation and browser h
   }));
 
   function visibleProject() {
-    return container.querySelector("article:not([hidden])")?.id;
+    return container.querySelector(".story-project-panels article:not([hidden])")?.getAttribute("data-project-slug");
   }
 
   function navigationButton(label: string) {
@@ -118,7 +118,16 @@ test("project navigation supports direct hashes, manual navigation and browser h
     );
     assert.deepEqual(scrollDestinations, ["selected-projects"]);
     assert.equal(container.querySelectorAll(".story-project-panels article").length, 3);
-    assert.equal(container.querySelector<HTMLDetailsElement>("#debby-arts details")?.open, false);
+    for (const { slug } of panels) {
+      const anchor = container.querySelector(`#${slug}`);
+
+      assert.ok(anchor);
+      assert.equal(anchor.parentElement?.id, "selected-projects");
+      assert.equal(anchor.closest("[hidden]"), null);
+      assert.equal(container.querySelectorAll(`#${slug}`).length, 1);
+    }
+
+    assert.equal(container.querySelector<HTMLDetailsElement>('[data-project-slug="debby-arts"] details')?.open, false);
 
     await act(async () => {
       navigationButton("Next project").click();

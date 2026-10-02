@@ -13,11 +13,27 @@ export function AssistantSources({ sources }: AssistantSourcesProps) {
     return null;
   }
 
+  const identities = new Set<string>();
+
+  const visibleSources = sources.filter(({ title, url }) => {
+    const identity = JSON.stringify([title, url]);
+
+    if (identities.has(identity)) {
+      return false;
+    }
+
+    identities.add(identity);
+
+    return true;
+  });
+
   return (
     <section aria-label="Sources" className="assistant-sources mt-5 border-t border-black/8 pt-4">
-      <p className="font-sans text-sm/5 font-medium text-muted">Sources · {sources.length}</p>
+      <p className="font-sans text-sm/5 font-medium text-muted">
+        Sources · {visibleSources.length}
+      </p>
       <ul role="list" className="mt-3 flex flex-col gap-1">
-        {sources.map((source) => {
+        {visibleSources.map((source) => {
           const external = isExternalUrl(source.url);
 
           // Native hash navigation notifies the project explorer and disclosure listeners.

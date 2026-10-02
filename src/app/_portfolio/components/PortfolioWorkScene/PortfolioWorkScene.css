@@ -2,6 +2,14 @@
 .story-work {
   padding-block: 112px 120px;
 }
+.story-project-explorer {
+  position: relative;
+}
+.story-project-anchor {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: 0;
+}
 .story-project-navigation {
   display: flex;
   align-items: center;

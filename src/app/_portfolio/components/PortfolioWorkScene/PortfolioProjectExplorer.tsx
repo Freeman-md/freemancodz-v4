@@ -78,6 +78,10 @@ export function PortfolioProjectExplorer({ panels }: { panels: ProjectPanel[] })
       ref={explorer}
       data-enhanced={activeSlug !== null || undefined}
     >
+      {/* Native fragment navigation and enhanced selection share the controls' position. */}
+      {panels.map((panel) => (
+        <span className="story-project-anchor" id={panel.slug} key={panel.slug} aria-hidden="true" />
+      ))}
       <nav className="story-project-navigation" aria-label="Selected projects">
         <ol role="list" className="story-project-choices">
           {panels.map((panel, index) => (
@@ -119,7 +123,7 @@ export function PortfolioProjectExplorer({ panels }: { panels: ProjectPanel[] })
           <article
             className="story-featured"
             key={panel.slug}
-            id={panel.slug}
+            data-project-slug={panel.slug}
             aria-labelledby={`${panel.slug}-title`}
             hidden={activeSlug !== null && activeSlug !== panel.slug}
           >

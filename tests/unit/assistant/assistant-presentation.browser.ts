@@ -63,6 +63,39 @@ test("sources belong to their answer and disappear when no evidence is returned"
   });
 });
 
+test("source display deduplicates only identical title and URL pairs", async () => {
+  await withBrowser(async ({ container, root }) => {
+    await act(async () => {
+      root.render(
+        createElement(AssistantSources, {
+          sources: [
+            { id: "first-chunk", title: "JPScents", url: "/#jpscents" },
+            { id: "second-chunk", title: "JPScents", url: "/#jpscents" },
+            { id: "different-title", title: "Fragrance discovery", url: "/#jpscents" },
+            { id: "different-url", title: "JPScents", url: "https://jpscents.shop" },
+          ],
+        }),
+      );
+    });
+
+    assert.match(container.textContent ?? "", /Sources · 3/);
+    const links = Array.from(container.querySelectorAll("a"));
+
+    assert.equal(links.length, 3);
+    assert.deepEqual(
+      links.map((link) => [
+        link.querySelector(".font-medium")?.textContent,
+        link.getAttribute("href"),
+      ]),
+      [
+        ["JPScents", "/#jpscents"],
+        ["Fragrance discovery", "/#jpscents"],
+        ["JPScents", "https://jpscents.shop"],
+      ],
+    );
+  });
+});
+
 test("same-page source clicks reveal hidden projects without dismissing the assistant", async () => {
   await withBrowser(async ({ container, root }) => {
     await act(async () => {
@@ -90,9 +123,9 @@ test("same-page source clicks reveal hidden projects without dismissing the assi
       );
     });
 
-    const jp = container.querySelector<HTMLElement>("#jpscents");
+    const jp = container.querySelector<HTMLElement>('article[data-project-slug="jpscents"]');
 
-    const debby = container.querySelector<HTMLElement>("#debby-arts");
+    const debby = container.querySelector<HTMLElement>('article[data-project-slug="debby-arts"]');
 
     assert.ok(jp);
     assert.ok(debby);
@@ -111,7 +144,7 @@ test("same-page source clicks reveal hidden projects without dismissing the assi
         // JSDOM schedules native anchor navigation and its hashchange event asynchronously.
         await new Promise((resolve) => setTimeout(resolve, 30));
       });
-      assert.equal(window.location.hash, `#${selected.id}`);
+      assert.equal(window.location.hash, `#${selected.dataset.projectSlug}`);
       assert.equal(selected.hidden, false);
       assert.equal(hidden.hidden, true);
       assert.ok(container.querySelector('aside[aria-label="Portfolio assistant"]'));
