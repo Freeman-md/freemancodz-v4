@@ -4,6 +4,8 @@ import { JSDOM } from "jsdom";
 import { act, createElement, createRef } from "react";
 import { AssistantMessages } from "@/app/_assistant/components/AssistantMessages";
 import { AssistantWorkflowProgress } from "@/app/_assistant/components/AssistantWorkflowProgress";
+import { AssistantSources } from "@/app/_assistant/components/AssistantSources";
+import { PortfolioProjectExplorer } from "@/app/_portfolio/components/PortfolioWorkScene/PortfolioProjectExplorer";
 import type { WorkflowPublicInstance } from "@/contracts/assistant.contract";
 
 test("sources belong to their answer and disappear when no evidence is returned", async () => {
@@ -58,6 +60,62 @@ test("sources belong to their answer and disappear when no evidence is returned"
     });
 
     assert.doesNotMatch(container.textContent ?? "", /Sources ·/);
+  });
+});
+
+test("same-page source clicks reveal hidden projects without dismissing the assistant", async () => {
+  await withBrowser(async ({ container, root }) => {
+    await act(async () => {
+      root.render(
+        createElement(
+          "div",
+          null,
+          createElement(PortfolioProjectExplorer, {
+            panels: [
+              { slug: "jpscents", title: "JPScents", content: "Perfume project" },
+              { slug: "debby-arts", title: "Debby Art & Prints", content: "Creative project" },
+            ],
+          }),
+          createElement(
+            "aside",
+            { "aria-label": "Portfolio assistant" },
+            createElement(AssistantSources, {
+              sources: [
+                { id: "debby", title: "Debby Art & Prints", url: "/#debby-arts" },
+                { id: "jp", title: "JPScents", url: "#jpscents" },
+              ],
+            }),
+          ),
+        ),
+      );
+    });
+
+    const jp = container.querySelector<HTMLElement>("#jpscents");
+
+    const debby = container.querySelector<HTMLElement>("#debby-arts");
+
+    assert.ok(jp);
+    assert.ok(debby);
+    assert.equal(jp.hidden, false);
+    assert.equal(debby.hidden, true);
+
+    for (const [href, selected, hidden] of [
+      ["/#debby-arts", debby, jp],
+      ["#jpscents", jp, debby],
+    ] as const) {
+      const source = container.querySelector<HTMLAnchorElement>(`aside a[href="${href}"]`);
+
+      assert.ok(source);
+      await act(async () => {
+        source.click();
+        // JSDOM schedules native anchor navigation and its hashchange event asynchronously.
+        await new Promise((resolve) => setTimeout(resolve, 30));
+      });
+      assert.equal(window.location.hash, `#${selected.id}`);
+      assert.equal(selected.hidden, false);
+      assert.equal(hidden.hidden, true);
+      assert.ok(container.querySelector('aside[aria-label="Portfolio assistant"]'));
+    }
   });
 });
 
@@ -136,6 +194,7 @@ async function withBrowser(
 ) {
   const dom = new JSDOM("<!doctype html><html><body><main></main></body></html>", {
     url: "http://localhost:3000",
+    pretendToBeVisual: true,
   });
 
   const previous = new Map<string, PropertyDescriptor | undefined>();
@@ -156,6 +215,8 @@ async function withBrowser(
   }
 
   const container = dom.window.document.querySelector("main")!;
+
+  dom.window.HTMLElement.prototype.scrollIntoView = () => {};
 
   const { createRoot } = await import("react-dom/client");
 

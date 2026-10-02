@@ -31,7 +31,7 @@ function contentBlock(
     eyebrow: input.eyebrow ?? null,
     title: input.title ?? "Customer journey section",
     copy: input.copy ?? "Clear customer-facing guidance.",
-    url: input.url ?? "/#customer-journey",
+    url: input.url ?? "/#home-improve",
     order: input.order ?? 1,
     createdAt: CREATED_AT,
     updatedAt: CREATED_AT,

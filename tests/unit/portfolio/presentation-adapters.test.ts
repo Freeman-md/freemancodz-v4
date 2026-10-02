@@ -69,6 +69,8 @@ const projectSlugs = [
   "across-the-horizon",
   "shifty",
   "self-healing-backend-operations-system",
+  "jpscents",
+  "debby-arts",
 ];
 
 const projects: PortfolioProjectSource[] = projectSlugs.map((slug) => ({
@@ -97,6 +99,9 @@ test("page adapters use URL and hierarchy identities instead of root array posit
 
   assert.equal(home.hero.title, "Hero");
   assert.equal(home.profile.title, profile.title);
+  assert.equal(home.projects.jpscents.slug, "jpscents");
+  assert.equal(home.projects.debbyArts.slug, "debby-arts");
+  assert.deepEqual(home.testimonials, []);
   assert.equal(home.improve.operationalWorkflow.title, "Workflow");
   assert.deepEqual(
     home.hero.icons.map(({ label }) => label),
@@ -128,6 +133,8 @@ test("page adapters use URL and hierarchy identities instead of root array posit
 
   assert.equal(work.hero.approach.title, "Approach");
   assert.equal(work.projects.selfHealing.title, "self-healing-backend-operations-system");
+  assert.equal(work.projects.jpscents.slug, "jpscents");
+  assert.equal(work.projects.debbyArts.slug, "debby-arts");
 
   const aboutHero = block("/about", "About hero");
 
@@ -183,6 +190,45 @@ test("page adapters use URL and hierarchy identities instead of root array posit
   assert.deepEqual(
     audit.process.stages.map(({ title }) => title),
     ["Context", "Inspect", "Prioritise", "Action"],
+  );
+});
+
+test("testimonials are optional and require a complete quote with author and relationship", () => {
+  const homeBlocks = [
+    block("/", "Hero"),
+    block("/#home-improve", "Improve", [block("/shared", "Journey"), block("/shared", "Workflow")]),
+    block("/#home-work", "Relevant"),
+    block("/#home-audit", "Audit", [block("/shared", "Problem"), block("/shared", "Improvement")]),
+    block("/#home-cta", "Closing"),
+  ];
+
+  const complete = {
+    ...block("/shared", "Client Name"),
+    copy: "  Verified client feedback.  ",
+    eyebrow: "  Client, Project  ",
+  };
+
+  const incomplete = {
+    ...block("/shared", "Incomplete"),
+    copy: "Unattributed feedback",
+    eyebrow: null,
+  };
+
+  const root = block("/#in-their-words", "In their words", [complete, incomplete]);
+
+  const home = createHomePresentationData({
+    profile,
+    projects,
+    contentBlocks: [...homeBlocks, root],
+  });
+
+  assert.deepEqual(home.testimonials, [
+    { quote: "Verified client feedback.", author: "Client Name", relationship: "Client, Project" },
+  ]);
+  assert.throws(
+    () =>
+      createHomePresentationData({ profile, projects, contentBlocks: [...homeBlocks, root, root] }),
+    /Required portfolio presentation content is unavailable: \/#in-their-words/,
   );
 });
 

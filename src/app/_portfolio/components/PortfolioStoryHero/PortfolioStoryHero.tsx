@@ -1,15 +1,13 @@
 import { ArrowDown, ArrowUpRight, MessageCircle } from "lucide-react";
 import { AssistantTriggerButton } from "@/app/_assistant/components/AssistantTriggerButton";
-import type { HomePresentationData, PortfolioProject } from "../../data/types";
+import type { HomePresentationData } from "../../data/types";
 import { StoryImage } from "../StoryImage/StoryImage";
 
-export function PortfolioStoryHero({
-  home,
-  horizon,
-}: {
-  home: HomePresentationData;
-  horizon: PortfolioProject;
-}) {
+export function PortfolioStoryHero({ home }: { home: HomePresentationData }) {
+  const primary = home.projects.jpscents;
+
+  const secondary = home.projects.debbyArts;
+
   return (
     <section className="story-hero" aria-labelledby="story-title" id="top">
       <div className="story-hero-copy">
@@ -28,41 +26,41 @@ export function PortfolioStoryHero({
         className="story-stage"
         aria-label="Selected interfaces and a working portfolio assistant"
       >
-        {horizon.cover && (
+        {secondary.cover && (
           <a
-            href={`#${horizon.slug}`}
-            className="story-plane story-plane-horizon"
-            aria-label={`Explore ${horizon.title}`}
+            href={`#${secondary.slug}`}
+            className="story-plane story-plane-secondary"
+            aria-label={`Explore ${secondary.title}`}
           >
             <div className="story-plane-image">
               <StoryImage
-                src={horizon.cover.source}
-                alt={horizon.cover.altText}
+                src={secondary.cover.source}
+                alt={secondary.cover.altText}
                 sizes="(max-width: 700px) 50vw, 400px"
               />
             </div>
             <span className="story-plane-caption">
-              {horizon.title}
+              {secondary.title}
               <ArrowUpRight aria-hidden="true" size={16} />
             </span>
           </a>
         )}
-        {home.projects.pay4Me.cover && (
+        {primary.cover && (
           <a
-            href="#work"
-            className="story-plane story-plane-radius"
-            aria-label={`Explore ${home.projects.pay4Me.title}`}
+            href={`#${primary.slug}`}
+            className="story-plane story-plane-primary"
+            aria-label={`Explore ${primary.title}`}
           >
             <div className="story-plane-image">
               <StoryImage
-                src={home.projects.pay4Me.cover.source}
-                alt={home.projects.pay4Me.cover.altText}
+                src={primary.cover.source}
+                alt={primary.cover.altText}
                 sizes="(max-width: 700px) 90vw, 760px"
                 priority
               />
             </div>
             <span className="story-plane-caption">
-              {home.projects.pay4Me.title}
+              {primary.title}
               <ArrowUpRight aria-hidden="true" size={16} />
             </span>
           </a>
@@ -70,8 +68,7 @@ export function PortfolioStoryHero({
         <div className="story-plane story-plane-assistant">
           <MessageCircle aria-hidden="true" size={25} />
           <strong>
-            A portfolio you{" "}
-            <br />
+            A portfolio you <br />
             can talk to.
           </strong>
           <p>Find the work that matters to you.</p>

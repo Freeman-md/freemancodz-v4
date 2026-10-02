@@ -75,7 +75,7 @@
   padding: 12px 18px;
   font-size: 12px;
 }
-.story-plane-radius {
+.story-plane-primary {
   width: 660px;
   left: 50%;
   top: 0;
@@ -83,7 +83,7 @@
   transform: translateX(-50%) translateY(calc(var(--scene-travel, 0px) * -0.35)) rotateX(9deg)
     rotateZ(calc(-3deg + var(--scene-turn, 0deg)));
 }
-.story-plane-horizon {
+.story-plane-secondary {
   width: 340px;
   left: max(2%, calc(50% - 620px));
   top: 90px;
@@ -138,11 +138,11 @@
   .story-stage {
     height: 450px;
   }
-  .story-plane-radius {
+  .story-plane-primary {
     width: 58%;
     top: 30px;
   }
-  .story-plane-horizon {
+  .story-plane-secondary {
     width: 30%;
   }
   .story-plane-assistant {
@@ -168,13 +168,13 @@
     height: 345px;
     margin-top: 35px;
   }
-  .story-plane-radius {
+  .story-plane-primary {
     width: 86%;
     left: 50%;
     top: 0;
     transform: translateX(-50%) rotate(-4deg);
   }
-  .story-plane-horizon {
+  .story-plane-secondary {
     display: none;
   }
   .story-plane-assistant {
@@ -228,7 +228,8 @@
   .story-hero::after {
     transition: opacity 240ms ease;
   }
-  .portfolio-story :is(p, h1 span, h2 span, .story-hero-signoff span, .story-person-visual > p span) {
+  .portfolio-story
+    :is(p, h1 span, h2 span, .story-hero-signoff span, .story-person-visual > p span) {
     transition: color 240ms ease;
   }
 }

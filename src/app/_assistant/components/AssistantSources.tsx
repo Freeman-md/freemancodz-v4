@@ -17,28 +17,27 @@ export function AssistantSources({ sources }: AssistantSourcesProps) {
     <section aria-label="Sources" className="assistant-sources mt-5 border-t border-black/8 pt-4">
       <p className="font-sans text-sm/5 font-medium text-muted">Sources · {sources.length}</p>
       <ul role="list" className="mt-3 flex flex-col gap-1">
-        {sources.map((source) => (
-          <li key={source.id}>
-            {isExternalUrl(source.url) ? (
-              <a
+        {sources.map((source) => {
+          const external = isExternalUrl(source.url);
+
+          // Native hash navigation notifies the project explorer and disclosure listeners.
+          const SourceLink =
+            external || source.url.startsWith("/#") || source.url.startsWith("#") ? "a" : Link;
+
+          return (
+            <li key={source.id}>
+              <SourceLink
                 href={source.url}
-                target="_blank"
-                rel="noreferrer"
-                aria-label={`${source.title} (opens in a new tab)`}
+                target={external ? "_blank" : undefined}
+                rel={external ? "noreferrer" : undefined}
+                aria-label={external ? `${source.title} (opens in a new tab)` : undefined}
                 className="flex min-h-12 items-start gap-3 py-2.5 outline-none focus-visible:ring-2 focus-visible:ring-signal-400/40"
               >
                 <SourceContent source={source} />
-              </a>
-            ) : (
-              <Link
-                href={source.url}
-                className="flex min-h-12 items-start gap-3 py-2.5 outline-none focus-visible:ring-2 focus-visible:ring-signal-400/40"
-              >
-                <SourceContent source={source} />
-              </Link>
-            )}
-          </li>
-        ))}
+              </SourceLink>
+            </li>
+          );
+        })}
       </ul>
     </section>
   );

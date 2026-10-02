@@ -46,6 +46,12 @@ export type PortfolioExperience = {
   icons: PortfolioIcon[];
 };
 
+export type PortfolioTestimonial = {
+  quote: string;
+  author: string;
+  relationship: string;
+};
+
 type SourceIcon = { iconName: string | null; label: string; copy: string | null };
 
 type OrderedIcon = { order: number; iconBlock: SourceIcon };
@@ -130,10 +136,13 @@ export type HomePresentationData = {
   };
   relevantWork: PortfolioSection;
   projects: {
+    jpscents: PortfolioProject;
+    debbyArts: PortfolioProject;
     pay4Me: PortfolioProject;
     portfolioAssistant: PortfolioProject;
     emailPa: PortfolioProject;
   };
+  testimonials: PortfolioTestimonial[];
   audit: PortfolioSection & {
     problem: PortfolioSection;
     improvement: PortfolioSection;
@@ -146,6 +155,8 @@ export type WorkPresentationData = {
   relevantWork: PortfolioSection;
   additionalWork: PortfolioSection;
   projects: {
+    jpscents: PortfolioProject;
+    debbyArts: PortfolioProject;
     pay4Me: PortfolioProject;
     portfolioAssistant: PortfolioProject;
     emailPa: PortfolioProject;

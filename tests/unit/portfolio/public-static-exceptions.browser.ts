@@ -9,6 +9,7 @@ import { PortfolioSystemsScene } from "@/app/_portfolio/components/PortfolioSyst
 import { PortfolioMoreWork } from "@/app/_portfolio/components/PortfolioMoreWork/PortfolioMoreWork";
 import { PortfolioFreemanScene } from "@/app/_portfolio/components/PortfolioFreemanScene/PortfolioFreemanScene";
 import { PortfolioAuditScene } from "@/app/_portfolio/components/PortfolioAuditScene/PortfolioAuditScene";
+import { PortfolioTestimonials } from "@/app/_portfolio/components/PortfolioTestimonials/PortfolioTestimonials";
 import { StoryProjectDetail } from "@/app/_portfolio/components/StoryProjectDetail/StoryProjectDetail";
 import {
   portfolioIconRegistry,
@@ -47,6 +48,8 @@ const project = (title: string): PortfolioProject => ({
 });
 
 const projects = {
+  jpscents: project("JPScents"),
+  debbyArts: project("Debby Arts"),
   pay4Me: project("Pay4Me"),
   portfolioAssistant: project("Portfolio Assistant"),
   emailPa: project("Email PA"),
@@ -65,6 +68,7 @@ const home: HomePresentationData = {
   },
   relevantWork: section("Work"),
   projects,
+  testimonials: [],
   audit: {
     ...section("Audit"),
     problem: section("Managed friction"),
@@ -194,9 +198,7 @@ test("managed actions retain link variants and assistant precedence", () => {
 });
 
 test("opening reads managed identity and positioning, and only renders supplied project media", () => {
-  const markup = renderToStaticMarkup(
-    createElement(PortfolioStoryHero, { home, horizon: projects.acrossTheHorizon }),
-  );
+  const markup = renderToStaticMarkup(createElement(PortfolioStoryHero, { home }));
 
   assert.match(markup, /Managed positioning/);
   assert.match(markup, /Managed Name/);
@@ -209,18 +211,19 @@ test("opening reads managed identity and positioning, and only renders supplied 
         ...home,
         projects: {
           ...projects,
-          pay4Me: {
-            ...projects.pay4Me,
-            cover: { source: "/managed-payment.png", altText: "Managed payment interface" },
+          jpscents: {
+            ...projects.jpscents,
+            cover: { source: "/managed-scent.png", altText: "Managed scent interface" },
           },
         },
       },
-      horizon: projects.acrossTheHorizon,
     }),
   );
 
-  assert.match(withMedia, /Managed payment interface/);
-  assert.match(withMedia, /managed-payment/);
+  assert.match(withMedia, /Managed scent interface/);
+  assert.match(withMedia, /managed-scent/);
+  assert.match(withMedia, /href="#jpscents"/);
+  assert.doesNotMatch(withMedia, /Explore Pay4Me/);
 });
 
 test("featured project preserves contribution, outcome, media, and expanded evidence", () => {
@@ -259,6 +262,46 @@ test("systems scene renders managed project explanations and working entry butto
   assert.match(markup, /Ask your own question/);
   assert.match(markup, /Let’s book a conversation/);
   assert.match(markup, /id="portfolio-assistant"/);
+  assert.match(markup, /What did you build for JPScents/);
+});
+
+test("all featured projects remain readable in server HTML with stable destinations", () => {
+  const markup = renderToStaticMarkup(createElement(PortfolioWorkScene, { work }));
+
+  for (const item of [projects.jpscents, projects.debbyArts, projects.pay4Me]) {
+    assert.ok(markup.includes(`id="${item.slug}"`));
+    assert.ok(markup.includes(`href="#${item.slug}"`));
+    assert.ok(markup.includes(item.solution));
+    assert.ok(markup.includes(item.problem));
+  }
+
+  assert.ok(markup.indexOf('id="jpscents"') < markup.indexOf('id="debby-arts"'));
+  assert.ok(markup.indexOf('id="debby-arts"') < markup.indexOf('id="pay4me"'));
+  assert.doesNotMatch(markup, /hidden=""/);
+});
+
+test("testimonials render only supplied attributed feedback, with no empty public section", () => {
+  assert.equal(
+    renderToStaticMarkup(createElement(PortfolioTestimonials, { testimonials: [] })),
+    "",
+  );
+  const markup = renderToStaticMarkup(
+    createElement(PortfolioTestimonials, {
+      testimonials: [
+        {
+          quote: "Real feedback from a client.",
+          author: "Named Client",
+          relationship: "JPScents client",
+        },
+      ],
+    }),
+  );
+
+  assert.match(markup, /id="in-their-words"/);
+  assert.match(markup, /<blockquote>/);
+  assert.match(markup, /Real feedback from a client\./);
+  assert.match(markup, /Named Client/);
+  assert.match(markup, /JPScents client/);
 });
 
 test("additional work remains discoverable, with complete managed detail", () => {
@@ -313,14 +356,26 @@ test("missing project links never create fake destinations", () => {
 });
 
 test("homepage retains section anchors used by existing assistant citations", () => {
-  const markup = renderToStaticMarkup(createElement("div", null,
-    createElement(PortfolioWorkScene, { work }),
-    createElement(PortfolioSystemsScene, { home, work }),
-    createElement(PortfolioFreemanScene, { about, home }),
-    createElement(PortfolioAuditScene, { audit, home }),
-  ));
+  const markup = renderToStaticMarkup(
+    createElement(
+      "div",
+      null,
+      createElement(PortfolioWorkScene, { work }),
+      createElement(PortfolioSystemsScene, { home, work }),
+      createElement(PortfolioFreemanScene, { about, home }),
+      createElement(PortfolioAuditScene, { audit, home }),
+    ),
+  );
 
-  for (const anchor of ["work-relevant", "work-connects", "about-thinking", "about-journey", "about-outside", "audit-proof", "audit-process"]) {
+  for (const anchor of [
+    "work-relevant",
+    "work-connects",
+    "about-thinking",
+    "about-journey",
+    "about-outside",
+    "audit-proof",
+    "audit-process",
+  ]) {
     assert.ok(markup.includes(`id="${anchor}"`), anchor);
   }
 });

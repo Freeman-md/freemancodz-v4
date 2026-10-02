@@ -46,9 +46,9 @@ export function PortfolioSystemsScene({
             <div className="story-prompt-list">
               <AssistantTriggerButton
                 className="story-prompt"
-                detail={{ message: "What did Freeman build at Pay4Me?" }}
+                detail={{ message: "What did Freeman build for JPScents?" }}
               >
-                What did you build at Pay4Me?
+                What did you build for JPScents?
                 <ArrowUpRight aria-hidden="true" size={17} />
               </AssistantTriggerButton>
               <AssistantTriggerButton
@@ -104,7 +104,8 @@ export function PortfolioSystemsScene({
             </div>
             <ol role="list">
               {home.improve.operationalWorkflow.icons.map((step) => {
-                const Icon = step.iconName === "Download" ? Inbox : resolvePortfolioIcon(step.iconName);
+                const Icon =
+                  step.iconName === "Download" ? Inbox : resolvePortfolioIcon(step.iconName);
 
                 return (
                   <li key={step.label}>

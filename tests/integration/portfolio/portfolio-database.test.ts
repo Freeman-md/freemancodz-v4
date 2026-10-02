@@ -245,13 +245,15 @@ test(
           await seedPortfolio(prisma!, storage);
           assert.deepEqual(await verifyPortfolio(prisma!), {
             profiles: 1,
-            projects: 6,
+            projects: 8,
             experiences: 4,
             topLevelBlocks: 22,
           });
           assert.deepEqual(
             await prisma!.project.findMany({ orderBy: { order: "asc" }, select: { title: true } }),
             [
+              { title: "JPScents" },
+              { title: "Debby Art & Prints" },
               { title: "Pay4Me / WithRadius" },
               { title: "Portfolio Assistant" },
               { title: "Email PA" },
@@ -308,13 +310,14 @@ test(
           });
           assert.deepEqual(
             await prisma!.project.findMany({
-              where: { order: { in: [1, 2] } },
+              where: { order: { in: [1, 2, 3] } },
               orderBy: { order: "asc" },
               select: { slug: true, order: true },
             }),
             [
-              { slug: "portfolio-assistant", order: 1 },
+              { slug: "jpscents", order: 1 },
               { slug: "pay4me-withradius", order: 2 },
+              { slug: "debby-arts", order: 3 },
             ],
           );
 

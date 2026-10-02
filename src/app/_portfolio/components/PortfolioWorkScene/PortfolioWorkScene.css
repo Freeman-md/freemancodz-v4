@@ -2,6 +2,87 @@
 .story-work {
   padding-block: 112px 120px;
 }
+.story-project-navigation {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 32px;
+  border-bottom: 1px solid var(--story-line);
+}
+.story-project-choices {
+  display: flex;
+  gap: 28px;
+  min-width: 0;
+  padding: 0;
+  margin: 0;
+  overflow-x: auto;
+  list-style: none;
+}
+.story-project-choices li {
+  flex-shrink: 0;
+}
+.story-project-choices a {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 60px;
+  padding: 4px;
+  border-bottom: 2px solid transparent;
+  color: var(--story-muted);
+  font-size: 14px;
+  font-weight: 500;
+}
+.story-project-choices a span {
+  font-variant-numeric: tabular-nums;
+}
+.story-project-choices a:focus-visible {
+  outline-offset: -4px;
+}
+.story-project-choices a[aria-current] {
+  color: var(--story-ink);
+  border-bottom-color: var(--brand-link);
+}
+[data-theme="dark"] .story-project-choices a[aria-current] {
+  border-bottom-color: var(--story-accent);
+}
+.story-project-controls {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.story-project-explorer[data-enhanced] .story-project-controls {
+  display: flex;
+}
+.story-project-controls p {
+  margin-right: 8px;
+  font-size: 13px;
+  color: var(--story-muted);
+  font-variant-numeric: tabular-nums;
+}
+.story-project-controls button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border: 1px solid var(--story-line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--story-ink);
+}
+.story-project-controls button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.story-project-panels {
+  display: grid;
+  gap: 72px;
+}
+.story-featured[hidden] {
+  display: none;
+}
 .story-featured {
   display: grid;
   grid-template-columns: 1.55fr 1fr;
@@ -21,20 +102,19 @@
   box-shadow: var(--story-shadow);
   border-radius: 8px;
   overflow: hidden;
-  transform: rotate(-3deg);
-  transition: transform 500ms var(--story-ease);
 }
 .story-featured-screen img {
   object-fit: cover;
+  object-position: top;
 }
 .story-visual-caption {
   margin-top: 36px;
   max-width: 350px;
-  font-size: 12px;
+  font-size: 14px;
   color: var(--story-muted);
 }
 .story-featured-copy > p:not(.story-category) {
-  font-size: 15px;
+  font-size: 16px;
   color: var(--story-muted);
   margin-top: 20px;
 }
@@ -42,12 +122,19 @@
   color: var(--story-ink);
   font-weight: 600;
 }
-@media (hover: hover) and (pointer: fine) {
-  .story-featured-visual:hover .story-featured-screen {
-    transform: rotate(0);
-  }
-}
 @media (max-width: 1100px) {
+  .story-project-navigation {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+    padding-bottom: 16px;
+  }
+  .story-project-choices {
+    width: 100%;
+  }
+  .story-project-controls {
+    align-self: flex-end;
+  }
   .story-featured {
     gap: 32px;
     grid-template-columns: 1.3fr 1fr;
@@ -56,6 +143,13 @@
 @media (max-width: 700px) {
   .story-work {
     padding-block: 72px;
+  }
+  .story-project-choices {
+    gap: 20px;
+  }
+  .story-project-choices a {
+    min-height: 56px;
+    font-size: 16px;
   }
   .story-featured {
     grid-template-columns: 1fr;
@@ -86,10 +180,8 @@
   min-width: 0;
 }
 @media (prefers-reduced-motion: no-preference) {
-  .story-featured-screen {
-    transform: translateY(calc((0.5 - var(--object-progress, 0.5)) * 64px))
-      rotate(calc(-3deg + (var(--object-progress, 0.5) - 0.5) * 6deg));
-    transition: none;
+  .story-project-explorer[data-enhanced] .story-featured:not([hidden]) {
+    animation: story-project-select 240ms var(--story-ease);
   }
   [data-motion-ready] .story-featured-visual:not([data-arrived]),
   [data-motion-ready] .story-more-list > article:not([data-arrived]) {
@@ -99,6 +191,24 @@
   .story-featured-visual[data-arrived],
   .story-more-list > article[data-arrived] {
     animation: story-work-arrive 550ms var(--story-ease) both;
+  }
+}
+@keyframes story-project-select {
+  from {
+    opacity: 0.6;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@media (hover: hover) and (pointer: fine) {
+  .story-project-choices a:hover {
+    color: var(--story-ink);
+  }
+  .story-project-controls button:not(:disabled):hover {
+    background: var(--project-stage);
   }
 }
 @keyframes story-work-arrive {
@@ -113,6 +223,8 @@
 }
 @media (prefers-reduced-motion: no-preference) {
   .story-featured-visual {
-    transition: background-color 240ms ease, border-color 240ms ease;
+    transition:
+      background-color 240ms ease,
+      border-color 240ms ease;
   }
 }

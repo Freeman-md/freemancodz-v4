@@ -209,7 +209,12 @@ export async function verifyPortfolio(database: PrismaClient) {
     database.contentBlock.count({ where: { parent: null } }),
   ]);
 
-  if (profiles !== 1 || projects !== 6 || experiences !== 4 || topLevelBlocks !== 22) {
+  if (
+    profiles !== 1 ||
+    projects !== projectSeeds.length ||
+    experiences !== experienceSeeds.length ||
+    topLevelBlocks !== contentSeeds.filter(({ parent }) => !parent).length
+  ) {
     throw new Error(
       `Portfolio bootstrap verification failed (${profiles} profile, ${projects} projects, ${experiences} experiences, ${topLevelBlocks} top-level blocks).`,
     );

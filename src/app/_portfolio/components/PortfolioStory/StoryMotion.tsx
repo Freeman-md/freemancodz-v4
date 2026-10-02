@@ -39,7 +39,10 @@ export function StoryMotion({ children }: { children: ReactNode }) {
           Math.min((window.innerHeight - bounds.top) / (window.innerHeight + bounds.height), 1),
         );
 
-        scene.style.setProperty("--object-progress", preference.matches ? "0.5" : progress.toFixed(4));
+        scene.style.setProperty(
+          "--object-progress",
+          preference.matches ? "0.5" : progress.toFixed(4),
+        );
       }
     };
 
@@ -61,6 +64,11 @@ export function StoryMotion({ children }: { children: ReactNode }) {
       const target = document.getElementById(id);
 
       if (!target) {
+        return;
+      }
+
+      // The explorer reveals project destinations and keeps its navigation in view.
+      if (target.closest(".story-project-explorer")) {
         return;
       }
 

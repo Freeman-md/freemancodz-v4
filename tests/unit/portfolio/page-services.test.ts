@@ -59,6 +59,8 @@ const pageBlocks = {
 } satisfies Record<string, ContentBlockNode[]>;
 
 const projects = [
+  "jpscents",
+  "debby-arts",
   "pay4me-withradius",
   "portfolio-assistant",
   "email-pa",
@@ -87,7 +89,8 @@ const projectRepository = {
   findAll: async () => projects,
   findFeatured: async () => [projects[0]!],
   findBySlug: async (slug: string) => projects.find((project) => project.slug === slug) ?? null,
-  findBySlugs: async (slugs: string[]) => projects.filter((project) => slugs.includes(project.slug)),
+  findBySlugs: async (slugs: string[]) =>
+    projects.filter((project) => slugs.includes(project.slug)),
 };
 
 const experienceRepository = { findAll: async () => experiences };
@@ -110,7 +113,7 @@ test("page services compose canonical independent records and ordered block tree
 
   assert.deepEqual(
     home.projects.map(({ slug }) => slug),
-    ["pay4me-withradius", "portfolio-assistant", "email-pa"],
+    ["jpscents", "debby-arts", "pay4me-withradius", "portfolio-assistant", "email-pa"],
   );
   assert.deepEqual(
     work.projects.map(({ slug }) => slug),
@@ -122,7 +125,7 @@ test("page services compose canonical independent records and ordered block tree
   );
   assert.deepEqual(
     audit.projects.map(({ slug }) => slug),
-    ["pay4me-withradius", "portfolio-assistant", "email-pa"],
+    ["jpscents", "debby-arts", "pay4me-withradius", "portfolio-assistant", "email-pa"],
   );
   assert.deepEqual(pages, ["/", "/work", "/about", "/audit"]);
   assert.deepEqual(

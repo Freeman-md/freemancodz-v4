@@ -4,6 +4,7 @@ import type {
   HomePageData,
   WorkPageData,
 } from "@/modules/portfolio/types";
+import { requiredPortfolioProjectSlugs } from "@/contracts/portfolio-presentation.contract";
 import type { IndexDocument } from "../types";
 
 export type PortfolioSnapshot = {
@@ -19,6 +20,35 @@ type Project = WorkPageData["projects"][number];
 type Experience = AboutPageData["experiences"][number];
 
 const PUBLIC_PROVENANCE_PATTERN = /^\/(?:(?:work|about|audit))?(?:#[A-Za-z0-9][A-Za-z0-9_-]*)?$/;
+
+const PRESENTED_PROJECT_SLUGS = new Set<string>(requiredPortfolioProjectSlugs);
+
+// Persisted page buckets are admin identities; citations point at the current one-page story.
+const CONTENT_DESTINATIONS: Record<string, string> = {
+  "/": "/",
+  "/#home-improve": "/#systems",
+  "/#home-work": "/#work",
+  "/#home-audit": "/#audit",
+  "/#home-cta": "/#audit",
+  "/work": "/#work",
+  "/work#work-relevant": "/#work",
+  "/work#work-additional": "/#work-additional",
+  "/work#work-connects": "/#systems",
+  "/work#work-cta": "/#audit",
+  "/about": "/#about",
+  "/about#about-journey": "/#about-journey",
+  "/about#about-thinking": "/#systems",
+  "/about#about-work": "/#about-work",
+  "/about#about-explore": "/#about-explore",
+  "/about#about-outside": "/#about-outside",
+  "/about#about-cta": "/#audit",
+  "/audit": "/#audit",
+  "/audit#audit-process": "/#audit-process",
+  "/audit#audit-why": "/#audit-why",
+  "/audit#audit-proof": "/#work",
+  "/audit#audit-cta": "/#audit",
+  "/#in-their-words": "/#in-their-words",
+};
 
 const PROFILE_COLLECTION_NAMES: Record<string, string> = {
   AUDIENCE: "Audience",
@@ -58,6 +88,18 @@ function publicProvenance(url: string): string {
   }
 
   return cleaned;
+}
+
+function contentDestination(url: string): string {
+  const identity = publicProvenance(url);
+
+  const destination = CONTENT_DESTINATIONS[identity];
+
+  if (!destination) {
+    throw new Error("Portfolio indexing encountered an unknown public content destination.");
+  }
+
+  return destination;
 }
 
 function addDocument(documents: Map<string, IndexDocument>, document: IndexDocument): void {
@@ -137,7 +179,7 @@ function mapProfile(profile: Profile): IndexDocument {
     sourceId: "global",
     title: `${name} — ${title}`,
     category: "Profile",
-    url: "/about",
+    url: "/#about",
     keywords: uniqueKeywords(keywords),
     paragraphs,
   };
@@ -252,7 +294,7 @@ function mapContentBlock(root: ContentBlock): IndexDocument {
     sourceId: root.id,
     title: cleanText(root.title) ?? cleanText(root.eyebrow) ?? "Portfolio section",
     category: "Portfolio section",
-    url: publicProvenance(root.url),
+    url: contentDestination(root.url),
     keywords: uniqueKeywords(keywords),
     paragraphs,
   };
@@ -292,6 +334,8 @@ function mapProject(project: Project): IndexDocument {
   const paragraphs = [
     `Project: ${title}`,
     `Category: ${category}`,
+    `Portfolio position: ${project.order}`,
+    `Featured work: ${project.featured ? "Yes" : "No"}`,
     `Problem: ${problem}`,
     `Solution: ${solution}`,
   ];
@@ -323,7 +367,9 @@ function mapProject(project: Project): IndexDocument {
     sourceId: project.id,
     title,
     category: "Project",
-    url: "/work",
+    url: PRESENTED_PROJECT_SLUGS.has(project.slug)
+      ? publicProvenance(`/#${project.slug}`)
+      : "/#work",
     keywords: uniqueKeywords([
       "project",
       project.title,
@@ -394,7 +440,7 @@ function mapExperience(experience: Experience): IndexDocument {
     sourceId: experience.id,
     title,
     category: "Experience",
-    url: "/about#about-journey",
+    url: "/#about-journey",
     keywords: uniqueKeywords(keywords),
     paragraphs,
   };

@@ -45,9 +45,12 @@ test("maps and deduplicates the complete public portfolio with stable identities
   assert.ok(profile);
   assert.ok(project);
   assert.ok(experience);
-  assert.equal(content.url, "/#customer-journey");
-  assert.equal(project.url, "/work");
-  assert.equal(experience.url, "/about#about-journey");
+  assert.equal(content.url, "/#systems");
+  assert.equal(profile.url, "/#about");
+  assert.equal(project.url, "/#portfolio-assistant");
+  assert.equal(experience.url, "/#about-journey");
+  assert.match(project.paragraphs.join("\n"), /Portfolio position: 1/);
+  assert.match(project.paragraphs.join("\n"), /Featured work: Yes/);
   assert.doesNotMatch(
     profile.paragraphs.join("\n"),
     /freeman@example|linkedin\.example|github\.example|storage\.example/,
@@ -62,6 +65,75 @@ test("maps and deduplicates the complete public portfolio with stable identities
     project.paragraphs.join("\n"),
     /private\.example|storage\.example|InternalVisualComponent/,
   );
+});
+
+test("projects legacy content identities onto current sections and disclosures", () => {
+  const destinations = {
+    "/": "/",
+    "/#home-improve": "/#systems",
+    "/#home-work": "/#work",
+    "/#home-audit": "/#audit",
+    "/#home-cta": "/#audit",
+    "/work": "/#work",
+    "/work#work-relevant": "/#work",
+    "/work#work-additional": "/#work-additional",
+    "/work#work-connects": "/#systems",
+    "/work#work-cta": "/#audit",
+    "/about": "/#about",
+    "/about#about-journey": "/#about-journey",
+    "/about#about-thinking": "/#systems",
+    "/about#about-work": "/#about-work",
+    "/about#about-explore": "/#about-explore",
+    "/about#about-outside": "/#about-outside",
+    "/about#about-cta": "/#audit",
+    "/audit": "/#audit",
+    "/audit#audit-process": "/#audit-process",
+    "/audit#audit-why": "/#audit-why",
+    "/audit#audit-proof": "/#work",
+    "/audit#audit-cta": "/#audit",
+  };
+
+  for (const [identity, destination] of Object.entries(destinations)) {
+    const snapshot = createPortfolioSnapshotFixture();
+
+    snapshot.home.contentBlocks[0]!.url = identity;
+
+    const document = mapPortfolioSnapshot(snapshot).find(
+      ({ sourceType }) => sourceType === "content_block",
+    );
+
+    assert.equal(document?.url, destination, identity);
+    assert.equal(snapshot.home.contentBlocks[0]!.url, identity);
+  }
+});
+
+test("rejects unrepresented content hashes instead of citing a nonexistent anchor", () => {
+  const snapshot = createPortfolioSnapshotFixture();
+
+  snapshot.home.contentBlocks[0]!.url = "/work#removed-project-section";
+
+  assert.throws(() => mapPortfolioSnapshot(snapshot), /unknown public content destination/);
+});
+
+test("additional admin projects cite the work section rather than an unrendered project hash", () => {
+  const snapshot = createPortfolioSnapshotFixture();
+
+  snapshot.work.projects.push({
+    ...snapshot.work.projects[0]!,
+    id: "admin-created-project",
+    slug: "additional-client-project",
+    title: "Additional client project",
+    order: 9,
+    featured: false,
+  });
+
+  const document = mapPortfolioSnapshot(snapshot).find(
+    ({ sourceId }) => sourceId === "admin-created-project",
+  );
+
+  assert.equal(document?.url, "/#work");
+  assert.match(document?.paragraphs.join("\n") ?? "", /Portfolio position: 9/);
+  assert.match(document?.paragraphs.join("\n") ?? "", /Featured work: No/);
 });
 
 test("uses fixed collection ordering and related-id tie-breaks", () => {

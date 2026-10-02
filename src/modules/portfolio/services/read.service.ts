@@ -7,11 +7,19 @@ import type {
   ProjectWithCover,
 } from "../types";
 
-const CURATED_PROJECTS = ["pay4me-withradius", "portfolio-assistant", "email-pa"];
+const CURATED_PROJECTS = [
+  "jpscents",
+  "debby-arts",
+  "pay4me-withradius",
+  "portfolio-assistant",
+  "email-pa",
+];
 
 type PortfolioReaders = {
   profiles: { findSingleton(): Promise<ProfileWithCollections> };
-  contentBlocks: { findPageTree(page: "/" | "/work" | "/about" | "/audit"): Promise<ContentBlockNode[]> };
+  contentBlocks: {
+    findPageTree(page: "/" | "/work" | "/about" | "/audit"): Promise<ContentBlockNode[]>;
+  };
   projects: {
     findAll(): Promise<ProjectWithCover[]>;
     findBySlugs(slugs: string[]): Promise<ProjectWithCover[]>;

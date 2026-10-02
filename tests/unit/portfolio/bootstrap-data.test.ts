@@ -23,6 +23,8 @@ test("canonical seed values and relationship allocation match the approved artif
   assert.deepEqual(
     projectSeeds.map(({ title }) => title),
     [
+      "JPScents",
+      "Debby Art & Prints",
       "Pay4Me / WithRadius",
       "Portfolio Assistant",
       "Email PA",
@@ -41,6 +43,15 @@ test("canonical seed values and relationship allocation match the approved artif
     false,
   );
   assert.equal(mediaSeeds.filter(({ source }) => source?.startsWith("/images/work/")).length, 2);
+  assert.deepEqual(
+    mediaSeeds
+      .filter(({ source }) => source?.startsWith("/images/projects/"))
+      .map(({ key, source }) => [key, source]),
+    [
+      ["cover.jpscents", "/images/projects/jpscents.webp"],
+      ["cover.debby-arts", "/images/projects/debby-arts.webp"],
+    ],
+  );
   assert.equal(
     mediaSeeds.some(({ source }) => source?.includes("/api/blob")),
     false,

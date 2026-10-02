@@ -33,8 +33,8 @@ test("the complete approved canonical seed payload remains exact", () => {
     profileCollections: "e1317ceb833726db55175b442b6703fa28c9180d51c5d2b2c8eb374447d83278",
     contentSeeds: "0bb064e0548022679e60afda8fc18e5461f7d69aa98767f8ca7d5e4d9270fa60",
     actionSeeds: "3ddaf27d71f9af15490e9825ccc872606b29070c165484cfdfa8022881c6478a",
-    mediaSeeds: "448adf47d084175810fb94625b4f18291a17864a98fabf916c257c24ec19bbb5",
-    projectSeeds: "15ca3c9242edc6cca4948ed95785e402ecec1bd044bdbb386966df818fd46b19",
+    mediaSeeds: "2ea4f3704fd1a3912aeeb8949fcd30ed4912fcab790bd395904aa2395d059cb6",
+    projectSeeds: "cf979cac24bab4dfac480b3bfebfe6490ef93d67142467d5a896194effb4758a",
     experienceSeeds: "2ee37a71521f75465ff96521e5f29ae1dd93299e7042caf8a03bbb618827fbf5",
   });
 });
@@ -398,6 +398,40 @@ test("all action labels, destinations, and assistant messages are exact", () => 
 test("all project and experience identities, ordering, and related icons are exact", () => {
   assert.deepEqual(projectSeeds, [
     {
+      slug: "jpscents",
+      title: "JPScents",
+      category: "Client product · Fragrance commerce",
+      problem:
+        "Customers needed help choosing a fragrance and placing a clear order while the business retained its WhatsApp payment and delivery workflow.",
+      solution:
+        "Freeman built a perfume catalogue, guided scent discovery, size-aware availability and a cart-to-checkout journey that saves the order before continuing to WhatsApp. Protected owner administration supports catalogue, inventory and order management.",
+      outcome: "Launched at jpscents.shop with a saved-order handoff to WhatsApp.",
+      cover: "cover.jpscents",
+      externalLinks: ["https://jpscents.shop"],
+      featured: true,
+      order: 1,
+      visualText: "From scent discovery to a clear next step.",
+      markdown:
+        "### Product decisions\nGuided fragrance discovery, size-aware availability and a saved-order handoff keep the customer journey clear without replacing the business’s WhatsApp payment and delivery workflow.\n\n### Engineering\nThe implementation includes atomic stock deduction with order creation, duplicate-submission protection and single stock restoration on cancellation. These safeguards have source and test coverage; live transaction behaviour has not been independently verified.",
+    },
+    {
+      slug: "debby-arts",
+      title: "Debby Art & Prints",
+      category: "Client product · Art and creative services",
+      problem:
+        "Customers needed an easier way to explore artwork, printing and personalisation services and share a useful brief before the conversation began.",
+      solution:
+        "Freeman built a filterable artwork gallery, image lightbox, grouped services and contextual multi-step requests. Enquiries save before the customer continues to WhatsApp, while protected owner administration supports content and follow-up.",
+      outcome: "Launched at debbyartprints.com.ng with structured, reference-backed enquiries.",
+      cover: "cover.debby-arts",
+      externalLinks: ["https://debbyartprints.com.ng"],
+      featured: true,
+      order: 2,
+      visualText: "Creative work, without the vague enquiry.",
+      markdown:
+        "### Product decisions\nA browsable artwork gallery and grouped creative services lead into contextual, reference-backed requests instead of a vague enquiry.\n\n### Engineering\nThe implementation saves requests before WhatsApp continuation, detects duplicate submissions and validates requests against the authoritative catalogue. Focused tests cover failed-save behaviour; live enquiries have not been submitted as part of verification.",
+    },
+    {
       slug: "pay4me-withradius",
       title: "Pay4Me / WithRadius",
       category: "Customer-facing product · Fintech",
@@ -408,8 +442,8 @@ test("all project and experience identities, ordering, and related icons are exa
       outcome: "More than US$500K processed through production payment workflows.",
       cover: "cover.pay4me",
       externalLinks: ["https://withradius.com", "https://pay4me.app"],
-      featured: true,
-      order: 1,
+      featured: false,
+      order: 3,
       visualText: "Payment experiences supporting complex international journeys.",
       visualBlock: "Pay4MeVisual",
     },
@@ -423,7 +457,7 @@ test("all project and experience identities, ordering, and related icons are exa
         "An AI assistant that retrieves relevant portfolio information, surfaces supporting evidence and guides visitors towards the right next step.",
       externalLinks: ["https://github.com/Freeman-md/freemancodz-v4"],
       featured: false,
-      order: 2,
+      order: 4,
       visualText: "Guided answers that help visitors find clarity and take the next step.",
       visualBlock: "PortfolioAssistantVisual",
     },
@@ -437,7 +471,7 @@ test("all project and experience identities, ordering, and related icons are exa
         "A background workflow that triages incoming email and helps route the right next action, reducing repetitive inbox handling.",
       externalLinks: ["https://github.com/Freeman-md/email-pa"],
       featured: false,
-      order: 3,
+      order: 5,
       visualText: "Workflow system that reduces repetitive inbox handling.",
       visualBlock: "EmailWorkflowVisual",
     },
@@ -452,7 +486,7 @@ test("all project and experience identities, ordering, and related icons are exa
       cover: "cover.horizon",
       externalLinks: ["https://acrossthehorizon.net"],
       featured: false,
-      order: 4,
+      order: 6,
     },
     {
       slug: "shifty",
@@ -464,7 +498,7 @@ test("all project and experience identities, ordering, and related icons are exa
         "A voice-agent prototype that helps coordinate shift-cover requests and move the process towards finding a replacement.",
       externalLinks: ["https://github.com/Freeman-md"],
       featured: false,
-      order: 5,
+      order: 7,
     },
     {
       slug: "self-healing-backend-operations-system",
@@ -476,7 +510,7 @@ test("all project and experience identities, ordering, and related icons are exa
         "A guarded self-healing backend system that observes incidents, diagnoses likely causes, performs allowed recovery actions and verifies that the system recovered as expected.",
       externalLinks: ["https://github.com/Freeman-md"],
       featured: false,
-      order: 6,
+      order: 8,
     },
   ]);
   assert.deepEqual(

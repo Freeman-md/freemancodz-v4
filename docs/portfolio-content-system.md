@@ -62,7 +62,7 @@ Provider errors are normalized before reaching a client. Request correctness doe
 
 There is one Profile. ContentBlocks form URL-identified page trees and relate explicitly to reusable IconBlocks, ActionBlocks and MediaBlocks. ActionBlock and MediaBlock are typed extensions of IconBlock. Projects and Experiences are independent ordered collections; Experience has ordered icon relations and Project may point to one MediaBlock cover.
 
-Key invariants: no generic page builder, no executable JSX stored in content, no arbitrary visual identifiers, no duplicate page-specific Profiles, no unsafe reusable-block deletion, and no deletion of the three canonical project slugs used by curated public selectors. Project slugs are immutable after creation because selectors and cache identity depend on them. Creating a Project does not automatically add it to Home or Audit.
+Key invariants: no generic page builder, no executable JSX stored in content, no arbitrary visual identifiers, no duplicate page-specific Profiles, no unsafe reusable-block deletion, and no deletion of the canonical project slugs required by public presentation. Project slugs are immutable after creation because selectors and cache identity depend on them. Creating a Project does not automatically add it to Home or Audit.
 
 The approved sources define no colour token palette, so the admin preserves the default `null` colour only. Profile deletion is deliberately absent.
 
@@ -72,13 +72,21 @@ The approved sources define no colour token palette, so the admin preserves the 
 
 `cacheComponents: true` enables Cache Components. The public presentation is one page at `/`. Its Server Component reads the four existing cached Home, Work, About and Audit payloads and converts them into semantic presentation data. Those records remain independently managed in the admin; presentation sections compose their useful content without duplicating records. A cache miss or invalidation performs the Prisma reads; a normal cache hit does not issue a fresh page-service query for each visitor.
 
-`/work`, `/about` and `/audit` remain compatibility entry points. A small client component preserves the incoming URL fragment and replaces the URL with its corresponding section at `/`. Project and content anchors remain available for assistant citations; a linked disclosure opens automatically. The public sitemap and canonical URLs point to `/`. The assistant, audit workflow provenance, booking flow, admin, and indexing sources remain unchanged.
+The public sitemap and canonical URLs point to `/`. The proxy redirects retired page paths such as `/work`, `/about` and `/audit` to `/`; there is no separate compatibility-page component. New links and assistant citations use actual root anchors instead. The index mapper translates the retained CMS page identities into these destinations: projects use `/#<slug>`, Profile uses `/#about`, and Experience uses `/#about-journey`. Known content URLs map to their rendered section or disclosure. Linked disclosures open automatically; project hashes select the corresponding project in the explorer.
 
 The visual story lives in colocated component directories under `src/app/_portfolio/components`, with each major scene owning its stylesheet and the story shell owning shared presentation rules and browser motion. Editorial headings belong to the frontend; project facts, profile, experience, media, reusable actions and detailed service copy retain their managed sources. Media failure presents a contextual fallback while leaving the stored URL intact.
 
 `next build` may execute database-backed cached reads while prerendering public routes, so the build environment requires a reachable migrated and bootstrapped `DATABASE_URL`. After deployment, cached entries serve static-like output until their dependency tags are invalidated; they are not build-only content requiring redeployment. Admin/auth data is outside these cached functions and is private and dynamic.
 
 Search indexing deliberately calls the configured page services directly instead of reading these app-level caches. This gives each worker attempt the current database-backed portfolio snapshot while keeping the public rendering cache independent.
+
+### Featured client work and recommendations
+
+The selected-work explorer leads with JPScents, then Debby Art & Prints, followed by Pay4Me / WithRadius. Previous/next controls and named links are manual; nothing auto-advances. Existing supporting projects remain further down the page. The two client cover images are real live-site captures in `public/images/projects`, referenced by ordinary database MediaBlocks and rendered through the existing optimized image component. They can still be replaced through the admin media workflow. Captures show the public homepages; product claims were checked against the live sites and their public organizational repositories. Neither product is described as accepting online card payments.
+
+“In Their Words” uses existing ContentBlocks, not a new testimonial model. When approved quotes are available, add a Home root block with URL `/#in-their-words` through a reviewed content-data update, then ordered child blocks with `copy` as the approved quote, `title` as the speaker's name and `eyebrow` as their role/relationship. The existing Home admin editor can edit and reorder those records after creation; it does not create new sections. Only publish real, permissioned quotes. The section renders only complete quote/name/relationship entries and stays absent when none exist; no placeholder endorsements are seeded.
+
+On an already initialized database, do not force-bootstrap to add these projects. The October 2026 release adds only the two project/cover records and updates project ordering/featured flags in a transaction, preserving existing descriptions and unrelated records. Refresh production data before the deployment build, then run the existing production index rebuild. A new Next.js build ID invalidates `use cache` entries; subsequent admin edits continue using the existing targeted invalidation paths.
 
 ## 7. Cache Tags / Revalidation
 
@@ -92,7 +100,7 @@ Cache invalidation does not enqueue indexing. The PostgreSQL trigger observes th
 
 ## 8. Admin
 
-Open `/admin`. The information architecture is Overview, Pages, Profile, Projects, Experience, Media and Reusable blocks. Editors expose domain fields, controlled icon/visual selectors, child/reusable relation ordering, Project markdown, guarded deletion and confirmation. Action destinations accept canonical site-relative paths such as `/work` and `/audit`, or safe HTTP(S) URLs. Projects and Experiences support create/update/delete; reusable records refuse deletion while referenced; the Profile is update-only.
+Open `/admin`. The information architecture is Overview, Pages, Profile, Projects, Experience, Media and Reusable blocks. Editors expose domain fields, controlled icon/visual selectors, child/reusable relation ordering, Project markdown, guarded deletion and confirmation. Action destinations accept site-relative paths; use current anchors such as `/#work` and `/#audit`, or safe HTTP(S) URLs. Projects and Experiences support create/update/delete; reusable records refuse deletion while referenced; the Profile is update-only.
 
 The admin is intentionally not a schema editor, arbitrary component builder, CSS editor, generic database console or indexing console. It performs ordinary portfolio CRUD and never calls the search-index service. Public selection rules and static mapping exceptions remain application-defined.
 

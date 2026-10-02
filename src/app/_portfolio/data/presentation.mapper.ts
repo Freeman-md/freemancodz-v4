@@ -6,6 +6,7 @@ import type {
   PortfolioExperience,
   PortfolioProject,
   PortfolioSection,
+  PortfolioTestimonial,
   WorkPresentationData,
 } from "./types";
 import type {
@@ -22,6 +23,8 @@ const [
   acrossTheHorizonSlug,
   shiftySlug,
   selfHealingSlug,
+  jpscentsSlug,
+  debbyArtsSlug,
 ] = requiredPortfolioProjectSlugs;
 
 class PortfolioPresentationError extends Error {
@@ -105,6 +108,24 @@ function experience(source: PortfolioExperienceSource): PortfolioExperience {
   };
 }
 
+function testimonials(blocks: PortfolioContentSource[]): PortfolioTestimonial[] {
+  const roots = blocks.filter((block) => block.url === "/#in-their-words");
+
+  if (roots.length > 1) {
+    throw new PortfolioPresentationError("/#in-their-words");
+  }
+
+  return byOrder(roots[0]?.children ?? []).flatMap(({ child }) => {
+    const quote = child.copy?.trim();
+
+    const author = child.title?.trim();
+
+    const relationship = child.eyebrow?.trim();
+
+    return quote && author && relationship ? [{ quote, author, relationship }] : [];
+  });
+}
+
 export function createHomePresentationData(source: {
   profile: PortfolioProfileSource;
   contentBlocks: PortfolioContentSource[];
@@ -129,10 +150,13 @@ export function createHomePresentationData(source: {
     },
     relevantWork: section(rootAt(source.contentBlocks, "/#home-work")),
     projects: {
+      jpscents: projectBySlug(source.projects, jpscentsSlug),
+      debbyArts: projectBySlug(source.projects, debbyArtsSlug),
       pay4Me: projectBySlug(source.projects, pay4MeSlug),
       portfolioAssistant: projectBySlug(source.projects, portfolioAssistantSlug),
       emailPa: projectBySlug(source.projects, emailPaSlug),
     },
+    testimonials: testimonials(source.contentBlocks),
     audit: {
       ...section(audit),
       problem: section(childAt(audit, 1)),
@@ -160,6 +184,8 @@ export function createWorkPresentationData(source: {
     relevantWork: section(rootAt(source.contentBlocks, "/work#work-relevant")),
     additionalWork: section(rootAt(source.contentBlocks, "/work#work-additional")),
     projects: {
+      jpscents: projectBySlug(source.projects, jpscentsSlug),
+      debbyArts: projectBySlug(source.projects, debbyArtsSlug),
       pay4Me: projectBySlug(source.projects, pay4MeSlug),
       portfolioAssistant: projectBySlug(source.projects, portfolioAssistantSlug),
       emailPa: projectBySlug(source.projects, emailPaSlug),

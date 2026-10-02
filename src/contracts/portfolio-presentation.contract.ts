@@ -74,6 +74,8 @@ export const requiredPortfolioProjectSlugs = [
   "across-the-horizon",
   "shifty",
   "self-healing-backend-operations-system",
+  "jpscents",
+  "debby-arts",
 ] as const;
 
 export type RequiredPortfolioProjectSlug = (typeof requiredPortfolioProjectSlugs)[number];
