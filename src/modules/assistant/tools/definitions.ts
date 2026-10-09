@@ -1,17 +1,17 @@
 import type { OpenAIResponseTool } from "@/infrastructure/openai/types";
 import { z } from "zod";
-import { assistantPresentationSchema } from "@/contracts/assistant-ui.contract";
+import { assistantChoiceSchema } from "@/contracts/assistant-choice.contract";
 
-const { $schema: _schema, ...presentationParameters } = z.toJSONSchema(assistantPresentationSchema);
+const { $schema: _schema, ...choiceParameters } = z.toJSONSchema(assistantChoiceSchema);
 
 export const GLOBAL_ASSISTANT_TOOLS: OpenAIResponseTool[] = [
   {
     type: "function",
-    name: "present_ui",
+    name: "ask_user_choice",
     strict: true,
     description:
-      "Support a conversational question with inputs sharing one submit button. Normally collect one answer, or two closely related precise details; do not dump all missing fields into a form. Include a brief introduction acknowledging intent and explaining the next useful question. Prefer ordinary chat for goals/problems; TextArea is optional, not the default. OptionSelector is for genuine relevant choices, never invented visitor facts; ordinary chat remains available. No workflow is required: operation conversation with targetWorkflowId null collects ordinary visitor answers. InputField uses inputType text/email and null options; TextArea uses null inputType/options; OptionSelector uses null inputType and distinct labelled options. Use short noun labels. For workflow-owned answers use fields and only supplied permitted fields/control types, targetWorkflowId null. Never use conversation to bypass workflow permissions. For workflow_choice use field choice, OptionSelector, null inputType, continue/switch options and the requested targetWorkflowId. Explain that switch cancels the current request and starts the target; continue retains it. Presentation ends this response. Collection and continue never confirm sending, audit submission or booking.",
-    parameters: presentationParameters,
+      "Ask a question with two to six distinct, meaningful reply options when a choice helps the conversation. Write both the question and options naturally. Each option must stand alone as a visitor reply and explain what choosing it means; use no hidden commands or identifiers. Asking never updates a workflow or confirms an action. The visitor can write their own reply instead. This ends tool execution for the turn: wait for the visitor before taking further action.",
+    parameters: choiceParameters,
   },
   {
     type: "function",

@@ -156,15 +156,15 @@ test("preparation requires complete data and submission requires a later interac
   assert.equal(sameInteraction.output.error, "confirmation_requires_new_input");
   assert.equal(audit.createdCount, 0);
 
-  const structuredAnswer = await definition.executeTool(
+  const unconfirmedRequest = await definition.executeTool(
     "submit_audit",
     "{}",
     prepared.state,
     { ...CONFIRMATION_CONTEXT, allowConfirmation: false },
   );
 
-  assert.equal(structuredAnswer.output.error, "separate_confirmation_required");
-  assert.equal(structuredAnswer.status, "active");
+  assert.equal(unconfirmedRequest.output.error, "separate_confirmation_required");
+  assert.equal(unconfirmedRequest.status, "active");
   assert.equal(audit.createdCount, 0);
 
   const submitted = await definition.executeTool(
@@ -314,7 +314,6 @@ class MemoryWorkflowRepository implements IWorkflowInstanceRepository {
     const timestamp = new Date("2026-08-20T10:00:00.000Z");
 
     const instance: WorkflowInstance = {
-      pendingInteraction: null,
       revision: 0,
       id: INSTANCE_ID,
       ...input,

@@ -2,63 +2,33 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { assistantRequestSchema, assistantStreamEventSchema } from "@/contracts/assistant.contract";
-import { assistantPresentationSchema } from "@/contracts/assistant-ui.contract";
+import { assistantChoiceSchema } from "@/contracts/assistant-choice.contract";
 
-test("interaction transport rejects mixed messages, unbound replies and unsupported model controls", () => {
-  const interactionReply = {
-    interactionId: "11111111-1111-4111-8111-111111111111",
-    revision: 1,
-    values: { name: "Visitor" },
+test("choices validate bounded unique strings and reject hidden operations", () => {
+  const choice = {
+    question: "What next?",
+    options: ["Continue my audit", "Cancel my audit and start a message"],
   };
 
-  const workflowInstanceId = "22222222-2222-4222-8222-222222222222";
+  assert.deepEqual(assistantChoiceSchema.parse(choice), choice);
+  for (const invalid of [
+    { ...choice, question: " " },
+    { ...choice, question: "q".repeat(501) },
+    { ...choice, options: ["One"] },
+    { ...choice, options: Array.from({ length: 7 }, (_, i) => String(i)) },
+    { ...choice, options: ["One", " one "] },
+    { ...choice, options: ["One", " "] },
+    { ...choice, options: ["One", "x".repeat(241)] },
+    { ...choice, options: [{ label: "Yes", value: "execute" }, "No"] },
+    { ...choice, workflowId: "audit" },
+  ]) {
+    assert.equal(assistantChoiceSchema.safeParse(invalid).success, false);
+  }
 
-  assert.equal(
-    assistantRequestSchema.safeParse({ interactionReply, workflowInstanceId }).success,
-    true,
-  );
-  assert.equal(assistantRequestSchema.safeParse({ interactionReply }).success, false);
-  assert.equal(
-    assistantRequestSchema.safeParse({ message: "Hello", interactionReply, workflowInstanceId })
-      .success,
-    false,
-  );
-  assert.equal(
-    assistantRequestSchema.safeParse({
-      interactionReply: { ...interactionReply, values: {} },
-      workflowInstanceId,
-    }).success,
-    false,
-  );
-  const presentation = {
-    introduction: "I can help. What name should I use?",
-    heading: "Details",
-    operation: "fields",
-    targetWorkflowId: null,
-    controls: [
-      { component: "InputField", field: "name", label: "Name", inputType: "text", options: null },
-    ],
-  };
-
-  assert.equal(assistantPresentationSchema.safeParse(presentation).success, true);
-  assert.equal(
-    assistantPresentationSchema.safeParse({ ...presentation, controls: [] }).success,
-    false,
-  );
-  assert.equal(
-    assistantPresentationSchema.safeParse({
-      ...presentation,
-      controls: [{ ...presentation.controls[0], component: "ArbitraryHtml" }],
-    }).success,
-    false,
-  );
-  assert.equal(
-    assistantPresentationSchema.safeParse({
-      ...presentation,
-      controls: [{ ...presentation.controls[0], required: false }],
-    }).success,
-    false,
-  );
+  assert.equal(assistantStreamEventSchema.safeParse({ type: "choice", choice }).success, true);
+  for (const key of ["interactionReply", "interactionContext"]) {
+    assert.equal(assistantRequestSchema.safeParse({ message: "Yes", [key]: {} }).success, false);
+  }
 });
 
 test("assistant request accepts the public payload and normalizes whitespace", () => {
@@ -71,86 +41,6 @@ test("assistant request accepts the public payload and normalizes whitespace", (
   assert.equal(result.message, "What has Freeman built?");
   assert.equal(result.previousResponseId, null);
   assert.equal(result.workflowInstanceId, "11111111-1111-4111-8111-111111111111");
-});
-
-test("answers carry bounded question context without adding it to the displayed interaction or workflow starts", () => {
-  const interaction = {
-    id: "11111111-1111-4111-8111-111111111111",
-    workflowInstanceId: null,
-    revision: 0,
-    heading: "Project priorities",
-    controls: [
-      {
-        component: "InputField",
-        field: "priority",
-        label: "Priority",
-        inputType: "text",
-        options: null,
-        required: true,
-        maxLength: 320,
-        value: "",
-      },
-    ],
-  };
-
-  const context = {
-    ...interaction,
-    question: "What matters most for this project, and why?",
-  };
-
-  const structuredReply = {
-    interactionId: interaction.id,
-    revision: interaction.revision,
-    values: { priority: "Performance" },
-    interaction: context,
-  };
-
-  assert.equal(
-    assistantRequestSchema.parse({ message: "Performance", interactionContext: context })
-      .interactionContext?.question,
-    context.question,
-  );
-  assert.equal(
-    assistantRequestSchema.parse({ interactionReply: structuredReply }).interactionReply
-      ?.interaction?.question,
-    context.question,
-  );
-  for (const question of [undefined, " ", "q".repeat(4001)]) {
-    assert.equal(
-      assistantRequestSchema.safeParse({
-        message: "Performance",
-        interactionContext: { ...context, question },
-      }).success,
-      false,
-    );
-    assert.equal(
-      assistantRequestSchema.safeParse({
-        interactionReply: { ...structuredReply, interaction: { ...context, question } },
-      }).success,
-      false,
-    );
-  }
-
-  assert.equal(
-    assistantStreamEventSchema.safeParse({ type: "interaction", interaction }).success,
-    true,
-  );
-  assert.equal(
-    assistantStreamEventSchema.safeParse({ type: "interaction", interaction: context }).success,
-    false,
-  );
-  assert.equal(
-    assistantRequestSchema.safeParse({
-      message: "Start a contact request",
-      interactionContext: context,
-      workflowStart: {
-        workflowId: "contact",
-        originPage: "/",
-        originEntry: "assistant-starter-contact",
-      },
-    }).success,
-    false,
-  );
 });
 
 test("assistant request recovers from malformed previous response IDs", () => {

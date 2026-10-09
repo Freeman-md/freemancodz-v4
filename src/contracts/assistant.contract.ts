@@ -1,11 +1,6 @@
 import { z } from "zod";
 import { workflowProgressSchema } from "./workflow-progress.contract";
-import {
-  assistantInteractionReplySchema,
-  assistantInteractionContextSchema,
-  assistantInteractionSchema,
-  assistantInteractionResultSchema,
-} from "./assistant-ui.contract";
+import { assistantChoiceSchema } from "./assistant-choice.contract";
 
 const MAX_MESSAGE_LENGTH = 500;
 
@@ -64,40 +59,12 @@ const workflowStartSchema = z.discriminatedUnion("originEntry", [
 
 export const assistantRequestSchema = z
   .object({
-    message: z.string().trim().min(1, "Message is required.").max(MAX_MESSAGE_LENGTH).optional(),
-    interactionReply: assistantInteractionReplySchema.optional(),
-    interactionContext: assistantInteractionContextSchema.optional(),
+    message: z.string().trim().min(1, "Message is required.").max(MAX_MESSAGE_LENGTH),
     previousResponseId: z.string().nullable().optional().transform(normalizePreviousResponseId),
     workflowInstanceId: workflowInstanceIdSchema.nullable().optional(),
     workflowStart: workflowStartSchema.nullable().optional(),
   })
-  .strict()
-  .superRefine((request, context) => {
-    if (Boolean(request.message) === Boolean(request.interactionReply)) {
-      context.addIssue({ code: "custom", message: "Provide a message or an interaction reply." });
-    }
-
-    if (request.interactionContext && (!request.message || request.workflowStart)) {
-      context.addIssue({
-        code: "custom",
-        message: "Presented input context accompanies a normal message without a workflow start.",
-      });
-    }
-
-    if (
-      request.interactionReply &&
-      (request.workflowStart ||
-        (!request.workflowInstanceId && !request.interactionReply.interaction) ||
-        (request.interactionReply.interaction &&
-          request.interactionReply.interaction.workflowInstanceId !== null))
-    ) {
-      context.addIssue({
-        code: "custom",
-        message:
-          "Provide the conversational inputs or their existing workflow, without starting one.",
-      });
-    }
-  });
+  .strict();
 
 function normalizePreviousResponseId(value: string | null | undefined) {
   if (!value) {
@@ -112,10 +79,7 @@ function normalizePreviousResponseId(value: string | null | undefined) {
 }
 
 export const assistantStreamEventSchema = z.discriminatedUnion("type", [
-  z.object({ type: z.literal("interaction"), interaction: assistantInteractionSchema }).strict(),
-  z
-    .object({ type: z.literal("interaction_result"), result: assistantInteractionResultSchema })
-    .strict(),
+  z.object({ type: z.literal("choice"), choice: assistantChoiceSchema }).strict(),
   z.object({ type: z.literal("delta"), delta: z.string() }).strict(),
   z.object({ type: z.literal("sources"), sources: z.array(sourceSchema) }).strict(),
   z.object({ type: z.literal("response_id"), responseId: z.string() }).strict(),

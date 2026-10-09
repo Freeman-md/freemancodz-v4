@@ -147,7 +147,6 @@ export function useAssistantSurface({
     isOpen,
     messages.length,
     latestMessage?.content,
-    latestMessage?.interaction,
     latestMessage?.sources,
     shouldReduceMotion,
   ]);

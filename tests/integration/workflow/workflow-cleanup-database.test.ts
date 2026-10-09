@@ -11,15 +11,14 @@ import { WorkflowService } from "@/modules/workflow/service";
 import { WorkflowDefinitionRegistry } from "@/modules/workflow/registry";
 import { ContactWorkflowDefinition } from "@/modules/workflow/definitions/contact/contact.definition";
 import { ContactWorkflowProgressProjector } from "@/modules/workflow/definitions/contact/contact.progress";
-import type { AssistantPresentation } from "@/contracts/assistant-ui.contract";
 
 const adminConnectionUrl = process.env.PORTFOLIO_TEST_DATABASE_URL;
 
 test(
-  "disposable PostgreSQL consumes concurrent answers once and rolls back workflow replacement",
+  "cleanup preserves workflow state, revisions and permissions; concurrent updates and replacement remain atomic",
   { skip: !adminConnectionUrl, timeout: 180_000 },
   async () => {
-    const databaseName = `assistant_inputs_test_${randomUUID().replaceAll("-", "")}`;
+    const databaseName = `workflow_cleanup_test_${randomUUID().replaceAll("-", "")}`;
 
     const databaseUrl = new URL(adminConnectionUrl!);
 
@@ -35,7 +34,7 @@ test(
     try {
       database = new Client({ connectionString: databaseUrl.toString() });
       await database.connect();
-      // Only these two migrations own this independent table; no vector/provider setup is needed.
+      // Only workflow-table migrations are needed for this isolated database.
       await database.query(
         await readFile(
           resolve("prisma/migrations/20260820120000_add_workflow_instances/migration.sql"),
@@ -51,11 +50,34 @@ test(
           "utf8",
         ),
       );
-      const legacy = await database.query(
-        "SELECT revision, pending_interaction FROM workflow_instances WHERE workflow_id = 'legacy'",
+      await database.query(
+        `UPDATE workflow_instances SET revision = 7, state = '{"name":"Visitor"}', pending_interaction = '{"obsolete":true}' WHERE workflow_id = 'legacy'`,
+      );
+      const before = await database.query(
+        "SELECT * FROM workflow_instances WHERE workflow_id = 'legacy'",
       );
 
-      assert.deepEqual(legacy.rows, [{ revision: 0, pending_interaction: null }]);
+      await database.query(
+        await readFile(
+          resolve(
+            "prisma/migrations/20261008120000_remove_workflow_pending_interaction/migration.sql",
+          ),
+          "utf8",
+        ),
+      );
+      const after = await database.query(
+        "SELECT * FROM workflow_instances WHERE workflow_id = 'legacy'",
+      );
+
+      const { pending_interaction: removed, ...preserved } = before.rows[0];
+
+      assert.deepEqual(removed, { obsolete: true });
+      assert.deepEqual(after.rows[0], preserved);
+      const legacy = await database.query(
+        "SELECT revision, state FROM workflow_instances WHERE workflow_id = 'legacy'",
+      );
+
+      assert.deepEqual(legacy.rows, [{ revision: 7, state: { name: "Visitor" } }]);
       const posture = await database.query(
         `SELECT relrowsecurity, has_table_privilege('anon', 'workflow_instances', 'SELECT,INSERT,UPDATE,DELETE') AS anon_access, has_table_privilege('authenticated', 'workflow_instances', 'SELECT,INSERT,UPDATE,DELETE') AS authenticated_access FROM pg_class WHERE oid = 'workflow_instances'::regclass`,
       );
@@ -73,7 +95,7 @@ test(
       const contact = new ContactWorkflowDefinition(
         {
           submit: async () => {
-            throw new Error("Forms must not send");
+            throw new Error("No final submission was authorized");
           },
         },
         new ContactWorkflowProgressProjector(),
@@ -95,95 +117,56 @@ test(
       const service = new WorkflowService(
         new WorkflowDefinitionRegistry([contact, other]),
         repository,
-        ["present_ui"],
+        ["ask_user_choice"],
       );
 
       const origin = { originChannel: "web", originPage: null, originEntry: null };
 
       const instance = await service.start("contact", origin);
 
-      const presentation: AssistantPresentation = {
-        introduction: "What email should Freeman use?",
-        heading: "Details",
-        operation: "fields",
-        targetWorkflowId: null,
-        controls: [
-          {
-            component: "InputField",
-            field: "email",
-            label: "Email",
-            inputType: "email",
-            options: null,
-          },
-        ],
-      };
+      const saved = await repository.findById(instance.id);
 
-      const pending = await service.prepareInteraction(instance.id, presentation);
-
-      const answer = {
-        interactionId: pending.id,
-        revision: pending.revision,
-        values: { email: "visitor@example.test" },
-      };
-
-      assert.equal(
-        (await service.submitInteraction(instance.id, { ...answer, values: { email: "bad" } }))
-          .result.status,
-        "invalid",
-      );
-      const results = await Promise.all(
-        Array.from({ length: 12 }, () => service.submitInteraction(instance.id, answer)),
+      assert.ok(saved);
+      const updates = await Promise.allSettled(
+        Array.from({ length: 12 }, () =>
+          repository.save({
+            id: instance.id,
+            expectedRevision: saved.revision,
+            state: { ...contact.createInitialState(origin), name: "Visitor" },
+            status: "active",
+            completedAt: null,
+          }),
+        ),
       );
 
-      assert.equal(results.filter(({ result }) => result.status === "accepted").length, 1);
-      assert.equal(results.filter(({ result }) => result.status === "stale").length, 11);
-      assert.equal((await repository.findById(instance.id))?.pendingInteraction, null);
-      const next = await service.prepareInteraction(instance.id, presentation);
+      assert.equal(updates.filter((result) => result.status === "fulfilled").length, 1);
+      assert.equal(updates.filter((result) => result.status === "rejected").length, 11);
+      const updated = await repository.findById(instance.id);
 
-      assert.equal((await service.submitInteraction(instance.id, answer)).result.status, "stale");
-      assert.equal(
-        (
-          await service.submitInteraction(instance.id, {
-            interactionId: next.id,
-            revision: next.revision,
-            values: { email: "next@example.test", extra: "bad" },
-          })
-        ).result.status,
-        "stale",
-      );
-      const choice: AssistantPresentation = {
-        introduction: "Continue this request, or cancel it and start another?",
-        heading: "Continue or switch",
-        operation: "workflow_choice",
-        targetWorkflowId: "other",
-        controls: [
-          {
-            component: "OptionSelector",
-            field: "choice",
-            label: "Next step",
-            inputType: null,
-            options: [
-              { value: "continue", label: "Continue" },
-              { value: "switch", label: "Switch" },
-            ],
-          },
-        ],
-      };
+      assert.equal(updated?.revision, saved.revision + 1);
+      const continued = await service.executeTool(instance.id, {
+        name: "switch_workflow",
+        rawArguments: '{"workflowId":"contact"}',
+        interactionId: randomUUID(),
+        startContext: origin,
+      });
 
-      const switching = await service.prepareInteraction(instance.id, choice);
-
-      const switchAnswer = {
-        interactionId: switching.id,
-        revision: switching.revision,
-        values: { choice: "switch" },
-      };
-
-      const switched = await Promise.all(
-        Array.from({ length: 8 }, () => service.submitInteraction(instance.id, switchAnswer)),
+      assert.equal(continued.instance.id, instance.id);
+      assert.deepEqual(await repository.findById(instance.id), updated);
+      const switched = await Promise.allSettled(
+        Array.from({ length: 8 }, () =>
+          service.executeTool(instance.id, {
+            name: "switch_workflow",
+            rawArguments: '{"workflowId":"other"}',
+            interactionId: randomUUID(),
+            startContext: origin,
+          }),
+        ),
       );
 
-      assert.equal(switched.filter(({ result }) => result.status === "accepted").length, 1);
+      assert.equal(switched.filter((result) => result.status === "fulfilled").length, 1);
       assert.equal(await prisma.workflowInstance.count({ where: { workflowId: "other" } }), 1);
+      assert.equal((await repository.findById(instance.id))?.status, "cancelled");
       const rollback = await repository.create({
         ...origin,
         workflowId: "contact",

@@ -16,9 +16,6 @@ import type {
 import { WorkflowService } from "@/modules/workflow/service";
 import { CANCEL_WORKFLOW_TOOL_NAME, START_WORKFLOW_TOOL_NAME } from "@/modules/workflow/constants";
 import { z } from "zod";
-import { ContactWorkflowDefinition } from "@/modules/workflow/definitions/contact/contact.definition";
-import { ContactWorkflowProgressProjector } from "@/modules/workflow/definitions/contact/contact.progress";
-import type { AssistantPresentation } from "@/contracts/assistant-ui.contract";
 
 const FIRST_INSTANCE_ID = "11111111-1111-4111-8111-111111111111";
 
@@ -38,272 +35,6 @@ type TestState = z.infer<typeof StateSchema>;
 const ADVANCE_TOOL = createTool("advance_test");
 
 const COMPLETE_TOOL = createTool("complete_test");
-
-const contactPresentation: AssistantPresentation = {
-  introduction: "I can help you leave a message. What should Freeman know?",
-  heading: "Your message details",
-  operation: "fields",
-  targetWorkflowId: null,
-  controls: [
-    { component: "InputField", field: "name", label: "Name", inputType: "text", options: null },
-    { component: "InputField", field: "email", label: "Email", inputType: "email", options: null },
-    { component: "TextArea", field: "message", label: "Message", inputType: null, options: null },
-  ],
-};
-
-function contactFixture() {
-  const repository = new MemoryWorkflowInstanceRepository();
-
-  let submissions = 0;
-
-  const contact = new ContactWorkflowDefinition(
-    {
-      submit: async (input) => {
-        submissions++;
-
-        return {
-          ...input,
-          id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
-          createdAt: new Date("2026-10-02T10:00:00Z"),
-        };
-      },
-    },
-    new ContactWorkflowProgressProjector(),
-  );
-
-  const service = new WorkflowService(
-    new WorkflowDefinitionRegistry([contact, createDefinition(1)]),
-    repository,
-    ["present_ui"],
-  );
-
-  return { repository, service, submissions: () => submissions };
-}
-
-test("single and grouped controls bind authoritative contact constraints and share text updates", async () => {
-  const { service, repository, submissions } = contactFixture();
-
-  const instance = await service.start("contact", {
-    originChannel: "web",
-    originPage: null,
-    originEntry: null,
-  });
-
-  await service.executeTool(instance.id, {
-    name: "update_contact_context",
-    rawArguments: JSON.stringify({ updates: [{ field: "name", value: "Known name" }] }),
-    interactionId: INTERACTION_ID,
-  });
-  const single = await service.prepareInteraction(instance.id, {
-    ...contactPresentation,
-    controls: [contactPresentation.controls[0]],
-  });
-
-  assert.equal(single.controls[0].value, "Known name");
-  assert.equal(single.controls[0].required, true);
-  assert.equal(single.controls[0].maxLength, 320);
-  const grouped = await service.prepareInteraction(instance.id, contactPresentation);
-
-  assert.equal(
-    (
-      await service.submitInteraction(instance.id, {
-        interactionId: single.id,
-        revision: single.revision,
-        values: { name: "Old answer" },
-      })
-    ).result.status,
-    "stale",
-  );
-  const answer = {
-    interactionId: grouped.id,
-    revision: grouped.revision,
-    values: { name: "Changed name", email: "visitor@example.test", message: "A longer enquiry" },
-  };
-
-  const invalid = await service.submitInteraction(instance.id, {
-    ...answer,
-    values: { ...answer.values, email: "bad" },
-  });
-
-  assert.equal(invalid.result.status, "invalid");
-  assert.equal((await repository.findById(instance.id))?.revision, grouped.revision);
-  assert.equal((await service.submitInteraction(instance.id, answer)).result.status, "accepted");
-  assert.equal((await repository.findById(instance.id))?.pendingInteraction, null);
-  assert.equal((await service.submitInteraction(instance.id, answer)).result.status, "stale");
-  assert.equal(submissions(), 0);
-  await service.executeTool(instance.id, {
-    name: "prepare_contact_submission",
-    rawArguments: "{}",
-    interactionId: INTERACTION_ID,
-  });
-  const sameTurn = await service.executeTool(instance.id, {
-    name: "submit_contact",
-    rawArguments: "{}",
-    interactionId: INTERACTION_ID,
-  });
-
-  assert.equal(sameTurn.output.error, "confirmation_requires_new_input");
-  assert.equal(submissions(), 0);
-  const structuredConfirmation = await service.executeTool(instance.id, {
-    name: "submit_contact",
-    rawArguments: "{}",
-    interactionId: SECOND_INSTANCE_ID,
-    allowConfirmation: false,
-  });
-
-  assert.equal(structuredConfirmation.output.error, "separate_confirmation_required");
-  assert.equal(submissions(), 0);
-  await service.executeTool(instance.id, {
-    name: "submit_contact",
-    rawArguments: "{}",
-    interactionId: SECOND_INSTANCE_ID,
-  });
-  assert.equal(submissions(), 1);
-});
-
-test("unknown fields, incompatible controls and mixed workflow operations are rejected", async () => {
-  const { service } = contactFixture();
-
-  const instance = await service.start("contact", {
-    originChannel: "web",
-    originPage: null,
-    originEntry: null,
-  });
-
-  for (const presentation of [
-    { ...contactPresentation, controls: [{ ...contactPresentation.controls[0], field: "secret" }] },
-    {
-      ...contactPresentation,
-      controls: [{ ...contactPresentation.controls[0], component: "TextArea" as const }],
-    },
-    {
-      ...contactPresentation,
-      controls: [contactPresentation.controls[0], contactPresentation.controls[0]],
-    },
-    {
-      ...contactPresentation,
-      operation: "workflow_choice" as const,
-      targetWorkflowId: "test-workflow",
-    },
-  ]) {
-    await assert.rejects(service.prepareInteraction(instance.id, presentation), {
-      code: "invalid_request",
-    });
-  }
-});
-
-test("continue retains the instance; switch consumes one bound choice and creates one replacement", async () => {
-  const { service, repository } = contactFixture();
-
-  const instance = await service.start("contact", {
-    originChannel: "web",
-    originPage: null,
-    originEntry: null,
-  });
-
-  const presentation: AssistantPresentation = {
-    introduction: "Continue this request, or cancel it and start another?",
-    heading: "Next step",
-    operation: "workflow_choice",
-    targetWorkflowId: "test-workflow",
-    controls: [
-      {
-        component: "OptionSelector",
-        field: "choice",
-        label: "Workflow",
-        inputType: null,
-        options: [
-          { value: "continue", label: "Continue" },
-          { value: "switch", label: "Switch" },
-        ],
-      },
-    ],
-  };
-
-  const first = await service.prepareInteraction(instance.id, presentation, "test-workflow");
-
-  // A refreshed browser restores only the instance ID, not model conversation state.
-  const restored = await service.getAssistantContext(instance.id);
-
-  assert.match(restored.instructions, /targetWorkflowId "test-workflow"/);
-  assert.match(restored.instructions, /continue\/switch/);
-  assert.equal(restored.pendingWorkflowTargetId, "test-workflow");
-  assert.equal(restored.inputFields, undefined);
-  assert.deepEqual(restored.tools.map(({ name }) => name), ["switch_workflow"]);
-
-  await assert.rejects(
-    service.executeTool(instance.id, {
-      name: "update_contact_context",
-      rawArguments: "{}",
-      interactionId: INTERACTION_ID,
-    }),
-    { code: "invalid_transition" },
-  );
-  const continued = await service.submitInteraction(instance.id, {
-    interactionId: first.id,
-    revision: first.revision,
-    values: { choice: "continue" },
-  });
-
-  assert.equal(continued.instance?.id, instance.id);
-  const second = await service.prepareInteraction(instance.id, presentation);
-
-  const reply = {
-    interactionId: second.id,
-    revision: second.revision,
-    values: { choice: "switch" },
-  };
-
-  const switched = await service.submitInteraction(instance.id, reply);
-
-  assert.equal(switched.instance?.id, SECOND_INSTANCE_ID);
-  assert.equal(switched.instance?.workflowId, "test-workflow");
-  assert.equal((await repository.findById(instance.id))?.status, "cancelled");
-  assert.equal((await service.submitInteraction(instance.id, reply)).result.status, "stale");
-  assert.equal(repository.createCalls, 2);
-});
-
-test("text changes invalidate pending controls and unexpected submissions cannot apply", async () => {
-  const { service, repository } = contactFixture();
-
-  const instance = await service.start("contact", {
-    originChannel: "web",
-    originPage: null,
-    originEntry: null,
-  });
-
-  const pending = await service.prepareInteraction(instance.id, {
-    ...contactPresentation,
-    controls: [contactPresentation.controls[0]],
-  });
-
-  assert.equal(
-    (
-      await service.submitInteraction(instance.id, {
-        interactionId: pending.id,
-        revision: pending.revision,
-        values: { name: "Name", extra: "Not permitted" },
-      })
-    ).result.status,
-    "stale",
-  );
-  await service.executeTool(instance.id, {
-    name: "update_contact_context",
-    rawArguments: JSON.stringify({ updates: [{ field: "name", value: "Text answer" }] }),
-    interactionId: INTERACTION_ID,
-  });
-  assert.equal(
-    (
-      await service.submitInteraction(instance.id, {
-        interactionId: pending.id,
-        revision: pending.revision,
-        values: { name: "Form answer" },
-      })
-    ).result.status,
-    "stale",
-  );
-  assert.equal((await repository.findById(instance.id))?.pendingInteraction, null);
-});
 
 function createDefinition(
   version: number,
@@ -417,7 +148,6 @@ test("starts the latest version with supplied origin and exposes only safe publi
   const active = await service.getAssistantContext(FIRST_INSTANCE_ID);
 
   assert.equal(active.instructions.split("\n")[0], "version-2-collecting");
-  assert.match(active.instructions, /no structured field capabilities/);
   assert.deepEqual(
     active.tools.map((tool) => tool.name),
     [CANCEL_WORKFLOW_TOOL_NAME, "advance_test"],
@@ -439,7 +169,6 @@ test("resolves an existing instance's exact version after a newer version is reg
   const context = await service.getAssistantContext(FIRST_INSTANCE_ID);
 
   assert.equal(context.instructions.split("\n")[0], "version-1-collecting");
-  assert.match(context.instructions, /Collect its details through ordinary chat/);
 });
 
 test("rejects nested starts and stale tools without persisting a second transition", async () => {
@@ -637,7 +366,6 @@ function createInstance(overrides: Partial<WorkflowInstance> = {}): WorkflowInst
     workflowVersion: 1,
     status: "active",
     state: { step: "collecting", count: 0 },
-    pendingInteraction: null,
     revision: 0,
     originChannel: "web",
     originPage: null,
@@ -669,7 +397,6 @@ class MemoryWorkflowInstanceRepository implements IWorkflowInstanceRepository {
     const instance: WorkflowInstance = {
       id,
       ...input,
-      pendingInteraction: null,
       revision: 0,
       status: "active",
       startedAt: timestamp,
@@ -705,7 +432,6 @@ class MemoryWorkflowInstanceRepository implements IWorkflowInstanceRepository {
     const saved: WorkflowInstance = {
       ...current,
       revision: current.revision + 1,
-      pendingInteraction: input.pendingInteraction ?? null,
       status: input.status,
       state: input.state,
       completedAt: input.completedAt,

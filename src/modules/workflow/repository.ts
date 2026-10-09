@@ -1,6 +1,6 @@
 import "server-only";
 
-import { Prisma, type PrismaClient, type WorkflowInstance } from "@/generated/prisma/client";
+import type { PrismaClient, WorkflowInstance } from "@/generated/prisma/client";
 import { WorkflowInstanceStoreError } from "./errors";
 import type { IWorkflowInstanceRepository } from "./interfaces";
 import type { CreateWorkflowInstanceInput, SaveWorkflowInstanceInput } from "./types";
@@ -50,7 +50,6 @@ export class WorkflowInstanceRepository implements IWorkflowInstanceRepository {
             state: input.state,
             completedAt: input.completedAt,
             revision: { increment: 1 },
-            pendingInteraction: input.pendingInteraction ?? Prisma.DbNull,
           },
         });
 

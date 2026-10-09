@@ -191,7 +191,7 @@ function confirmMeeting(
   if (context.allowConfirmation === false) {
     return active(state, {
       error: "separate_confirmation_required",
-      message: "Structured answers cannot confirm booking. Wait for a separate visitor message.",
+      message: "Continuing or switching cannot confirm booking. Wait for a separate confirmation.",
     });
   }
 

@@ -139,7 +139,7 @@ async function submitAudit(
   if (context.allowConfirmation === false) {
     return active(state, {
       error: "separate_confirmation_required",
-      message: "Structured answers cannot confirm submission. Wait for a separate visitor message.",
+      message: "Continuing or switching cannot confirm submission. Wait for a separate confirmation.",
     });
   }
 

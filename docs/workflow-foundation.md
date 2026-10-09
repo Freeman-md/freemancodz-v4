@@ -21,7 +21,7 @@ Instances begin as `active`. Completion and cancellation are terminal and their 
 
 ## Assistant and browser boundary
 
-Every OpenAI iteration combines the portfolio assistant's global instructions and `search_website` tool with the current workflow context. With no active instance, that context can expose `start_workflow`. With an active instance, it exposes `cancel_workflow` and only the definition tools available at the current state. A start tool result is therefore followed immediately by another model iteration using the selected workflow's surface.
+Every normal OpenAI iteration combines the portfolio assistant's global instructions and tools (`search_website`, `ask_user_choice`) with the current workflow context. With no active instance, that context can expose `start_workflow`. With an active instance, it exposes `cancel_workflow`, `switch_workflow` and only the definition tools available at the current state. A start tool result is therefore followed immediately by another model iteration using the selected workflow's surface.
 
 The browser request carries only:
 
@@ -33,7 +33,13 @@ The browser request carries only:
 }
 ```
 
-The stream returns only safe instance metadata: ID, workflow ID, version, and lifecycle status. It never returns workflow state. The client keeps the active opaque ID in memory and clears it when completed or cancelled metadata arrives. There is no public workflow-instance read or write endpoint.
+The stream returns safe instance metadata and read-only progress: collected public values, missing required fields, and phase. Private workflow state stays on the server. Only the active opaque ID persists in sessionStorage; after refresh, the next assistant request reloads the saved workflow. Completion or cancellation clears that ID. There is no public workflow-instance read or write endpoint.
+
+### Conversational choices
+
+The global `ask_user_choice` tool accepts a model-written question and two to six distinct reply strings. It has no workflow dependency. Once requested, remaining tool calls receive skipped acknowledgements. A single tools-disabled model continuation completes before the browser receives the choice and its response checkpoint.
+
+The picker temporarily replaces the composer. Selecting and sending an option submits its exact text through the ordinary chat request; “Write my own reply” restores text entry without sending anything. Choices are memory-only, never stored on a workflow, and disappear on refresh. The normal workflow tools still validate details, switch atomically, and require a later explicit confirmation before sending or booking. Read-only progress is unchanged.
 
 ## Meeting booking version 1
 
@@ -65,4 +71,6 @@ PORTFOLIO_TEST_DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54332/postg
 
 The suite creates and drops a random database, applies the complete historical migration chain, proves representative data survives the forward migration, verifies constraints and access controls, and exercises repository lifecycle persistence.
 
-Current limitations are intentional: conversation transcripts are not persisted, the browser does not restore a workflow after refresh, and there are no additional workflows, analytics events, admin workflow UI, additional channel adapters, or generative UI contracts.
+Workflow writes use revision checks to reject stale concurrent updates. The cleanup migration `20261008120000_remove_workflow_pending_interaction` removes only the obsolete pending form column and its check constraint, preserving state, revisions and permissions. For production, deploy code that no longer reads or writes that column, retire all old instances, and only then apply the cleanup migration. Do not run a migration-first deployment for this cleanup.
+
+Conversation transcripts, choices and drafts are not persisted. Generated free-text controls, structured form submissions, editable progress and preview components are not supported.

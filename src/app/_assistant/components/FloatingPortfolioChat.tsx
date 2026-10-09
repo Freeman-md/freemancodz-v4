@@ -5,6 +5,8 @@ import { Dialog } from "@base-ui/react/dialog";
 import { Maximize2Icon, MessageSquareIcon, Minimize2Icon, XIcon } from "lucide-react";
 import { Button } from "@/app/_components/ui/Button";
 import { cn } from "@/app/_utils/class-names";
+import { useEffect, useRef } from "react";
+import { AssistantChoice } from "./AssistantChoice";
 import { AssistantComposer } from "./AssistantComposer";
 import { AssistantMessages, type StarterAction } from "./AssistantMessages";
 import { AssistantWorkflowProgress } from "./AssistantWorkflowProgress";
@@ -19,8 +21,8 @@ export function FloatingPortfolioChat() {
     messages,
     setInput,
     submitMessage,
-    submitInteraction,
-    updateInteractionValue,
+    choice,
+    dismissChoice,
     workflowInstance,
   } = useAssistant();
 
@@ -45,6 +47,16 @@ export function FloatingPortfolioChat() {
     shouldReduceMotion,
     submitMessage,
   });
+
+  const previousChoice = useRef(choice);
+
+  useEffect(() => {
+    if (isOpen && previousChoice.current && !choice) {
+      textareaRef.current?.focus({ preventScroll: true });
+    }
+
+    previousChoice.current = choice;
+  }, [choice, isOpen, textareaRef]);
 
   const isMobileSheet = isMobile && isOpen;
 
@@ -160,17 +172,25 @@ export function FloatingPortfolioChat() {
             messagesEndRef={messagesEndRef}
             shouldReduceMotion={shouldReduceMotion}
             onStarterAction={(action) => void handleStarterAction(action)}
-            onInteractionSubmit={submitInteraction}
-            onInteractionValueChange={updateInteractionValue}
           />
 
-          <AssistantComposer
-            canSubmit={canSubmit}
-            input={input}
-            onInputChange={setInput}
-            onSubmit={handleSubmit}
-            textareaRef={textareaRef}
-          />
+          {choice ? (
+            <AssistantChoice
+              key={messages.at(-1)?.id}
+              choice={choice}
+              isLoading={isLoading}
+              onSend={submitMessage}
+              onWriteReply={dismissChoice}
+            />
+          ) : (
+            <AssistantComposer
+              canSubmit={canSubmit}
+              input={input}
+              onInputChange={setInput}
+              onSubmit={handleSubmit}
+              textareaRef={textareaRef}
+            />
+          )}
         </motion.div>
       ) : (
         <Button

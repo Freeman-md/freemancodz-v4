@@ -1,10 +1,7 @@
-import type { AssistantRequest, AssistantWorkflowStart } from "@/contracts/assistant.contract";
-import type { AssistantInteractionReply } from "@/contracts/assistant-ui.contract";
+import type { AssistantWorkflowStart } from "@/contracts/assistant.contract";
 
 export type AssistantResponseInput = {
-  message?: string;
-  interactionReply?: AssistantInteractionReply;
-  interactionContext?: AssistantRequest["interactionContext"];
+  message: string;
   previousResponseId: string | null;
   workflowInstanceId: string | null;
   workflowStart: AssistantWorkflowStart | null;

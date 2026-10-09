@@ -67,7 +67,6 @@ model WorkflowInstance {
   workflowVersion    Int             @map("workflow_version")
   status             String          @default("active")
   state              Json            @db.JsonB
-  pendingInteraction Json?           @map("pending_interaction") @db.JsonB
   revision           Int             @default(0)
   originChannel      String          @map("origin_channel")
   originPage         String?         @map("origin_page")

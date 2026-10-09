@@ -110,15 +110,15 @@ test("preparation requires a later explicit confirmation transition before booki
   assert.equal(sameInteractionConfirmation.output.error, "confirmation_requires_new_input");
   assert.equal(sameInteractionConfirmation.state.step, "awaiting_confirmation");
 
-  const structuredAnswer = await definition.executeTool(
+  const unconfirmedRequest = await definition.executeTool(
     "confirm_meeting",
     "{}",
     prepared.state,
     { ...CONFIRMATION_INTERACTION, allowConfirmation: false },
   );
 
-  assert.equal(structuredAnswer.output.error, "separate_confirmation_required");
-  assert.equal(structuredAnswer.state.step, "awaiting_confirmation");
+  assert.equal(unconfirmedRequest.output.error, "separate_confirmation_required");
+  assert.equal(unconfirmedRequest.state.step, "awaiting_confirmation");
   assert.equal(bookingCalls, 0);
 
   const confirmed = await definition.executeTool(

@@ -8,8 +8,6 @@ import { cn } from "@/app/_utils/class-names";
 import type { ChatMessage } from "../types";
 import { AssistantMarkdown } from "./AssistantMarkdown";
 import { AssistantSources } from "./AssistantSources";
-import { AssistantInteraction } from "./AssistantInteraction";
-import type { AssistantInteractionReply } from "@/contracts/assistant-ui.contract";
 import type { AssistantWorkflowStart } from "@/contracts/assistant.contract";
 
 export type StarterAction = {
@@ -60,8 +58,6 @@ type AssistantMessagesProps = {
   messagesEndRef: RefObject<HTMLDivElement | null>;
   shouldReduceMotion: boolean | null;
   onStarterAction: (action: StarterAction) => void;
-  onInteractionSubmit?: (reply: AssistantInteractionReply) => Promise<void>;
-  onInteractionValueChange?: (interactionId: string, field: string, value: string) => void;
 };
 
 export function AssistantMessages({
@@ -71,13 +67,11 @@ export function AssistantMessages({
   messagesEndRef,
   shouldReduceMotion,
   onStarterAction,
-  onInteractionSubmit,
-  onInteractionValueChange,
 }: AssistantMessagesProps) {
   return (
     <ScrollArea
       className={cn(
-        "assistant-messages min-h-40 flex-1 overscroll-contain bg-[#fbfbfa]",
+        "assistant-messages min-h-0 flex-1 overscroll-contain bg-[#fbfbfa]",
         className,
       )}
     >
@@ -157,18 +151,6 @@ export function AssistantMessages({
               </div>
 
               {message.sources ? <AssistantSources sources={message.sources} /> : null}
-              {message.interaction && onInteractionSubmit && onInteractionValueChange ? (
-                <AssistantInteraction
-                  key={message.interaction.id}
-                  interaction={message.interaction}
-                  values={message.interactionValues ?? {}}
-                  result={message.interactionResult}
-                  uncertain={message.interactionUncertain}
-                  isLoading={isLoading}
-                  onSubmit={onInteractionSubmit}
-                  onValueChange={onInteractionValueChange}
-                />
-              ) : null}
             </motion.article>
           ))}
         </AnimatePresence>
