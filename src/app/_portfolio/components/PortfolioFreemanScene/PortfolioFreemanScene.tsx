@@ -62,6 +62,7 @@ export function PortfolioFreemanScene({
             {about.experiences.map((experience) => (
               <div key={experience.title}>
                 <h3>{experience.title}</h3>
+                {experience.tag && <p className="story-experience-period">{experience.tag}</p>}
                 <p>{experience.copy}</p>
               </div>
             ))}

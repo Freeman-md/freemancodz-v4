@@ -1,4 +1,3 @@
-
 export const SITE_OWNER_NAME = "Freeman Madudili";
 
 const fallbackSiteUrl = "https://freemanmadudili.com";
@@ -14,16 +13,16 @@ function getSiteUrl() {
 }
 
 export const siteConfig = {
-  name: `${SITE_OWNER_NAME} | Product Engineer`,
+  name: `${SITE_OWNER_NAME} | Software Engineer`,
   shortName: SITE_OWNER_NAME,
-  title: `${SITE_OWNER_NAME} | Product Engineer`,
+  title: `${SITE_OWNER_NAME} | Software Engineer`,
   description:
-    "Building customer-facing products and reliable operational workflows that help businesses improve customer journeys and reduce repetitive work.",
+    "Freeman Madudili is a London-based software engineer building customer-facing products, AI applications and reliable workflows—from understanding the problem to delivery.",
   url: getSiteUrl(),
   ogImage: "/opengraph-image",
   keywords: [
     "Freeman Madudili",
-    "Product Engineer",
+    "Software Engineer",
     "AI-assisted engineering",
     "systems engineering",
     "reliable software",

@@ -29,13 +29,13 @@ test("the complete approved canonical seed payload remains exact", () => {
   );
 
   assert.deepEqual(fingerprints, {
-    profileSeed: "c2df2bd00ae8356225ef697ff3a3d8a60ac330ebee47f90582713250e46f0af1",
+    profileSeed: "063fd7ad9614ccc9b60890cda85a952aeff0b4231e23acccd71e0afb3ba667e4",
     profileCollections: "e1317ceb833726db55175b442b6703fa28c9180d51c5d2b2c8eb374447d83278",
-    contentSeeds: "0bb064e0548022679e60afda8fc18e5461f7d69aa98767f8ca7d5e4d9270fa60",
+    contentSeeds: "128afe74628cde43d31d292758807b87d89db62b3ab75f5a4207e31d747a6c49",
     actionSeeds: "3ddaf27d71f9af15490e9825ccc872606b29070c165484cfdfa8022881c6478a",
     mediaSeeds: "2ea4f3704fd1a3912aeeb8949fcd30ed4912fcab790bd395904aa2395d059cb6",
-    projectSeeds: "cf979cac24bab4dfac480b3bfebfe6490ef93d67142467d5a896194effb4758a",
-    experienceSeeds: "2ee37a71521f75465ff96521e5f29ae1dd93299e7042caf8a03bbb618827fbf5",
+    projectSeeds: "e2b536903b5d94caf5d20b6e1112f50e143a4ad333fe087f9a6b5170de15cc64",
+    experienceSeeds: "ea7b1592d006f5e6a0caadd3849613eda66cca20afb8e072fe9b651ab7f95c17",
   });
 });
 
@@ -44,10 +44,9 @@ test("profile seed and all six ordered reusable collections are exact", () => {
     id: "global",
     name: "Freeman Madudili",
     title: "Software engineer",
-    positioning: "Customer-Facing Products · Reliable Workflows",
-    email: "freemanmadudili@gmail.com",
-    linkedInUrl:
-      "https://www.linkedin.com/in/freeman-madudili-9864101a2?utm_source=share_via&utm_content=profile&utm_medium=member_ios",
+    positioning: "Customer-Facing Products · AI Applications · Reliable Workflows",
+    email: "freemanmadudili@outlook.com",
+    linkedInUrl: "https://www.linkedin.com/in/freeman-madudili-9864101a2/",
     githubUrl: "https://github.com/Freeman-md",
   });
   assert.deepEqual(
@@ -400,12 +399,13 @@ test("all project and experience identities, ordering, and related icons are exa
     {
       slug: "jpscents",
       title: "JPScents",
-      category: "Client product · Fragrance commerce",
+      category: "Novier Labs · Fragrance commerce",
       problem:
-        "Customers needed help choosing a fragrance and placing a clear order while the business retained its WhatsApp payment and delivery workflow.",
+        "The owner relied on WhatsApp conversations to explain the catalogue and help each customer choose a fragrance before taking payment.",
       solution:
-        "Freeman built a perfume catalogue, guided scent discovery, size-aware availability and a cart-to-checkout journey that saves the order before continuing to WhatsApp. Protected owner administration supports catalogue, inventory and order management.",
-      outcome: "Launched at jpscents.shop with a saved-order handoff to WhatsApp.",
+        "After understanding how the business sold, Freeman proposed and built a storefront where customers can explore products and choose fragrances independently, then continue to WhatsApp for payment and delivery. Catalogue, inventory and order administration support the owner behind the scenes.",
+      outcome:
+        "Customers reach WhatsApp with their choices already made, so the owner can handle payment instead of walking each person through the catalogue.",
       cover: "cover.jpscents",
       externalLinks: ["https://jpscents.shop"],
       featured: true,
@@ -417,29 +417,29 @@ test("all project and experience identities, ordering, and related icons are exa
     {
       slug: "debby-arts",
       title: "Debby Art & Prints",
-      category: "Client product · Art and creative services",
+      category: "Novier Labs · Art and creative services",
       problem:
         "Customers needed an easier way to explore artwork, printing and personalisation services and share a useful brief before the conversation began.",
       solution:
-        "Freeman built a filterable artwork gallery, image lightbox, grouped services and contextual multi-step requests. Enquiries save before the customer continues to WhatsApp, while protected owner administration supports content and follow-up.",
-      outcome: "Launched at debbyartprints.com.ng with structured, reference-backed enquiries.",
+        "Freeman assessed how the business handled artwork, printing and custom orders, then proposed a portfolio with clearer service information and custom-order guidance to make customer enquiries more useful.",
+      outcome: "Defined a concrete website scope and plan around the business’s enquiry process.",
       cover: "cover.debby-arts",
       externalLinks: ["https://debbyartprints.com.ng"],
       featured: true,
       order: 2,
       visualText: "Creative work, without the vague enquiry.",
       markdown:
-        "### Product decisions\nA browsable artwork gallery and grouped creative services lead into contextual, reference-backed requests instead of a vague enquiry.\n\n### Engineering\nThe implementation saves requests before WhatsApp continuation, detects duplicate submissions and validates requests against the authoritative catalogue. Focused tests cover failed-save behaviour; live enquiries have not been submitted as part of verification.",
+        "### Understanding the business\nAssessed artwork sales, printing services and custom orders before choosing what the website should do.\n\n### Proposed customer journey\nA portfolio, clear service information and custom-order guidance would help visitors explore the work and arrive with a more useful brief.",
     },
     {
       slug: "pay4me-withradius",
       title: "Pay4Me / WithRadius",
       category: "Customer-facing product · Fintech",
       problem:
-        "International users needed clear, dependable experiences for important onboarding and payment journeys.",
+        "Additional verification and slow support from third-party payment gateways delayed large payments for students studying abroad. Account restrictions could not be solved by code alone.",
       solution:
-        "Freeman built and supported production customer-facing functionality across interfaces, onboarding, payments and backend API integrations.",
-      outcome: "More than US$500K processed through production payment workflows.",
+        "At Pay4Me, Freeman contributed to engineering discussions about growing transaction volume. When the company partnered with a microfinance bank, he helped build the payment experience around that partnership, collaborating with senior engineers and product teams.",
+      outcome: "Contributed to payment workflows supporting more than US$500,000 in transactions.",
       cover: "cover.pay4me",
       externalLinks: ["https://withradius.com", "https://pay4me.app"],
       featured: false,
@@ -480,9 +480,11 @@ test("all project and experience identities, ordering, and related icons are exa
       title: "AcrossTheHorizon",
       category: "Customer-facing product · Study abroad",
       problem:
-        "A study-abroad platform helping users access education and relocation resources, offers, reviews and related services.",
+        "An existing Laravel application needed key customer experiences rebuilt and integrated before launch.",
       solution:
-        "Freeman worked on production frontend experiences inside a Laravel application using Blade, Vue.js and Tailwind CSS.",
+        "At Pay4Me, Freeman rebuilt customer-facing experiences in collaboration with backend engineers, connecting the frontend and backend before launch.",
+      outcome:
+        "The business generated more than US$60,000 in revenue in its first week after launch.",
       cover: "cover.horizon",
       externalLinks: ["https://acrossthehorizon.net"],
       featured: false,
@@ -524,37 +526,22 @@ test("all project and experience identities, ordering, and related icons are exa
     })),
     [
       {
-        title: "Pay4Me",
-        tag: "Customer-facing products",
-        copy: "Worked on payment features, customer interfaces, backend API functionality, critical journeys, and release support.",
+        title: "Software Engineer · Novier Labs",
+        tag: "August 2023 – July 2025",
+        copy: "I started TruTech.app as its first developer, learning an unfamiliar mobile environment while building task requests, applications, portfolios, payments and administration across three user roles. As two engineers and a delivery manager joined, I explained feature implications and helped keep the first release achievable despite changing stakeholder demands.\n\nOn BARSS, an app connecting artists with studios and producers, I became technical lead. I managed a mobile engineer and product designer, worked with the delivery manager and executive officer, and bridged disagreements about feasibility and delivery time to agree the first release’s priorities.\n\nFor JPScents, I investigated the owner’s WhatsApp-dependent sales process and proposed and built a storefront that lets customers choose fragrances before contacting the owner. For Debby Arts, I assessed artwork, printing and custom orders and proposed a clearer portfolio and enquiry journey.",
+        insight:
+          "Progressed from implementing features to guiding scope, technical decisions and delivery across a team.",
+        order: 1,
+        icons: [],
+      },
+      {
+        title: "Frontend Developer · Pay4Me",
+        tag: "January 2022 – February 2023",
+        copy: "I began by implementing requirements with product teams, designers and senior engineers. For Pay4Me.Pay, I helped build the payment experience around a microfinance bank partnership after third-party gateway verification and support delays disrupted large student payments. Those workflows supported over US$500,000 in transactions.\n\nI delivered Clear Assessment’s administration experience within a 30-day project deadline, working from the project manager’s requirements and designer’s screens through to launch. On Birbur, I built the host-facing car-booking experience alongside a senior engineer, presented progress to stakeholders and helped defer integrations until after the first release; the work finished ahead of schedule.\n\nFor AcrossTheHorizon, I rebuilt key customer experiences in an existing Laravel application with backend engineers. The business generated over US$60,000 in its first week after launch.",
         insight:
           "Started close to the customer experience, while already working beyond the interface.",
-        order: 1,
-        icons: ["Interfaces", "APIs", "Production"],
-      },
-      {
-        title: "The Hippodrome Casino",
-        tag: "Live operations",
-        copy: "Observed high-volume service up close—accuracy, procedures, real-time decisions, communication, and escalation.",
-        insight: "Saw the human operation behind a live customer experience.",
         order: 2,
-        icons: ["People", "Process", "Decisions"],
-      },
-      {
-        title: "Beyond the interface",
-        tag: "Systems thinking",
-        copy: "The question became not just what users see, but what happens after they act.",
-        insight: "The question became not just what users see, but what happens after they act.",
-        order: 3,
-        icons: ["Integrations", "Workflows", "Reliability"],
-      },
-      {
-        title: "Today",
-        tag: undefined,
-        copy: "That broader view shapes how I build today.",
-        insight: undefined,
-        order: 4,
-        icons: ["Customer-facing products", "Reliable operational workflows"],
+        icons: ["Interfaces", "APIs", "Production"],
       },
     ],
   );

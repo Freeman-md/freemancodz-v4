@@ -1,4 +1,5 @@
 import { PortfolioStory } from "./_portfolio/components/PortfolioStory/PortfolioStory";
+import { siteConfig } from "./_config/site-metadata";
 import {
   createHomePresentationData,
   createWorkPresentationData,
@@ -28,5 +29,27 @@ export default async function HomePage() {
 
   const audit = createAuditPresentationData(auditData);
 
-  return <PortfolioStory home={home} work={work} about={about} audit={audit} />;
+  const person = {
+    "@context": "https://schema.org",
+    "@type": "Person",
+    "@id": `${siteConfig.url.origin}/#person`,
+    name: homeData.profile.name,
+    jobTitle: homeData.profile.title,
+    url: siteConfig.url.toString(),
+    description: siteConfig.description,
+    sameAs: [homeData.profile.linkedInUrl, homeData.profile.githubUrl].filter(Boolean),
+    ...(homeData.profile.coverImage ? { image: homeData.profile.coverImage } : {}),
+  };
+
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(person).replace(/</g, "\\u003c"),
+        }}
+      />
+      <PortfolioStory home={home} work={work} about={about} audit={audit} />
+    </>
+  );
 }

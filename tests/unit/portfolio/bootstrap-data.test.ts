@@ -35,7 +35,7 @@ test("canonical seed values and relationship allocation match the approved artif
   );
   assert.deepEqual(
     experienceSeeds.map(({ title }) => title),
-    ["Pay4Me", "The Hippodrome Casino", "Beyond the interface", "Today"],
+    ["Software Engineer · Novier Labs", "Frontend Developer · Pay4Me"],
   );
   assert.equal(contentSeeds.filter(({ parent }) => !parent).length, 22);
   assert.equal(

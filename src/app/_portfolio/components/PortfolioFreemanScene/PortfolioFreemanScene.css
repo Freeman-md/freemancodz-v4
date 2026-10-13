@@ -107,9 +107,15 @@
   letter-spacing: 0;
 }
 .story-experiences p {
+  white-space: pre-line;
   margin-top: 8px;
   font-size: 14px;
   color: var(--story-muted);
+}
+.story-experiences .story-experience-period {
+  font-size: 12px;
+  margin-top: 4px;
+  color: var(--brand-link);
 }
 .story-interests {
   display: grid;
