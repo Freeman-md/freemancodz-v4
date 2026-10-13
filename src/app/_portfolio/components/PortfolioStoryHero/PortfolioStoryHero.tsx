@@ -11,10 +11,13 @@ export function PortfolioStoryHero({ home }: { home: HomePresentationData }) {
   return (
     <section className="story-hero" aria-labelledby="story-title" id="top">
       <div className="story-hero-copy">
+        <p className="story-hero-eyebrow">
+          {home.profile.name} · {home.profile.title}
+        </p>
         <h1 id="story-title">
-          From first click.
+          Understand the problem.
           <br />
-          <span>To a job well done.</span>
+          <span>Build what matters.</span>
         </h1>
         <p>{home.hero.title}</p>
         <a href="#work" className="story-button">

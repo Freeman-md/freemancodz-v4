@@ -1,5 +1,4 @@
 /* Styles owned by the foundation portfolio presentation boundary. */
-/* Styles owned by the foundation portfolio presentation boundary. */
 :root {
   --story-canvas: var(--page-background);
   --story-white: #ffffff;
@@ -20,13 +19,13 @@
 }
 .portfolio-story :is(h1, h2, h3) {
   font-family: var(--font-story), sans-serif;
-  font-weight: 500;
+  font-weight: 600;
   letter-spacing: -0.04em;
   text-wrap: balance;
 }
 .portfolio-story h1 {
-  font-size: 76px;
-  line-height: 1.08;
+  font-size: clamp(3rem, 6.8vw, 6.75rem);
+  line-height: 1.02;
 }
 .portfolio-story h2 {
   font-size: 56px;
@@ -110,6 +109,21 @@
   max-width: 310px;
   font-size: 16px;
   color: var(--story-muted);
+}
+/* One quiet entrance per section. Content stays readable before JS and without motion. */
+@media (prefers-reduced-motion: no-preference) {
+  [data-motion-ready] .story-reveal {
+    opacity: 0.72;
+    translate: 0 24px;
+    transition:
+      opacity 650ms var(--story-ease),
+      translate 650ms var(--story-ease);
+  }
+  [data-motion-ready] .story-reveal[data-arrived],
+  [data-motion-ready] .story-reveal:focus-within {
+    opacity: 1;
+    translate: 0 0;
+  }
 }
 .story-category {
   color: var(--story-muted);
@@ -221,6 +235,8 @@
 }
 @media (prefers-reduced-motion: no-preference) {
   .portfolio-story {
-    transition: background-color 240ms ease, color 240ms ease;
+    transition:
+      background-color 240ms ease,
+      color 240ms ease;
   }
 }

@@ -108,25 +108,23 @@ export function StoryMotion({ children }: { children: ReactNode }) {
     const observer = new IntersectionObserver(
       (entries) => {
         for (const entry of entries) {
-          // Keep the four-step entrance visible together, including on narrow screens.
-          const requiredVisibility = entry.target.classList.contains("story-workflow-object")
-            ? 0.65
-            : 0.15;
-
-          if (entry.isIntersecting && entry.intersectionRatio >= requiredVisibility) {
+          if (entry.isIntersecting) {
             entry.target.setAttribute("data-arrived", "true");
             observer.unobserve(entry.target);
           }
         }
       },
-      { threshold: [0.15, 0.65], rootMargin: "0px 0px -120px 0px" },
+      { threshold: 0, rootMargin: "0px 0px -40px 0px" },
     );
 
     element
       .querySelectorAll(
-        ".story-section-intro, .story-featured-visual, .story-assistant-object, .story-workflow-object, .story-more > h2, .story-more-list > article, .story-person-visual, .story-person-copy > h2, .story-audit-copy > h2, .story-audit-paper",
+        ".story-section-intro, .story-featured-visual, .story-featured-copy, .story-assistant-object, .story-workflow-object, .story-more > h2, .story-more-list > article, .story-testimonials h2, .story-testimonial-list > figure, .story-person-visual, .story-person-copy > h2, .story-person-copy > p, .story-person-copy > details, .story-audit-copy > h2, .story-audit-copy > p, .story-audit-paper",
       )
-      .forEach((target) => observer.observe(target));
+      .forEach((target) => {
+        target.classList.add("story-reveal");
+        observer.observe(target);
+      });
 
     update();
     element.setAttribute("data-motion-ready", "true");
