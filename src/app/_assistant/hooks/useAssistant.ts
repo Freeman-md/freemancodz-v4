@@ -82,6 +82,8 @@ export function useAssistant() {
         })) {
           if (event.type === "choice") {
             setChoice(event.choice);
+            // The reply panel owns this turn's question; don't repeat it in the transcript.
+            updateAssistantMessage((current) => ({ ...current, content: "" }));
           }
 
           if (event.type === "delta") {

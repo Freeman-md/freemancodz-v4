@@ -355,11 +355,16 @@ export class AssistantService {
     const calls = await this.streamModelResponse(
       {
         ...request,
-        instructions: `${request.instructions}\nThe choice has been requested. Briefly introduce it without repeating any introduction already sent, then wait for the visitor. Do not answer it or perform further actions.`,
+        instructions: `${request.instructions}\nThe application will display the question and options in its choice panel. Acknowledge the tool result without repeating the question or options. Wait for the visitor; do not answer it or perform further actions.`,
         tools: [],
       },
       state,
-      write,
+      (event) => {
+        // Complete the provider checkpoint without narrating the choice a second time.
+        if (event.type !== "delta") {
+          write(event);
+        }
+      },
       true,
     );
 
@@ -370,8 +375,8 @@ export class AssistantService {
 
   private writeFinalEvents(state: ResponseState, write: WriteEvent) {
     write({ type: "sources", sources: [...state.sources.values()] });
-    if (!state.didStreamText) {
-      write({ type: "delta", delta: state.choice?.question ?? FALLBACK_ANSWER });
+    if (!state.didStreamText && !state.choice) {
+      write({ type: "delta", delta: FALLBACK_ANSWER });
     }
 
     if (state.responseId) {

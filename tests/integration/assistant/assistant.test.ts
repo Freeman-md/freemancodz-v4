@@ -854,6 +854,11 @@ test("choice resolves every tool call before publishing a completed checkpoint; 
   );
   assert.ok(output.indexOf('"responseId":"resp_choice_ready"') < output.indexOf('"type":"choice"'));
   assert.doesNotMatch(output, /resp_choice_tools/);
+  assert.equal(
+    parsed.some((event) => event.type === "delta"),
+    false,
+    "The choice panel owns the question, without duplicate continuation text or fallback",
+  );
   assert.equal(inputs.length, 2);
   assert.deepEqual(await workflowRepository.findById(instance.id), before);
   await readChatResponse(

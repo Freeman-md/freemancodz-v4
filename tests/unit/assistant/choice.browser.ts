@@ -122,7 +122,7 @@ test("choices replace text entry, send exact ordinary replies once, and disappea
       current()
         .messages.filter((message) => message.role === "assistant")
         .map((message) => message.content),
-      ["Let's choose the next step."],
+      [""],
     );
     await act(async () => radios()[1]!.click());
     assert.equal(send().disabled, false);

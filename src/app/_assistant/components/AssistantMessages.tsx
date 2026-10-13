@@ -70,10 +70,7 @@ export function AssistantMessages({
 }: AssistantMessagesProps) {
   return (
     <ScrollArea
-      className={cn(
-        "assistant-messages min-h-0 flex-1 overscroll-contain bg-[#fbfbfa]",
-        className,
-      )}
+      className={cn("assistant-messages min-h-0 flex-1 overscroll-contain bg-[#fbfbfa]", className)}
     >
       <div className="flex min-h-full flex-col gap-5 px-4 py-5 sm:px-6 sm:py-6">
         {messages.length === 0 ? (
@@ -116,43 +113,50 @@ export function AssistantMessages({
         ) : null}
 
         <AnimatePresence initial={false}>
-          {messages.map((message) => (
-            <motion.article
-              key={message.id}
-              initial={
-                shouldReduceMotion
-                  ? false
-                  : message.role === "user"
-                    ? { opacity: 0, x: 20, y: 10, scale: 0.98 }
-                    : { opacity: 0, x: -18, y: 12, scale: 0.985 }
-              }
-              animate={{ opacity: 1, x: 0, y: 0, scale: 1 }}
-              exit={{ opacity: 0 }}
-              transition={
-                shouldReduceMotion
-                  ? { duration: 0 }
-                  : { type: "spring", stiffness: 360, damping: 28 }
-              }
-              className={cn(
-                "flex flex-col gap-3",
-                message.role === "user"
-                  ? "assistant-visitor ml-auto max-w-[85%] rounded-xl bg-[#F5F5F7] px-4 py-3 text-ink"
-                  : message.error
-                    ? "assistant-error w-full rounded-xl bg-red-50 px-4 py-3 text-red-950 ring-1 ring-red-950/10"
-                    : "w-full text-ink",
-              )}
-            >
-              <div className="whitespace-pre-wrap text-base/6">
-                {message.content ? (
-                  <AssistantMarkdown content={message.content} />
-                ) : message.role === "assistant" && isLoading && !message.error ? (
-                  "Thinking…"
-                ) : null}
-              </div>
+          {messages
+            .filter(
+              (message, index) =>
+                message.content ||
+                message.sources?.length ||
+                (isLoading && index === messages.length - 1),
+            )
+            .map((message) => (
+              <motion.article
+                key={message.id}
+                initial={
+                  shouldReduceMotion
+                    ? false
+                    : message.role === "user"
+                      ? { opacity: 0, x: 20, y: 10, scale: 0.98 }
+                      : { opacity: 0, x: -18, y: 12, scale: 0.985 }
+                }
+                animate={{ opacity: 1, x: 0, y: 0, scale: 1 }}
+                exit={{ opacity: 0 }}
+                transition={
+                  shouldReduceMotion
+                    ? { duration: 0 }
+                    : { type: "spring", stiffness: 360, damping: 28 }
+                }
+                className={cn(
+                  "flex flex-col gap-3",
+                  message.role === "user"
+                    ? "assistant-visitor ml-auto max-w-[85%] rounded-xl bg-[#F5F5F7] px-4 py-3 text-ink"
+                    : message.error
+                      ? "assistant-error w-full rounded-xl bg-red-50 px-4 py-3 text-red-950 ring-1 ring-red-950/10"
+                      : "w-full text-ink",
+                )}
+              >
+                <div className="whitespace-pre-wrap text-base/6">
+                  {message.content ? (
+                    <AssistantMarkdown content={message.content} />
+                  ) : message.role === "assistant" && isLoading && !message.error ? (
+                    "Thinking…"
+                  ) : null}
+                </div>
 
-              {message.sources ? <AssistantSources sources={message.sources} /> : null}
-            </motion.article>
-          ))}
+                {message.sources ? <AssistantSources sources={message.sources} /> : null}
+              </motion.article>
+            ))}
         </AnimatePresence>
 
         <div ref={messagesEndRef} />
