@@ -110,14 +110,21 @@
   font-size: 16px;
   color: var(--story-muted);
 }
-/* One quiet entrance per section. Content stays readable before JS and without motion. */
+.story-word {
+  display: inline-block;
+  white-space: pre;
+}
+.story-section-intro h2 > .story-word {
+  color: inherit;
+}
+/* Content remains readable without JS; motion is a progressive enhancement. */
 @media (prefers-reduced-motion: no-preference) {
   [data-motion-ready] .story-reveal {
-    opacity: 0.72;
-    translate: 0 24px;
+    opacity: 0.35;
+    translate: 0 48px;
     transition:
-      opacity 650ms var(--story-ease),
-      translate 650ms var(--story-ease);
+      opacity 800ms var(--story-ease),
+      translate 800ms var(--story-ease);
   }
   [data-motion-ready] .story-reveal[data-arrived],
   [data-motion-ready] .story-reveal:focus-within {

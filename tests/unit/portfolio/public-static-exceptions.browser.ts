@@ -319,7 +319,7 @@ test("personal scene retains managed experience and portrait without a static id
 
   assert.match(markup, /Managed employer/);
   assert.match(markup, /Managed experience/);
-  assert.match(markup, /About managed copy/);
+  assert.doesNotMatch(markup, /About managed copy/);
   assert.doesNotMatch(markup, /<img/);
   const withPortrait = renderToStaticMarkup(
     createElement(PortfolioFreemanScene, {
@@ -330,6 +330,22 @@ test("personal scene retains managed experience and portrait without a static id
 
   assert.match(withPortrait, /managed-portrait/);
   assert.match(withPortrait, /alt="Managed Name"/);
+});
+
+test("experience uses the managed short summary without repeating the full career narrative", () => {
+  const markup = renderToStaticMarkup(
+    createElement(PortfolioFreemanScene, {
+      about: {
+        ...about,
+        experiences: [{ ...about.experiences[0]!, insight: "A concise managed role summary." }],
+      },
+      home,
+    }),
+  );
+
+  assert.match(markup, /Experience/);
+  assert.match(markup, /A concise managed role summary/);
+  assert.doesNotMatch(markup, /Managed experience/);
 });
 
 test("audit retains managed actions, process and example rather than fixed copies", () => {

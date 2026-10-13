@@ -24,9 +24,19 @@ export function PortfolioSystemsScene({
         <span id="about-thinking" />
         <div className="story-section-intro">
           <h2 id="systems-title">
-            The click is only
+            {"The click is only".split(" ").map((word) => (
+              <span className="story-word" data-story-word key={word}>
+                {word}{" "}
+              </span>
+            ))}
             <br />
-            <span>the beginning.</span>
+            <span>
+              {"the beginning.".split(" ").map((word) => (
+                <span className="story-word" data-story-word key={word}>
+                  {word}{" "}
+                </span>
+              ))}
+            </span>
           </h2>
           <p>{home.improve.copy}</p>
         </div>

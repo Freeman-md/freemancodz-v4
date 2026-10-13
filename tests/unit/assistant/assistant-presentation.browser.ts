@@ -237,6 +237,7 @@ async function withBrowser(
     self: dom.window,
     document: dom.window.document,
     HTMLElement: dom.window.HTMLElement,
+    HTMLDetailsElement: dom.window.HTMLDetailsElement,
     Element: dom.window.Element,
     Node: dom.window.Node,
     MutationObserver: dom.window.MutationObserver,
@@ -250,6 +251,10 @@ async function withBrowser(
   const container = dom.window.document.querySelector("main")!;
 
   dom.window.HTMLElement.prototype.scrollIntoView = () => {};
+
+  Object.defineProperty(dom.window, "matchMedia", {
+    value: () => ({ matches: false, addEventListener() {}, removeEventListener() {} }),
+  });
 
   const { createRoot } = await import("react-dom/client");
 

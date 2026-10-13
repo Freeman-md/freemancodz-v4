@@ -56,14 +56,13 @@ export function PortfolioFreemanScene({
             <p key={principle.label}>{principle.label}</p>
           ))}
         </div>
-        <StoryDisclosure title={about.journey.title} id="about-journey">
-          <p>{about.hero.copy}</p>
+        <StoryDisclosure title="Experience" id="about-journey">
           <div className="story-experiences">
             {about.experiences.map((experience) => (
               <div key={experience.title}>
                 <h3>{experience.title}</h3>
                 {experience.tag && <p className="story-experience-period">{experience.tag}</p>}
-                <p>{experience.copy}</p>
+                <p>{experience.insight || experience.copy}</p>
               </div>
             ))}
           </div>

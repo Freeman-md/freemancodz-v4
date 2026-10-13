@@ -17,38 +17,82 @@ export function StoryMotion({ children }: { children: ReactNode }) {
       return;
     }
 
+    const hero = element.querySelector<HTMLElement>(".story-hero");
+
+    const heroStage = element.querySelector<HTMLElement>(".story-hero-sticky");
+
+    const words = element.querySelectorAll<HTMLElement>("[data-story-word]");
+
+    const statement = element.querySelector<HTMLElement>("#systems-title");
+
+    const pinned = window.matchMedia("(min-width: 1101px) and (min-height: 850px)");
+
     const scenes = element.querySelectorAll<HTMLElement>(
       ".story-featured-visual, .story-assistant-scene, .story-workflow-scene, .story-person-visual, .story-audit-grid",
     );
 
     const update = () => {
       frame = 0;
-      const distance = Math.min(window.scrollY / 900, 1);
+      // Read geometry together before changing styles; no React renders on scroll.
+      const heroBounds = hero?.getBoundingClientRect();
 
-      element.style.setProperty(
-        "--scene-travel",
-        preference.matches ? "0px" : `${distance * 42}px`,
-      );
-      element.style.setProperty("--scene-turn", preference.matches ? "0deg" : `${distance * 3}deg`);
+      const heroHeight = heroStage?.offsetHeight ?? 0;
 
-      for (const scene of scenes) {
-        const bounds = scene.getBoundingClientRect();
+      const statementBounds = statement?.getBoundingClientRect();
 
-        const progress = Math.max(
-          0,
-          Math.min((window.innerHeight - bounds.top) / (window.innerHeight + bounds.height), 1),
+      const sceneBounds = Array.from(scenes, (scene) => scene.getBoundingClientRect());
+
+      const clamp = (value: number) => Math.max(0, Math.min(value, 1));
+
+      element.toggleAttribute("data-motion-enabled", !preference.matches);
+
+      if (hero && heroBounds) {
+        const progress = pinned.matches
+          ? clamp((80 - heroBounds.top) / Math.max(1, heroBounds.height - heroHeight))
+          : clamp(-heroBounds.top / Math.max(1, heroBounds.height));
+
+        hero.style.setProperty("--hero-progress", preference.matches ? "0" : progress.toFixed(4));
+      }
+
+      if (statementBounds) {
+        const progress = clamp(
+          (window.innerHeight * 0.85 - statementBounds.top) / (window.innerHeight * 0.45),
+        );
+
+        words.forEach((word, index) => {
+          const amount = preference.matches ? 1 : clamp(progress * (words.length + 1) - index);
+
+          word.style.opacity = String(0.25 + amount * 0.75);
+          word.style.transform = `translateY(${(1 - amount) * 12}px)`;
+        });
+      }
+
+      scenes.forEach((scene, index) => {
+        const bounds = sceneBounds[index]!;
+
+        const progress = clamp(
+          (window.innerHeight - bounds.top) / (window.innerHeight + bounds.height),
         );
 
         scene.style.setProperty(
           "--object-progress",
           preference.matches ? "0.5" : progress.toFixed(4),
         );
-      }
+      });
     };
 
     const schedule = () => {
-      if (!frame) {
+      if (!document.hidden && !frame) {
         frame = window.requestAnimationFrame(update);
+      }
+    };
+
+    const onVisibilityChange = () => {
+      if (document.hidden) {
+        window.cancelAnimationFrame(frame);
+        frame = 0;
+      } else {
+        schedule();
       }
     };
 
@@ -132,6 +176,7 @@ export function StoryMotion({ children }: { children: ReactNode }) {
     window.addEventListener("scroll", schedule, { passive: true });
     window.addEventListener("resize", schedule);
     window.addEventListener("hashchange", onHashChange);
+    document.addEventListener("visibilitychange", onVisibilityChange);
     preference.addEventListener("change", update);
 
     return () => {
@@ -139,9 +184,11 @@ export function StoryMotion({ children }: { children: ReactNode }) {
       window.removeEventListener("scroll", schedule);
       window.removeEventListener("resize", schedule);
       window.removeEventListener("hashchange", onHashChange);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
       preference.removeEventListener("change", update);
       observer.disconnect();
       element.removeAttribute("data-motion-ready");
+      element.removeAttribute("data-motion-enabled");
     };
   }, []);
 
