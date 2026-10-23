@@ -159,6 +159,7 @@ export class AssistantService {
           });
         } catch {
           this.logger.error("assistant.booking_failed", {
+            action: request.action,
             workflowInstanceId: request.workflowInstanceId,
             category: "booking_request_failed",
           });

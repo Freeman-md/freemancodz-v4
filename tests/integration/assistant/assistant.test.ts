@@ -155,6 +155,7 @@ function createAssistant({
     ]),
     workflowRepository,
     ["search_website"],
+    { info() {}, error() {} },
   );
 
   const assistantService = new AssistantService(openai, siteSearch, logger, workflowService);
@@ -534,6 +535,39 @@ test("the bounded model loop stops before executing a fourth tool batch", async 
   assert.match(output, /The assistant could not respond/);
 });
 
+test("partial meeting details return after refresh without a model checkpoint", async () => {
+  const { inputs, post, workflowService } = createAssistant();
+
+  const instance = await workflowService.start("meeting-booking", {
+    originChannel: "test",
+    originPage: null,
+    originEntry: null,
+  });
+
+  await workflowService.executeTool(instance.id, {
+    name: "update_meeting_context",
+    rawArguments: '{"updates":[{"field":"name","value":"Visitor"}]}',
+    interactionId: "33333333-3333-4333-8333-333333333333",
+  });
+  const output = await readChatResponse(
+    await post(chatRequest({ message: "Continue my booking", workflowInstanceId: instance.id })),
+  );
+
+  assert.equal(inputs[0].previousResponseId, null);
+  assert.match(JSON.stringify(inputs[0].input), /Visitor/);
+  assert.match(output, /Visitor/);
+  assert.match(output, /"missingRequiredFields":\["email","reason","selectedSlot"\]/);
+  await workflowService.executeTool(instance.id, {
+    name: "update_meeting_context",
+    rawArguments: '{"updates":[{"field":"email","value":"visitor@example.com"}]}',
+    interactionId: "33333333-3333-4333-8333-333333333333",
+  });
+  const context = await workflowService.getAssistantContext(instance.id);
+
+  assert.equal(context.instance?.progress.fields[0].value, "Visitor");
+  assert.equal(context.instance?.progress.fields[1].value, "visitor@example.com");
+});
+
 test("a restored workflow supplies known progress to the model and public stream", async () => {
   const { inputs, post, workflowService } = createAssistant();
 
@@ -669,6 +703,7 @@ test("starting a workflow changes instructions and tools on the next iteration i
       "cancel_workflow",
       "switch_workflow",
       "find_meeting_slots",
+      "update_meeting_context",
     ],
   );
   assert.doesNotMatch(inputs[0]?.instructions ?? "", /meeting-booking workflow/i);

@@ -105,7 +105,10 @@ test("starts the latest version with supplied origin and exposes only safe publi
     /positive integer version/,
   );
 
-  const service = new WorkflowService(registry, repository, ["search_website"]);
+  const service = new WorkflowService(registry, repository, ["search_website"], {
+    info() {},
+    error() {},
+  });
 
   const idle = await service.getAssistantContext(null);
 
@@ -165,6 +168,7 @@ test("resolves an existing instance's exact version after a newer version is reg
     new WorkflowDefinitionRegistry([createDefinition(1), createDefinition(2)]),
     repository,
     [],
+    { info() {}, error() {} },
   );
 
   const context = await service.getAssistantContext(FIRST_INSTANCE_ID);
@@ -180,6 +184,7 @@ test("rejects nested starts and stale tools without persisting a second transiti
     new WorkflowDefinitionRegistry([createDefinition(1)]),
     repository,
     [],
+    { info() {}, error() {} },
   );
 
   await assert.rejects(
@@ -217,6 +222,7 @@ test("rejects invalid initial and returned state before persistence", async () =
     new WorkflowDefinitionRegistry([createDefinition(1, { initialCount: -1 })]),
     invalidInitialRepository,
     [],
+    { info() {}, error() {} },
   );
 
   await assert.rejects(
@@ -236,6 +242,7 @@ test("rejects invalid initial and returned state before persistence", async () =
     new WorkflowDefinitionRegistry([createDefinition(1, { invalidReturnedCount: true })]),
     invalidReturnedRepository,
     [],
+    { info() {}, error() {} },
   );
 
   await assert.rejects(
@@ -260,6 +267,7 @@ test("persists completion and cancellation as terminal states and rejects later 
     new WorkflowDefinitionRegistry([createDefinition(1)]),
     repository,
     [],
+    { info() {}, error() {} },
     () => completedAt,
   );
 
@@ -300,6 +308,7 @@ test("fails safely for unknown instances, missing definitions, and corrupt store
     new WorkflowDefinitionRegistry([createDefinition(1)]),
     repository,
     [],
+    { info() {}, error() {} },
   );
 
   await assert.rejects(service.getAssistantContext(FIRST_INSTANCE_ID), { code: "not_found" });
@@ -320,6 +329,7 @@ test("rejects collisions across global, control, and definition tool names", asy
         new WorkflowDefinitionRegistry([createDefinition(1)]),
         new MemoryWorkflowInstanceRepository(),
         [START_WORKFLOW_TOOL_NAME],
+        { info() {}, error() {} },
       ),
     { code: "configuration_error" },
   );
@@ -330,6 +340,7 @@ test("rejects collisions across global, control, and definition tool names", asy
     new WorkflowDefinitionRegistry([createDefinition(1, { toolName: "search_website" })]),
     repository,
     ["search_website"],
+    { info() {}, error() {} },
   );
 
   await assert.rejects(

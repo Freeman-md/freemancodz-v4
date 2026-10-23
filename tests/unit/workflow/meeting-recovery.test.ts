@@ -64,6 +64,8 @@ function harness(
 
   const notifications: string[] = [];
 
+  const logs: Array<{ event: string; context: unknown }> = [];
+
   const calendar: CalendarClient = {
     findEvent: async (id) => {
       calls.push(`find:${id}`);
@@ -116,8 +118,12 @@ function harness(
     calendar,
     repository,
     {
-      info: () => undefined,
-      error: () => undefined,
+      info: (event, context) => {
+        logs.push({ event, context });
+      },
+      error: (event, context) => {
+        logs.push({ event, context });
+      },
     },
     {
       notifyMeetingBooked: async (record) => {
@@ -126,8 +132,64 @@ function harness(
     },
   );
 
-  return { service, calendar, repository, calls, events, records, notifications };
+  return { service, calendar, repository, calls, events, records, notifications, logs };
 }
+
+test("recovery diagnostics identify stages without personal or provider data", async () => {
+  for (const stage of [
+    "calendar_lookup",
+    "availability",
+    "calendar_insert",
+    "meeting_persistence",
+  ] as const) {
+    const setup = harness();
+
+    if (stage === "calendar_lookup")
+      {setup.calendar.findEvent = async () => {
+        throw new Error("PRIVATE_PROVIDER_PAYLOAD");
+      };}
+
+    if (stage === "availability")
+      {setup.calendar.getBusyPeriods = async () => {
+        throw new Error("PRIVATE_PROVIDER_PAYLOAD");
+      };}
+
+    if (stage === "calendar_insert")
+      {setup.calendar.createEvent = async () => {
+        throw new Error("PRIVATE_PROVIDER_PAYLOAD");
+      };}
+
+    if (stage === "meeting_persistence")
+      {setup.repository.createMeeting = async () => {
+        throw new Error("PRIVATE_PROVIDER_PAYLOAD");
+      };}
+
+    await assert.rejects(setup.service.bookMeeting(input));
+    const failure = setup.logs.find((log) => log.event === "meeting.booking_recovery_required");
+
+    assert.ok(failure);
+    assert.match(
+      JSON.stringify(failure),
+      new RegExp(stage === "calendar_insert" ? "calendar_lookup_after_insert" : stage),
+    );
+    assert.match(JSON.stringify(failure), new RegExp(input.bookingOperationId));
+    assert.doesNotMatch(
+      JSON.stringify(setup.logs),
+      /visitor@example.com|Discuss a project|PRIVATE_PROVIDER_PAYLOAD|stack|cause/,
+    );
+  }
+
+  const setup = harness();
+
+  await setup.service.bookMeeting(input);
+  await setup.service.bookMeeting(input);
+  assert.deepEqual(
+    setup.logs
+      .filter((log) => log.event === "meeting.calendar_event_resolved")
+      .map((log) => (log.context as { source: string }).source),
+    ["created", "existing"],
+  );
+});
 
 test("an insert with a lost response recovers by the same event ID and reuses its Meeting", async () => {
   const setup = harness();

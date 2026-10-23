@@ -156,12 +156,10 @@ test("preparation requires complete data and submission requires a later interac
   assert.equal(sameInteraction.output.error, "confirmation_requires_new_input");
   assert.equal(audit.createdCount, 0);
 
-  const unconfirmedRequest = await definition.executeTool(
-    "submit_audit",
-    "{}",
-    prepared.state,
-    { ...CONFIRMATION_CONTEXT, allowConfirmation: false },
-  );
+  const unconfirmedRequest = await definition.executeTool("submit_audit", "{}", prepared.state, {
+    ...CONFIRMATION_CONTEXT,
+    allowConfirmation: false,
+  });
 
   assert.equal(unconfirmedRequest.output.error, "separate_confirmation_required");
   assert.equal(unconfirmedRequest.status, "active");
@@ -240,6 +238,7 @@ test("retry after the request is created but workflow save fails returns one req
     ]),
     repository,
     ["search_website"],
+    { info() {}, error() {} },
   );
 
   const instance = await workflow.start("audit", {
@@ -291,6 +290,7 @@ test("cancellation creates no audit request", async () => {
     ]),
     new MemoryWorkflowRepository(),
     [],
+    { info() {}, error() {} },
   );
 
   const instance = await workflow.start("audit", {

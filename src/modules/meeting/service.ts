@@ -89,88 +89,127 @@ export class MeetingService {
   }
 
   async bookMeeting(input: BookMeetingInput) {
-    if (!z.string().uuid().safeParse(input.bookingOperationId).success) {
-      throw new MeetingBookingError("invalid_operation");
-    }
-
-    const eventId = `b${input.bookingOperationId.replaceAll("-", "").toLowerCase()}`;
-
-    let existing: MeetingRecord | null;
+    let stage = "meeting_lookup";
 
     try {
-      existing = await this.repository.findMeetingByGoogleEventId(eventId);
-    } catch (error) {
-      throw new MeetingBookingError("unavailable", error);
-    }
-
-    let event: CreatedCalendarEvent | null;
-
-    try {
-      event = await this.calendar.findEvent(eventId);
-    } catch (error) {
-      throw new MeetingBookingError("unavailable", error);
-    }
-
-    if (existing) {
-      assertMatchingMeeting(existing, input, eventId);
-
-      if (!event) {
-        throw new MeetingBookingError("conflict");
+      if (!z.string().uuid().safeParse(input.bookingOperationId).success) {
+        throw new MeetingBookingError("invalid_operation");
       }
 
-      assertMatchingCalendarEvent(event, input, eventId);
-      await this.notifications.notifyMeetingBooked(existing);
+      const eventId = `b${input.bookingOperationId.replaceAll("-", "").toLowerCase()}`;
 
-      return { googleEventId: existing.googleEventId, googleEventUrl: existing.googleEventUrl };
-    }
-
-    if (!event) {
-      let available: boolean;
+      let existing: MeetingRecord | null;
 
       try {
-        available = await this.isSlotAvailable(input.slot);
+        existing = await this.repository.findMeetingByGoogleEventId(eventId);
       } catch (error) {
         throw new MeetingBookingError("unavailable", error);
       }
 
-      if (!available) {
-        throw new MeetingBookingError("slot_unavailable");
+      let event: CreatedCalendarEvent | null;
+
+      let source = "existing";
+
+      stage = "calendar_lookup";
+      try {
+        event = await this.calendar.findEvent(eventId);
+      } catch (error) {
+        throw new MeetingBookingError("unavailable", error);
       }
 
-      try {
-        event = await this.calendar.createEvent({
-          eventId,
-          bookingOperationId: input.bookingOperationId,
-          summary: `Meeting with ${input.name}`,
-          description: input.reason,
-          attendeeEmail: input.email,
-          start: new Date(input.slot.start),
-          end: new Date(input.slot.end),
-          timezone: MEETING_CONFIG.timezone,
-        });
-      } catch (error) {
-        // Insert may have committed before its response was lost. Never mint another ID.
-        try {
-          event = await this.calendar.findEvent(eventId);
-        } catch (lookupError) {
-          throw new MeetingBookingError("uncertain", lookupError);
-        }
+      if (existing) {
+        stage = "event_validation";
+        assertMatchingMeeting(existing, input, eventId);
 
         if (!event) {
-          throw new MeetingBookingError("uncertain", error);
+          throw new MeetingBookingError("conflict");
+        }
+
+        assertMatchingCalendarEvent(event, input, eventId);
+        this.logger.info("meeting.calendar_event_resolved", {
+          bookingOperationId: input.bookingOperationId,
+          googleEventId: eventId,
+          source,
+        });
+        await this.notifications.notifyMeetingBooked(existing);
+
+        return { googleEventId: existing.googleEventId, googleEventUrl: existing.googleEventUrl };
+      }
+
+      if (!event) {
+        stage = "availability";
+        let available: boolean;
+
+        try {
+          available = await this.isSlotAvailable(input.slot);
+        } catch (error) {
+          throw new MeetingBookingError("unavailable", error);
+        }
+
+        if (!available) {
+          throw new MeetingBookingError("slot_unavailable");
+        }
+
+        try {
+          stage = "calendar_insert";
+          event = await this.calendar.createEvent({
+            eventId,
+            bookingOperationId: input.bookingOperationId,
+            summary: `Meeting with ${input.name}`,
+            description: input.reason,
+            attendeeEmail: input.email,
+            start: new Date(input.slot.start),
+            end: new Date(input.slot.end),
+            timezone: MEETING_CONFIG.timezone,
+          });
+          source = "created";
+        } catch (error) {
+          // Insert may have committed before its response was lost. Never mint another ID.
+          try {
+            stage = "calendar_lookup_after_insert";
+            event = await this.calendar.findEvent(eventId);
+          } catch (lookupError) {
+            throw new MeetingBookingError("uncertain", lookupError);
+          }
+
+          if (!event) {
+            throw new MeetingBookingError("uncertain", error);
+          }
+
+          source = "recovered";
         }
       }
+
+      stage = "event_validation";
+      assertMatchingCalendarEvent(event, input, eventId);
+      this.logger.info("meeting.calendar_event_resolved", {
+        bookingOperationId: input.bookingOperationId,
+        googleEventId: eventId,
+        source,
+      });
+
+      const pendingEvent = {
+        googleEventId: event.id,
+        googleEventUrl: event.htmlLink,
+        rawProviderPayload: event.payload,
+      };
+
+      stage = "meeting_persistence";
+
+      return await this.persistMeeting({ ...input, pendingEvent });
+    } catch (error) {
+      this.logger.error("meeting.booking_recovery_required", {
+        bookingOperationId: input.bookingOperationId,
+        stage,
+        category:
+          error instanceof MeetingBookingError
+            ? error.code
+            : error instanceof MeetingPersistenceError
+              ? "persistence_failed"
+              : "unexpected",
+      });
+      throw error;
     }
-
-    assertMatchingCalendarEvent(event, input, eventId);
-
-    const pendingEvent = {
-      googleEventId: event.id,
-      googleEventUrl: event.htmlLink,
-      rawProviderPayload: event.payload,
-    };
-
-    return this.persistMeeting({ ...input, pendingEvent });
   }
 
   async reconcileMeeting(
@@ -179,28 +218,52 @@ export class MeetingService {
       bookingOperationId?: string;
     },
   ) {
-    let event: CreatedCalendarEvent | null;
+    let stage = "calendar_lookup";
 
     try {
-      event = await this.calendar.findEvent(input.pendingEvent.googleEventId);
-    } catch (error) {
-      throw new MeetingBookingError("unavailable", error);
-    }
+      let event: CreatedCalendarEvent | null;
 
-    if (!event) {
-      throw new MeetingBookingError("conflict");
-    }
+      try {
+        event = await this.calendar.findEvent(input.pendingEvent.googleEventId);
+      } catch (error) {
+        throw new MeetingBookingError("unavailable", error);
+      }
 
-    assertMatchingCalendarEvent(event, input, input.pendingEvent.googleEventId);
+      if (!event) {
+        throw new MeetingBookingError("conflict");
+      }
 
-    return this.persistMeeting({
-      ...input,
-      pendingEvent: {
+      stage = "event_validation";
+      assertMatchingCalendarEvent(event, input, input.pendingEvent.googleEventId);
+      this.logger.info("meeting.calendar_event_resolved", {
+        bookingOperationId: input.bookingOperationId,
         googleEventId: event.id,
-        googleEventUrl: event.htmlLink,
-        rawProviderPayload: event.payload,
-      },
-    });
+        source: "existing",
+      });
+
+      stage = "meeting_persistence";
+
+      return await this.persistMeeting({
+        ...input,
+        pendingEvent: {
+          googleEventId: event.id,
+          googleEventUrl: event.htmlLink,
+          rawProviderPayload: event.payload,
+        },
+      });
+    } catch (error) {
+      this.logger.error("meeting.booking_recovery_required", {
+        bookingOperationId: input.bookingOperationId,
+        stage,
+        category:
+          error instanceof MeetingBookingError
+            ? error.code
+            : error instanceof MeetingPersistenceError
+              ? "persistence_failed"
+              : "unexpected",
+      });
+      throw error;
+    }
   }
 
   private async persistMeeting(
@@ -242,11 +305,6 @@ export class MeetingService {
         }
 
         if (!meeting) {
-          this.logger.error("meeting.persistence_failed", {
-            googleEventId: input.pendingEvent.googleEventId,
-            startsAt: input.slot.start,
-          });
-
           throw new MeetingPersistenceError(input.pendingEvent, error);
         }
 

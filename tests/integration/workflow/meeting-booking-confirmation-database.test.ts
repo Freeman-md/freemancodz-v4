@@ -52,6 +52,8 @@ function createService(
 ) {
   const operations = new Set<string>();
 
+  const logs: Array<{ event: string; context: unknown }> = [];
+
   const meeting: MeetingServiceClient = {
     findAvailableSlots: async () => [slot],
     isSlotAvailable: async () => true,
@@ -93,9 +95,17 @@ function createService(
     ]),
     repository,
     [],
+    {
+      info: (event, context) => {
+        logs.push({ event, context });
+      },
+      error: (event, context) => {
+        logs.push({ event, context });
+      },
+    },
   );
 
-  return { service, operations };
+  return { service, operations, logs };
 }
 
 async function prepare(service: WorkflowService) {
@@ -335,13 +345,10 @@ test(
           await preflightStarted.promise;
 
           const corrected = await service.executeTool(prepared.id, {
-            name: "prepare_meeting",
+            name: "update_meeting_context",
             interactionId: randomUUID(),
             rawArguments: JSON.stringify({
-              name: "Corrected",
-              email: "corrected@example.test",
-              reason: "Updated topic",
-              selectedSlot: { start: slot.start, end: slot.end },
+              updates: [{ field: "name", value: "Corrected" }],
             }),
           });
 
@@ -356,9 +363,20 @@ test(
           assert.equal(stale.output.error, "stale_booking_summary");
           assert.equal(stale.instance.revision, corrected.instance.revision);
           assert.equal(operations.size, 0);
+          const reviewed = await service.executeTool(prepared.id, {
+            name: "prepare_meeting",
+            interactionId: randomUUID(),
+            rawArguments: JSON.stringify({
+              name: "Corrected",
+              email: "visitor@example.test",
+              reason: "Discuss a project",
+              selectedSlot: { start: slot.start, end: slot.end },
+            }),
+          });
+
           const confirmed = await service.confirmMeetingBooking(
             prepared.id,
-            corrected.instance.revision,
+            reviewed.instance.revision,
           );
 
           assert.equal(confirmed.instance.status, "completed");
@@ -392,7 +410,7 @@ test(
               },
             };
 
-            const { service, operations } = createService(failingRepository);
+            const { service, operations, logs } = createService(failingRepository);
 
             const prepared = await prepare(service);
 
@@ -400,6 +418,9 @@ test(
 
             assert.equal(operations.size, 1);
             assert.equal(first.instance.status, committed ? "completed" : "active");
+            assert.ok(logs.some((log) => log.event === "workflow.booking_accepted"));
+            assert.ok(logs.some((log) => log.event === "workflow.booking_completion_save_failed"));
+            assert.doesNotMatch(JSON.stringify(logs), /visitor@example|Discuss a project|Visitor/);
             if (!committed) {
               assert.equal(first.instance.bookingAction, "retry");
             }

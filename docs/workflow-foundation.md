@@ -45,6 +45,10 @@ The picker temporarily replaces the composer. Selecting and sending an option su
 
 ## Meeting booking version 1
 
+`update_meeting_context` saves name, email, reason and a selection from returned availability incrementally. Validated batches are atomic and use the existing revision check. Corrections invalidate preparation without discarding other details; availability refreshes discard the slot, not personal details. The next post-refresh interaction reloads these saved values through the existing ID-only restoration.
+
+Booking diagnostics reuse the existing logger: `workflow.booking_accepted`, `meeting.calendar_event_resolved` (created/existing/recovered), `meeting.booking_recovery_required`, `workflow.booking_completed`, and `workflow.booking_completion_save_failed`. Server logs correlate operation/workflow identifiers and revisions with typed categories and failure stages. They exclude personal fields, provider payloads and raw exceptions. Retry semantics and public error messages are unchanged.
+
 The meeting definition uses the Meeting module's public service interface for London-time availability, final slot rechecking, Calendar creation, Meeting persistence, and partial-failure reconciliation. It owns all attendee fields, booking state, meeting prompts, and meeting tools.
 
 Preparation exposes a saved summary and explicit Confirm booking button, not model-accessible confirmation or booking tools. The server checks that exact revision and current availability, then saves a UUID booking operation through a revision-checked write before any Calendar insertion. The saved details are frozen: correction, cancellation and switching cannot change an accepted booking. A preflight race lost to any of those mutations creates no event.

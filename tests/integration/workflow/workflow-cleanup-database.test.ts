@@ -118,6 +118,7 @@ test(
         new WorkflowDefinitionRegistry([contact, other]),
         repository,
         ["ask_user_choice"],
+        { info() {}, error() {} },
       );
 
       const origin = { originChannel: "web", originPage: null, originEntry: null };

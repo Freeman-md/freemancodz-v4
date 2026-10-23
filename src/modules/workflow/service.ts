@@ -1,5 +1,6 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
+import type { Logger } from "@/infrastructure/logging/logger";
 import type { Prisma, WorkflowInstance } from "@/generated/prisma/client";
 import type { OpenAIResponseTool } from "@/infrastructure/openai/types";
 import {
@@ -50,6 +51,7 @@ export class WorkflowService implements IWorkflowService {
     private readonly registry: WorkflowDefinitionRegistry,
     private readonly repository: IWorkflowInstanceRepository,
     globalToolNames: readonly string[],
+    private readonly logger: Logger,
     private readonly clock: () => Date = () => new Date(),
   ) {
     this.globalToolNames = new Set(globalToolNames);
@@ -270,6 +272,14 @@ export class WorkflowService implements IWorkflowService {
       return saved;
     }
 
+    const operation = meetingBookingStateSchema.parse(execution.state).bookingOperation;
+
+    this.logger.info("workflow.booking_accepted", {
+      workflowInstanceId: instance.id,
+      bookingOperationId: operation?.id,
+      revision: saved.instance.revision,
+    });
+
     // Only the persisted operation may reach the Calendar; retries reuse that identity.
     return this.retryMeetingBooking(instance.id);
   }
@@ -303,7 +313,16 @@ export class WorkflowService implements IWorkflowService {
     );
 
     try {
-      return await this.persistExecution(instance, definition, execution);
+      const result = await this.persistExecution(instance, definition, execution);
+
+      if (result.instance.status === "completed")
+        {this.logger.info("workflow.booking_completed", {
+          workflowInstanceId: instance.id,
+          bookingOperationId: parsed.bookingOperation?.id,
+          revision: result.instance.revision,
+        });}
+
+      return result;
     } catch (error) {
       if (!isBookingPersistenceFailure(error)) {
         throw error;
@@ -312,6 +331,13 @@ export class WorkflowService implements IWorkflowService {
       const current = await this.loadMeetingInstance(instance.id);
 
       const currentState = meetingBookingStateSchema.parse(current.state);
+
+      this.logger.error("workflow.booking_completion_save_failed", {
+        workflowInstanceId: instance.id,
+        bookingOperationId: parsed.bookingOperation?.id,
+        category: error instanceof WorkflowServiceError ? error.code : "unexpected",
+        reconciled: current.status === "completed" && hasSameBookingIdentity(parsed, currentState),
+      });
 
       if (!hasSameBookingIdentity(parsed, currentState)) {
         throw new WorkflowServiceError(

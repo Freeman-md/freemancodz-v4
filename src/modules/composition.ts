@@ -167,6 +167,7 @@ export const workflowService = new WorkflowService(
   workflowRegistry,
   new WorkflowInstanceRepository(prisma),
   GLOBAL_ASSISTANT_TOOLS.map(({ name }) => name),
+  logger,
 );
 
 // Rate limiting
