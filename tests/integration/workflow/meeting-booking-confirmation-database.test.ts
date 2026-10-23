@@ -13,6 +13,7 @@ import {
   type CreatedCalendarEvent,
 } from "@/infrastructure/google-calendar/types";
 import { MeetingService } from "@/modules/meeting/service";
+import { MeetingBookingError } from "@/modules/meeting/types";
 import { MeetingRepository } from "@/modules/meeting/repository";
 import type { MeetingServiceClient } from "@/modules/meeting/types";
 import { WorkflowInstanceStoreError } from "@/modules/workflow/errors";
@@ -194,6 +195,372 @@ test(
         adapter: new PrismaPg({ connectionString: databaseUrl.toString() }),
       });
       const repository = new WorkflowInstanceRepository(prisma);
+
+      context.beforeEach(async () => {
+        await prisma!.$transaction([
+          prisma!.auditRequest.deleteMany(),
+          prisma!.contactRequest.deleteMany(),
+          prisma!.meeting.deleteMany(),
+          prisma!.workflowInstance.deleteMany(),
+        ]);
+      });
+
+      const claimInput = async (id: string, selectedSlot = slot) => {
+        const current = (await repository.findById(id))!;
+
+        const state = meetingBookingStateSchema.parse(current.state);
+
+        return {
+          id,
+          expectedRevision: current.revision,
+          status: "active" as const,
+          completedAt: null,
+          state: {
+            ...state,
+            step: "confirmed" as const,
+            selectedSlot,
+            bookingOperation: { id: randomUUID(), preparedRevision: current.revision },
+          },
+        };
+      };
+
+      await context.test(
+        "different workflows racing one slot admit one Calendar event and Meeting row",
+        async () => {
+          const otherDatabase = new PrismaClient({
+            adapter: new PrismaPg({ connectionString: databaseUrl.toString() }),
+          });
+
+          const otherRepository = new WorkflowInstanceRepository(otherDatabase);
+
+          const bothAvailable = deferred(),
+            insertStarted = deferred(),
+            finishInsert = deferred();
+
+          const events = new Map<string, CreatedCalendarEvent>();
+
+          let preflights = 0,
+            insertCalls = 0;
+
+          const calendar: CalendarClient = {
+            getBusyPeriods: async () => [],
+            findEvent: async (id) => events.get(id) ?? null,
+            createEvent: async (input) => {
+              insertCalls++;
+              const event = {
+                id: input.eventId,
+                htmlLink: null,
+                payload: {
+                  id: input.eventId,
+                  status: "confirmed",
+                  summary: input.summary,
+                  description: input.description,
+                  attendees: [{ email: input.attendeeEmail }],
+                  start: { dateTime: input.start.toISOString(), timeZone: input.timezone },
+                  end: { dateTime: input.end.toISOString(), timeZone: input.timezone },
+                  extendedProperties: { private: { bookingOperationId: input.bookingOperationId } },
+                },
+              };
+
+              events.set(input.eventId, event);
+              insertStarted.release();
+              await finishInsert.promise;
+
+              return event;
+            },
+          };
+
+          const meeting = new MeetingService(
+            calendar,
+            new MeetingRepository(prisma!),
+            { info() {}, error() {} },
+            { notifyMeetingBooked: async () => {} },
+          );
+
+          const provider: MeetingServiceClient = {
+            findAvailableSlots: async () => [slot],
+            isSlotAvailable: async () => {
+              preflights++;
+              if (preflights === 2) {
+                bothAvailable.release();
+              }
+
+              await bothAvailable.promise;
+
+              return true;
+            },
+            bookMeeting: (input) => meeting.bookMeeting(input),
+            reconcileMeeting: (input) => meeting.reconcileMeeting(input),
+          };
+
+          const left = createService(repository, {}, provider),
+            right = createService(otherRepository, {}, provider);
+
+          const a = await prepare(left.service),
+            b = await prepare(right.service);
+
+          const first = left.service.confirmMeetingBooking(a.id, a.revision),
+            second = right.service.confirmMeetingBooking(b.id, b.revision);
+
+          try {
+            await insertStarted.promise;
+            const aState = meetingBookingStateSchema.parse(
+              (await repository.findById(a.id))!.state,
+            );
+
+            const losing = await (aState.bookingOperation ? second : first);
+
+            assert.equal(losing.output.error, "slot_unavailable");
+            const savedLoser = meetingBookingStateSchema.parse(
+              (await repository.findById(losing.instance.id))!.state,
+            );
+
+            assert.equal(savedLoser.selectedSlot, null);
+            assert.equal(savedLoser.preparedInteractionId, null);
+            assert.equal(savedLoser.bookingOperation, null);
+            assert.deepEqual(savedLoser.availableSlots, []);
+            assert.equal(savedLoser.name, "Visitor");
+            assert.equal(savedLoser.email, "visitor@example.test");
+            assert.equal(savedLoser.reason, "Discuss a project");
+            assert.equal(insertCalls, 1);
+            // The loser finishes while the winner is still waiting on Calendar.
+            finishInsert.release();
+            const results = await Promise.all([first, second]);
+
+            assert.equal(
+              results.filter((result) => result.instance.status === "completed").length,
+              1,
+            );
+            assert.equal(events.size, 1);
+            assert.equal(await prisma!.meeting.count(), 1);
+            const logs = [...left.logs, ...right.logs];
+
+            assert.ok(logs.some((log) => log.event === "workflow.booking_slot_conflict"));
+            assert.doesNotMatch(JSON.stringify(logs), /visitor@example|Discuss a project|Visitor/);
+          } finally {
+            finishInsert.release();
+            await Promise.allSettled([first, second]);
+            await otherDatabase.$disconnect();
+          }
+        },
+      );
+
+      await context.test(
+        "overlapping claims conflict, adjacent intervals and own-instance saves do not",
+        async () => {
+          const { service } = createService(repository);
+
+          const a = await prepare(service),
+            b = await prepare(service),
+            c = await prepare(service);
+
+          const input = await claimInput(a.id);
+
+          const accepted = await repository.claimMeetingBooking(input);
+
+          await repository.claimMeetingBooking({ ...input, expectedRevision: accepted.revision });
+          await assert.rejects(
+            repository.claimMeetingBooking(
+              await claimInput(b.id, {
+                ...slot,
+                start: "2099-09-15T11:15:00.000Z",
+                end: "2099-09-15T11:45:00.000Z",
+              }),
+            ),
+            { code: "slot_unavailable" },
+          );
+          await repository.claimMeetingBooking(
+            await claimInput(c.id, { ...slot, start: slot.end, end: "2099-09-15T12:00:00.000Z" }),
+          );
+          assert.equal(
+            meetingBookingStateSchema.parse((await repository.findById(b.id))!.state).step,
+            "awaiting_confirmation",
+          );
+        },
+      );
+
+      for (const legacy of ["confirmed", "pending", "completed", "malformed"] as const) {
+        await context.test(`${legacy} accepted states block overlapping claims`, async () => {
+          const { service } = createService(repository);
+
+          const a = await prepare(service),
+            b = await prepare(service);
+
+          const input = await claimInput(a.id);
+
+          const state = { ...input.state, bookingOperation: null };
+
+          if (legacy === "pending") {
+            state.pendingBooking = {
+              googleEventId: "legacy-event",
+              googleEventUrl: null,
+              rawProviderPayload: {},
+              name: "Visitor",
+              email: "visitor@example.test",
+              reason: "Discuss a project",
+              selectedSlot: slot,
+            };
+          }
+
+          await prisma!.workflowInstance.update({
+            where: { id: a.id },
+            data: {
+              state: legacy === "malformed" ? { step: "confirmed", selectedSlot: null } : state,
+              status: legacy === "completed" ? "completed" : "active",
+              completedAt: legacy === "completed" ? new Date() : null,
+            },
+          });
+          await assert.rejects(repository.claimMeetingBooking(await claimInput(b.id)), {
+            code: legacy === "malformed" ? "unavailable" : "slot_unavailable",
+          });
+        });
+      }
+
+      await context.test("failed claim rolls back and releases its lock", async () => {
+        const { service, operations } = createService(repository);
+
+        const a = await prepare(service),
+          b = await prepare(service);
+
+        await assert.rejects(
+          repository.claimMeetingBooking({ ...(await claimInput(a.id)), expectedRevision: 0 }),
+          { code: "stale" },
+        );
+        assert.equal(
+          meetingBookingStateSchema.parse((await repository.findById(a.id))!.state)
+            .bookingOperation,
+          null,
+        );
+        await repository.claimMeetingBooking(await claimInput(b.id));
+        assert.equal(operations.size, 0);
+      });
+
+      await context.test("a correction winning conflict cleanup is not overwritten", async () => {
+        const base = createService(repository);
+
+        const a = await prepare(base.service),
+          b = await prepare(base.service);
+
+        await repository.claimMeetingBooking(await claimInput(a.id));
+        let corrected = false;
+
+        const store: IWorkflowInstanceRepository = {
+          create: (input) => repository.create(input),
+          findById: (id) => repository.findById(id),
+          claimMeetingBooking: (input) => repository.claimMeetingBooking(input),
+          save: async (input) => {
+            if (input.id === b.id && !corrected) {
+              corrected = true;
+              await base.service.executeTool(b.id, {
+                name: "update_meeting_context",
+                rawArguments: JSON.stringify({
+                  updates: [{ field: "name", value: "Corrected visitor" }],
+                }),
+                interactionId: randomUUID(),
+              });
+            }
+
+            return repository.save(input);
+          },
+        };
+
+        const { service, operations } = createService(store);
+
+        const result = await service.confirmMeetingBooking(b.id, b.revision);
+
+        const state = meetingBookingStateSchema.parse((await repository.findById(b.id))!.state);
+
+        assert.equal(result.output.error, "booking_changed");
+        assert.equal(state.name, "Corrected visitor");
+        assert.deepEqual(state.selectedSlot, slot);
+        assert.equal(operations.size, 0);
+      });
+
+      await context.test(
+        "lock timeout leaves no acceptance and permits a later claim",
+        async () => {
+          const blocker = new Client({ connectionString: databaseUrl.toString() });
+
+          await blocker.connect();
+          const { service, operations } = createService(repository);
+
+          const a = await prepare(service),
+            b = await prepare(service);
+
+          try {
+            await blocker.query("BEGIN");
+            await blocker.query(
+              "SELECT pg_advisory_xact_lock(hashtext('freemancodz:meeting-booking'))",
+            );
+            await assert.rejects(repository.claimMeetingBooking(await claimInput(a.id)), {
+              code: "unavailable",
+            });
+            const result = await service.confirmMeetingBooking(a.id, a.revision);
+
+            assert.equal(result.instance.progress.phase, "awaiting_confirmation");
+            assert.equal(result.output.error, "booking_changed");
+            assert.equal(
+              meetingBookingStateSchema.parse((await repository.findById(a.id))!.state)
+                .bookingOperation,
+              null,
+            );
+            assert.equal(operations.size, 0);
+          } finally {
+            await blocker.query("ROLLBACK");
+            await blocker.end();
+          }
+
+          await repository.claimMeetingBooking(await claimInput(b.id));
+        },
+      );
+
+      for (const failure of ["provider_response", "completion_save"] as const) {
+        await context.test(`${failure} retains the claim through recovery`, async () => {
+          let fail = true;
+
+          const store: IWorkflowInstanceRepository = {
+            create: (input) => repository.create(input),
+            findById: (id) => repository.findById(id),
+            claimMeetingBooking: (input) => repository.claimMeetingBooking(input),
+            save: async (input) => {
+              if (failure === "completion_save" && input.status === "completed" && fail) {
+                fail = false;
+                throw new WorkflowInstanceStoreError("unavailable", "Injected completion failure");
+              }
+
+              return repository.save(input);
+            },
+          };
+
+          const operationIds = new Set<string>();
+
+          const { service } = createService(store, {
+            bookMeeting: async (input) => {
+              operationIds.add(input.bookingOperationId);
+              if (failure === "provider_response" && fail) {
+                fail = false;
+                throw new MeetingBookingError("uncertain");
+              }
+
+              return { googleEventId: input.bookingOperationId, googleEventUrl: null };
+            },
+          });
+
+          const a = await prepare(service),
+            b = await prepare(service);
+
+          const pending = await service.confirmMeetingBooking(a.id, a.revision);
+
+          assert.equal(pending.instance.confirmationAction, "retry");
+          const loser = await service.confirmMeetingBooking(b.id, b.revision);
+
+          assert.equal(loser.output.error, "slot_unavailable");
+          const recovered = await service.retryMeetingBooking(a.id);
+
+          assert.equal(recovered.instance.status, "completed");
+          assert.equal(operationIds.size, 1);
+        });
+      }
 
       await context.test(
         "concurrent confirmations admit one operation and freeze controls",
@@ -403,6 +770,7 @@ test(
             const failingRepository: IWorkflowInstanceRepository = {
               create: (input) => repository.create(input),
               findById: (id) => repository.findById(id),
+              claimMeetingBooking: (input) => repository.claimMeetingBooking(input),
               save: async (input) => {
                 if (input.status === "completed" && failCompletion) {
                   failCompletion = false;
@@ -704,6 +1072,7 @@ test(
             const service = createSubmission({
               create: (input) => repository.create(input),
               findById: (id) => repository.findById(id),
+              claimMeetingBooking: (input) => repository.claimMeetingBooking(input),
               save: async (input) => {
                 const saved = await repository.save(input);
 
@@ -735,6 +1104,7 @@ test(
               const service = createSubmission({
                 create: (input) => repository.create(input),
                 findById: (id) => repository.findById(id),
+                claimMeetingBooking: (input) => repository.claimMeetingBooking(input),
                 save: async (input) => {
                   if (input.state.confirmedRevision != null) {
                     waiting.release();
@@ -782,6 +1152,7 @@ test(
             const service = createSubmission({
               create: (input) => repository.create(input),
               findById: (id) => repository.findById(id),
+              claimMeetingBooking: (input) => repository.claimMeetingBooking(input),
               save: async (input) => {
                 if (input.status === "completed" && fail) {
                   fail = false;

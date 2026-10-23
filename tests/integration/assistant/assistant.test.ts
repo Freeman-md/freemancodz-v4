@@ -1876,4 +1876,8 @@ class MemoryWorkflowInstanceRepository implements IWorkflowInstanceRepository {
 
     return saved;
   }
+
+  claimMeetingBooking(input: SaveWorkflowInstanceInput): Promise<WorkflowInstance> {
+    return this.save(input);
+  }
 }

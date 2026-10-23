@@ -40,6 +40,7 @@ export interface IWorkflowInstanceRepository {
   create(input: CreateWorkflowInstanceInput): Promise<WorkflowInstance>;
   findById(id: string): Promise<WorkflowInstance | null>;
   save(input: SaveWorkflowInstanceInput): Promise<WorkflowInstance>;
+  claimMeetingBooking(input: SaveWorkflowInstanceInput): Promise<WorkflowInstance>;
 }
 
 export interface IWorkflowService {

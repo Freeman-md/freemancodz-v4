@@ -253,8 +253,17 @@ export class WorkflowService implements IWorkflowService {
     let saved: WorkflowToolExecutionResult;
 
     try {
-      saved = await this.persistExecution(instance, definition, execution);
+      saved = await this.persistExecution(
+        instance,
+        definition,
+        execution,
+        !("error" in execution.output),
+      );
     } catch (error) {
+      if (error instanceof WorkflowServiceError && error.code === "slot_unavailable") {
+        return this.rejectUnavailableMeetingSlot(instance, definition, state);
+      }
+
       if (!isBookingPersistenceFailure(error)) {
         throw error;
       }
@@ -282,6 +291,48 @@ export class WorkflowService implements IWorkflowService {
 
     // Only the persisted operation may reach the Calendar; retries reuse that identity.
     return this.retryMeetingBooking(instance.id);
+  }
+
+  private async rejectUnavailableMeetingSlot(
+    instance: WorkflowInstance,
+    definition: IWorkflowDefinition,
+    state: Prisma.JsonObject,
+  ): Promise<WorkflowToolExecutionResult> {
+    this.logger.info("workflow.booking_slot_conflict", {
+      workflowInstanceId: instance.id,
+      revision: instance.revision,
+      category: "slot_unavailable",
+    });
+    const next = {
+      ...state,
+      step: "collecting",
+      selectedSlot: null,
+      availableSlots: [],
+      availabilityCheckedAt: null,
+      preparedInteractionId: null,
+    };
+
+    try {
+      return await this.persistExecution(instance, definition, {
+        state: next,
+        status: "active",
+        output: {
+          error: "slot_unavailable",
+          message: "That slot is no longer available. Choose a new time before confirming again.",
+        },
+      });
+    } catch (error) {
+      if (!isBookingPersistenceFailure(error)) {
+        throw error;
+      }
+
+      const current = await this.loadMeetingInstance(instance.id);
+
+      return this.currentBookingResult(current, definition, {
+        error: "booking_changed",
+        message: "The booking changed. Review its current status before continuing.",
+      });
+    }
   }
 
   async retryMeetingBooking(instanceId: string): Promise<WorkflowToolExecutionResult> {
@@ -550,6 +601,7 @@ export class WorkflowService implements IWorkflowService {
     instance: WorkflowInstance,
     definition: IWorkflowDefinition,
     execution: WorkflowExecutionResult<Prisma.JsonObject>,
+    claimMeetingSlot = false,
   ): Promise<WorkflowToolExecutionResult> {
     const nextState = this.validateState(definition, execution.state);
 
@@ -564,14 +616,16 @@ export class WorkflowService implements IWorkflowService {
 
     const completedAt = status === "completed" ? this.clock() : null;
 
+    const input = {
+      id: instance.id,
+      expectedRevision: instance.revision,
+      state: nextState,
+      status,
+      completedAt,
+    };
+
     const saved = await this.runRepositoryOperation(() =>
-      this.repository.save({
-        id: instance.id,
-        expectedRevision: instance.revision,
-        state: nextState,
-        status,
-        completedAt,
-      }),
+      claimMeetingSlot ? this.repository.claimMeetingBooking(input) : this.repository.save(input),
     );
 
     return { output, instance: toWorkflowPublicInstance(saved, progress) };
@@ -944,6 +998,12 @@ export class WorkflowService implements IWorkflowService {
     try {
       return await operation();
     } catch (error) {
+      if (error instanceof WorkflowInstanceStoreError && error.code === "slot_unavailable") {
+        throw new WorkflowServiceError("slot_unavailable", "That slot is no longer available.", {
+          cause: error,
+        });
+      }
+
       if (error instanceof WorkflowInstanceStoreError && error.code === "terminal") {
         throw new WorkflowServiceError(
           "invalid_transition",

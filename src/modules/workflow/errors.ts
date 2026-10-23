@@ -6,6 +6,7 @@ export type WorkflowServiceErrorCode =
   | "invalid_transition"
   | "not_found"
   | "persistence_failed"
+  | "slot_unavailable"
   | "unavailable_definition"
   | "unavailable_tool";
 
@@ -20,7 +21,8 @@ export class WorkflowServiceError extends Error {
   }
 }
 
-export type WorkflowInstanceStoreErrorCode = "not_found" | "terminal" | "stale" | "unavailable";
+export type WorkflowInstanceStoreErrorCode =
+  "not_found" | "terminal" | "stale" | "unavailable" | "slot_unavailable";
 
 export class WorkflowInstanceStoreError extends Error {
   constructor(
