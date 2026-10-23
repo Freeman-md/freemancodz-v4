@@ -22,7 +22,7 @@ const workflowInstanceSchema = z
     workflowId: z.string().min(1),
     workflowVersion: z.number().int().positive(),
     revision: z.number().int().nonnegative(),
-    bookingAction: z.enum(["confirm", "retry", "blocked"]).optional(),
+    confirmationAction: z.enum(["confirm", "retry", "blocked"]).optional(),
     status: z.enum(["active", "completed", "cancelled"]),
     progress: workflowProgressSchema,
   })
@@ -68,7 +68,19 @@ const assistantMessageSchema = z
   })
   .strict();
 
-export const assistantBookingActionSchema = z.union([
+export const assistantWorkflowActionSchema = z.union([
+  ...(["confirm_audit", "confirm_contact"] as const).map((action) =>
+    z
+      .object({
+        action: z.literal(action),
+        workflowInstanceId: workflowInstanceIdSchema,
+        expectedRevision: z.number().int().nonnegative(),
+      })
+      .strict(),
+  ),
+  ...(["retry_audit", "retry_contact"] as const).map((action) =>
+    z.object({ action: z.literal(action), workflowInstanceId: workflowInstanceIdSchema }).strict(),
+  ),
   z
     .object({
       action: z.literal("confirm_booking"),
@@ -83,7 +95,7 @@ export const assistantBookingActionSchema = z.union([
 
 export const assistantRequestSchema = z.union([
   assistantMessageSchema,
-  assistantBookingActionSchema,
+  assistantWorkflowActionSchema,
 ]);
 
 function normalizePreviousResponseId(value: string | null | undefined) {
@@ -121,7 +133,7 @@ export const assistantTriggerDetailSchema = z
   .strict();
 
 export type AssistantRequest = z.infer<typeof assistantRequestSchema>;
-export type AssistantBookingAction = z.infer<typeof assistantBookingActionSchema>;
+export type AssistantWorkflowAction = z.infer<typeof assistantWorkflowActionSchema>;
 export type AssistantStreamEvent = z.infer<typeof assistantStreamEventSchema>;
 export type AssistantSource = z.infer<typeof sourceSchema>;
 export type AssistantTriggerDetail = z.infer<typeof assistantTriggerDetailSchema>;

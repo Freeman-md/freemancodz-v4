@@ -15,6 +15,7 @@ export const contactStateSchema = z
     message: messageText.nullable(),
     businessName: shortText.nullable(),
     preparedInteractionId: z.string().uuid().nullable(),
+    confirmedRevision: z.number().int().nonnegative().nullable().optional(),
   })
   .strict();
 

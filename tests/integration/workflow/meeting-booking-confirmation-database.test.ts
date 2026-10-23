@@ -26,6 +26,14 @@ import { meetingBookingStateSchema } from "@/modules/workflow/definitions/meetin
 import { WorkflowDefinitionRegistry } from "@/modules/workflow/registry";
 import { WorkflowInstanceRepository } from "@/modules/workflow/repository";
 import { WorkflowService } from "@/modules/workflow/service";
+import { AuditService } from "@/modules/audit/service";
+import { AuditRequestRepository } from "@/modules/audit/repository";
+import { ContactService } from "@/modules/contact/service";
+import { ContactRequestRepository } from "@/modules/contact/repository";
+import { AuditWorkflowDefinition } from "@/modules/workflow/definitions/audit/audit.definition";
+import { AuditWorkflowProgressProjector } from "@/modules/workflow/definitions/audit/audit.progress";
+import { ContactWorkflowDefinition } from "@/modules/workflow/definitions/contact/contact.definition";
+import { ContactWorkflowProgressProjector } from "@/modules/workflow/definitions/contact/contact.progress";
 
 const adminConnectionUrl = process.env.PORTFOLIO_TEST_DATABASE_URL;
 
@@ -169,6 +177,8 @@ test(
       for (const migration of [
         "20260803090000_add_meetings",
         "20260820120000_add_workflow_instances",
+        "20260820130000_add_audit_requests",
+        "20260923200500_add_contact_requests",
         "20261002090000_add_workflow_interactions",
         "20261008120000_remove_workflow_pending_interaction",
       ]) {
@@ -222,7 +232,7 @@ test(
 
           const prepared = await prepare(service);
 
-          assert.equal(prepared.bookingAction, "confirm");
+          assert.equal(prepared.confirmationAction, "confirm");
           for (const name of ["confirm_meeting", "book_meeting"]) {
             await assert.rejects(
               service.executeTool(prepared.id, {
@@ -243,7 +253,7 @@ test(
           await bookingStarted.promise;
           const accepted = await service.getAssistantContext(prepared.id);
 
-          assert.equal(accepted.instance?.bookingAction, "retry");
+          assert.equal(accepted.instance?.confirmationAction, "retry");
           assert.deepEqual(accepted.tools, []);
           await assert.rejects(service.cancel(prepared.id), { code: "invalid_transition" });
           for (const name of ["cancel_workflow", "switch_workflow", "prepare_meeting"]) {
@@ -422,7 +432,7 @@ test(
             assert.ok(logs.some((log) => log.event === "workflow.booking_completion_save_failed"));
             assert.doesNotMatch(JSON.stringify(logs), /visitor@example|Discuss a project|Visitor/);
             if (!committed) {
-              assert.equal(first.instance.bookingAction, "retry");
+              assert.equal(first.instance.confirmationAction, "retry");
             }
 
             const [left, right] = await Promise.all([
@@ -580,6 +590,234 @@ test(
         );
       }
 
+      for (const kind of ["audit", "contact"] as const) {
+        const definitions = [
+          new AuditWorkflowDefinition(
+            new AuditService(new AuditRequestRepository(prisma!), {
+              notifyAuditSubmitted: async () => {},
+            }),
+            new AuditWorkflowProgressProjector(),
+          ),
+          new ContactWorkflowDefinition(
+            new ContactService(new ContactRequestRepository(prisma!), {
+              notifyContactSubmitted: async () => {},
+            }),
+            new ContactWorkflowProgressProjector(),
+          ),
+        ];
+
+        const createSubmission = (store: IWorkflowInstanceRepository = repository) =>
+          new WorkflowService(new WorkflowDefinitionRegistry(definitions), store, [], {
+            info() {},
+            error() {},
+          });
+
+        const confirm = (service: WorkflowService, id: string, revision: number) =>
+          kind === "audit"
+            ? service.confirmAuditRequest(id, revision)
+            : service.confirmContactMessage(id, revision);
+
+        const retry = (service: WorkflowService, id: string) =>
+          kind === "audit" ? service.retryAuditRequest(id) : service.retryContactMessage(id);
+
+        const prepareSubmission = async (service: WorkflowService) => {
+          const instance = await service.start(kind, {
+            originChannel: "test",
+            originPage: null,
+            originEntry: null,
+          });
+
+          const fields =
+            kind === "audit"
+              ? {
+                  name: "Visitor",
+                  email: "visitor@example.test",
+                  focus: "Orders",
+                  currentProcess: "Inbox",
+                  friction: "Slow replies",
+                  desiredOutcome: "Clear next step",
+                }
+              : { name: "Visitor", email: "visitor@example.test", message: "Discuss a project" };
+
+          await service.executeTool(instance.id, {
+            name: `update_${kind}_context`,
+            rawArguments: JSON.stringify({
+              updates: Object.entries(fields).map(([field, value]) => ({ field, value })),
+            }),
+            interactionId: randomUUID(),
+          });
+
+          return (
+            await service.executeTool(instance.id, {
+              name: `prepare_${kind}_submission`,
+              rawArguments: "{}",
+              interactionId: randomUUID(),
+            })
+          ).instance;
+        };
+
+        const count = (id: string) =>
+          kind === "audit"
+            ? prisma!.auditRequest.count({ where: { workflowInstanceId: id } })
+            : prisma!.contactRequest.count({ where: { workflowInstanceId: id } });
+
+        await context.test(
+          `${kind}: concurrent confirmation and retries create one matching request`,
+          async () => {
+            const service = createSubmission();
+
+            const prepared = await prepareSubmission(service);
+
+            await assert.rejects(
+              service.executeTool(prepared.id, {
+                name: `submit_${kind}`,
+                rawArguments: "{}",
+                interactionId: randomUUID(),
+                allowConfirmation: true,
+              }),
+              { code: "unavailable_tool" },
+            );
+            const stale = await confirm(service, prepared.id, prepared.revision - 1);
+
+            assert.equal(stale.instance.progress.phase, "awaiting_confirmation");
+            assert.equal(await count(prepared.id), 0);
+            await Promise.all([
+              confirm(service, prepared.id, prepared.revision),
+              confirm(service, prepared.id, prepared.revision),
+            ]);
+            const result = await retry(service, prepared.id);
+
+            assert.equal(result.instance.status, "completed");
+            assert.equal(await count(prepared.id), 1);
+            assert.equal(
+              result.instance.progress.fields.find((field) => field.key === "email")?.value,
+              "visitor@example.test",
+            );
+          },
+        );
+
+        await context.test(
+          `${kind}: completion committed before a lost save response reconciles`,
+          async () => {
+            let fail = true;
+
+            const service = createSubmission({
+              create: (input) => repository.create(input),
+              findById: (id) => repository.findById(id),
+              save: async (input) => {
+                const saved = await repository.save(input);
+
+                if (input.status === "completed" && fail) {
+                  fail = false;
+                  throw new Error("Lost committed response");
+                }
+
+                return saved;
+              },
+            });
+
+            const prepared = await prepareSubmission(service);
+
+            const result = await confirm(service, prepared.id, prepared.revision);
+
+            assert.equal(result.instance.status, "completed");
+            assert.equal(await count(prepared.id), 1);
+          },
+        );
+
+        for (const mutation of ["correction", "cancel", "switch"] as const) {
+          await context.test(
+            `${kind}: ${mutation} winning acceptance race prevents submission`,
+            async () => {
+              const waiting = deferred(),
+                release = deferred();
+
+              const service = createSubmission({
+                create: (input) => repository.create(input),
+                findById: (id) => repository.findById(id),
+                save: async (input) => {
+                  if (input.state.confirmedRevision != null) {
+                    waiting.release();
+                    await release.promise;
+                  }
+
+                  return repository.save(input);
+                },
+              });
+
+              const prepared = await prepareSubmission(service);
+
+              const confirmation = confirm(service, prepared.id, prepared.revision);
+
+              await waiting.promise;
+              const other = createSubmission();
+
+              if (mutation === "cancel") {
+                await other.cancel(prepared.id);
+              } else {
+                await other.executeTool(prepared.id, {
+                  name: mutation === "correction" ? `update_${kind}_context` : "switch_workflow",
+                  rawArguments: JSON.stringify(
+                    mutation === "correction"
+                      ? { updates: [{ field: "name", value: "Corrected visitor" }] }
+                      : { workflowId: kind === "audit" ? "contact" : "audit" },
+                  ),
+                  interactionId: randomUUID(),
+                  startContext: { originChannel: "test", originPage: null, originEntry: null },
+                });
+              }
+
+              release.release();
+              await confirmation;
+              assert.equal(await count(prepared.id), 0);
+            },
+          );
+        }
+
+        await context.test(
+          `${kind}: completion failure freezes details and concurrent recovery reuses request`,
+          async () => {
+            let fail = true;
+
+            const service = createSubmission({
+              create: (input) => repository.create(input),
+              findById: (id) => repository.findById(id),
+              save: async (input) => {
+                if (input.status === "completed" && fail) {
+                  fail = false;
+                  throw new Error("Injected completion failure");
+                }
+
+                return repository.save(input);
+              },
+            });
+
+            const prepared = await prepareSubmission(service);
+
+            const pending = await confirm(service, prepared.id, prepared.revision);
+
+            assert.equal(pending.instance.progress.phase, "processing");
+            assert.equal(await count(prepared.id), 1);
+            await assert.rejects(service.cancel(prepared.id), { code: "invalid_transition" });
+            await assert.rejects(
+              service.executeTool(prepared.id, {
+                name: `update_${kind}_context`,
+                rawArguments: JSON.stringify({ updates: [{ field: "name", value: "Changed" }] }),
+                interactionId: randomUUID(),
+              }),
+              { code: "invalid_transition" },
+            );
+            const results = await Promise.all([
+              retry(service, prepared.id),
+              retry(service, prepared.id),
+            ]);
+
+            assert.ok(results.every((result) => result.instance.status === "completed"));
+            assert.equal(await count(prepared.id), 1);
+          },
+        );
+      }
+
       await context.test("legacy confirmed state without an operation fails closed", async () => {
         const { service, operations } = createService(repository);
 
@@ -598,7 +836,7 @@ test(
         });
         const result = await service.retryMeetingBooking(prepared.id);
 
-        assert.equal(result.instance.bookingAction, "blocked");
+        assert.equal(result.instance.confirmationAction, "blocked");
         assert.equal(result.output.error, "booking_recovery_blocked");
         assert.equal(operations.size, 0);
       });

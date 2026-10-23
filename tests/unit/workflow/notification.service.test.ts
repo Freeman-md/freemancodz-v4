@@ -49,6 +49,42 @@ const meeting: MeetingRecord = {
   updatedAt: new Date("2026-09-23T12:00:00.000Z"),
 };
 
+test("recovered audit/contact records must match before owner notification", async () => {
+  let notifications = 0;
+
+  const auditService = new AuditService(
+    { createOrFind: async () => audit, list: async () => [] },
+    {
+      notifyAuditSubmitted: async () => {
+        notifications++;
+      },
+    },
+  );
+
+  const contactService = new ContactService(
+    { createOrFind: async () => contact, list: async () => [] },
+    {
+      notifyContactSubmitted: async () => {
+        notifications++;
+      },
+    },
+  );
+
+  const { id: _auditId, createdAt: _auditDate, ...auditInput } = audit;
+
+  const { id: _contactId, createdAt: _contactDate, ...contactInput } = contact;
+
+  await assert.rejects(auditService.submit({ ...auditInput, name: "Different" }), /does not match/);
+  await assert.rejects(
+    contactService.submit({ ...contactInput, message: "Different" }),
+    /does not match/,
+  );
+  assert.equal(notifications, 0);
+  await auditService.submit(auditInput);
+  await contactService.submit(contactInput);
+  assert.equal(notifications, 2);
+});
+
 test("Resend client uses the current Email API request shape without exposing response bodies", async () => {
   let capturedUrl = "";
 
@@ -120,7 +156,8 @@ test("Resend client bounds stalled provider requests", async () => {
       text: "Message body",
       idempotencyKey: "contact-submitted/contact-1",
     }),
-    (error: unknown) => error instanceof Error && "category" in error && error.category === "network",
+    (error: unknown) =>
+      error instanceof Error && "category" in error && error.category === "network",
   );
 });
 

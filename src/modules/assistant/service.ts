@@ -28,7 +28,7 @@ export class AssistantService {
 
   createResponse(request: AssistantResponseInput) {
     if ("action" in request) {
-      return this.createBookingResponse(request);
+      return this.createWorkflowActionResponse(request);
     }
 
     const encoder = new TextEncoder();
@@ -120,7 +120,9 @@ export class AssistantService {
     state.input = [{ type: "user_message", content: state.message }];
   }
 
-  private createBookingResponse(request: Extract<AssistantResponseInput, { action: string }>) {
+  private createWorkflowActionResponse(
+    request: Extract<AssistantResponseInput, { action: string }>,
+  ) {
     const encoder = new TextEncoder();
 
     let connected = true;
@@ -141,13 +143,7 @@ export class AssistantService {
 
         try {
           // Acceptance and provider work must survive loss of the response stream.
-          const result =
-            request.action === "confirm_booking"
-              ? await this.workflow.confirmMeetingBooking(
-                  request.workflowInstanceId,
-                  request.expectedRevision,
-                )
-              : await this.workflow.retryMeetingBooking(request.workflowInstanceId);
+          const result = await this.executeWorkflowAction(request);
 
           write({ type: "workflow_instance", instance: result.instance });
           write({
@@ -155,13 +151,13 @@ export class AssistantService {
             delta:
               typeof result.output.message === "string"
                 ? result.output.message
-                : "Please review the current booking details.",
+                : "Please review the current request details.",
           });
         } catch {
-          this.logger.error("assistant.booking_failed", {
+          this.logger.error("assistant.workflow_action_failed", {
             action: request.action,
             workflowInstanceId: request.workflowInstanceId,
-            category: "booking_request_failed",
+            category: "workflow_action_failed",
           });
           try {
             const current = await this.workflow.getAssistantContext(request.workflowInstanceId);
@@ -176,7 +172,7 @@ export class AssistantService {
           write({
             type: "delta",
             delta:
-              "We could not finish checking this booking. Review its status and retry; do not start another booking.",
+              "We could not finish checking this request. Review its status and retry the same request.",
           });
         } finally {
           write({ type: "done" });
@@ -193,6 +189,32 @@ export class AssistantService {
         connected = false;
       },
     });
+  }
+
+  private executeWorkflowAction(request: Extract<AssistantResponseInput, { action: string }>) {
+    switch (request.action) {
+      case "confirm_audit":
+        return this.workflow.confirmAuditRequest(
+          request.workflowInstanceId,
+          request.expectedRevision,
+        );
+      case "retry_audit":
+        return this.workflow.retryAuditRequest(request.workflowInstanceId);
+      case "confirm_contact":
+        return this.workflow.confirmContactMessage(
+          request.workflowInstanceId,
+          request.expectedRevision,
+        );
+      case "retry_contact":
+        return this.workflow.retryContactMessage(request.workflowInstanceId);
+      case "confirm_booking":
+        return this.workflow.confirmMeetingBooking(
+          request.workflowInstanceId,
+          request.expectedRevision,
+        );
+      case "retry_booking":
+        return this.workflow.retryMeetingBooking(request.workflowInstanceId);
+    }
   }
 
   private async runResponseLoop(state: ResponseState, write: WriteEvent) {

@@ -4,34 +4,40 @@ import test from "node:test";
 import { assistantRequestSchema, assistantStreamEventSchema } from "@/contracts/assistant.contract";
 import { assistantChoiceSchema } from "@/contracts/assistant-choice.contract";
 
-test("booking actions cannot carry messages or editable booking details", () => {
-  const action = {
-    action: "confirm_booking",
-    workflowInstanceId: "11111111-1111-4111-8111-111111111111",
-    expectedRevision: 3,
-  };
+for (const kind of ["booking", "audit", "contact"]) {
+  test(`${kind} actions cannot carry messages or editable details`, () => {
+    const action = {
+      action: `confirm_${kind}`,
+      workflowInstanceId: "11111111-1111-4111-8111-111111111111",
+      expectedRevision: 3,
+    };
 
-  assert.deepEqual(assistantRequestSchema.parse(action), action);
-  assert.equal(
-    assistantRequestSchema.safeParse({
-      action: "retry_booking",
-      workflowInstanceId: action.workflowInstanceId,
-    }).success,
-    true,
-  );
-  for (const invalid of [
-    { ...action, expectedRevision: -1 },
-    { ...action, expectedRevision: 1.5 },
-    { ...action, expectedRevision: undefined },
-    { ...action, message: "yes" },
-    { ...action, email: "different@example.com" },
-    { ...action, workflowStart: {} },
-    { ...action, workflowInstanceId: "invalid" },
-    { action: "retry_booking", workflowInstanceId: action.workflowInstanceId, expectedRevision: 3 },
-  ]) {
-    assert.equal(assistantRequestSchema.safeParse(invalid).success, false);
-  }
-});
+    assert.deepEqual(assistantRequestSchema.parse(action), action);
+    assert.equal(
+      assistantRequestSchema.safeParse({
+        action: `retry_${kind}`,
+        workflowInstanceId: action.workflowInstanceId,
+      }).success,
+      true,
+    );
+    for (const invalid of [
+      { ...action, expectedRevision: -1 },
+      { ...action, expectedRevision: 1.5 },
+      { ...action, expectedRevision: undefined },
+      { ...action, message: "yes" },
+      { ...action, email: "different@example.com" },
+      { ...action, workflowStart: {} },
+      { ...action, workflowInstanceId: "invalid" },
+      {
+        action: `retry_${kind}`,
+        workflowInstanceId: action.workflowInstanceId,
+        expectedRevision: 3,
+      },
+    ]) {
+      assert.equal(assistantRequestSchema.safeParse(invalid).success, false);
+    }
+  });
+}
 
 test("choices validate bounded unique strings and reject hidden operations", () => {
   const choice = {

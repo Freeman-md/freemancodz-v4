@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { randomUUID } from "node:crypto";
 import test from "node:test";
 
 import { createChatPostHandler } from "@/app/api/chat/route";
@@ -187,6 +188,128 @@ function chatRequest(body: unknown, signal?: AbortSignal) {
     signal,
   });
 }
+
+test("audit/contact actions confirm saved summaries without invoking the model", async () => {
+  for (const kind of ["audit", "contact"] as const) {
+    const { post, inputs, workflowService } = createAssistant();
+
+    const instance = await workflowService.start(kind, {
+      originChannel: "test",
+      originPage: null,
+      originEntry: null,
+    });
+
+    const fields =
+      kind === "audit"
+        ? {
+            name: "Visitor",
+            email: "visitor@example.test",
+            focus: "Orders",
+            currentProcess: "Inbox",
+            friction: "Slow replies",
+            desiredOutcome: "Clear next step",
+          }
+        : { name: "Visitor", email: "visitor@example.test", message: "Discuss a project" };
+
+    await workflowService.executeTool(instance.id, {
+      name: `update_${kind}_context`,
+      rawArguments: JSON.stringify({
+        updates: Object.entries(fields).map(([field, value]) => ({ field, value })),
+      }),
+      interactionId: randomUUID(),
+    });
+    const prepared = await workflowService.executeTool(instance.id, {
+      name: `prepare_${kind}_submission`,
+      rawArguments: "{}",
+      interactionId: randomUUID(),
+    });
+
+    const invalid = await post(
+      chatRequest({
+        action: `confirm_${kind}`,
+        workflowInstanceId: instance.id,
+        expectedRevision: prepared.instance.revision,
+        message: "changed",
+      }),
+    );
+
+    assert.equal(invalid.status, 400);
+    const stale = await readChatResponse(
+      await post(
+        chatRequest({
+          action: `confirm_${kind}`,
+          workflowInstanceId: instance.id,
+          expectedRevision: 0,
+        }),
+      ),
+    );
+
+    assert.match(stale, /details changed/);
+    const output = await readChatResponse(
+      await post(
+        chatRequest({
+          action: `confirm_${kind}`,
+          workflowInstanceId: instance.id,
+          expectedRevision: prepared.instance.revision,
+        }),
+      ),
+    );
+
+    assert.match(output, /"status":"completed"/);
+    assert.equal(inputs.length, 0);
+    const repeated = await readChatResponse(
+      await post(
+        chatRequest({
+          action: `confirm_${kind}`,
+          workflowInstanceId: instance.id,
+          expectedRevision: prepared.instance.revision,
+        }),
+      ),
+    );
+
+    assert.match(repeated, /"status":"completed"/);
+
+    const next = await workflowService.start(kind, {
+      originChannel: "test",
+      originPage: null,
+      originEntry: null,
+    });
+
+    await workflowService.executeTool(next.id, {
+      name: `update_${kind}_context`,
+      rawArguments: JSON.stringify({
+        updates: Object.entries(fields).map(([field, value]) => ({ field, value })),
+      }),
+      interactionId: randomUUID(),
+    });
+    const ready = await workflowService.executeTool(next.id, {
+      name: `prepare_${kind}_submission`,
+      rawArguments: "{}",
+      interactionId: randomUUID(),
+    });
+
+    const controller = new AbortController();
+
+    controller.abort();
+    await readChatResponse(
+      await post(
+        chatRequest(
+          {
+            action: `confirm_${kind}`,
+            workflowInstanceId: next.id,
+            expectedRevision: ready.instance.revision,
+          },
+          controller.signal,
+        ),
+      ),
+    );
+    assert.equal(
+      (await workflowService.getAssistantContext(next.id)).instance?.status,
+      "completed",
+    );
+    assert.equal(inputs.length, 0);
+  }
+});
 
 async function readChatResponse(response: Response) {
   assert.equal(response.status, 200);
@@ -1390,7 +1513,7 @@ for (const failure of ["lost_calendar_response", "meeting_save", "response_disco
     );
     if (failSave) {
       assert.equal(
-        (await workflowService.getAssistantContext(instance.id)).instance?.bookingAction,
+        (await workflowService.getAssistantContext(instance.id)).instance?.confirmationAction,
         "retry",
       );
       failSave = false;

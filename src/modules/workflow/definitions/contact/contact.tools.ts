@@ -38,12 +38,3 @@ export const PREPARE_CONTACT_SUBMISSION_TOOL: OpenAIResponseTool = {
   strict: true,
   parameters: { type: "object", additionalProperties: false, required: [], properties: {} },
 };
-
-export const SUBMIT_CONTACT_TOOL: OpenAIResponseTool = {
-  type: "function",
-  name: "submit_contact",
-  description:
-    "Submit the prepared message only after the visitor explicitly confirms that exact summary in a later message.",
-  strict: true,
-  parameters: { type: "object", additionalProperties: false, required: [], properties: {} },
-};

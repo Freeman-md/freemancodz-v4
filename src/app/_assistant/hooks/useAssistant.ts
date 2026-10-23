@@ -8,7 +8,7 @@ import {
   workflowInstanceIdSchema,
   type AssistantWorkflowStart,
   type WorkflowPublicInstance,
-  type AssistantBookingAction,
+  type AssistantWorkflowAction,
   type AssistantRequest,
 } from "@/contracts/assistant.contract";
 import type { AssistantChoice } from "@/contracts/assistant-choice.contract";
@@ -143,11 +143,18 @@ export function useAssistant() {
     [submitRequest],
   );
 
-  const submitBookingAction = useCallback(
-    (request: AssistantBookingAction) => {
+  const submitWorkflowAction = useCallback(
+    (request: AssistantWorkflowAction) => {
       return submitRequest(
         request,
-        request.action === "confirm_booking" ? "Confirm booking" : "Retry booking",
+        {
+          confirm_booking: "Confirm booking",
+          retry_booking: "Retry booking",
+          confirm_audit: "Submit audit request",
+          retry_audit: "Retry audit request",
+          confirm_contact: "Send message",
+          retry_contact: "Retry message",
+        }[request.action],
       );
     },
     [submitRequest],
@@ -162,7 +169,7 @@ export function useAssistant() {
     messages,
     setInput,
     submitMessage,
-    submitBookingAction,
+    submitWorkflowAction,
     choice,
     dismissChoice: () => setChoice(null),
     workflowInstance,

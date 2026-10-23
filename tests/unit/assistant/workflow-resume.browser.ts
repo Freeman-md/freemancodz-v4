@@ -153,8 +153,8 @@ test("active workflow IDs survive remounts until the workflow finishes", async (
     let pendingAction!: Promise<void>;
 
     await act(async () => {
-      pendingAction = currentAssistant().submitBookingAction(action);
-      await currentAssistant().submitBookingAction(action);
+      pendingAction = currentAssistant().submitWorkflowAction(action);
+      await currentAssistant().submitWorkflowAction(action);
     });
     assert.deepEqual(requests.at(-1), action);
     assert.equal(requests.filter((request) => request.action === "confirm_booking").length, 1);

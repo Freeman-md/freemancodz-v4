@@ -7,7 +7,7 @@ import { Button } from "@/app/_components/ui/Button";
 import { cn } from "@/app/_utils/class-names";
 import { useEffect, useRef } from "react";
 import { AssistantChoice } from "./AssistantChoice";
-import { AssistantBookingConfirmation } from "./AssistantBookingConfirmation";
+import { AssistantWorkflowConfirmation } from "./AssistantWorkflowConfirmation";
 import { AssistantComposer } from "./AssistantComposer";
 import { AssistantMessages, type StarterAction } from "./AssistantMessages";
 import { AssistantWorkflowProgress } from "./AssistantWorkflowProgress";
@@ -25,7 +25,7 @@ export function FloatingPortfolioChat() {
     choice,
     dismissChoice,
     workflowInstance,
-    submitBookingAction,
+    submitWorkflowAction,
   } = useAssistant();
 
   const shouldReduceMotion = useReducedMotion();
@@ -176,10 +176,10 @@ export function FloatingPortfolioChat() {
             onStarterAction={(action) => void handleStarterAction(action)}
           >
             {workflowInstance ? (
-              <AssistantBookingConfirmation
+              <AssistantWorkflowConfirmation
                 instance={workflowInstance}
                 isLoading={isLoading}
-                onSubmit={submitBookingAction}
+                onSubmit={submitWorkflowAction}
               />
             ) : null}
           </AssistantMessages>

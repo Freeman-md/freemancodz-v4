@@ -16,6 +16,7 @@ export const auditStateSchema = z
     websiteUrl: z.string().trim().url().max(2_000).nullable(),
     additionalContext: longText.nullable(),
     preparedInteractionId: z.string().uuid().nullable(),
+    confirmedRevision: z.number().int().nonnegative().nullable().optional(),
   })
   .strict();
 

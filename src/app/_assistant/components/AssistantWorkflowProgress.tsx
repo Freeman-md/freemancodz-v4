@@ -152,7 +152,7 @@ function missingValueCopy(fieldKey: string) {
   return fieldKey === "selectedSlot" ? "Not chosen" : "Not provided";
 }
 
-function formatFieldLabel(key: string) {
+export function formatFieldLabel(key: string) {
   const label = key
     .replace(/[-_]+/g, " ")
     .replace(/([a-z0-9])([A-Z])/g, "$1 $2")

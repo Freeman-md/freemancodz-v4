@@ -54,17 +54,3 @@ export const PREPARE_AUDIT_SUBMISSION_TOOL: OpenAIResponseTool = {
     properties: {},
   },
 };
-
-export const SUBMIT_AUDIT_TOOL: OpenAIResponseTool = {
-  type: "function",
-  name: "submit_audit",
-  description:
-    "Submit the prepared audit only after the visitor explicitly confirms that exact summary in a later message.",
-  strict: true,
-  parameters: {
-    type: "object",
-    additionalProperties: false,
-    required: [],
-    properties: {},
-  },
-};

@@ -9,11 +9,7 @@ import {
   type ContactState,
   type ContactUpdateField,
 } from "./contact.schema";
-import {
-  PREPARE_CONTACT_SUBMISSION_TOOL,
-  SUBMIT_CONTACT_TOOL,
-  UPDATE_CONTACT_CONTEXT_TOOL,
-} from "./contact.tools";
+import { PREPARE_CONTACT_SUBMISSION_TOOL, UPDATE_CONTACT_CONTEXT_TOOL } from "./contact.tools";
 
 export async function executeContactTool({
   contactService,
@@ -30,6 +26,13 @@ export async function executeContactTool({
   state: ContactState;
   context: WorkflowExecutionContext;
 }): Promise<WorkflowExecutionResult<ContactState>> {
+  if (state.confirmedRevision != null && name !== "submit_contact") {
+    return active(state, {
+      error: "submission_frozen",
+      message: "Accepted details cannot change.",
+    });
+  }
+
   const args = parseArguments(rawArguments);
 
   if (args === null) {
@@ -50,7 +53,7 @@ export async function executeContactTool({
       : active(state, invalidArguments());
   }
 
-  if (name === SUBMIT_CONTACT_TOOL.name) {
+  if (name === "submit_contact") {
     return noContactArgumentsSchema.safeParse(args).success
       ? submitContact(contactService, progress, state, context)
       : active(state, invalidArguments());
@@ -131,7 +134,7 @@ function prepareSubmission(
       businessName: nextState.businessName,
     },
     requiresConfirmation: true,
-    message: "Present this summary and ask the visitor to confirm it explicitly.",
+    message: "The application displays this saved summary with its confirmation button.",
   });
 }
 
@@ -141,7 +144,7 @@ async function submitContact(
   state: ContactState,
   context: WorkflowExecutionContext,
 ): Promise<WorkflowExecutionResult<ContactState>> {
-  if (context.allowConfirmation === false) {
+  if (state.confirmedRevision == null || context.allowConfirmation !== true) {
     return active(state, {
       error: "separate_confirmation_required",
       message: "Continuing or switching cannot confirm sending. Wait for a separate confirmation.",

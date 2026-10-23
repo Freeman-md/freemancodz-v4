@@ -31,7 +31,7 @@
 }
 
 :root[data-theme="dark"] .portfolio-chat-surface .assistant-header,
-:root[data-theme="dark"] .portfolio-chat-surface .assistant-booking-review,
+:root[data-theme="dark"] .portfolio-chat-surface .assistant-workflow-review,
 :root[data-theme="dark"] .portfolio-chat-surface .assistant-composer {
   background: var(--assistant-surface);
   border-color: var(--assistant-line);

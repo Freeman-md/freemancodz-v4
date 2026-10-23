@@ -10,11 +10,7 @@ import type {
 } from "../../types";
 import { contactStateSchema, type ContactState } from "./contact.schema";
 import { executeContactTool } from "./contact.tool-handlers";
-import {
-  PREPARE_CONTACT_SUBMISSION_TOOL,
-  SUBMIT_CONTACT_TOOL,
-  UPDATE_CONTACT_CONTEXT_TOOL,
-} from "./contact.tools";
+import { PREPARE_CONTACT_SUBMISSION_TOOL, UPDATE_CONTACT_CONTEXT_TOOL } from "./contact.tools";
 
 export const CONTACT_WORKFLOW_ID = "contact";
 
@@ -47,10 +43,14 @@ export class ContactWorkflowDefinition implements IWorkflowDefinition<ContactSta
   }
 
   getInstructions(state: ContactState): string {
+    if (state.confirmedRevision != null) {
+      return "Submission has been accepted. Details are frozen; use the application retry control if recovery is needed.";
+    }
+
     const missing = this.progress.getMissingRequiredFields(state);
 
     if (state.preparedInteractionId) {
-      return `${CONTACT_INSTRUCTIONS}\nA complete summary has been prepared. Present it and wait for explicit confirmation in a later visitor message before calling submit_contact. If the visitor corrects anything, save every correction first and prepare a new summary.`;
+      return `${CONTACT_INSTRUCTIONS}\nA complete summary has been prepared. The application displays its confirmation button. Only that button can authorise submission, never a chat reply. If the visitor corrects anything, save every correction first and prepare a new summary.`;
     }
 
     if (missing.length === 0) {
@@ -61,8 +61,12 @@ export class ContactWorkflowDefinition implements IWorkflowDefinition<ContactSta
   }
 
   getTools(state: ContactState): OpenAIResponseTool[] {
+    if (state.confirmedRevision != null) {
+      return [];
+    }
+
     if (state.preparedInteractionId) {
-      return [UPDATE_CONTACT_CONTEXT_TOOL, PREPARE_CONTACT_SUBMISSION_TOOL, SUBMIT_CONTACT_TOOL];
+      return [UPDATE_CONTACT_CONTEXT_TOOL, PREPARE_CONTACT_SUBMISSION_TOOL];
     }
 
     return this.progress.getMissingRequiredFields(state).length === 0
@@ -91,4 +95,4 @@ const CONTACT_INSTRUCTIONS = `You are coordinating a message to Freeman for proj
 Begin conversationally with a brief acknowledgement and the next useful question, not a form containing every missing field. Normally collect one answer at a time, or two closely related answers. If the visitor has already explained their message, save it instead of asking them to repeat it.
 Extract and save all valid details the visitor supplies together, including corrections, even when they answer more than you asked. Never repeat a question for known information. Your suggestions and examples are not visitor facts unless the visitor explicitly adopts them.
 Answer unrelated portfolio questions normally, using website search when needed, without cancelling this workflow or forcing the visitor back into collection.
-A durable submission requires a prepared summary and explicit confirmation in a subsequent visitor message. Supplying details or saying continue never counts as confirmation to send.`;
+A durable submission requires a prepared summary and the application confirmation button. Supplying details or saying continue never counts as confirmation to send.`;

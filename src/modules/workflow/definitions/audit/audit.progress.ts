@@ -16,9 +16,7 @@ const OPTIONAL_FIELDS = ["businessName", "websiteUrl", "additionalContext"] as c
 
 export type RequiredAuditField = (typeof REQUIRED_FIELDS)[number];
 
-export class AuditWorkflowProgressProjector
-  implements IWorkflowProgressProjector<AuditState>
-{
+export class AuditWorkflowProgressProjector implements IWorkflowProgressProjector<AuditState> {
   getProgress(state: AuditState, status: WorkflowInstanceStatus): WorkflowProgress {
     const missingRequiredFields = this.getMissingRequiredFields(state);
 
@@ -36,12 +34,13 @@ export class AuditWorkflowProgressProjector
     return REQUIRED_FIELDS.filter((field) => !state[field]);
   }
 
-  private getPhase(
-    state: AuditState,
-    status: WorkflowInstanceStatus,
-  ): WorkflowProgress["phase"] {
+  private getPhase(state: AuditState, status: WorkflowInstanceStatus): WorkflowProgress["phase"] {
     if (status !== "active") {
       return status;
+    }
+
+    if (state.confirmedRevision != null) {
+      return "processing";
     }
 
     return state.preparedInteractionId ? "awaiting_confirmation" : "collecting";

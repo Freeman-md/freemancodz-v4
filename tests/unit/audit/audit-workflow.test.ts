@@ -153,7 +153,7 @@ test("preparation requires complete data and submission requires a later interac
     PREPARATION_CONTEXT,
   );
 
-  assert.equal(sameInteraction.output.error, "confirmation_requires_new_input");
+  assert.equal(sameInteraction.output.error, "separate_confirmation_required");
   assert.equal(audit.createdCount, 0);
 
   const unconfirmedRequest = await definition.executeTool("submit_audit", "{}", prepared.state, {
@@ -168,8 +168,8 @@ test("preparation requires complete data and submission requires a later interac
   const submitted = await definition.executeTool(
     "submit_audit",
     "{}",
-    prepared.state,
-    CONFIRMATION_CONTEXT,
+    { ...prepared.state, confirmedRevision: 2 },
+    { ...CONFIRMATION_CONTEXT, allowConfirmation: true },
   );
 
   assert.equal(submitted.status, "completed");
@@ -223,7 +223,7 @@ test("changing a prepared detail invalidates its confirmation", async () => {
     CONFIRMATION_CONTEXT,
   );
 
-  assert.equal(rejected.output.error, "preparation_required");
+  assert.equal(rejected.output.error, "separate_confirmation_required");
   assert.equal(audit.createdCount, 0);
 });
 
@@ -259,22 +259,23 @@ test("retry after the request is created but workflow save fails returns one req
     interactionId: PREPARATION_CONTEXT.interactionId,
   });
 
-  repository.failNextSave = true;
+  const submit = audit.service.submit;
 
-  await assert.rejects(
-    workflow.executeTool(instance.id, {
-      name: "submit_audit",
-      rawArguments: "{}",
-      interactionId: CONFIRMATION_CONTEXT.interactionId,
-    }),
-    { code: "persistence_failed" },
-  );
+  audit.service.submit = async (input) => {
+    const result = await submit(input);
 
-  const retried = await workflow.executeTool(instance.id, {
-    name: "submit_audit",
-    rawArguments: "{}",
-    interactionId: CONFIRMATION_CONTEXT.interactionId,
-  });
+    repository.failNextSave = true;
+    audit.service.submit = submit;
+
+    return result;
+  };
+
+  const revision = (await workflow.getAssistantContext(instance.id)).instance!.revision;
+
+  const pending = await workflow.confirmAuditRequest(instance.id, revision);
+
+  assert.equal(pending.instance.progress.phase, "processing");
+  const retried = await workflow.retryAuditRequest(instance.id);
 
   assert.equal(retried.instance.status, "completed");
   assert.equal(audit.submitCalls, 2);

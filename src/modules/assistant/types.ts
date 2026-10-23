@@ -1,6 +1,6 @@
 import type {
   AssistantWorkflowStart,
-  AssistantBookingAction,
+  AssistantWorkflowAction,
 } from "@/contracts/assistant.contract";
 
 export type AssistantResponseInput = (
@@ -10,5 +10,5 @@ export type AssistantResponseInput = (
       workflowInstanceId: string | null;
       workflowStart: AssistantWorkflowStart | null;
     }
-  | AssistantBookingAction
+  | AssistantWorkflowAction
 ) & { signal: AbortSignal };

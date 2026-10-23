@@ -85,7 +85,7 @@ test("Contact collects all supplied details and asks only for missing required f
   assert.equal(contact.createdCount, 0);
 });
 
-test("Contact requires preparation and later confirmation, invalidates corrections, and stays idempotent", async () => {
+test("Contact requires application acceptance, invalidates corrections, and stays idempotent", async () => {
   const contact = createContactService();
 
   const definition = new ContactWorkflowDefinition(contact.service, contactWorkflowProgress);
@@ -126,7 +126,7 @@ test("Contact requires preparation and later confirmation, invalidates correctio
     PREPARATION,
   );
 
-  assert.equal(sameInteraction.output.error, "confirmation_requires_new_input");
+  assert.equal(sameInteraction.output.error, "separate_confirmation_required");
 
   const corrected = await definition.executeTool(
     "update_contact_context",
@@ -139,7 +139,7 @@ test("Contact requires preparation and later confirmation, invalidates correctio
   assert.equal(
     (await definition.executeTool("submit_contact", "{}", corrected.state, CONFIRMATION)).output
       .error,
-    "preparation_required",
+    "separate_confirmation_required",
   );
 
   const rePrepared = await definition.executeTool(
@@ -152,15 +152,15 @@ test("Contact requires preparation and later confirmation, invalidates correctio
   const submitted = await definition.executeTool(
     "submit_contact",
     "{}",
-    rePrepared.state,
-    CONFIRMATION,
+    { ...rePrepared.state, confirmedRevision: 2 },
+    { ...CONFIRMATION, allowConfirmation: true },
   );
 
   const retried = await definition.executeTool(
     "submit_contact",
     "{}",
-    rePrepared.state,
-    CONFIRMATION,
+    { ...rePrepared.state, confirmedRevision: 2 },
+    { ...CONFIRMATION, allowConfirmation: true },
   );
 
   assert.equal(submitted.status, "completed");

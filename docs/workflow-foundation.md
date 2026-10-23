@@ -43,6 +43,14 @@ The global `ask_user_choice` tool accepts a model-written question and two to si
 
 The picker temporarily replaces the composer. Selecting and sending an option submits its exact text through the ordinary chat request; “Write my own reply” restores text entry without sending anything. Choices are memory-only, never stored on a workflow, and disappear on refresh. The normal workflow tools still validate details and switch atomically. Neither a choice nor typed confirmation can authorise meeting booking; the saved summary's Confirm booking button is required. Read-only progress is unchanged.
 
+## Audit and contact confirmation
+
+Audit and contact use the same explicit confirmation boundary: `confirm_audit` / `confirm_contact` submit only the saved workflow ID and displayed revision. `retry_audit` / `retry_contact` recover that same accepted request. Typed approval and model tools cannot submit either request. The application displays the saved progress fields in a read-only confirmation summary.
+
+Before submission, the workflow saves `confirmedRevision` in its existing JSON state through a revision-checked write. Accepted fields are frozen against corrections, cancellation and switching. Existing states without this optional marker remain readable. Recovery uses the existing unique workflow-instance key, checks that the saved request matches the accepted fields before notification, and reconciles completion-save failures without overwriting newer state. Notifications retain their current best-effort handling and stable idempotency keys; completion does not guarantee email delivery.
+
+Submission diagnostics reuse the logger: `workflow.submission_accepted`, `workflow.submission_completed` and `workflow.submission_recovery_required`. Recovery records the submission/completion-save stage, workflow ID, revision and safe category, never submitted personal fields or raw exceptions. No tables or migrations are added.
+
 ## Meeting booking version 1
 
 `update_meeting_context` saves name, email, reason and a selection from returned availability incrementally. Validated batches are atomic and use the existing revision check. Corrections invalidate preparation without discarding other details; availability refreshes discard the slot, not personal details. The next post-refresh interaction reloads these saved values through the existing ID-only restoration.

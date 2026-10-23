@@ -7,9 +7,7 @@ const REQUIRED_FIELDS = ["name", "email", "message"] as const;
 
 const OPTIONAL_FIELDS = ["businessName"] as const;
 
-export class ContactWorkflowProgressProjector
-  implements IWorkflowProgressProjector<ContactState>
-{
+export class ContactWorkflowProgressProjector implements IWorkflowProgressProjector<ContactState> {
   getProgress(state: ContactState, status: WorkflowInstanceStatus): WorkflowProgress {
     const missingRequiredFields = this.getMissingRequiredFields(state);
 
@@ -27,12 +25,13 @@ export class ContactWorkflowProgressProjector
     return REQUIRED_FIELDS.filter((field) => !state[field]);
   }
 
-  private getPhase(
-    state: ContactState,
-    status: WorkflowInstanceStatus,
-  ): WorkflowProgress["phase"] {
+  private getPhase(state: ContactState, status: WorkflowInstanceStatus): WorkflowProgress["phase"] {
     if (status !== "active") {
       return status;
+    }
+
+    if (state.confirmedRevision != null) {
+      return "processing";
     }
 
     return state.preparedInteractionId ? "awaiting_confirmation" : "collecting";

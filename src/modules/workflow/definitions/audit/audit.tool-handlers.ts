@@ -9,11 +9,7 @@ import {
   type AuditState,
   type AuditUpdateField,
 } from "./audit.schema";
-import {
-  PREPARE_AUDIT_SUBMISSION_TOOL,
-  SUBMIT_AUDIT_TOOL,
-  UPDATE_AUDIT_CONTEXT_TOOL,
-} from "./audit.tools";
+import { PREPARE_AUDIT_SUBMISSION_TOOL, UPDATE_AUDIT_CONTEXT_TOOL } from "./audit.tools";
 
 type ExecuteAuditToolInput = {
   auditService: Pick<AuditService, "submit">;
@@ -32,6 +28,13 @@ export async function executeAuditTool({
   state,
   context,
 }: ExecuteAuditToolInput): Promise<WorkflowExecutionResult<AuditState>> {
+  if (state.confirmedRevision != null && name !== "submit_audit") {
+    return active(state, {
+      error: "submission_frozen",
+      message: "Accepted details cannot change.",
+    });
+  }
+
   const args = parseArguments(rawArguments);
 
   if (args === null) {
@@ -52,7 +55,7 @@ export async function executeAuditTool({
       : active(state, invalidArguments());
   }
 
-  if (name === SUBMIT_AUDIT_TOOL.name) {
+  if (name === "submit_audit") {
     return noAuditArgumentsSchema.safeParse(args).success
       ? submitAudit(auditService, progress, state, context)
       : active(state, invalidArguments());
@@ -126,7 +129,7 @@ function prepareSubmission(
     kind: "audit_preparation",
     summary: submissionSummary(nextState),
     requiresConfirmation: true,
-    message: "Present this summary and ask the visitor to confirm it explicitly.",
+    message: "The application displays this saved summary with its confirmation button.",
   });
 }
 
@@ -136,10 +139,11 @@ async function submitAudit(
   state: AuditState,
   context: WorkflowExecutionContext,
 ): Promise<WorkflowExecutionResult<AuditState>> {
-  if (context.allowConfirmation === false) {
+  if (state.confirmedRevision == null || context.allowConfirmation !== true) {
     return active(state, {
       error: "separate_confirmation_required",
-      message: "Continuing or switching cannot confirm submission. Wait for a separate confirmation.",
+      message:
+        "Continuing or switching cannot confirm submission. Wait for a separate confirmation.",
     });
   }
 
