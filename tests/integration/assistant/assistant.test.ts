@@ -27,6 +27,9 @@ import { WorkflowService } from "@/modules/workflow/service";
 import { WorkflowInstanceStoreError } from "@/modules/workflow/errors";
 import { assistantStreamEventSchema } from "@/contracts/assistant.contract";
 import { CalendarAvailabilityError } from "@/infrastructure/google-calendar/types";
+import type { CalendarClient, CreatedCalendarEvent } from "@/infrastructure/google-calendar/types";
+import { MeetingService } from "@/modules/meeting/service";
+import type { MeetingServiceClient, MeetingRecord } from "@/modules/meeting/types";
 
 const source = {
   id: "project-1",
@@ -79,12 +82,14 @@ function createAssistant({
       { type: "response.completed", response: { id: "resp_current" } },
     ),
   rateLimit,
+  meeting,
 }: {
   chunks?: SiteSearchResult[];
   embedding?: OpenAITransport["createEmbedding"];
   search?: SiteSearch["search"];
   response?: (request: OpenAIResponseRequest) => ReturnType<OpenAITransport["streamResponse"]>;
   rateLimit?: Pick<RateLimitService, "consume">;
+  meeting?: MeetingServiceClient;
 } = {}) {
   const inputs: OpenAIResponseRequest[] = [];
 
@@ -112,7 +117,7 @@ function createAssistant({
     search,
   };
 
-  const meetingService = {
+  const meetingService = meeting ?? {
     findAvailableSlots: async () => [meetingSlot],
     isSlotAvailable: async () => true,
     bookMeeting: async () => ({ googleEventId: "event_test", googleEventUrl: null }),
@@ -1212,46 +1217,171 @@ test("a later workflow-call failure in one model batch does not orphan a persist
   ]);
 });
 
+for (const failure of ["lost_calendar_response", "meeting_save", "response_disconnect"] as const) {
+  test(`booking route with real services recovers ${failure} without another Calendar insert`, async () => {
+    const providerEvents = new Map<string, CreatedCalendarEvent>();
+
+    const meetings = new Map<string, MeetingRecord>();
+
+    let inserts = 0;
+
+    let failSave = failure === "meeting_save";
+
+    const abort = new AbortController();
+
+    const calendar: CalendarClient = {
+      getBusyPeriods: async () =>
+        [...providerEvents.values()].map(() => ({
+          start: new Date(meetingSlot.start),
+          end: new Date(meetingSlot.end),
+        })),
+      findEvent: async (id) => providerEvents.get(id) ?? null,
+      createEvent: async (input) => {
+        inserts++;
+        const event: CreatedCalendarEvent = {
+          id: input.eventId,
+          htmlLink: null,
+          payload: {
+            id: input.eventId,
+            status: "confirmed",
+            summary: input.summary,
+            description: input.description,
+            attendees: [{ email: input.attendeeEmail }],
+            start: { dateTime: input.start.toISOString(), timeZone: input.timezone },
+            end: { dateTime: input.end.toISOString(), timeZone: input.timezone },
+            extendedProperties: { private: { bookingOperationId: input.bookingOperationId } },
+          },
+        };
+
+        providerEvents.set(event.id, event);
+        if (failure === "response_disconnect") {
+          abort.abort();
+        }
+
+        if (failure === "lost_calendar_response") {
+          throw new Error("Response lost after provider committed");
+        }
+
+        return event;
+      },
+    };
+
+    const meeting = new MeetingService(
+      calendar,
+      {
+        findMeetingByGoogleEventId: async (id) => meetings.get(id) ?? null,
+        createMeeting: async (record) => {
+          if (failSave) {
+            throw new Error("Database temporarily unavailable");
+          }
+
+          if (meetings.has(record.googleEventId)) {
+            throw new Error("Unique event ID");
+          }
+
+          const saved: MeetingRecord = {
+            ...record,
+            rawProviderPayload: {},
+            id: "meeting-1",
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          };
+
+          meetings.set(record.googleEventId, saved);
+
+          return saved;
+        },
+        updateMeeting: async () => {
+          throw new Error("Must not overwrite bookings");
+        },
+      },
+      { info() {}, error() {} },
+      { notifyMeetingBooked: async () => {} },
+    );
+
+    const { post, workflowService, inputs, rateLimitInputs } = createAssistant({
+      meeting,
+      response: async () => {
+        throw new Error("Narration unavailable");
+      },
+    });
+
+    const instance = await workflowService.start("meeting-booking", {
+      originChannel: "test",
+      originPage: null,
+      originEntry: null,
+    });
+
+    await workflowService.executeTool(instance.id, {
+      name: "find_meeting_slots",
+      rawArguments: '{"startDate":"2099-09-15","endDate":"2099-09-15"}',
+      interactionId: "11111111-1111-4111-8111-111111111111",
+    });
+    await workflowService.executeTool(instance.id, {
+      name: "prepare_meeting",
+      rawArguments: JSON.stringify({
+        name: "Visitor",
+        email: "visitor@example.com",
+        reason: "Discuss a project",
+        selectedSlot: { start: meetingSlot.start, end: meetingSlot.end },
+      }),
+      interactionId: "11111111-1111-4111-8111-111111111111",
+    });
+    const prepared = (await workflowService.getAssistantContext(instance.id)).instance!;
+
+    const stale = await readChatResponse(
+      await post(
+        chatRequest({
+          action: "confirm_booking",
+          workflowInstanceId: instance.id,
+          expectedRevision: prepared.revision - 1,
+        }),
+      ),
+    );
+
+    assert.match(stale, /Review the updated summary/);
+    assert.equal(inserts, 0);
+    await readChatResponse(
+      await post(
+        chatRequest(
+          {
+            action: "confirm_booking",
+            workflowInstanceId: instance.id,
+            expectedRevision: prepared.revision,
+          },
+          abort.signal,
+        ),
+      ),
+    );
+    if (failSave) {
+      assert.equal(
+        (await workflowService.getAssistantContext(instance.id)).instance?.bookingAction,
+        "retry",
+      );
+      failSave = false;
+      const recovered = await readChatResponse(
+        await post(chatRequest({ action: "retry_booking", workflowInstanceId: instance.id })),
+      );
+
+      assert.match(recovered, /"status":"completed"/);
+    }
+
+    assert.equal(
+      (await workflowService.getAssistantContext(instance.id)).instance?.status,
+      "completed",
+    );
+    assert.equal(providerEvents.size, 1);
+    assert.equal(inserts, 1);
+    assert.equal(meetings.size, 1);
+    assert.equal(inputs.length, 0, "Booking completion is independent of narration availability");
+    assert.ok(rateLimitInputs.length >= 2);
+  });
+}
+
 test("terminal workflow metadata clears the active surface without streaming private state", async () => {
   const { inputs, post, workflowService } = createAssistant({
-    response: async (request) => {
-      if (request.input[0]?.type !== "function_call_output") {
-        return events(
-          { type: "response.created", response: { id: "resp_confirmation_tool" } },
-          {
-            type: "response.output_item.done",
-            item: {
-              type: "function_call",
-              call_id: "call_confirm",
-              name: "confirm_meeting",
-              arguments: "{}",
-            },
-          },
-          { type: "response.completed", response: { id: "resp_confirmation_tool" } },
-        );
-      }
-
-      if (request.tools.some(({ name }) => name === "book_meeting")) {
-        return events(
-          { type: "response.created", response: { id: "resp_booking_tool" } },
-          {
-            type: "response.output_item.done",
-            item: {
-              type: "function_call",
-              call_id: "call_book",
-              name: "book_meeting",
-              arguments: "{}",
-            },
-          },
-          { type: "response.completed", response: { id: "resp_booking_tool" } },
-        );
-      }
-
-      return events(
-        { type: "response.created", response: { id: "resp_booking_done" } },
-        { type: "response.output_text.delta", delta: "Your meeting is booked." },
-        { type: "response.completed", response: { id: "resp_booking_done" } },
-      );
+    response: async () => {
+      throw new Error("Booking must not depend on model narration");
     },
   });
 
@@ -1280,34 +1410,16 @@ test("terminal workflow metadata clears the active surface without streaming pri
   const output = await readChatResponse(
     await post(
       chatRequest({
-        message: "Yes, confirm the prepared booking.",
+        action: "confirm_booking",
+        expectedRevision: (await workflowService.getAssistantContext(instance.id)).instance!
+          .revision,
         workflowInstanceId: instance.id,
       }),
     ),
   );
 
-  assert.deepEqual(
-    inputs[0]?.tools.map(({ name }) => name),
-    [
-      "ask_user_choice",
-      "search_website",
-      "cancel_workflow",
-      "switch_workflow",
-      "find_meeting_slots",
-      "prepare_meeting",
-      "confirm_meeting",
-    ],
-  );
-  assert.deepEqual(
-    inputs[1]?.tools.map(({ name }) => name),
-    ["ask_user_choice", "search_website", "cancel_workflow", "switch_workflow", "book_meeting"],
-  );
-  assert.deepEqual(
-    inputs[2]?.tools.map(({ name }) => name),
-    ["ask_user_choice", "search_website"],
-  );
+  assert.deepEqual(inputs, [], "Booking must not require model authorization or narration");
   assert.match(output, /"status":"completed"/);
-  assert.match(output, /"phase":"processing"/);
   assert.match(output, /"phase":"completed"/);
   assert.match(output, /visitor@example\.com/);
   assert.doesNotMatch(

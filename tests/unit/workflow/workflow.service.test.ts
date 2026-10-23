@@ -130,6 +130,7 @@ test("starts the latest version with supplied origin and exposes only safe publi
     id: FIRST_INSTANCE_ID,
     workflowId: "test-workflow",
     workflowVersion: 2,
+    revision: 0,
     status: "active",
     progress: {
       phase: "collecting",

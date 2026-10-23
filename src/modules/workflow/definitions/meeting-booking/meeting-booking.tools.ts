@@ -42,31 +42,3 @@ export const PREPARE_MEETING_TOOL: OpenAIResponseTool = {
     },
   },
 };
-
-export const CONFIRM_MEETING_TOOL: OpenAIResponseTool = {
-  type: "function",
-  name: "confirm_meeting",
-  description:
-    "Record the visitor's explicit confirmation of the prepared summary. Call only after a subsequent user message clearly confirms the booking.",
-  strict: true,
-  parameters: {
-    type: "object",
-    additionalProperties: false,
-    required: [],
-    properties: {},
-  },
-};
-
-export const BOOK_MEETING_TOOL: OpenAIResponseTool = {
-  type: "function",
-  name: "book_meeting",
-  description:
-    "Create the real meeting after the prepared summary has been explicitly confirmed, or retry its pending database reconciliation.",
-  strict: true,
-  parameters: {
-    type: "object",
-    additionalProperties: false,
-    required: [],
-    properties: {},
-  },
-};

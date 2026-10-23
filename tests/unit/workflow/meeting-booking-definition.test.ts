@@ -7,10 +7,11 @@ import {
   findMeetingSlotsSchema,
   prepareMeetingSchema,
 } from "@/modules/workflow/definitions/meeting-booking/meeting-booking.schema";
-import type { MeetingServiceClient } from "@/modules/meeting/types";
-import type { CalendarClient } from "@/infrastructure/google-calendar/types";
+import { MeetingBookingError, type MeetingServiceClient } from "@/modules/meeting/types";
+import type { CalendarClient, CreatedCalendarEvent } from "@/infrastructure/google-calendar/types";
 import type { MeetingStore } from "@/modules/meeting/types";
 import { MeetingService } from "@/modules/meeting/service";
+import { CalendarAvailabilityError } from "@/infrastructure/google-calendar/types";
 
 const slot = {
   start: "2099-09-15T11:00:00.000Z",
@@ -34,6 +35,8 @@ const PREPARATION_INTERACTION = {
 const CONFIRMATION_INTERACTION = {
   workflowInstanceId: "11111111-1111-4111-8111-111111111111",
   interactionId: "44444444-4444-4444-8444-444444444444",
+  allowConfirmation: true,
+  expectedRevision: 2,
 };
 
 function createMeetingService(overrides: Partial<MeetingServiceClient> = {}): MeetingServiceClient {
@@ -87,15 +90,14 @@ test("preparation requires a later explicit confirmation transition before booki
 
   const preparedTools = definition.getTools(prepared.state).map(({ name }) => name);
 
-  assert.deepEqual(preparedTools, ["find_meeting_slots", "prepare_meeting", "confirm_meeting"]);
+  assert.deepEqual(preparedTools, ["find_meeting_slots", "prepare_meeting"]);
   assert.equal(preparedTools.includes("book_meeting"), false);
 
-  const earlyBooking = await definition.executeTool(
-    "book_meeting",
-    "{}",
-    prepared.state,
-    PREPARATION_INTERACTION,
-  );
+  const earlyBooking = await definition.executeTool("book_meeting", "{}", prepared.state, {
+    ...PREPARATION_INTERACTION,
+    allowConfirmation: true,
+    expectedRevision: 2,
+  });
 
   assert.equal(earlyBooking.output.error, "confirmation_required");
   assert.equal(bookingCalls, 0);
@@ -104,18 +106,16 @@ test("preparation requires a later explicit confirmation transition before booki
     "confirm_meeting",
     "{}",
     prepared.state,
-    PREPARATION_INTERACTION,
+    { ...PREPARATION_INTERACTION, allowConfirmation: true, expectedRevision: 2 },
   );
 
   assert.equal(sameInteractionConfirmation.output.error, "confirmation_requires_new_input");
   assert.equal(sameInteractionConfirmation.state.step, "awaiting_confirmation");
 
-  const unconfirmedRequest = await definition.executeTool(
-    "confirm_meeting",
-    "{}",
-    prepared.state,
-    { ...CONFIRMATION_INTERACTION, allowConfirmation: false },
-  );
+  const unconfirmedRequest = await definition.executeTool("confirm_meeting", "{}", prepared.state, {
+    ...CONFIRMATION_INTERACTION,
+    allowConfirmation: false,
+  });
 
   assert.equal(unconfirmedRequest.output.error, "separate_confirmation_required");
   assert.equal(unconfirmedRequest.state.step, "awaiting_confirmation");
@@ -130,7 +130,7 @@ test("preparation requires a later explicit confirmation transition before booki
 
   assert.deepEqual(
     definition.getTools(confirmed.state).map(({ name }) => name),
-    ["book_meeting"],
+    [],
   );
 
   const booked = await definition.executeTool(
@@ -158,17 +158,31 @@ test("a persistence retry reconciles one created event without exposing provider
 
   let notificationCalls = 0;
 
+  let createdEvent: CreatedCalendarEvent | null = null;
+
   const calendar: CalendarClient = {
     getBusyPeriods: async () => [],
+    findEvent: async () => createdEvent,
     createEvent: async (input) => {
       createEventCalls += 1;
       calendarTimezone = input.timezone;
 
-      return {
-        id: "event_internal",
-        htmlLink: "https://calendar.example/event_internal",
-        payload: { id: "event_internal" },
+      createdEvent = {
+        id: input.eventId,
+        htmlLink: `https://calendar.example/${input.eventId}`,
+        payload: {
+          id: input.eventId,
+          status: "confirmed",
+          summary: input.summary,
+          description: input.description,
+          attendees: [{ email: input.attendeeEmail }],
+          start: { dateTime: input.start.toISOString(), timeZone: input.timezone },
+          end: { dateTime: input.end.toISOString(), timeZone: input.timezone },
+          extendedProperties: { private: { bookingOperationId: input.bookingOperationId } },
+        },
       };
+
+      return createdEvent;
     },
   };
 
@@ -243,7 +257,10 @@ test("a persistence retry reconciles one created event without exposing provider
 
   assert.equal(first.status, "active");
   assert.equal(first.output.error, "booking_recovery_required");
-  assert.equal(first.state.pendingBooking?.googleEventId, "event_internal");
+  const eventId = `b${confirmed.state.bookingOperation!.id.replaceAll("-", "")}`;
+
+  assert.equal(first.state.pendingBooking, null);
+  assert.deepEqual(first.state.bookingOperation, confirmed.state.bookingOperation);
 
   const second = await definition.executeTool(
     "book_meeting",
@@ -258,7 +275,7 @@ test("a persistence retry reconciles one created event without exposing provider
   assert.equal(notificationCalls, 1);
   assert.equal(calendarTimezone, "Europe/London");
   assert.equal(persistedTimezone, "Europe/London");
-  assert.equal(persistedEventUrl, "https://calendar.example/event_internal");
+  assert.equal(persistedEventUrl, `https://calendar.example/${eventId}`);
   assert.deepEqual(second.output, {
     kind: "meeting_booking",
     status: "confirmed",
@@ -266,13 +283,15 @@ test("a persistence retry reconciles one created event without exposing provider
     start: slot.start,
     end: slot.end,
     timezone: "Europe/London",
+    message:
+      "Your meeting is booked for Tuesday, 15 September 2099 at 12:00 pm Europe/London. A calendar invitation will be sent to visitor@example.com.",
   });
   assert.equal("googleEventId" in second.output, false);
   assert.equal("googleEventUrl" in second.output, false);
   assert.equal("rawProviderPayload" in second.output, false);
 });
 
-test("an unavailable confirmed slot forces a fresh availability check", async () => {
+test("an unavailable slot is rejected before accepting confirmation", async () => {
   const definition = new MeetingBookingWorkflowDefinition(
     createMeetingService({ isSlotAvailable: async () => false }),
     meetingBookingWorkflowProgress,
@@ -287,16 +306,12 @@ test("an unavailable confirmed slot forces a fresh availability check", async ()
     CONFIRMATION_INTERACTION,
   );
 
-  const result = await definition.executeTool(
-    "book_meeting",
-    "{}",
-    confirmed.state,
-    CONFIRMATION_INTERACTION,
-  );
+  const result = confirmed;
 
   assert.equal(result.status, "active");
   assert.equal(result.output.error, "slot_unavailable");
   assert.equal(result.state.selectedSlot, null);
+  assert.equal(result.state.bookingOperation, null);
   assert.deepEqual(result.state.availableSlots, []);
   assert.deepEqual(
     definition.getTools(result.state).map(({ name }) => name),
@@ -323,4 +338,198 @@ test("meeting schemas reject model-supplied timezones", () => {
     }).success,
     false,
   );
+});
+
+test("availability failure does not accept confirmation or discard the saved summary", async () => {
+  let bookingCalls = 0;
+
+  const definition = new MeetingBookingWorkflowDefinition(
+    createMeetingService({
+      isSlotAvailable: async () => {
+        throw new CalendarAvailabilityError();
+      },
+      bookMeeting: async () => {
+        bookingCalls += 1;
+
+        return { googleEventId: "unexpected", googleEventUrl: null };
+      },
+    }),
+    meetingBookingWorkflowProgress,
+  );
+
+  const prepared = await prepareDefinition(definition);
+
+  const result = await definition.executeTool(
+    "confirm_meeting",
+    "{}",
+    prepared.state,
+    CONFIRMATION_INTERACTION,
+  );
+
+  assert.equal(result.output.error, "meeting_availability_unavailable");
+  assert.deepEqual(result.state, prepared.state);
+  assert.equal(result.state.bookingOperation, null);
+  assert.equal(bookingCalls, 0);
+});
+
+test("accepted operations keep their identity and details after all safe provider failures", async () => {
+  for (const code of [
+    "unavailable",
+    "uncertain",
+    "conflict",
+    "slot_unavailable",
+    "invalid_operation",
+  ] as const) {
+    const operationIds: string[] = [];
+
+    const definition = new MeetingBookingWorkflowDefinition(
+      createMeetingService({
+        bookMeeting: async ({ bookingOperationId }) => {
+          operationIds.push(bookingOperationId);
+          throw new MeetingBookingError(code);
+        },
+      }),
+      meetingBookingWorkflowProgress,
+    );
+
+    const prepared = await prepareDefinition(definition);
+
+    const confirmed = await definition.executeTool(
+      "confirm_meeting",
+      "{}",
+      prepared.state,
+      CONFIRMATION_INTERACTION,
+    );
+
+    const first = await definition.executeTool(
+      "book_meeting",
+      "{}",
+      confirmed.state,
+      CONFIRMATION_INTERACTION,
+    );
+
+    const second = await definition.executeTool(
+      "book_meeting",
+      "{}",
+      first.state,
+      CONFIRMATION_INTERACTION,
+    );
+
+    assert.equal(first.output.error, "booking_recovery_required");
+    assert.deepEqual(first.state, confirmed.state);
+    assert.deepEqual(second.state, confirmed.state);
+    assert.deepEqual(operationIds, [
+      confirmed.state.bookingOperation!.id,
+      confirmed.state.bookingOperation!.id,
+    ]);
+    assert.deepEqual(definition.getTools(second.state), []);
+  }
+});
+
+test("legacy confirmed state without a known operation never creates a new event", async () => {
+  let bookingCalls = 0;
+
+  const definition = new MeetingBookingWorkflowDefinition(
+    createMeetingService({
+      bookMeeting: async () => {
+        bookingCalls += 1;
+
+        return { googleEventId: "unexpected", googleEventUrl: null };
+      },
+    }),
+    meetingBookingWorkflowProgress,
+  );
+
+  const prepared = await prepareDefinition(definition);
+
+  const legacy = { ...prepared.state, step: "confirmed" as const, bookingOperation: null };
+
+  const result = await definition.executeTool(
+    "book_meeting",
+    "{}",
+    legacy,
+    CONFIRMATION_INTERACTION,
+  );
+
+  assert.equal(result.output.error, "booking_recovery_blocked");
+  assert.equal(bookingCalls, 0);
+});
+
+test("pending recovery refuses details or event identity that differ from the confirmed summary", async () => {
+  let reconciliationCalls = 0;
+
+  const definition = new MeetingBookingWorkflowDefinition(
+    createMeetingService({
+      reconcileMeeting: async () => {
+        reconciliationCalls += 1;
+
+        return { googleEventId: "legacy-event", googleEventUrl: null };
+      },
+    }),
+    meetingBookingWorkflowProgress,
+  );
+
+  const prepared = await prepareDefinition(definition);
+
+  const legacy = {
+    ...prepared.state,
+    step: "confirmed" as const,
+    bookingOperation: null,
+    pendingBooking: {
+      googleEventId: "legacy-event",
+      googleEventUrl: null,
+      rawProviderPayload: {},
+      name: prepared.state.name!,
+      email: prepared.state.email!,
+      reason: prepared.state.reason!,
+      selectedSlot: slot,
+    },
+  };
+
+  for (const pendingBooking of [
+    { ...legacy.pendingBooking, name: "Different visitor" },
+    { ...legacy.pendingBooking, email: "different@example.com" },
+    { ...legacy.pendingBooking, reason: "Different topic" },
+    { ...legacy.pendingBooking, selectedSlot: { ...slot, start: "2099-09-15T12:00:00.000Z" } },
+    { ...legacy.pendingBooking, selectedSlot: { ...slot, end: "2099-09-15T12:30:00.000Z" } },
+    { ...legacy.pendingBooking, selectedSlot: { ...slot, timezone: "UTC" } },
+  ]) {
+    const result = await definition.executeTool(
+      "book_meeting",
+      "{}",
+      { ...legacy, pendingBooking },
+      CONFIRMATION_INTERACTION,
+    );
+
+    assert.equal(result.status, "active");
+    assert.equal(result.output.error, "booking_recovery_blocked");
+    assert.deepEqual(result.state.pendingBooking, pendingBooking);
+  }
+
+  const wrongOperation = await definition.executeTool(
+    "book_meeting",
+    "{}",
+    {
+      ...legacy,
+      bookingOperation: { id: "55555555-5555-4555-8555-555555555555", preparedRevision: 2 },
+    },
+    CONFIRMATION_INTERACTION,
+  );
+
+  assert.equal(wrongOperation.output.error, "booking_recovery_blocked");
+  assert.equal(wrongOperation.status, "active");
+  assert.equal(reconciliationCalls, 0);
+
+  const normalizedEmail = await definition.executeTool(
+    "book_meeting",
+    "{}",
+    {
+      ...legacy,
+      pendingBooking: { ...legacy.pendingBooking, email: " VISITOR@EXAMPLE.COM " },
+    },
+    CONFIRMATION_INTERACTION,
+  );
+
+  assert.equal(normalizedEmail.status, "completed");
+  assert.equal(reconciliationCalls, 1);
 });

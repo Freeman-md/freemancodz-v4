@@ -8,6 +8,7 @@ const workflowInstance = {
   id: "11111111-1111-4111-8111-111111111111",
   workflowId: "meeting-booking",
   workflowVersion: 1,
+  revision: 0,
   status: "active",
   progress: {
     phase: "collecting",

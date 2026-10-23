@@ -4,6 +4,35 @@ import test from "node:test";
 import { assistantRequestSchema, assistantStreamEventSchema } from "@/contracts/assistant.contract";
 import { assistantChoiceSchema } from "@/contracts/assistant-choice.contract";
 
+test("booking actions cannot carry messages or editable booking details", () => {
+  const action = {
+    action: "confirm_booking",
+    workflowInstanceId: "11111111-1111-4111-8111-111111111111",
+    expectedRevision: 3,
+  };
+
+  assert.deepEqual(assistantRequestSchema.parse(action), action);
+  assert.equal(
+    assistantRequestSchema.safeParse({
+      action: "retry_booking",
+      workflowInstanceId: action.workflowInstanceId,
+    }).success,
+    true,
+  );
+  for (const invalid of [
+    { ...action, expectedRevision: -1 },
+    { ...action, expectedRevision: 1.5 },
+    { ...action, expectedRevision: undefined },
+    { ...action, message: "yes" },
+    { ...action, email: "different@example.com" },
+    { ...action, workflowStart: {} },
+    { ...action, workflowInstanceId: "invalid" },
+    { action: "retry_booking", workflowInstanceId: action.workflowInstanceId, expectedRevision: 3 },
+  ]) {
+    assert.equal(assistantRequestSchema.safeParse(invalid).success, false);
+  }
+});
+
 test("choices validate bounded unique strings and reject hidden operations", () => {
   const choice = {
     question: "What next?",
@@ -38,6 +67,7 @@ test("assistant request accepts the public payload and normalizes whitespace", (
     workflowInstanceId: "11111111-1111-4111-8111-111111111111",
   });
 
+  assert.ok("message" in result);
   assert.equal(result.message, "What has Freeman built?");
   assert.equal(result.previousResponseId, null);
   assert.equal(result.workflowInstanceId, "11111111-1111-4111-8111-111111111111");
@@ -45,17 +75,19 @@ test("assistant request accepts the public payload and normalizes whitespace", (
 
 test("assistant request recovers from malformed previous response IDs", () => {
   for (const previousResponseId of ["", "  ", "response_1", "resp_" + "x".repeat(201)]) {
-    assert.equal(
-      assistantRequestSchema.parse({ message: "Question", previousResponseId }).previousResponseId,
-      null,
-    );
+    const result = assistantRequestSchema.parse({ message: "Question", previousResponseId });
+
+    assert.ok("message" in result);
+    assert.equal(result.previousResponseId, null);
   }
 
-  assert.equal(
-    assistantRequestSchema.parse({ message: "Question", previousResponseId: " resp_123 " })
-      .previousResponseId,
-    "resp_123",
-  );
+  const result = assistantRequestSchema.parse({
+    message: "Question",
+    previousResponseId: " resp_123 ",
+  });
+
+  assert.ok("message" in result);
+  assert.equal(result.previousResponseId, "resp_123");
 });
 
 test("deterministic Audit start accepts only the homepage Audit CTA origin", () => {
@@ -161,6 +193,7 @@ test("assistant stream contract accepts known events and rejects malformed event
         id: "11111111-1111-4111-8111-111111111111",
         workflowId: "meeting-booking",
         workflowVersion: 1,
+        revision: 0,
         status: "active",
         progress: {
           phase: "collecting",
@@ -186,6 +219,7 @@ test("assistant stream contract accepts known events and rejects malformed event
         id: "11111111-1111-4111-8111-111111111111",
         workflowId: "meeting-booking",
         workflowVersion: 1,
+        revision: 0,
         status: "active",
         progress: { phase: "collecting", fields: [], missingRequiredFields: [] },
         state: { email: "private@example.com" },
@@ -200,6 +234,7 @@ test("assistant stream contract accepts known events and rejects malformed event
         id: "11111111-1111-4111-8111-111111111111",
         workflowId: "meeting-booking",
         workflowVersion: 1,
+        revision: 0,
         status: "active",
         progress: { phase: "collecting", fields: [], missingRequiredFields: [] },
       },

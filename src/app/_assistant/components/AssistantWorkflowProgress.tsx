@@ -121,7 +121,7 @@ function hasValue(value: WorkflowFieldValue): value is NonNullable<WorkflowField
   return typeof value === "string" ? value.trim().length > 0 : value !== null;
 }
 
-function formatFieldValue(value: NonNullable<WorkflowProgress["fields"][number]["value"]>) {
+export function formatFieldValue(value: NonNullable<WorkflowProgress["fields"][number]["value"]>) {
   if (typeof value === "string") {
     return value;
   }
@@ -135,6 +135,7 @@ function formatFieldValue(value: NonNullable<WorkflowProgress["fields"][number][
     weekday: "short",
     day: "numeric",
     month: "short",
+    year: "numeric",
   }).format(start);
 
   const time = new Intl.DateTimeFormat("en-GB", {
@@ -144,7 +145,7 @@ function formatFieldValue(value: NonNullable<WorkflowProgress["fields"][number][
     hour12: false,
   });
 
-  return `${date} · ${time.format(start)}–${time.format(end)}`;
+  return `${date} · ${time.format(start)}–${time.format(end)} · London time`;
 }
 
 function missingValueCopy(fieldKey: string) {

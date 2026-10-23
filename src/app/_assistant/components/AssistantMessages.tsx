@@ -1,6 +1,6 @@
 "use client";
 
-import type { RefObject } from "react";
+import type { ReactNode, RefObject } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowRightIcon } from "lucide-react";
 import { ScrollArea } from "@/app/_components/ui/ScrollArea";
@@ -52,6 +52,7 @@ const ASSISTANT_STARTER_ACTIONS: readonly StarterAction[] = [
 ];
 
 type AssistantMessagesProps = {
+  children?: ReactNode;
   className?: string;
   isLoading: boolean;
   messages: ChatMessage[];
@@ -61,6 +62,7 @@ type AssistantMessagesProps = {
 };
 
 export function AssistantMessages({
+  children,
   className,
   isLoading,
   messages,
@@ -159,6 +161,7 @@ export function AssistantMessages({
             ))}
         </AnimatePresence>
 
+        {children}
         <div ref={messagesEndRef} />
       </div>
     </ScrollArea>

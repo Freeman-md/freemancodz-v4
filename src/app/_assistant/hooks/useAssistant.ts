@@ -8,6 +8,8 @@ import {
   workflowInstanceIdSchema,
   type AssistantWorkflowStart,
   type WorkflowPublicInstance,
+  type AssistantBookingAction,
+  type AssistantRequest,
 } from "@/contracts/assistant.contract";
 import type { AssistantChoice } from "@/contracts/assistant-choice.contract";
 
@@ -44,97 +46,111 @@ export function useAssistant() {
     }
   }, []);
 
-  const submitMessage = useCallback(
-    async (rawMessage: string, workflowStart: AssistantWorkflowStart | null = null) => {
-      const message = rawMessage.trim();
+  const submitRequest = useCallback(async (request: AssistantRequest, message: string) => {
+    if (!message || message.length > MAX_MESSAGE_LENGTH || submissionInProgress.current) {
+      return;
+    }
 
-      if (!message || message.length > MAX_MESSAGE_LENGTH || submissionInProgress.current) {
-        return;
+    submissionInProgress.current = true;
+    if ("action" in request) {
+      // Booking actions have no model checkpoint; the next message reloads saved state.
+      previousResponseId.current = null;
+    }
+
+    setIsLoading(true);
+    setInput("");
+    setChoice(null);
+
+    const timestamp = Date.now();
+
+    const assistantMessageId = `assistant-${timestamp}`;
+
+    setMessages((current) => [
+      ...current,
+      { id: `user-${timestamp}`, role: "user", content: message },
+      { id: assistantMessageId, role: "assistant", content: "", sources: [] },
+    ]);
+
+    const updateAssistantMessage = (update: (message: ChatMessage) => ChatMessage) => {
+      setMessages((current) =>
+        current.map((item) => (item.id === assistantMessageId ? update(item) : item)),
+      );
+    };
+
+    try {
+      for await (const event of streamAssistant(request)) {
+        if (event.type === "choice") {
+          setChoice(event.choice);
+          // The reply panel owns this turn's question; don't repeat it in the transcript.
+          updateAssistantMessage((current) => ({ ...current, content: "" }));
+        }
+
+        if (event.type === "delta") {
+          updateAssistantMessage((current) => ({
+            ...current,
+            content: current.content + event.delta,
+          }));
+        }
+
+        if (event.type === "sources") {
+          updateAssistantMessage((current) => ({ ...current, sources: event.sources }));
+        }
+
+        if (event.type === "response_id") {
+          previousResponseId.current = event.responseId;
+        }
+
+        if (event.type === "workflow_instance") {
+          setWorkflowInstance(event.instance);
+
+          if (event.instance.status === "active") {
+            workflowInstanceId.current = event.instance.id;
+            window.sessionStorage.setItem(ACTIVE_WORKFLOW_INSTANCE_STORAGE_KEY, event.instance.id);
+          } else {
+            workflowInstanceId.current = null;
+            window.sessionStorage.removeItem(ACTIVE_WORKFLOW_INSTANCE_STORAGE_KEY);
+          }
+        }
       }
-
-      submissionInProgress.current = true;
-      setIsLoading(true);
-      setInput("");
+    } catch (error) {
       setChoice(null);
+      const messageText =
+        error instanceof Error ? error.message : "Something went wrong while fetching a response.";
 
-      const timestamp = Date.now();
-
-      const assistantMessageId = `assistant-${timestamp}`;
-
-      setMessages((current) => [
+      updateAssistantMessage((current) => ({
         ...current,
-        { id: `user-${timestamp}`, role: "user", content: message },
-        { id: assistantMessageId, role: "assistant", content: "", sources: [] },
-      ]);
+        content: messageText,
+        sources: [],
+        error: true,
+      }));
+    } finally {
+      submissionInProgress.current = false;
+      setIsLoading(false);
+    }
+  }, []);
 
-      const updateAssistantMessage = (update: (message: ChatMessage) => ChatMessage) => {
-        setMessages((current) =>
-          current.map((item) => (item.id === assistantMessageId ? update(item) : item)),
-        );
-      };
-
-      try {
-        for await (const event of streamAssistant({
-          message,
+  const submitMessage = useCallback(
+    (rawMessage: string, workflowStart: AssistantWorkflowStart | null = null) =>
+      submitRequest(
+        {
+          message: rawMessage.trim(),
           ...(workflowStart ? { workflowStart } : {}),
           previousResponseId: previousResponseId.current,
           workflowInstanceId: workflowInstanceId.current,
-        })) {
-          if (event.type === "choice") {
-            setChoice(event.choice);
-            // The reply panel owns this turn's question; don't repeat it in the transcript.
-            updateAssistantMessage((current) => ({ ...current, content: "" }));
-          }
+        },
+        rawMessage.trim(),
+      ),
+    [submitRequest],
+  );
 
-          if (event.type === "delta") {
-            updateAssistantMessage((current) => ({
-              ...current,
-              content: current.content + event.delta,
-            }));
-          }
-
-          if (event.type === "sources") {
-            updateAssistantMessage((current) => ({ ...current, sources: event.sources }));
-          }
-
-          if (event.type === "response_id") {
-            previousResponseId.current = event.responseId;
-          }
-
-          if (event.type === "workflow_instance") {
-            setWorkflowInstance(event.instance);
-
-            if (event.instance.status === "active") {
-              workflowInstanceId.current = event.instance.id;
-              window.sessionStorage.setItem(
-                ACTIVE_WORKFLOW_INSTANCE_STORAGE_KEY,
-                event.instance.id,
-              );
-            } else {
-              workflowInstanceId.current = null;
-              window.sessionStorage.removeItem(ACTIVE_WORKFLOW_INSTANCE_STORAGE_KEY);
-            }
-          }
-        }
-      } catch (error) {
-        setChoice(null);
-        const messageText =
-          error instanceof Error
-            ? error.message
-            : "Something went wrong while fetching a response.";
-
-        updateAssistantMessage((current) => ({
-          ...current,
-          content: messageText,
-          sources: [],
-          error: true,
-        }));
-      } finally {
-        submissionInProgress.current = false;
-        setIsLoading(false);
-      }
+  const submitBookingAction = useCallback(
+    (request: AssistantBookingAction) => {
+      return submitRequest(
+        request,
+        request.action === "confirm_booking" ? "Confirm booking" : "Retry booking",
+      );
     },
-    [],
+    [submitRequest],
   );
 
   const trimmedInput = input.trim();
@@ -146,6 +162,7 @@ export function useAssistant() {
     messages,
     setInput,
     submitMessage,
+    submitBookingAction,
     choice,
     dismissChoice: () => setChoice(null),
     workflowInstance,

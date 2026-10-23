@@ -1,13 +1,18 @@
 import "server-only";
 import { google } from "googleapis";
+import { z } from "zod";
 import {
   CalendarAvailabilityError,
+  CalendarEventError,
   type CalendarBusyPeriod,
   type CalendarClient,
   type CreatedCalendarEvent,
   type GoogleCalendarConfig,
 } from "./types";
-import { createHash } from "node:crypto";
+
+const eventPayloadSchema = z.record(z.string(), z.json());
+
+const requestOptions = { timeout: 10_000, retry: false } as const;
 
 export class GoogleCalendarClient implements CalendarClient {
   private calendar: ReturnType<typeof google.calendar> | null = null;
@@ -20,13 +25,16 @@ export class GoogleCalendarClient implements CalendarClient {
     try {
       const { calendar, calendarId } = this.getCalendar();
 
-      const response = await calendar.freebusy.query({
-        requestBody: {
-          timeMin: input.start.toISOString(),
-          timeMax: input.end.toISOString(),
-          items: [{ id: calendarId }],
+      const response = await calendar.freebusy.query(
+        {
+          requestBody: {
+            timeMin: input.start.toISOString(),
+            timeMax: input.end.toISOString(),
+            items: [{ id: calendarId }],
+          },
         },
-      });
+        requestOptions,
+      );
 
       const result = response.data.calendars?.[calendarId];
 
@@ -53,7 +61,33 @@ export class GoogleCalendarClient implements CalendarClient {
     }
   }
 
+  async findEvent(eventId: string): Promise<CreatedCalendarEvent | null> {
+    try {
+      const { calendar, calendarId } = this.getCalendar();
+
+      const response = await calendar.events.get({ calendarId, eventId }, requestOptions);
+
+      return toCalendarEvent(response.data);
+    } catch (error) {
+      if (
+        typeof error === "object" &&
+        error !== null &&
+        "response" in error &&
+        typeof error.response === "object" &&
+        error.response !== null &&
+        "status" in error.response &&
+        error.response.status === 404
+      ) {
+        return null;
+      }
+
+      throw new CalendarEventError(error);
+    }
+  }
+
   async createEvent(input: {
+    eventId: string;
+    bookingOperationId: string;
     summary: string;
     description: string;
     attendeeEmail: string;
@@ -61,34 +95,29 @@ export class GoogleCalendarClient implements CalendarClient {
     end: Date;
     timezone: string;
   }): Promise<CreatedCalendarEvent> {
-    const { calendar, calendarId } = this.getCalendar();
-
     try {
-      const response = await calendar.events.insert({
-        calendarId,
-        sendUpdates: "all",
-        requestBody: {
-          summary: input.summary,
-          description: input.description,
-          attendees: [{ email: input.attendeeEmail }],
-          start: { dateTime: input.start.toISOString(), timeZone: input.timezone },
-          end: { dateTime: input.end.toISOString(), timeZone: input.timezone },
+      const { calendar, calendarId } = this.getCalendar();
+
+      const response = await calendar.events.insert(
+        {
+          calendarId,
+          sendUpdates: "all",
+          requestBody: {
+            id: input.eventId,
+            extendedProperties: { private: { bookingOperationId: input.bookingOperationId } },
+            summary: input.summary,
+            description: input.description,
+            attendees: [{ email: input.attendeeEmail }],
+            start: { dateTime: input.start.toISOString(), timeZone: input.timezone },
+            end: { dateTime: input.end.toISOString(), timeZone: input.timezone },
+          },
         },
-      });
+        requestOptions,
+      );
 
-      if (!response.data.id) {
-        throw new Error("Google Calendar did not return an event ID.");
-      }
-
-      return {
-        id: response.data.id,
-        htmlLink: response.data.htmlLink ?? null,
-        payload: JSON.parse(
-          JSON.stringify(response.data),
-        ) as import("@/generated/prisma/client").Prisma.JsonObject,
-      };
+      return toCalendarEvent(response.data);
     } catch (error) {
-      throw new Error("Google Calendar event creation failed.", { cause: error });
+      throw new CalendarEventError(error);
     }
   }
 
@@ -107,4 +136,14 @@ export class GoogleCalendarClient implements CalendarClient {
 
     return { calendar: this.calendar, calendarId: this.calendarId };
   }
+}
+
+function toCalendarEvent(data: unknown): CreatedCalendarEvent {
+  const payload = eventPayloadSchema.parse(data);
+
+  const id = z.string().min(1).parse(payload.id);
+
+  const htmlLink = z.string().url().nullish().parse(payload.htmlLink) ?? null;
+
+  return { id, htmlLink, payload };
 }

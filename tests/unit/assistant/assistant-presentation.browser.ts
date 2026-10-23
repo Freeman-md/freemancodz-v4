@@ -5,8 +5,78 @@ import { act, createElement, createRef } from "react";
 import { AssistantMessages } from "@/app/_assistant/components/AssistantMessages";
 import { AssistantWorkflowProgress } from "@/app/_assistant/components/AssistantWorkflowProgress";
 import { AssistantSources } from "@/app/_assistant/components/AssistantSources";
+import { AssistantBookingConfirmation } from "@/app/_assistant/components/AssistantBookingConfirmation";
+import type { AssistantBookingAction } from "@/contracts/assistant.contract";
 import { PortfolioProjectExplorer } from "@/app/_portfolio/components/PortfolioWorkScene/PortfolioProjectExplorer";
 import type { WorkflowPublicInstance } from "@/contracts/assistant.contract";
+
+test("booking review submits the displayed revision and replaces obsolete controls", async () => {
+  await withBrowser(async ({ container, root }) => {
+    const instance: WorkflowPublicInstance = {
+      ...workflowInstance("00000000-0000-4000-8000-000000000001", "visitor@example.com"),
+      workflowId: "meeting-booking",
+      revision: 7,
+      bookingAction: "confirm",
+      progress: {
+        phase: "awaiting_confirmation",
+        missingRequiredFields: [],
+        fields: [
+          { key: "name", required: true, value: "Visitor" },
+          { key: "email", required: true, value: "visitor@example.com" },
+          { key: "reason", required: true, value: "Discuss a project" },
+          {
+            key: "selectedSlot",
+            required: true,
+            value: {
+              start: "2099-09-15T11:00:00.000Z",
+              end: "2099-09-15T11:30:00.000Z",
+              timezone: "Europe/London",
+            },
+          },
+        ],
+      },
+    };
+
+    const actions: AssistantBookingAction[] = [];
+
+    const render = async (snapshot: WorkflowPublicInstance, isLoading = false) => {
+      await act(async () =>
+        root.render(
+          createElement(AssistantBookingConfirmation, {
+            instance: snapshot,
+            isLoading,
+            onSubmit: async (action) => {
+              actions.push(action);
+            },
+          }),
+        ),
+      );
+    };
+
+    await render(instance);
+    assert.match(container.textContent ?? "", /visitor@example.com/);
+    assert.match(container.textContent ?? "", /2099/);
+    assert.match(container.textContent ?? "", /London/);
+    assert.equal(container.querySelector("input,textarea,select"), null);
+    await act(async () => container.querySelector("button")!.click());
+    assert.deepEqual(actions, [
+      { action: "confirm_booking", workflowInstanceId: instance.id, expectedRevision: 7 },
+    ]);
+    await render({ ...instance, revision: 8 });
+    await act(async () => container.querySelector("button")!.click());
+    assert.equal("expectedRevision" in actions[1] && actions[1].expectedRevision, 8);
+    await render({ ...instance, revision: 9, bookingAction: "retry" }, true);
+    assert.equal(container.querySelector("button")!.disabled, true);
+    await act(async () => container.querySelector("button")!.click());
+    assert.equal(actions.length, 2);
+    await render({ ...instance, revision: 9, bookingAction: "retry" });
+    assert.match(container.textContent ?? "", /Retry booking/);
+    await act(async () => container.querySelector("button")!.click());
+    assert.deepEqual(actions[2], { action: "retry_booking", workflowInstanceId: instance.id });
+    await render({ ...instance, status: "completed", bookingAction: undefined });
+    assert.equal(container.querySelector("button"), null);
+  });
+});
 
 test("sources belong to their answer and disappear when no evidence is returned", async () => {
   await withBrowser(async ({ container, root }) => {
@@ -205,6 +275,7 @@ function workflowInstance(id: string, email: string | null): WorkflowPublicInsta
     id,
     workflowId: "contact",
     workflowVersion: 1,
+    revision: 0,
     status: "active",
     progress: {
       phase: "collecting",

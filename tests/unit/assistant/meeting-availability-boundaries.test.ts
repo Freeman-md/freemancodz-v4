@@ -67,6 +67,7 @@ test("elapsed slots skip Calendar and provider failures stay unavailable with sa
   const errors: Array<{ event: string; context: unknown }> = [];
 
   const calendar: CalendarClient = {
+    findEvent: async () => null,
     getBusyPeriods: async () => {
       queries += 1;
 

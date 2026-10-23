@@ -20,6 +20,7 @@ function workflowEvent(id: string, status: "active" | "completed" | "cancelled")
       id,
       workflowId: "contact",
       workflowVersion: 1,
+      revision: 0,
       status,
       progress: {
         phase: status === "active" ? "collecting" : status,
@@ -129,10 +130,48 @@ test("active workflow IDs survive remounts until the workflow finishes", async (
       SECOND_WORKFLOW_ID,
     );
 
+    let releaseAction!: (response: Response) => void;
+
+    const actionResponse = new Promise<Response>((resolve) => {
+      releaseAction = resolve;
+    });
+
+    const responseFetch = globalThis.fetch;
+
+    globalThis.fetch = async (_input, init) => {
+      requests.push(JSON.parse(String(init?.body)) as Record<string, unknown>);
+
+      return actionResponse;
+    };
+
+    const action = {
+      action: "confirm_booking" as const,
+      workflowInstanceId: SECOND_WORKFLOW_ID,
+      expectedRevision: 4,
+    };
+
+    let pendingAction!: Promise<void>;
+
+    await act(async () => {
+      pendingAction = currentAssistant().submitBookingAction(action);
+      await currentAssistant().submitBookingAction(action);
+    });
+    assert.deepEqual(requests.at(-1), action);
+    assert.equal(requests.filter((request) => request.action === "confirm_booking").length, 1);
+    assert.equal(currentAssistant().isLoading, true);
+    await act(async () => {
+      releaseAction(
+        streamResponse([workflowEvent(SECOND_WORKFLOW_ID, "active"), { type: "done" }]),
+      );
+      await pendingAction;
+    });
+    globalThis.fetch = responseFetch;
+
     responses.push(
       streamResponse([workflowEvent(SECOND_WORKFLOW_ID, "cancelled"), { type: "done" }]),
     );
     await act(async () => currentAssistant().submitMessage("Cancel the workflow"));
+    assert.equal(requests.at(-1)?.previousResponseId, null);
     assert.equal(dom.window.sessionStorage.getItem(ACTIVE_WORKFLOW_INSTANCE_STORAGE_KEY), null);
     assert.equal(currentAssistant().workflowInstance?.status, "cancelled");
   } finally {

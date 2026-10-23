@@ -50,4 +50,9 @@ export interface IWorkflowService {
     toolCall: WorkflowToolCall,
   ): Promise<WorkflowToolExecutionResult>;
   cancel(instanceId: string): Promise<WorkflowPublicInstance>;
+  confirmMeetingBooking(
+    instanceId: string,
+    expectedRevision: number,
+  ): Promise<WorkflowToolExecutionResult>;
+  retryMeetingBooking(instanceId: string): Promise<WorkflowToolExecutionResult>;
 }

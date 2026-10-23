@@ -1,14 +1,39 @@
 import "server-only";
-import type { MeetingSlot, MeetingStore, PendingCalendarEvent } from "./types";
+import { z } from "zod";
+import type {
+  BookMeetingInput,
+  MeetingBookingDetails,
+  MeetingRecord,
+  MeetingRecordInput,
+  MeetingSlot,
+  MeetingStore,
+  PendingCalendarEvent,
+} from "./types";
 import {
   CalendarAvailabilityError,
   type CalendarBusyPeriod,
   type CalendarClient,
+  type CreatedCalendarEvent,
 } from "@/infrastructure/google-calendar/types";
 import type { Logger } from "@/infrastructure/logging/logger";
 import { MEETING_CONFIG } from "./config";
-import { MeetingPersistenceError } from "./types";
+import { MeetingBookingError, MeetingPersistenceError } from "./types";
 import type { NotificationService } from "@/modules/notification/service";
+
+const recoveredEventSchema = z.object({
+  id: z.string(),
+  status: z.literal("confirmed"),
+  summary: z.string(),
+  description: z.string(),
+  attendees: z.array(z.object({ email: z.string().email() })).length(1),
+  start: z.object({ dateTime: z.string().datetime({ offset: true }), timeZone: z.string() }),
+  end: z.object({ dateTime: z.string().datetime({ offset: true }), timeZone: z.string() }),
+  extendedProperties: z
+    .object({
+      private: z.object({ bookingOperationId: z.string().optional() }).optional(),
+    })
+    .optional(),
+});
 
 export class MeetingService {
   constructor(
@@ -63,15 +88,81 @@ export class MeetingService {
     );
   }
 
-  async bookMeeting(input: { name: string; email: string; reason: string; slot: MeetingSlot }) {
-    const event = await this.calendar.createEvent({
-      summary: `Meeting with ${input.name}`,
-      description: input.reason,
-      attendeeEmail: input.email,
-      start: new Date(input.slot.start),
-      end: new Date(input.slot.end),
-      timezone: MEETING_CONFIG.timezone,
-    });
+  async bookMeeting(input: BookMeetingInput) {
+    if (!z.string().uuid().safeParse(input.bookingOperationId).success) {
+      throw new MeetingBookingError("invalid_operation");
+    }
+
+    const eventId = `b${input.bookingOperationId.replaceAll("-", "").toLowerCase()}`;
+
+    let existing: MeetingRecord | null;
+
+    try {
+      existing = await this.repository.findMeetingByGoogleEventId(eventId);
+    } catch (error) {
+      throw new MeetingBookingError("unavailable", error);
+    }
+
+    let event: CreatedCalendarEvent | null;
+
+    try {
+      event = await this.calendar.findEvent(eventId);
+    } catch (error) {
+      throw new MeetingBookingError("unavailable", error);
+    }
+
+    if (existing) {
+      assertMatchingMeeting(existing, input, eventId);
+
+      if (!event) {
+        throw new MeetingBookingError("conflict");
+      }
+
+      assertMatchingCalendarEvent(event, input, eventId);
+      await this.notifications.notifyMeetingBooked(existing);
+
+      return { googleEventId: existing.googleEventId, googleEventUrl: existing.googleEventUrl };
+    }
+
+    if (!event) {
+      let available: boolean;
+
+      try {
+        available = await this.isSlotAvailable(input.slot);
+      } catch (error) {
+        throw new MeetingBookingError("unavailable", error);
+      }
+
+      if (!available) {
+        throw new MeetingBookingError("slot_unavailable");
+      }
+
+      try {
+        event = await this.calendar.createEvent({
+          eventId,
+          bookingOperationId: input.bookingOperationId,
+          summary: `Meeting with ${input.name}`,
+          description: input.reason,
+          attendeeEmail: input.email,
+          start: new Date(input.slot.start),
+          end: new Date(input.slot.end),
+          timezone: MEETING_CONFIG.timezone,
+        });
+      } catch (error) {
+        // Insert may have committed before its response was lost. Never mint another ID.
+        try {
+          event = await this.calendar.findEvent(eventId);
+        } catch (lookupError) {
+          throw new MeetingBookingError("uncertain", lookupError);
+        }
+
+        if (!event) {
+          throw new MeetingBookingError("uncertain", error);
+        }
+      }
+    }
+
+    assertMatchingCalendarEvent(event, input, eventId);
 
     const pendingEvent = {
       googleEventId: event.id,
@@ -79,17 +170,43 @@ export class MeetingService {
       rawProviderPayload: event.payload,
     };
 
-    return this.reconcileMeeting({ ...input, pendingEvent });
+    return this.persistMeeting({ ...input, pendingEvent });
   }
 
-  async reconcileMeeting(input: {
-    name: string;
-    email: string;
-    reason: string;
-    slot: MeetingSlot;
-    pendingEvent: PendingCalendarEvent;
-  }) {
-    const record = {
+  async reconcileMeeting(
+    input: MeetingBookingDetails & {
+      pendingEvent: PendingCalendarEvent;
+      bookingOperationId?: string;
+    },
+  ) {
+    let event: CreatedCalendarEvent | null;
+
+    try {
+      event = await this.calendar.findEvent(input.pendingEvent.googleEventId);
+    } catch (error) {
+      throw new MeetingBookingError("unavailable", error);
+    }
+
+    if (!event) {
+      throw new MeetingBookingError("conflict");
+    }
+
+    assertMatchingCalendarEvent(event, input, input.pendingEvent.googleEventId);
+
+    return this.persistMeeting({
+      ...input,
+      pendingEvent: {
+        googleEventId: event.id,
+        googleEventUrl: event.htmlLink,
+        rawProviderPayload: event.payload,
+      },
+    });
+  }
+
+  private async persistMeeting(
+    input: MeetingBookingDetails & { pendingEvent: PendingCalendarEvent },
+  ) {
+    const record: MeetingRecordInput = {
       googleEventId: input.pendingEvent.googleEventId,
       name: input.name,
       email: input.email,
@@ -102,25 +219,39 @@ export class MeetingService {
       rawProviderPayload: input.pendingEvent.rawProviderPayload,
     };
 
-    let meeting;
+    let meeting: MeetingRecord | null;
 
     try {
-      meeting = await this.repository.createMeeting(record);
+      meeting = await this.repository.findMeetingByGoogleEventId(input.pendingEvent.googleEventId);
     } catch (error) {
-      const existing = await this.repository.findMeetingByGoogleEventId(
-        input.pendingEvent.googleEventId,
-      );
+      throw new MeetingPersistenceError(input.pendingEvent, error);
+    }
 
-      if (!existing) {
-        this.logger.error("Meeting persistence failed after calendar event creation", {
-          googleEventId: input.pendingEvent.googleEventId,
-          startsAt: input.slot.start,
-        });
+    if (meeting) {
+      assertMatchingMeeting(meeting, input, input.pendingEvent.googleEventId);
+    } else {
+      try {
+        meeting = await this.repository.createMeeting(record);
+      } catch (error) {
+        try {
+          meeting = await this.repository.findMeetingByGoogleEventId(
+            input.pendingEvent.googleEventId,
+          );
+        } catch (lookupError) {
+          throw new MeetingPersistenceError(input.pendingEvent, lookupError);
+        }
 
-        throw new MeetingPersistenceError(input.pendingEvent, error);
+        if (!meeting) {
+          this.logger.error("meeting.persistence_failed", {
+            googleEventId: input.pendingEvent.googleEventId,
+            startsAt: input.slot.start,
+          });
+
+          throw new MeetingPersistenceError(input.pendingEvent, error);
+        }
+
+        assertMatchingMeeting(meeting, input, input.pendingEvent.googleEventId);
       }
-
-      meeting = existing;
     }
 
     await this.notifications.notifyMeetingBooked(meeting);
@@ -167,6 +298,55 @@ export class MeetingService {
     }
 
     return slots;
+  }
+}
+
+function assertMatchingMeeting(
+  meeting: MeetingRecord,
+  input: MeetingBookingDetails,
+  eventId: string,
+): void {
+  if (
+    meeting.googleEventId !== eventId ||
+    meeting.status !== "confirmed" ||
+    meeting.name !== input.name ||
+    meeting.email.toLowerCase() !== input.email.toLowerCase() ||
+    meeting.reason !== input.reason ||
+    meeting.timezone !== MEETING_CONFIG.timezone ||
+    meeting.startsAt.getTime() !== Date.parse(input.slot.start) ||
+    meeting.endsAt.getTime() !== Date.parse(input.slot.end)
+  ) {
+    throw new MeetingBookingError("conflict");
+  }
+}
+
+function assertMatchingCalendarEvent(
+  event: CreatedCalendarEvent,
+  input: MeetingBookingDetails & { bookingOperationId?: string },
+  eventId: string,
+): void {
+  const result = recoveredEventSchema.safeParse(event.payload);
+
+  if (!result.success) {
+    throw new MeetingBookingError("conflict");
+  }
+
+  const payload = result.data;
+
+  if (
+    event.id !== eventId ||
+    payload.id !== eventId ||
+    (input.bookingOperationId !== undefined &&
+      payload.extendedProperties?.private?.bookingOperationId !== input.bookingOperationId) ||
+    payload.summary !== `Meeting with ${input.name}` ||
+    payload.description !== input.reason ||
+    payload.attendees[0].email.toLowerCase() !== input.email.toLowerCase() ||
+    Date.parse(payload.start.dateTime) !== Date.parse(input.slot.start) ||
+    Date.parse(payload.end.dateTime) !== Date.parse(input.slot.end) ||
+    payload.start.timeZone !== MEETING_CONFIG.timezone ||
+    payload.end.timeZone !== MEETING_CONFIG.timezone
+  ) {
+    throw new MeetingBookingError("conflict");
   }
 }
 

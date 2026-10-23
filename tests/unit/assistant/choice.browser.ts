@@ -19,6 +19,7 @@ const workflowEvent = {
     id: workflowId,
     workflowId: "contact",
     workflowVersion: 1,
+    revision: 0,
     status: "active",
     progress: { phase: "collecting", fields: [], missingRequiredFields: [] },
   },

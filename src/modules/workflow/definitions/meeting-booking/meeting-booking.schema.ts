@@ -20,6 +20,14 @@ export const meetingBookingStateSchema = z
     availabilityCheckedAt: z.string().datetime().nullable(),
     selectedSlot: meetingSlotSchema.nullable(),
     preparedInteractionId: z.string().uuid().nullable(),
+    bookingOperation: z
+      .object({
+        id: z.string().uuid(),
+        preparedRevision: z.number().int().nonnegative(),
+      })
+      .strict()
+      .nullable()
+      .optional(),
     pendingBooking: z
       .object({
         googleEventId: z.string().min(1),

@@ -100,10 +100,14 @@ export function createChatPostHandler({
 
     return new Response(
       assistantService.createResponse({
-        message: parsed.data.message,
-        previousResponseId: parsed.data.previousResponseId ?? null,
-        workflowInstanceId: parsed.data.workflowInstanceId ?? null,
-        workflowStart: parsed.data.workflowStart ?? null,
+        ...("action" in parsed.data
+          ? parsed.data
+          : {
+              message: parsed.data.message,
+              previousResponseId: parsed.data.previousResponseId ?? null,
+              workflowInstanceId: parsed.data.workflowInstanceId ?? null,
+              workflowStart: parsed.data.workflowStart ?? null,
+            }),
         signal: request.signal,
       }),
       {

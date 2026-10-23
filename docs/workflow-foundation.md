@@ -23,7 +23,7 @@ Instances begin as `active`. Completion and cancellation are terminal and their 
 
 Every normal OpenAI iteration combines the portfolio assistant's global instructions and tools (`search_website`, `ask_user_choice`) with the current workflow context. With no active instance, that context can expose `start_workflow`. With an active instance, it exposes `cancel_workflow`, `switch_workflow` and only the definition tools available at the current state. A start tool result is therefore followed immediately by another model iteration using the selected workflow's surface.
 
-The browser request carries only:
+An ordinary browser request carries:
 
 ```json
 {
@@ -33,19 +33,27 @@ The browser request carries only:
 }
 ```
 
-The stream returns safe instance metadata and read-only progress: collected public values, missing required fields, and phase. Private workflow state stays on the server. Only the active opaque ID persists in sessionStorage; after refresh, the next assistant request reloads the saved workflow. Completion or cancellation clears that ID. There is no public workflow-instance read or write endpoint.
+The stream returns safe instance metadata (including its saved revision) and read-only progress: collected public values, missing required fields, and phase. Private workflow state stays on the server. Only the active opaque ID persists in sessionStorage; after refresh, the next assistant request reloads the saved workflow. Completion or cancellation clears that ID. There is no public workflow-instance read or write endpoint.
+
+Meeting confirmation uses the same rate-limited `/api/chat` route with `{ action: "confirm_booking", workflowInstanceId, expectedRevision }`; recovery uses `{ action: "retry_booking", workflowInstanceId }`. These strict alternatives cannot include a message or editable booking details. Action responses use the same stream without a model call. The next ordinary message reloads workflow state without the previous model checkpoint.
 
 ### Conversational choices
 
 The global `ask_user_choice` tool accepts a model-written question and two to six distinct reply strings. It has no workflow dependency. Once requested, remaining tool calls receive skipped acknowledgements. A single tools-disabled model continuation completes before the browser receives the choice and its response checkpoint.
 
-The picker temporarily replaces the composer. Selecting and sending an option submits its exact text through the ordinary chat request; “Write my own reply” restores text entry without sending anything. Choices are memory-only, never stored on a workflow, and disappear on refresh. The normal workflow tools still validate details, switch atomically, and require a later explicit confirmation before sending or booking. Read-only progress is unchanged.
+The picker temporarily replaces the composer. Selecting and sending an option submits its exact text through the ordinary chat request; “Write my own reply” restores text entry without sending anything. Choices are memory-only, never stored on a workflow, and disappear on refresh. The normal workflow tools still validate details and switch atomically. Neither a choice nor typed confirmation can authorise meeting booking; the saved summary's Confirm booking button is required. Read-only progress is unchanged.
 
 ## Meeting booking version 1
 
 The meeting definition uses the Meeting module's public service interface for London-time availability, final slot rechecking, Calendar creation, Meeting persistence, and partial-failure reconciliation. It owns all attendee fields, booking state, meeting prompts, and meeting tools.
 
-Preparation exposes a confirmation tool but not the booking tool. The server records a private, request-local interaction marker with the preparation and rejects confirmation in that same visitor request; a later visitor message can explicitly confirm and then expose booking. A successful booking completes the instance. If Calendar creation succeeds before database persistence fails, private recovery state remains on the active instance so a retry reconciles the existing event instead of knowingly creating another one. Provider payloads, event identifiers, and Calendar URLs remain server-only.
+Preparation exposes a saved summary and explicit Confirm booking button, not model-accessible confirmation or booking tools. The server checks that exact revision and current availability, then saves a UUID booking operation through a revision-checked write before any Calendar insertion. The saved details are frozen: correction, cancellation and switching cannot change an accepted booking. A preflight race lost to any of those mutations creates no event.
+
+The operation UUID determines a single Calendar event ID. Recovery looks up that ID before checking availability, validates its active status, attendee, times and operation metadata, then finds or creates the matching Meeting row. An uncertain insert rechecks the same event ID; it never generates a replacement. Calendar calls have a 10-second timeout and no automatic retries. A matching Meeting row cannot conceal a missing, cancelled or conflicting provider event. Notifications retain their existing stable Meeting-based idempotency key.
+
+If saving completion fails, the service reloads and accepts an already-completed result only for the same operation. Otherwise the operation remains available for explicit Retry booking; no automatic browser retry occurs. Losing the response stream does not cancel accepted work. A process termination may still require that explicit retry.
+
+Existing prepared instances remain usable. Legacy pending events retain their original event ID and must match the saved summary and current Calendar event before reconciliation. Legacy confirmed instances without an operation or event reference stop for manual reconciliation rather than risking a duplicate. Provider payloads, operation and event identifiers, and Calendar URLs remain server-only. This change adds no table or migration.
 
 ## Adding a real future workflow
 

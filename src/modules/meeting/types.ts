@@ -37,6 +37,27 @@ export type PendingCalendarEvent = {
   rawProviderPayload: Prisma.JsonObject;
 };
 
+export type MeetingBookingDetails = {
+  name: string;
+  email: string;
+  reason: string;
+  slot: MeetingSlot;
+};
+
+export type BookMeetingInput = MeetingBookingDetails & { bookingOperationId: string };
+
+export class MeetingBookingError extends Error {
+  constructor(
+    readonly code:
+      "unavailable" | "uncertain" | "conflict" | "slot_unavailable" | "invalid_operation",
+    cause?: unknown,
+  ) {
+    super("The booking could not be safely completed. Retry the existing booking operation.", {
+      cause,
+    });
+  }
+}
+
 export class MeetingPersistenceError extends Error {
   constructor(
     readonly pendingEvent: PendingCalendarEvent,
@@ -49,17 +70,13 @@ export class MeetingPersistenceError extends Error {
 export type MeetingServiceClient = {
   findAvailableSlots(input: { startDate: string; endDate: string }): Promise<MeetingSlot[]>;
   isSlotAvailable(slot: MeetingSlot): Promise<boolean>;
-  bookMeeting(input: {
-    name: string;
-    email: string;
-    reason: string;
-    slot: MeetingSlot;
-  }): Promise<{ googleEventId: string; googleEventUrl: string | null }>;
-  reconcileMeeting(input: {
-    name: string;
-    email: string;
-    reason: string;
-    slot: MeetingSlot;
-    pendingEvent: PendingCalendarEvent;
-  }): Promise<{ googleEventId: string; googleEventUrl: string | null }>;
+  bookMeeting(
+    input: BookMeetingInput,
+  ): Promise<{ googleEventId: string; googleEventUrl: string | null }>;
+  reconcileMeeting(
+    input: MeetingBookingDetails & {
+      pendingEvent: PendingCalendarEvent;
+      bookingOperationId?: string;
+    },
+  ): Promise<{ googleEventId: string; googleEventUrl: string | null }>;
 };

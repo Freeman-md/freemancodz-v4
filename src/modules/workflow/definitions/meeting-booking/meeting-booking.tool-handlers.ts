@@ -1,8 +1,10 @@
 import type { Prisma } from "@/generated/prisma/client";
+import { randomUUID } from "node:crypto";
 import { MEETING_CONFIG } from "@/modules/meeting/config";
 import { CalendarAvailabilityError } from "@/infrastructure/google-calendar/types";
 import {
   MeetingPersistenceError,
+  MeetingBookingError,
   type MeetingServiceClient,
   type MeetingSlot,
 } from "@/modules/meeting/types";
@@ -10,19 +12,13 @@ import type { WorkflowExecutionContext, WorkflowExecutionResult } from "../../ty
 import { formatMeetingSlot } from "./meeting-slot.mapper";
 import {
   findMeetingSlotsSchema,
-  meetingProviderPayloadSchema,
   noArgumentsSchema,
   prepareMeetingSchema,
   type FindMeetingSlotsInput,
   type MeetingBookingState,
   type PrepareMeetingInput,
 } from "./meeting-booking.schema";
-import {
-  BOOK_MEETING_TOOL,
-  CONFIRM_MEETING_TOOL,
-  FIND_MEETING_SLOTS_TOOL,
-  PREPARE_MEETING_TOOL,
-} from "./meeting-booking.tools";
+import { FIND_MEETING_SLOTS_TOOL, PREPARE_MEETING_TOOL } from "./meeting-booking.tools";
 
 type ExecuteMeetingBookingToolInput = {
   meetingService: MeetingServiceClient;
@@ -61,13 +57,13 @@ export async function executeMeetingBookingTool({
       : active(state, invalidArguments());
   }
 
-  if (name === CONFIRM_MEETING_TOOL.name) {
+  if (name === "confirm_meeting") {
     return noArgumentsSchema.safeParse(args).success
-      ? confirmMeeting(state, context)
+      ? confirmMeeting(meetingService, state, context)
       : active(state, invalidArguments());
   }
 
-  if (name === BOOK_MEETING_TOOL.name) {
+  if (name === "book_meeting") {
     return noArgumentsSchema.safeParse(args).success
       ? bookMeeting(meetingService, state)
       : active(state, invalidArguments());
@@ -84,7 +80,7 @@ async function findMeetingSlots(
   input: FindMeetingSlotsInput,
   state: MeetingBookingState,
 ): Promise<WorkflowExecutionResult<MeetingBookingState>> {
-  if (state.pendingBooking) {
+  if (state.pendingBooking || state.bookingOperation || state.step === "confirmed") {
     return active(state, bookingRecoveryOutput());
   }
 
@@ -146,7 +142,7 @@ function prepareMeeting(
   state: MeetingBookingState,
   context: WorkflowExecutionContext,
 ): WorkflowExecutionResult<MeetingBookingState> {
-  if (state.pendingBooking) {
+  if (state.pendingBooking || state.bookingOperation || state.step === "confirmed") {
     return active(state, bookingRecoveryOutput());
   }
 
@@ -180,19 +176,29 @@ function prepareMeeting(
       slot: formatMeetingSlot(nextState.selectedSlot!),
     },
     requiresConfirmation: true,
-    message: "Present this exact summary and ask the visitor to confirm it explicitly.",
+    message: "The application displays this saved summary. Ask the visitor to use Confirm booking.",
   });
 }
 
-function confirmMeeting(
+async function confirmMeeting(
+  meetingService: MeetingServiceClient,
   state: MeetingBookingState,
   context: WorkflowExecutionContext,
-): WorkflowExecutionResult<MeetingBookingState> {
-  if (context.allowConfirmation === false) {
+): Promise<WorkflowExecutionResult<MeetingBookingState>> {
+  if (
+    context.allowConfirmation !== true ||
+    !Number.isInteger(context.expectedRevision) ||
+    context.expectedRevision === undefined ||
+    context.expectedRevision < 0
+  ) {
     return active(state, {
       error: "separate_confirmation_required",
       message: "Continuing or switching cannot confirm booking. Wait for a separate confirmation.",
     });
+  }
+
+  if (state.pendingBooking || state.bookingOperation) {
+    return active(state, bookingRecoveryOutput());
   }
 
   if (
@@ -200,6 +206,7 @@ function confirmMeeting(
     !state.name ||
     !state.email ||
     !state.reason ||
+    !state.preparedInteractionId ||
     !state.selectedSlot
   ) {
     return active(state, {
@@ -215,8 +222,40 @@ function confirmMeeting(
     });
   }
 
+  try {
+    if (!(await meetingService.isSlotAvailable(state.selectedSlot))) {
+      return active(
+        {
+          ...state,
+          step: "collecting",
+          availableSlots: [],
+          selectedSlot: null,
+          preparedInteractionId: null,
+        },
+        {
+          error: "slot_unavailable",
+          message: "That slot is no longer available. Choose a new time before confirming again.",
+        },
+      );
+    }
+  } catch (error) {
+    if (!(error instanceof CalendarAvailabilityError)) {
+      throw error;
+    }
+
+    return active(state, {
+      error: "meeting_availability_unavailable",
+      message:
+        "Meeting availability is temporarily unavailable. Please try confirming again later.",
+    });
+  }
+
   return active(
-    { ...state, step: "confirmed" },
+    {
+      ...state,
+      step: "confirmed",
+      bookingOperation: { id: randomUUID(), preparedRevision: context.expectedRevision },
+    },
     {
       kind: "meeting_confirmation",
       status: "confirmed",
@@ -246,49 +285,25 @@ async function bookMeeting(
     return reconcilePendingBooking(meetingService, state);
   }
 
-  if (!(await meetingService.isSlotAvailable(state.selectedSlot))) {
-    return active(
-      {
-        ...state,
-        step: "collecting",
-        availableSlots: [],
-        availabilityCheckedAt: new Date().toISOString(),
-        selectedSlot: null,
-        preparedInteractionId: null,
-      },
-      {
-        error: "slot_unavailable",
-        message:
-          "That slot is no longer available. Find new availability before preparing another booking.",
-      },
-    );
+  if (!state.bookingOperation) {
+    return active(state, {
+      error: "booking_recovery_blocked",
+      message:
+        "This saved booking cannot be retried safely. Please contact Freeman to check its status.",
+    });
   }
 
   try {
     await meetingService.bookMeeting({
+      bookingOperationId: state.bookingOperation.id,
       name: state.name,
       email: state.email,
       reason: state.reason,
       slot: state.selectedSlot,
     });
   } catch (error) {
-    if (error instanceof MeetingPersistenceError) {
-      return active(
-        {
-          ...state,
-          pendingBooking: {
-            ...error.pendingEvent,
-            rawProviderPayload: meetingProviderPayloadSchema.parse(
-              error.pendingEvent.rawProviderPayload,
-            ),
-            name: state.name,
-            email: state.email,
-            reason: state.reason,
-            selectedSlot: state.selectedSlot,
-          },
-        },
-        bookingRecoveryOutput(),
-      );
+    if (error instanceof MeetingBookingError || error instanceof MeetingPersistenceError) {
+      return active(state, bookingRecoveryOutput());
     }
 
     throw error;
@@ -310,8 +325,29 @@ async function reconcilePendingBooking(
     });
   }
 
+  const summaryMatches =
+    pendingBooking.name === state.name &&
+    pendingBooking.email.trim().toLowerCase() === state.email.trim().toLowerCase() &&
+    pendingBooking.reason === state.reason &&
+    slotsMatch(pendingBooking.selectedSlot, state.selectedSlot) &&
+    pendingBooking.selectedSlot.timezone === state.selectedSlot.timezone;
+
+  const operationMatches =
+    !state.bookingOperation ||
+    pendingBooking.googleEventId ===
+      `b${state.bookingOperation.id.replaceAll("-", "").toLowerCase()}`;
+
+  if (!summaryMatches || !operationMatches) {
+    return active(state, {
+      error: "booking_recovery_blocked",
+      message:
+        "This saved booking does not match its confirmed summary. Please contact Freeman to check its status.",
+    });
+  }
+
   try {
     await meetingService.reconcileMeeting({
+      bookingOperationId: state.bookingOperation?.id,
       name: pendingBooking.name,
       email: pendingBooking.email,
       reason: pendingBooking.reason,
@@ -319,14 +355,18 @@ async function reconcilePendingBooking(
       pendingEvent: pendingBooking,
     });
   } catch (error) {
-    if (error instanceof MeetingPersistenceError) {
+    if (error instanceof MeetingPersistenceError || error instanceof MeetingBookingError) {
       return active(state, bookingRecoveryOutput());
     }
 
     throw error;
   }
 
-  return completed({ ...state, pendingBooking: null }, confirmedBookingOutput(state));
+  // Legacy recovery has no operation ID; retain its known event as the terminal identity.
+  return completed(
+    { ...state, pendingBooking: state.bookingOperation ? null : pendingBooking },
+    confirmedBookingOutput(state),
+  );
 }
 
 function parseArguments(rawArguments: string): unknown | null {
@@ -362,7 +402,7 @@ function bookingRecoveryOutput() {
   return {
     error: "booking_recovery_required",
     message:
-      "Your calendar event was created, but we could not finish recording it yet. Please try again shortly.",
+      "We could not finish checking your booking. Use Retry booking to safely check the same booking again.",
   };
 }
 
@@ -374,6 +414,7 @@ function confirmedBookingOutput(state: Pick<MeetingBookingState, "email" | "sele
     start: state.selectedSlot!.start,
     end: state.selectedSlot!.end,
     timezone: MEETING_CONFIG.timezone,
+    message: `Your meeting is booked for ${formatMeetingSlot(state.selectedSlot!)}. A calendar invitation will be sent to ${state.email!}.`,
   };
 }
 

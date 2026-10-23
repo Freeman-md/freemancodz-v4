@@ -27,6 +27,10 @@ export class AssistantService {
   ) {}
 
   createResponse(request: AssistantResponseInput) {
+    if ("action" in request) {
+      return this.createBookingResponse(request);
+    }
+
     const encoder = new TextEncoder();
 
     // Each stream owns its state, including transitions saved before a later failure.
@@ -79,7 +83,10 @@ export class AssistantService {
     });
   }
 
-  private async prepareRequest(request: AssistantResponseInput, state: ResponseState) {
+  private async prepareRequest(
+    request: Exclude<AssistantResponseInput, { action: string }>,
+    state: ResponseState,
+  ) {
     const { workflowStart } = request;
 
     if (workflowStart) {
@@ -111,6 +118,80 @@ export class AssistantService {
     }
 
     state.input = [{ type: "user_message", content: state.message }];
+  }
+
+  private createBookingResponse(request: Extract<AssistantResponseInput, { action: string }>) {
+    const encoder = new TextEncoder();
+
+    let connected = true;
+
+    return new ReadableStream<Uint8Array>({
+      start: async (controller) => {
+        const write = (event: AssistantStreamEvent) => {
+          if (!connected || request.signal.aborted) {
+            return;
+          }
+
+          try {
+            controller.enqueue(encoder.encode(`${JSON.stringify(event)}\n`));
+          } catch {
+            connected = false;
+          }
+        };
+
+        try {
+          // Acceptance and provider work must survive loss of the response stream.
+          const result =
+            request.action === "confirm_booking"
+              ? await this.workflow.confirmMeetingBooking(
+                  request.workflowInstanceId,
+                  request.expectedRevision,
+                )
+              : await this.workflow.retryMeetingBooking(request.workflowInstanceId);
+
+          write({ type: "workflow_instance", instance: result.instance });
+          write({
+            type: "delta",
+            delta:
+              typeof result.output.message === "string"
+                ? result.output.message
+                : "Please review the current booking details.",
+          });
+        } catch {
+          this.logger.error("assistant.booking_failed", {
+            workflowInstanceId: request.workflowInstanceId,
+            category: "booking_request_failed",
+          });
+          try {
+            const current = await this.workflow.getAssistantContext(request.workflowInstanceId);
+
+            if (current.instance) {
+              write({ type: "workflow_instance", instance: current.instance });
+            }
+          } catch {
+            /* The durable operation remains available when storage recovers. */
+          }
+
+          write({
+            type: "delta",
+            delta:
+              "We could not finish checking this booking. Review its status and retry; do not start another booking.",
+          });
+        } finally {
+          write({ type: "done" });
+          if (connected) {
+            try {
+              controller.close();
+            } catch {
+              /* Reader already closed. */
+            }
+          }
+        }
+      },
+      cancel: () => {
+        connected = false;
+      },
+    });
   }
 
   private async runResponseLoop(state: ResponseState, write: WriteEvent) {
