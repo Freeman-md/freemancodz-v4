@@ -66,6 +66,32 @@ export const prepareMeetingSchema = z
 
 export const noArgumentsSchema = z.object({}).strict();
 
+export const updateMeetingContextSchema = z
+  .object({
+    updates: z
+      .array(
+        z.union([
+          ...(["name", "email", "reason"] as const).map((field) =>
+            z
+              .object({ field: z.literal(field), value: prepareMeetingSchema.shape[field] })
+              .strict(),
+          ),
+          z
+            .object({
+              field: z.literal("selectedSlot"),
+              value: prepareMeetingSchema.shape.selectedSlot,
+            })
+            .strict(),
+        ]),
+      )
+      .min(1)
+      .max(4)
+      .refine((updates) => new Set(updates.map((update) => update.field)).size === updates.length),
+  })
+  .strict();
+
+export type MeetingContextUpdate = z.infer<typeof updateMeetingContextSchema>["updates"][number];
+
 export type MeetingBookingState = z.infer<typeof meetingBookingStateSchema>;
 export type FindMeetingSlotsInput = z.infer<typeof findMeetingSlotsSchema>;
 export type PrepareMeetingInput = z.infer<typeof prepareMeetingSchema>;

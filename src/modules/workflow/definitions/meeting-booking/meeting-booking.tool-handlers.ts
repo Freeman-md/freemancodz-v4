@@ -14,6 +14,8 @@ import {
   findMeetingSlotsSchema,
   noArgumentsSchema,
   prepareMeetingSchema,
+  updateMeetingContextSchema,
+  type MeetingContextUpdate,
   type FindMeetingSlotsInput,
   type MeetingBookingState,
   type PrepareMeetingInput,
@@ -39,6 +41,14 @@ export async function executeMeetingBookingTool({
 
   if (!args) {
     return active(state, invalidArguments());
+  }
+
+  if (name === "update_meeting_context") {
+    const parsed = updateMeetingContextSchema.safeParse(args);
+
+    return parsed.success
+      ? updateMeetingContext(state, parsed.data.updates)
+      : active(state, invalidArguments());
   }
 
   if (name === FIND_MEETING_SLOTS_TOOL.name) {
@@ -146,23 +156,18 @@ function prepareMeeting(
     return active(state, bookingRecoveryOutput());
   }
 
-  const selectedSlot = state.availableSlots.find((slot) => slotsMatch(slot, input.selectedSlot));
+  const updated = updateMeetingContext(state, [
+    { field: "name", value: input.name },
+    { field: "email", value: input.email },
+    { field: "reason", value: input.reason },
+    { field: "selectedSlot", value: input.selectedSlot },
+  ]);
 
-  if (!selectedSlot) {
-    return active(state, {
-      error: "invalid_slot",
-      message:
-        "The selected slot is not in the latest availability result. Find availability again.",
-    });
-  }
+  if ("error" in updated.output) {return updated;}
 
   const nextState: MeetingBookingState = {
-    ...state,
+    ...updated.state,
     step: "awaiting_confirmation",
-    name: input.name,
-    email: input.email,
-    reason: input.reason,
-    selectedSlot: withLondonTimezone(selectedSlot),
     preparedInteractionId: context.interactionId,
   };
 
@@ -177,6 +182,52 @@ function prepareMeeting(
     },
     requiresConfirmation: true,
     message: "The application displays this saved summary. Ask the visitor to use Confirm booking.",
+  });
+}
+
+function updateMeetingContext(
+  state: MeetingBookingState,
+  updates: MeetingContextUpdate[],
+): WorkflowExecutionResult<MeetingBookingState> {
+  if (state.pendingBooking || state.bookingOperation || state.step === "confirmed")
+    {return active(state, bookingRecoveryOutput());}
+
+  const next = { ...state };
+
+  let changed = false;
+
+  for (const update of updates) {
+    if (update.field === "selectedSlot") {
+      if (typeof update.value === "string") {return active(state, invalidArguments());}
+
+      const slot = state.availableSlots.find((slot) => slotsMatch(slot, update.value));
+
+      if (!slot)
+        {return active(state, {
+          error: "invalid_slot",
+          message:
+            "The selected slot is not in the latest availability result. Find availability again.",
+        });}
+
+      changed ||= !state.selectedSlot || !slotsMatch(state.selectedSlot, slot);
+      next.selectedSlot = withLondonTimezone(slot);
+    } else {
+      if (typeof update.value !== "string") {return active(state, invalidArguments());}
+
+      changed ||= state[update.field] !== update.value;
+      next[update.field] = update.value;
+    }
+  }
+
+  if (changed) {
+    next.step = "collecting";
+    next.preparedInteractionId = null;
+  }
+
+  return active(next, {
+    kind: "context_updated",
+    message:
+      "Meeting details saved. Ask only for information still missing, then prepare the complete summary.",
   });
 }
 

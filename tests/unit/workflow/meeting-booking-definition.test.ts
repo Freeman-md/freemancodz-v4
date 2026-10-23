@@ -72,6 +72,73 @@ async function prepareDefinition(definition: MeetingBookingWorkflowDefinition) {
   );
 }
 
+test("incremental meeting updates are atomic, preserve known details and invalidate only changed preparations", async () => {
+  const definition = new MeetingBookingWorkflowDefinition(
+    createMeetingService(),
+    meetingBookingWorkflowProgress,
+  );
+
+  const update = (state: ReturnType<typeof definition.createInitialState>, updates: unknown[]) =>
+    definition.executeTool(
+      "update_meeting_context",
+      JSON.stringify({ updates }),
+      state,
+      PREPARATION_INTERACTION,
+    );
+
+  const named = await update(definition.createInitialState(startContext), [
+    { field: "name", value: " Visitor " },
+  ]);
+
+  assert.equal(named.state.name, "Visitor");
+  assert.equal(named.state.email, null);
+  const invalid = await update(named.state, [
+    { field: "reason", value: "Discuss work" },
+    { field: "email", value: "invalid" },
+  ]);
+
+  assert.deepEqual(invalid.state, named.state);
+  const duplicate = await update(named.state, [
+    { field: "name", value: "One" },
+    { field: "name", value: "Two" },
+  ]);
+
+  assert.deepEqual(duplicate.state, named.state);
+  const prepared = await prepareDefinition(definition);
+
+  const unchanged = await update(prepared.state, [{ field: "name", value: "Visitor" }]);
+
+  assert.equal(unchanged.state.preparedInteractionId, prepared.state.preparedInteractionId);
+  const corrected = await update(prepared.state, [{ field: "reason", value: "New topic" }]);
+
+  assert.equal(corrected.state.step, "collecting");
+  assert.equal(corrected.state.preparedInteractionId, null);
+  assert.equal(corrected.state.email, prepared.state.email);
+  assert.deepEqual(corrected.state.selectedSlot, prepared.state.selectedSlot);
+  const missingSlot = await update(named.state, [
+    { field: "selectedSlot", value: { start: slot.start, end: slot.end } },
+  ]);
+
+  assert.deepEqual(missingSlot.state, named.state);
+  const refreshed = await definition.executeTool(
+    "find_meeting_slots",
+    '{"startDate":"2099-09-15","endDate":"2099-09-15"}',
+    corrected.state,
+    PREPARATION_INTERACTION,
+  );
+
+  assert.equal(refreshed.state.name, "Visitor");
+  assert.equal(refreshed.state.reason, "New topic");
+  assert.equal(refreshed.state.selectedSlot, null);
+  const frozen = {
+    ...prepared.state,
+    step: "confirmed" as const,
+    bookingOperation: { id: "11111111-1111-4111-8111-111111111111", preparedRevision: 1 },
+  };
+
+  assert.deepEqual((await update(frozen, [{ field: "name", value: "Other" }])).state, frozen);
+});
+
 test("preparation requires a later explicit confirmation transition before booking", async () => {
   let bookingCalls = 0;
 
@@ -90,7 +157,11 @@ test("preparation requires a later explicit confirmation transition before booki
 
   const preparedTools = definition.getTools(prepared.state).map(({ name }) => name);
 
-  assert.deepEqual(preparedTools, ["find_meeting_slots", "prepare_meeting"]);
+  assert.deepEqual(preparedTools, [
+    "find_meeting_slots",
+    "prepare_meeting",
+    "update_meeting_context",
+  ]);
   assert.equal(preparedTools.includes("book_meeting"), false);
 
   const earlyBooking = await definition.executeTool("book_meeting", "{}", prepared.state, {
@@ -315,7 +386,7 @@ test("an unavailable slot is rejected before accepting confirmation", async () =
   assert.deepEqual(result.state.availableSlots, []);
   assert.deepEqual(
     definition.getTools(result.state).map(({ name }) => name),
-    ["find_meeting_slots"],
+    ["find_meeting_slots", "update_meeting_context"],
   );
 });
 

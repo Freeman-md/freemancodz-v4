@@ -1,5 +1,52 @@
 import type { OpenAIResponseTool } from "@/infrastructure/openai/types";
 
+export const UPDATE_MEETING_CONTEXT_TOOL: OpenAIResponseTool = {
+  type: "function",
+  name: "update_meeting_context",
+  strict: true,
+  description:
+    "Save every meeting detail volunteered by the visitor immediately, even before finding availability. Save selectedSlot only from returned availability. This never prepares or books a meeting.",
+  parameters: {
+    type: "object",
+    additionalProperties: false,
+    required: ["updates"],
+    properties: {
+      updates: {
+        type: "array",
+        minItems: 1,
+        maxItems: 4,
+        items: {
+          anyOf: [
+            {
+              type: "object",
+              additionalProperties: false,
+              required: ["field", "value"],
+              properties: {
+                field: { type: "string", enum: ["name", "email", "reason"] },
+                value: { type: "string" },
+              },
+            },
+            {
+              type: "object",
+              additionalProperties: false,
+              required: ["field", "value"],
+              properties: {
+                field: { type: "string", enum: ["selectedSlot"] },
+                value: {
+                  type: "object",
+                  additionalProperties: false,
+                  required: ["start", "end"],
+                  properties: { start: { type: "string" }, end: { type: "string" } },
+                },
+              },
+            },
+          ],
+        },
+      },
+    },
+  },
+};
+
 export const FIND_MEETING_SLOTS_TOOL: OpenAIResponseTool = {
   type: "function",
   name: "find_meeting_slots",
