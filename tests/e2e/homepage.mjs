@@ -30,11 +30,34 @@ const response =
     {
       type: "sources",
       sources: [
-        { id: "journey", title: "Career journey", url: "/#about-journey" },
-        { id: "project", title: "JPScents", url: "/#jpscents" },
+        { id: "journey", title: "Career journey", url: "/#experience" },
+        { id: "project", title: "JPScents", url: "/work/jpscents" },
+        { id: "services", title: "Services", url: "/#services" },
+        { id: "profile", title: "Profile", url: "/#top" },
         { id: "retired", title: "Retired audit", url: "/#audit" },
       ],
     },
+    { type: "done" },
+  ]
+    .map((event) => JSON.stringify(event))
+    .join("\n") + "\n";
+
+const mixedQuestion = "Did Freeman pilot Apollo 11? I also want to leave a message.";
+
+const portfolioNotice = "I couldn’t find enough information in the portfolio to answer that.";
+
+const mixedResponse =
+  [
+    { type: "delta", delta: `${portfolioNotice}\n\n` },
+    { type: "sources", sources: [] },
+    {
+      type: "choice",
+      choice: {
+        question: "What kind of message is this?",
+        options: ["Software consulting", "Collaboration"],
+      },
+    },
+    { type: "delta", delta: portfolioNotice },
     { type: "done" },
   ]
     .map((event) => JSON.stringify(event))
@@ -91,8 +114,13 @@ async function journey(browser, phone) {
 
   page.on("pageerror", (error) => errors.push(error.message));
   await page.route("**/api/chat", async (route) => {
-    requests.push(route.request().postDataJSON());
-    await route.fulfill({ contentType: "application/x-ndjson", body: response });
+    const request = route.request().postDataJSON();
+
+    requests.push(request);
+    await route.fulfill({
+      contentType: "application/x-ndjson",
+      body: request.message === mixedQuestion ? mixedResponse : response,
+    });
   });
 
   const click = (locator) => (phone ? locator.tap() : locator.click());
@@ -231,7 +259,7 @@ async function journey(browser, phone) {
     );
     assert.equal(
       await page.getByRole("link", { name: /JPScents.*jpscents/ }).getAttribute("href"),
-      "/#jpscents",
+      "/work/jpscents",
     );
     assert.equal(await page.getByText("Retired audit").count(), 0);
     await click(closeChat);
@@ -239,15 +267,30 @@ async function journey(browser, phone) {
     await focused(whatsApp);
     if (phone) {
       await page.emulateMedia({ reducedMotion: "no-preference" });
-      await click(launcher);
-      await focused(closeChat);
-      await click(page.getByRole("link", { name: /JPScents.*jpscents/ }));
-      await closeChat.waitFor({ state: "hidden" });
-      await page.waitForURL("**/#jpscents", documentReady);
-      await focused(page.locator("#jpscents"));
-      assert.equal(requests.length, 1);
-      await page.emulateMedia({ reducedMotion: "reduce" });
     }
+
+    await click(launcher);
+    await focused(closeChat);
+    const experienceSource = page.getByRole("link", { name: /Career journey/ });
+
+    if (phone) {
+      await click(experienceSource);
+    } else {
+      await experienceSource.focus();
+      await experienceSource.press("Enter");
+    }
+
+    await closeChat.waitFor({ state: "hidden" });
+    await page.waitForURL("**/#experience", documentReady);
+    await focused(page.locator("#experience[data-portfolio-highlight]"));
+    assert.equal(
+      await page
+        .locator("#experience")
+        .evaluate((heading) => getComputedStyle(heading).animationName),
+      phone ? "portfolio-anchor-highlight" : "none",
+    );
+    assert.equal(requests.length, 1);
+    await page.emulateMedia({ reducedMotion: "reduce" });
 
     const pay4me = page.getByRole("button", { name: /2022–2023 Pay4Me/ });
 
@@ -338,6 +381,38 @@ async function journey(browser, phone) {
     const retiredResponse = await page.request.get(`${base}/admin/projects`);
 
     assert.equal(retiredResponse.status(), 404);
+    for (const [title, hash] of [
+      ["Services", "services"],
+      ["Profile", "top"],
+    ]) {
+      await click(launcher);
+      await focused(closeChat);
+      await click(
+        page
+          .getByRole("link", { name: new RegExp(`^${title}`) })
+          .and(page.locator(`[href="/#${hash}"]`))
+          .and(page.locator(".assistant-sources a")),
+      );
+      await closeChat.waitFor({ state: "hidden" });
+      await page.waitForURL(`**/#${hash}`, documentReady);
+      await focused(page.locator(`#${hash}[data-portfolio-highlight]`));
+    }
+
+    await click(launcher);
+    await focused(closeChat);
+    await click(page.getByRole("link", { name: /JPScents.*jpscents/ }));
+    await page.waitForURL("**/work/jpscents", documentReady);
+    await closeChat.waitFor({ state: "hidden" });
+    await page.getByRole("heading", { name: "JPScents", exact: true, level: 1 }).waitFor();
+    await click(launcher);
+    await message.fill(mixedQuestion);
+    await click(page.getByRole("button", { name: "Send message" }));
+    await page.getByText("What kind of message is this?", { exact: true }).waitFor();
+    await page.getByText("Software consulting", { exact: true }).waitFor();
+    const notice = page.getByText(portfolioNotice, { exact: true });
+
+    await notice.waitFor();
+    assert.equal(await notice.count(), 1);
     assert.deepEqual(errors, []);
     console.log(
       `${browser.browserType().name()} ${phone ? "390px touch" : "1440px keyboard/pointer"}: passed`,

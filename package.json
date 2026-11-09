@@ -21,6 +21,7 @@
     "test": "npm run test:unit && npm run test:integration",
     "portfolio:seed:local": "node --conditions=react-server --import tsx src/entrypoints/maintenance/seed-portfolio.ts",
     "portfolio:seed:production": "node --conditions=react-server --import tsx src/entrypoints/maintenance/seed-portfolio.ts --production",
+    "portfolio:index": "node --conditions=react-server --import tsx src/entrypoints/maintenance/index-portfolio.ts",
     "prisma:migrate": "prisma migrate deploy"
   },
   "dependencies": {

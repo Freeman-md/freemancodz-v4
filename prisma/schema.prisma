@@ -159,3 +159,14 @@ model ProjectService {
   @@index([serviceKey])
   @@map("portfolio_project_services")
 }
+
+model PortfolioSearchDocument {
+  key        String                     @id
+  sourceKind String                     @map("source_kind")
+  sourceKey  String                     @map("source_key")
+  title      String
+  excerpt    String
+  embedding  Unsupported("vector(1536)")
+
+  @@map("portfolio_search_documents")
+}

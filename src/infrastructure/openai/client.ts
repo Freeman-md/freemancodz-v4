@@ -23,6 +23,7 @@ export class OpenAIClient implements OpenAITransport {
         instructions: request.instructions,
         input: this.toResponseInput(request.input),
         tools: this.toFunctionTools(request.tools),
+        tool_choice: request.requireTool ? "required" : undefined,
         previous_response_id: request.previousResponseId,
         store: true,
         stream: true,

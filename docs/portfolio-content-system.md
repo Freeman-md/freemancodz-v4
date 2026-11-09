@@ -34,3 +34,16 @@ Repeat this sequence on an isolated Preview database before production. Set its 
 For a new empty database, run `npm run prisma:migrate`, then preview and apply the seed for that target. The historical Audit presentation and portfolio cleanup migrations now allow empty database replay. Their migration names remain unchanged. Existing databases use the staged `migrate deploy` procedure above. `prisma migrate dev` may flag changed checksums and ask to reset the database.
 
 If a local migration failed and the local data can be discarded, follow the [local reset and seed instructions](../README.md#local-development). If the data must be kept, inspect `npx prisma migrate status` and the failed migration before resolving anything.
+
+## Refresh assistant search
+
+Apply the additive search migration before the first refresh: `npm run prisma:migrate` for development or `npm run prisma:migrate:production` for production. The indexer uses the same database target checks as the seed and needs `OPENAI_API_KEY` to apply a refresh.
+
+1. Preview and apply the seed for the intended target using the commands above.
+2. Rebuild and verify the site. For a new project, open its published `/work/<slug>` page before indexing it.
+3. Run `npm run portfolio:index` in development or `npm run portfolio:index -- --production --apply` for production. The production command without `--apply` lists the document keys without embedding or writing. A failed refresh leaves the previous index intact.
+4. Ask the assistant about the changed content and open its source link.
+
+If hosted Preview shares the production database, keep seed experiments, failure injection and reset rehearsals on disposable PostgreSQL. Refresh the shared index only from the published portfolio.
+
+Hosted Preview chat also needs its own `RATE_LIMIT_HMAC_SECRET` and access to `OPENAI_API_KEY`. Scope the rate-limit secret to the intended Preview environment or branch, then redeploy so the new deployment receives it.

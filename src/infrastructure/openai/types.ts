@@ -16,6 +16,7 @@ export type OpenAIResponseRequest = {
   input: OpenAIResponseInputItem[];
   instructions: string;
   tools: OpenAIResponseTool[];
+  requireTool?: boolean;
   previousResponseId: string | null;
   signal: AbortSignal;
 };

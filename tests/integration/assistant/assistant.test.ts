@@ -68,10 +68,12 @@ function createAssistant({
     ),
   rateLimit,
   meeting,
+  portfolioSearch,
 }: {
   response?: (request: OpenAIResponseRequest) => ReturnType<OpenAITransport["streamResponse"]>;
   rateLimit?: Pick<RateLimitService, "consume">;
   meeting?: MeetingServiceClient;
+  portfolioSearch?: ConstructorParameters<typeof AssistantService>[3];
 } = {}) {
   const inputs: OpenAIResponseRequest[] = [];
 
@@ -123,7 +125,7 @@ function createAssistant({
     { info() {}, error() {} },
   );
 
-  const assistantService = new AssistantService(openai, logger, workflowService);
+  const assistantService = new AssistantService(openai, logger, workflowService, portfolioSearch);
 
   const rateLimitService: Pick<RateLimitService, "consume"> = rateLimit ?? {
     consume: async (input) => {
@@ -662,35 +664,335 @@ test("a restored workflow supplies known progress to the model and public stream
   assert.doesNotMatch(output, /preparedInteractionId/);
 });
 
-test("a portfolio question uses the temporary Work notice without legacy tools or citations", async () => {
-  const notice =
-    "Portfolio answers are temporarily unavailable. You can browse the projects on [Work](/work).";
+function portfolioCall(query: string | null, id = "call_search", workflowRequested = false) {
+  return {
+    type: "response.output_item.done",
+    item: {
+      type: "function_call",
+      call_id: id,
+      name: "search_portfolio",
+      arguments: JSON.stringify({ query, workflowRequested }),
+    },
+  };
+}
 
-  const { inputs, post } = createAssistant({
+for (const [message, query, title, url] of [
+  ["What was your role there?", "Freeman's role on JPScents", "JPScents", "/work/jpscents"],
+  ["Where has Freeman worked?", "Freeman work experience", "Experience", "/#experience"],
+  [
+    "Can Freeman automate a process?",
+    "Freeman process automation services",
+    "Services",
+    "/#services",
+  ],
+]) {
+  test(`portfolio search grounds the answer to: ${message}`, async () => {
+    const searched: string[] = [];
+
+    const excerpt = `Published evidence for ${title}`;
+
+    const { inputs, post } = createAssistant({
+      portfolioSearch: {
+        search: async (value) => {
+          searched.push(value);
+
+          return [{ excerpt, source: { id: title, title, url } }];
+        },
+      },
+      response: async (request) => {
+        if (request.input[0]?.type === "function_call_output") {
+          assert.ok(JSON.stringify(request.input).includes(excerpt));
+          assert.ok(request.tools.every(({ name }) => name !== "search_portfolio"));
+
+          return events(
+            { type: "response.output_text.delta", delta: "[[GROUND" },
+            { type: "response.output_text.delta", delta: "ED]]" },
+            { type: "response.output_text.delta", delta: excerpt },
+            { type: "response.completed", response: { id: "resp_answer" } },
+          );
+        }
+
+        assert.equal(request.requireTool, true);
+        assert.equal(request.previousResponseId, "resp_prior");
+        assert.ok(request.tools.some(({ name }) => name === "search_portfolio"));
+
+        return events(
+          { type: "response.output_text.delta", delta: "Discard this preamble" },
+          portfolioCall(query),
+          portfolioCall(query, "duplicate"),
+          { type: "response.completed", response: { id: "resp_search" } },
+        );
+      },
+    });
+
+    const output = await readChatResponse(
+      await post(chatRequest({ message, previousResponseId: "resp_prior" })),
+    );
+
+    assert.deepEqual(searched, [query]);
+    assert.equal(inputs.length, 2);
+    assert.ok(output.includes(excerpt));
+    assert.ok(output.includes(url));
+    assert.doesNotMatch(output, /Discard this preamble/);
+  });
+}
+
+for (const unavailable of [false, true]) {
+  test(`portfolio search returns a safe limitation when ${unavailable ? "unavailable" : "empty"}`, async () => {
+    const { post, workflowService } = createAssistant({
+      portfolioSearch: {
+        search: async () => {
+          if (unavailable) {
+            throw new Error("private provider error");
+          }
+
+          return [];
+        },
+      },
+      response: async (request) => {
+        assert.notEqual(
+          request.input[0]?.type,
+          "function_call_output",
+          "No provider continuation is needed for a search failure",
+        );
+
+        return events(portfolioCall("Freeman astronaut missions"), {
+          type: "response.completed",
+          response: { id: "resp_unanswered_call" },
+        });
+      },
+    });
+
+    const active = unavailable
+      ? await workflowService.start("contact", {
+          originChannel: "web",
+          originPage: null,
+          originEntry: null,
+        })
+      : null;
+
+    const output = await readChatResponse(
+      await post(
+        chatRequest({
+          message: "What astronaut missions did Freeman do?",
+          previousResponseId: "resp_prior",
+          workflowInstanceId: active?.id,
+        }),
+      ),
+    );
+
+    assert.match(output, unavailable ? /couldn’t search/ : /enough/);
+    assert.match(output, /"sources":\[\]/);
+    assert.doesNotMatch(output, /Unsupported claim|private provider error/);
+    assert.match(output, /"responseId":"resp_prior"/);
+    assert.doesNotMatch(output, /resp_unanswered_call/);
+    if (active) {
+      assert.ok(output.includes(active.id));
+      assert.equal(
+        (await workflowService.getAssistantContext(active.id)).instance?.status,
+        "active",
+      );
+    }
+  });
+}
+
+test("a direct completion cannot bypass the required portfolio routing step", async () => {
+  const { post } = createAssistant({
+    portfolioSearch: {
+      search: async () => {
+        throw new Error("Search was not called");
+      },
+    },
     response: async (request) => {
-      assert.ok(request.instructions.includes(notice));
-      assert.doesNotMatch(request.instructions, /search_website/);
+      assert.equal(request.requireTool, true);
 
       return events(
-        { type: "response.output_text.delta", delta: notice },
-        { type: "response.completed", response: { id: "resp_notice" } },
+        { type: "response.output_text.delta", delta: "Freeman built a fictional perfume formula." },
+        { type: "response.completed", response: { id: "resp_unsupported_direct_answer" } },
       );
+    },
+  });
+
+  const output = await readChatResponse(
+    await post(chatRequest({ message: "What did Freeman build for JPScents?" })),
+  );
+
+  assert.doesNotMatch(output, /fictional perfume|resp_unsupported_direct_answer/);
+  assert.match(output, /"sources":\[\]/);
+  assert.match(output, /"type":"done"/);
+});
+
+test("ordinary conversation can continue without calling the embedding provider", async () => {
+  let queries = 0;
+
+  const { post } = createAssistant({
+    portfolioSearch: {
+      search: async () => {
+        queries += 1;
+
+        return [];
+      },
+    },
+    response: async (request) => {
+      if (request.requireTool) {
+        assert.deepEqual(
+          request.tools.map(({ name }) => name),
+          ["search_portfolio"],
+        );
+
+        return events(portfolioCall(null), {
+          type: "response.completed",
+          response: { id: "resp_route" },
+        });
+      }
+
+      assert.match(JSON.stringify(request.input), /no_portfolio_facts_needed/);
+
+      return events(
+        { type: "response.output_text.delta", delta: "Hello! How can I help?" },
+        { type: "response.completed", response: { id: "resp_hello" } },
+      );
+    },
+  });
+
+  const output = await readChatResponse(await post(chatRequest({ message: "Hello!" })));
+
+  assert.equal(queries, 0);
+  assert.match(output, /Hello! How can I help/);
+  assert.match(output, /"sources":\[\]/);
+});
+
+test("an ungrounded answer drops unrelated matches even if the model writes a limitation", async () => {
+  const { post } = createAssistant({
+    portfolioSearch: {
+      search: async () => [
+        {
+          excerpt: "Work experience: Pay4Me and Novier Labs.",
+          source: { id: "experience", title: "Experience", url: "/#experience" },
+        },
+      ],
+    },
+    response: async (request) => {
+      if (request.requireTool) {
+        return events(portfolioCall("Microsoft employment history"), {
+          type: "response.completed",
+          response: { id: "resp_search" },
+        });
+      }
+
+      assert.match(request.instructions, /GROUNDED/);
+
+      return events(
+        { type: "response.output_text.delta", delta: "I couldn’t find Microsoft in the snippets." },
+        { type: "response.output_text.delta", delta: " The Experience page is worth a look." },
+        { type: "response.completed", response: { id: "resp_unsupported" } },
+      );
+    },
+  });
+
+  const output = await readChatResponse(
+    await post(chatRequest({ message: "How long did Freeman work at Microsoft?" })),
+  );
+
+  assert.match(output, /couldn’t find enough/);
+  assert.match(output, /"sources":\[\]/);
+  assert.doesNotMatch(output, /Microsoft in the snippets|worth a look|\/#experience/);
+});
+
+test("a mixed Contact turn keeps the search limitation if the workflow continuation fails", async () => {
+  const { post } = createAssistant({
+    portfolioSearch: {
+      search: async () => {
+        throw new Error("provider offline");
+      },
+    },
+    response: async (request) => {
+      if (request.requireTool) {
+        return events(portfolioCall("JPScents", "call_search", true), {
+          type: "response.completed",
+          response: { id: "resp_search" },
+        });
+      }
+
+      throw new Error("continuation offline");
     },
   });
 
   const output = await readChatResponse(
     await post(
       chatRequest({
-        message: "What has Freeman built?",
-        previousResponseId: "resp_from_previous_release",
+        message: "I want to leave a message. Also, what did Freeman build for JPScents?",
+        workflowStart: {
+          workflowId: "contact",
+          originPage: "/",
+          originEntry: "assistant-starter-contact",
+        },
       }),
     ),
   );
 
-  assert.equal(inputs.length, 1);
-  assert.ok(inputs[0].tools.every(({ name }) => name !== "search_website"));
-  assert.ok(output.includes(notice));
+  assert.equal(output.match(/couldn’t search the portfolio/g)?.length, 1);
+  assert.match(output, /"workflowId":"contact"/);
+  assert.match(output, /couldn’t continue the request/);
+  assert.match(output, /"type":"done"/);
+  assert.doesNotMatch(output, /"type":"error"|provider offline|continuation offline/);
+});
+
+test("a portfolio limitation remains after a Contact choice clears earlier text", async () => {
+  const choice = {
+    question: "What kind of message is this?",
+    options: ["Software consulting", "Collaboration"],
+  };
+
+  const { post } = createAssistant({
+    portfolioSearch: { search: async () => [] },
+    response: async (request) => {
+      if (request.requireTool) {
+        return events(portfolioCall("Apollo 11 lunar module pilot", "call_search", true), {
+          type: "response.completed",
+          response: { id: "resp_search" },
+        });
+      }
+
+      if (request.tools.length) {
+        return toolResponse("resp_options", {
+          name: "ask_user_choice",
+          arguments: JSON.stringify(choice),
+        });
+      }
+
+      return textResponse("resp_choice_ready", "Duplicate workflow copy that should stay hidden");
+    },
+  });
+
+  const output = await readChatResponse(
+    await post(
+      chatRequest({
+        message: "Did Freeman pilot Apollo 11? I also want to leave a message.",
+        workflowStart: {
+          workflowId: "contact",
+          originPage: "/",
+          originEntry: "assistant-starter-contact",
+        },
+      }),
+    ),
+  );
+
+  const parsed = output
+    .trim()
+    .split("\n")
+    .map((line) => assistantStreamEventSchema.parse(JSON.parse(line)));
+
+  const choiceIndex = parsed.findIndex((event) => event.type === "choice");
+
+  assert.ok(choiceIndex >= 0);
+  assert.deepEqual(parsed[choiceIndex], { type: "choice", choice });
+  assert.deepEqual(parsed[choiceIndex + 1], {
+    type: "delta",
+    delta: "I couldn’t find enough information in the portfolio to answer that.",
+  });
   assert.match(output, /"sources":\[\]/);
+  assert.doesNotMatch(output, /Duplicate workflow copy/);
 });
 
 test("starting a workflow changes instructions and tools on the next iteration in one request", async () => {

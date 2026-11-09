@@ -11,7 +11,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { followHomeAnchor } from "./follow-home-anchor";
+import { followHomeAnchor, highlightPortfolioAnchor } from "./follow-home-anchor";
 import { ThemeToggle } from "./ThemeToggle";
 import "./navbar.css";
 
@@ -55,6 +55,10 @@ export function Navbar() {
 
     if (!initialHash) {
       return;
+    }
+
+    if (window.location.pathname === "/") {
+      highlightPortfolioAnchor(document.getElementById(initialHash.slice(1)));
     }
 
     let current = true;

@@ -14,3 +14,28 @@ export const GLOBAL_ASSISTANT_TOOLS: OpenAIResponseTool[] = [
     parameters: choiceParameters,
   },
 ];
+
+export const PORTFOLIO_SEARCH_TOOL: OpenAIResponseTool = {
+  type: "function",
+  name: "search_portfolio",
+  description:
+    "Retrieve factual excerpts from the published portfolio. Use a standalone query resolving any references from prior turns. Call before answering a portfolio question.",
+  strict: true,
+  parameters: {
+    type: "object",
+    properties: {
+      query: {
+        type: ["string", "null"],
+        description:
+          "A short standalone search query. Use null only if the turn needs no portfolio facts.",
+      },
+      workflowRequested: {
+        type: "boolean",
+        description:
+          "True only when the visitor is also explicitly asking to start or continue Contact or Meeting.",
+      },
+    },
+    required: ["query", "workflowRequested"],
+    additionalProperties: false,
+  },
+};

@@ -88,7 +88,7 @@ export function FloatingPortfolioChat() {
     const href = pendingSource.current;
 
     pendingSource.current = null;
-    followHomeAnchor(href);
+    followHomeAnchor(href, true);
   }
 
   const panel = (
@@ -121,7 +121,7 @@ export function FloatingPortfolioChat() {
         messagesEndRef={messagesEndRef}
         shouldReduceMotion={shouldReduceMotion}
         onStarterAction={(action) => void handleStarterAction(action)}
-        onInternalSource={isMobile ? closeForSource : undefined}
+        onInternalSource={closeForSource}
       >
         {workflowInstance && (
           <AssistantWorkflowConfirmation

@@ -78,3 +78,24 @@ html:has(.public-site) {
     scroll-behavior: auto;
   }
 }
+
+[data-portfolio-highlight] {
+  outline: 2px solid var(--color-signal-500, currentColor);
+  outline-offset: 4px;
+  animation: portfolio-anchor-highlight 1.6s ease-out both;
+}
+
+@keyframes portfolio-anchor-highlight {
+  65% {
+    outline-color: var(--color-signal-500, currentColor);
+  }
+  100% {
+    outline-color: transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-portfolio-highlight] {
+    animation: none;
+  }
+}
