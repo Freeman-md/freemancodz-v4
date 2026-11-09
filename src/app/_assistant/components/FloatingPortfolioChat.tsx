@@ -11,7 +11,7 @@ import { AssistantWorkflowProgress } from "./AssistantWorkflowProgress";
 import { useAssistant } from "../hooks/useAssistant";
 import { useAssistantSurface } from "../hooks/useAssistantSurface";
 import { MAX_MESSAGE_LENGTH } from "../constants";
-import { followHomeAnchor } from "../../_utils/follow-home-anchor";
+import { followHomeAnchor } from "../../_components/layout/follow-home-anchor";
 
 export function FloatingPortfolioChat() {
   const {

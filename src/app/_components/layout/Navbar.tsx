@@ -11,7 +11,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { followHomeAnchor } from "../../_utils/follow-home-anchor";
+import { followHomeAnchor } from "./follow-home-anchor";
 import { ThemeToggle } from "./ThemeToggle";
 import "./navbar.css";
 
