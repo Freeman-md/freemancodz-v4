@@ -230,6 +230,7 @@ test("sources remap truthful destinations and omit retired sections", async () =
             { id: "work", title: "Debby Art & Prints", url: "/#debby-arts" },
             { id: "journey", title: "Journey", url: "/#about-journey" },
             { id: "audit", title: "Audit", url: "/#audit" },
+            { id: "audit-proof", title: "Audit proof", url: "/#audit-proof" },
             { id: "more", title: "More work", url: "/#work-additional" },
             { id: "external", title: "External", url: "//example.com/reference" },
           ],

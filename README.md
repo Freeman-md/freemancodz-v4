@@ -8,6 +8,14 @@ See the [portfolio operations guide](docs/portfolio-content-system.md) for the f
 
 Install dependencies with `npm ci`. Set the server variables described in `.env.example`, then run `npm run dev` against a migrated and seeded local database. Development reads the seeded database. Production builds prerender the portfolio from PostgreSQL. Published portfolio pages serve the built content even when the database is unavailable. Chat and its workflows still use the database at runtime.
 
+To start over on local Supabase, confirm Prisma shows `127.0.0.1:54332` before accepting the reset prompt. Reset deletes local data; the seed restores the portfolio content.
+
+```bash
+npx prisma migrate reset && npm run portfolio:seed:local -- --apply
+```
+
+For a new empty database, use `npm run prisma:migrate` in place of the reset.
+
 Prisma migrations under `prisma/migrations` are the schema history. Additive migration, seeding, deployment, and legacy cleanup are separate operations. Follow the staged release procedure before upgrading an existing database.
 
 ## Verification
