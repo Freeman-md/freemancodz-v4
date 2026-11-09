@@ -664,7 +664,7 @@ test("a restored workflow supplies known progress to the model and public stream
   assert.doesNotMatch(output, /preparedInteractionId/);
 });
 
-function portfolioCall(query: string, id = "call_search") {
+function portfolioCall(query: string | null, id = "call_search") {
   return {
     type: "response.output_item.done",
     item: {
@@ -710,6 +710,7 @@ for (const [message, query, title, url] of [
           );
         }
 
+        assert.equal(request.requireTool, true);
         assert.equal(request.previousResponseId, "resp_prior");
         assert.ok(request.tools.some(({ name }) => name === "search_portfolio"));
 
@@ -736,7 +737,7 @@ for (const [message, query, title, url] of [
 
 for (const unavailable of [false, true]) {
   test(`portfolio search returns a safe limitation when ${unavailable ? "unavailable" : "empty"}`, async () => {
-    const { post } = createAssistant({
+    const { post, workflowService } = createAssistant({
       portfolioSearch: {
         search: async () => {
           if (unavailable) {
@@ -746,27 +747,151 @@ for (const unavailable of [false, true]) {
           return [];
         },
       },
-      response: async (request) =>
-        request.input[0]?.type === "function_call_output"
-          ? events(
-              { type: "response.output_text.delta", delta: "Unsupported claim" },
-              { type: "response.completed", response: { id: "resp_answer" } },
-            )
-          : events(portfolioCall("Freeman astronaut missions"), {
-              type: "response.completed",
-              response: { id: "resp_search" },
-            }),
+      response: async (request) => {
+        assert.notEqual(
+          request.input[0]?.type,
+          "function_call_output",
+          "No provider continuation is needed for a search failure",
+        );
+
+        return events(portfolioCall("Freeman astronaut missions"), {
+          type: "response.completed",
+          response: { id: "resp_unanswered_call" },
+        });
+      },
     });
 
+    const active = unavailable
+      ? await workflowService.start("contact", {
+          originChannel: "web",
+          originPage: null,
+          originEntry: null,
+        })
+      : null;
+
     const output = await readChatResponse(
-      await post(chatRequest({ message: "What astronaut missions did Freeman do?" })),
+      await post(
+        chatRequest({
+          message: "What astronaut missions did Freeman do?",
+          previousResponseId: "resp_prior",
+          workflowInstanceId: active?.id,
+        }),
+      ),
     );
 
     assert.match(output, unavailable ? /couldn’t search/ : /enough/);
     assert.match(output, /"sources":\[\]/);
     assert.doesNotMatch(output, /Unsupported claim|private provider error/);
+    assert.match(output, /"responseId":"resp_prior"/);
+    assert.doesNotMatch(output, /resp_unanswered_call/);
+    if (active) {
+      assert.ok(output.includes(active.id));
+      assert.equal(
+        (await workflowService.getAssistantContext(active.id)).instance?.status,
+        "active",
+      );
+    }
   });
 }
+
+test("a direct completion cannot bypass the required portfolio routing step", async () => {
+  const { post } = createAssistant({
+    portfolioSearch: {
+      search: async () => {
+        throw new Error("Search was not called");
+      },
+    },
+    response: async (request) => {
+      assert.equal(request.requireTool, true);
+
+      return events(
+        { type: "response.output_text.delta", delta: "Freeman built a fictional perfume formula." },
+        { type: "response.completed", response: { id: "resp_unsupported_direct_answer" } },
+      );
+    },
+  });
+
+  const output = await readChatResponse(
+    await post(chatRequest({ message: "What did Freeman build for JPScents?" })),
+  );
+
+  assert.doesNotMatch(output, /fictional perfume|resp_unsupported_direct_answer/);
+  assert.match(output, /"sources":\[\]/);
+  assert.match(output, /"type":"done"/);
+});
+
+test("ordinary conversation can continue without calling the embedding provider", async () => {
+  let queries = 0;
+
+  const { post } = createAssistant({
+    portfolioSearch: {
+      search: async () => {
+        queries += 1;
+
+        return [];
+      },
+    },
+    response: async (request) => {
+      if (request.requireTool) {
+        return events(portfolioCall(null), {
+          type: "response.completed",
+          response: { id: "resp_route" },
+        });
+      }
+
+      assert.match(JSON.stringify(request.input), /no_portfolio_facts_needed/);
+
+      return events(
+        { type: "response.output_text.delta", delta: "Hello! How can I help?" },
+        { type: "response.completed", response: { id: "resp_hello" } },
+      );
+    },
+  });
+
+  const output = await readChatResponse(await post(chatRequest({ message: "Hello!" })));
+
+  assert.equal(queries, 0);
+  assert.match(output, /Hello! How can I help/);
+  assert.match(output, /"sources":\[\]/);
+});
+
+test("an unsupported answer drops unrelated matches and never leaks the streamed verdict", async () => {
+  const { post } = createAssistant({
+    portfolioSearch: {
+      search: async () => [
+        {
+          excerpt: "Work experience: Pay4Me and Novier Labs.",
+          source: { id: "experience", title: "Experience", url: "/#experience" },
+        },
+      ],
+    },
+    response: async (request) => {
+      if (request.requireTool) {
+        return events(portfolioCall("Microsoft employment history"), {
+          type: "response.completed",
+          response: { id: "resp_search" },
+        });
+      }
+
+      assert.match(request.instructions, /NO_PORTFOLIO_EVIDENCE/);
+
+      return events(
+        { type: "response.output_text.delta", delta: " [[" },
+        { type: "response.output_text.delta", delta: "NO_PORTFOLIO_" },
+        { type: "response.output_text.delta", delta: "EVIDENCE]]" },
+        { type: "response.completed", response: { id: "resp_unsupported" } },
+      );
+    },
+  });
+
+  const output = await readChatResponse(
+    await post(chatRequest({ message: "How long did Freeman work at Microsoft?" })),
+  );
+
+  assert.match(output, /couldn’t find enough/);
+  assert.match(output, /"sources":\[\]/);
+  assert.doesNotMatch(output, /NO_PORTFOLIO_EVIDENCE|\/#experience/);
+});
 
 test("starting a workflow changes instructions and tools on the next iteration in one request", async () => {
   const { inputs, post } = createAssistant({

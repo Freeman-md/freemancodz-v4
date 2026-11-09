@@ -23,7 +23,13 @@ export const PORTFOLIO_SEARCH_TOOL: OpenAIResponseTool = {
   strict: true,
   parameters: {
     type: "object",
-    properties: { query: { type: "string", description: "A short standalone search query." } },
+    properties: {
+      query: {
+        type: ["string", "null"],
+        description:
+          "A short standalone search query. Use null only if the turn needs no portfolio facts.",
+      },
+    },
     required: ["query"],
     additionalProperties: false,
   },

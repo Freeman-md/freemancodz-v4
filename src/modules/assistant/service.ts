@@ -19,11 +19,13 @@ import type { IWorkflowService } from "@/modules/workflow/interfaces";
 import type { WorkflowAssistantContext, WorkflowPublicInstance } from "@/modules/workflow/types";
 import type { AssistantChoice } from "@/contracts/assistant-choice.contract";
 
-const searchArguments = z.strictObject({ query: z.string().trim().min(1).max(240) });
+const searchArguments = z.strictObject({ query: z.string().trim().min(1).max(240).nullable() });
 
 const searchUnavailable = "I couldn’t search the portfolio just now. Please try again shortly.";
 
 const searchEmpty = "I couldn’t find enough information in the portfolio to answer that.";
+
+const noEvidence = "[[NO_PORTFOLIO_EVIDENCE]]";
 
 export class AssistantService {
   constructor(
@@ -68,7 +70,7 @@ export class AssistantService {
 
         try {
           await this.prepareRequest(request, state);
-          await this.runResponseLoop(state, write);
+          await this.runResponseLoop(state, write, request.previousResponseId);
           if (!state.signal.aborted) {
             this.writeFinalEvents(state, write);
           }
@@ -220,7 +222,11 @@ export class AssistantService {
     }
   }
 
-  private async runResponseLoop(state: ResponseState, write: WriteEvent) {
+  private async runResponseLoop(
+    state: ResponseState,
+    write: WriteEvent,
+    previousCheckpoint: string | null,
+  ) {
     for (let iteration = 0; iteration < MAX_TOOL_CALL_ITERATIONS; iteration += 1) {
       state.operation = "workflow_context";
       const workflowContext = await this.workflow.getAssistantContext(
@@ -231,36 +237,43 @@ export class AssistantService {
       const request = this.createModelRequest(state, workflowContext, iteration);
 
       state.operation = "provider_response";
-      const failedSearch = state.search === "empty" || state.search === "unavailable";
-
-      const suppressAnswer =
-        failedSearch && !state.activeWorkflowInstanceId && !state.workflowRequested;
-
       const beforeSearch = request.tools.some(({ name }) => name === PORTFOLIO_SEARCH_TOOL.name);
 
       const buffered: AssistantStreamEvent[] = [];
 
+      const checkEvidence = state.search === "found";
+
+      const evidenceWriter = checkEvidence ? this.groundAnswer(state, write) : null;
+
       const toolCalls = await this.streamModelResponse(
         request,
         state,
-        beforeSearch || suppressAnswer ? (event) => buffered.push(event) : write,
+        beforeSearch ? (event) => buffered.push(event) : (evidenceWriter?.write ?? write),
       );
-
-      const searched = toolCalls.some(({ name }) => name === PORTFOLIO_SEARCH_TOOL.name);
-
-      if (suppressAnswer) {
-        state.didStreamText = false;
-      } else if (!searched && !state.signal.aborted) {
-        for (const event of buffered) {
-          write(event);
-        }
-      } else if (searched && beforeSearch) {
-        state.didStreamText = false;
-      }
 
       if (state.signal.aborted) {
         return;
       }
+
+      const searched = toolCalls.some(({ name }) => name === PORTFOLIO_SEARCH_TOOL.name);
+
+      if (request.requireTool && toolCalls.length === 0) {
+        // A direct completion bypassed the routing step and may contain unsupported facts.
+        state.didStreamText = false;
+        state.responseId = previousCheckpoint;
+
+        return;
+      }
+
+      if (searched && beforeSearch) {
+        state.didStreamText = false;
+      } else {
+        for (const event of buffered) {
+          write(event);
+        }
+      }
+
+      evidenceWriter?.finish();
 
       if (toolCalls.length === 0) {
         break;
@@ -273,6 +286,17 @@ export class AssistantService {
       state.operation = "tool_execution";
       state.input = await this.executeToolBatch(toolCalls, state, workflowContext, write);
       if (state.signal.aborted) {
+        return;
+      }
+
+      if (
+        (state.search === "empty" || state.search === "unavailable") &&
+        !state.workflowRequested &&
+        !state.choice
+      ) {
+        // Finish with the known limitation; do not resume an unanswered provider tool call.
+        state.responseId = previousCheckpoint;
+
         return;
       }
 
@@ -313,20 +337,76 @@ export class AssistantService {
       ? workflowContext.tools.filter(({ name }) => name !== START_WORKFLOW_TOOL_NAME)
       : workflowContext.tools;
 
+    const instructions = [
+      CHAT_SYSTEM_PROMPT,
+      workflowInstructions,
+      state.search === "found"
+        ? `If the returned excerpts do not support the requested portfolio fact, reply with exactly ${noEvidence} so the application can show the limitation without displaying unrelated sources.`
+        : "",
+      state.search === "empty" || state.search === "unavailable"
+        ? "The application displays the portfolio search limitation. Continue the visitor workflow without making portfolio claims."
+        : "",
+    ]
+      .filter(Boolean)
+      .join("\n\n");
+
+    const tools = state.workflowConflict
+      ? GLOBAL_ASSISTANT_TOOLS.filter(({ name }) => name === "ask_user_choice")
+      : [
+          ...GLOBAL_ASSISTANT_TOOLS,
+          ...workflowTools,
+          ...(this.portfolioSearch && state.search === null ? [PORTFOLIO_SEARCH_TOOL] : []),
+        ];
+
     return {
       input: state.input,
-      instructions: workflowInstructions
-        ? `${CHAT_SYSTEM_PROMPT}\n\n${workflowInstructions}`
-        : CHAT_SYSTEM_PROMPT,
-      tools: state.workflowConflict
-        ? GLOBAL_ASSISTANT_TOOLS.filter(({ name }) => name === "ask_user_choice")
-        : [
-            ...GLOBAL_ASSISTANT_TOOLS,
-            ...workflowTools,
-            ...(this.portfolioSearch && state.search === null ? [PORTFOLIO_SEARCH_TOOL] : []),
-          ],
+      instructions,
+      tools,
+      requireTool: iteration === 0 && tools.some(({ name }) => name === PORTFOLIO_SEARCH_TOOL.name),
       previousResponseId: state.responseId,
       signal: state.signal,
+    };
+  }
+
+  private groundAnswer(state: ResponseState, write: WriteEvent) {
+    let pending = "";
+
+    let verdict: "stream" | "insufficient" | null = null;
+
+    return {
+      write: (event: AssistantStreamEvent) => {
+        if (verdict === "insufficient") {
+          return;
+        }
+
+        if (event.type !== "delta" || verdict === "stream") {
+          write(event);
+
+          return;
+        }
+
+        pending += event.delta;
+        const prefix = pending.trimStart();
+
+        if (prefix.startsWith(noEvidence)) {
+          verdict = "insufficient";
+          state.sources = [];
+          write({ type: "delta", delta: searchEmpty });
+
+          return;
+        }
+
+        if (!noEvidence.startsWith(prefix)) {
+          verdict = "stream";
+          write({ type: "delta", delta: pending });
+        }
+      },
+      finish: () => {
+        if (verdict === null && pending.trim()) {
+          state.sources = [];
+          write({ type: "delta", delta: searchEmpty });
+        }
+      },
     };
   }
 
@@ -494,6 +574,12 @@ export class AssistantService {
 
       const { query } = searchArguments.parse(args);
 
+      if (query === null) {
+        state.search = "not_needed";
+
+        return { status: "no_portfolio_facts_needed" };
+      }
+
       const matches = await this.portfolioSearch.search(query, state.signal);
 
       if (!matches.length) {
@@ -548,6 +634,14 @@ export class AssistantService {
   }
 
   private writeFinalEvents(state: ResponseState, write: WriteEvent) {
+    const failedSearch = state.search === "empty" || state.search === "unavailable";
+
+    const limitation = state.search === "unavailable" ? searchUnavailable : searchEmpty;
+
+    if (failedSearch && (state.didStreamText || state.choice)) {
+      write({ type: "delta", delta: `\n\n${limitation}` });
+    }
+
     write({
       type: "sources",
       sources: state.completed && state.didStreamText && !state.choice ? state.sources : [],
@@ -642,7 +736,7 @@ type ResponseState = {
   didStreamText: boolean;
   choice: AssistantChoice | null;
   workflowRequested: boolean;
-  search: "found" | "empty" | "unavailable" | null;
+  search: "found" | "empty" | "unavailable" | "not_needed" | null;
   sources: AssistantSource[];
   completed: boolean;
   operation: string;
