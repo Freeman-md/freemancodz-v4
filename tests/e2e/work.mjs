@@ -66,7 +66,7 @@ async function journey(browser, phone) {
     const more = page.getByRole("link", { name: "View rest of work" });
 
     await click(more);
-    await page.waitForURL("**/work");
+    await page.waitForURL("**/work", documentReady);
     await page.getByRole("heading", { name: "/ SELECTED WORK" }).waitFor();
     await page.locator('head link[rel="canonical"][href$="/work"]').waitFor({ state: "attached" });
     assert.match(await page.title(), /^Work/);
@@ -129,7 +129,7 @@ async function journey(browser, phone) {
 
     assert.equal(await assistantCard.getByRole("link").count(), 1);
     await click(page.getByRole("link", { name: "Read JPScents case study" }));
-    await page.waitForURL("**/work/jpscents");
+    await page.waitForURL("**/work/jpscents", documentReady);
     await page.getByRole("heading", { name: "JPScents", level: 1 }).waitFor();
     const refreshed = await page.reload(documentReady);
 
@@ -221,7 +221,7 @@ async function journey(browser, phone) {
       );
     }
 
-    await page.waitForURL("**/#experience");
+    await page.waitForURL("**/#experience", documentReady);
     await page.waitForFunction(() => {
       const anchor = document.querySelector("#experience");
 
