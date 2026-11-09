@@ -13,11 +13,9 @@ export type ProjectCardData = {
   category: string;
   kind: ProjectKind;
   cover: CardArtwork;
-  cardCover?: CardArtwork;
   featured?: { problem: string; outcome: string; questions: readonly string[] };
   links: readonly { kind: "live-site" | "repository"; label: string; url: string }[];
-  catalogueTags: readonly string[];
-  suggestedQuestions: readonly string[];
+  questions: readonly string[];
 };
 
 export function ProjectCard({
@@ -27,7 +25,7 @@ export function ProjectCard({
   project: ProjectCardData;
   featured?: boolean;
 }) {
-  const art = project.cardCover ?? project.cover;
+  const art = project.cover;
 
   const excerpts = featured ? project.featured : undefined;
 
@@ -82,13 +80,6 @@ export function ProjectCard({
           </h3>
           <p>{context}</p>
         </div>
-        {!featured && (
-          <ul className="catalogue-card-tags" aria-label="Project topics">
-            {project.catalogueTags.map((tag) => (
-              <li key={tag}>{tag}</li>
-            ))}
-          </ul>
-        )}
         {excerpts && (
           <div className="home-project-excerpts">
             <p>
@@ -101,7 +92,7 @@ export function ProjectCard({
         )}
         <QuestionChips
           subject={project.title}
-          questions={excerpts?.questions ?? project.suggestedQuestions}
+          questions={excerpts?.questions ?? project.questions}
         />
       </div>
     </article>

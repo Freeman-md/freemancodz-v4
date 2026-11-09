@@ -1,6 +1,7 @@
+import { applyPrismaMigration } from "../apply-prisma-migration";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
-import { readFile, readdir } from "node:fs/promises";
+import { readdir } from "node:fs/promises";
 import { resolve } from "node:path";
 import test from "node:test";
 
@@ -16,15 +17,6 @@ const AUDIT_MIGRATION = "20260820130000_add_audit_requests";
 function hasPostgresCode(code: string) {
   return (error: unknown) =>
     typeof error === "object" && error !== null && "code" in error && error.code === code;
-}
-
-async function applyMigration(database: Client, directory: string) {
-  const sql = await readFile(
-    resolve(process.cwd(), "prisma/migrations", directory, "migration.sql"),
-    "utf8",
-  );
-
-  await database.query(sql);
 }
 
 async function assertRoleCannotRead(database: Client, role: "anon" | "authenticated") {
@@ -72,7 +64,7 @@ test(
       assert.notEqual(migrationDirectories.indexOf(AUDIT_MIGRATION), -1);
 
       for (const directory of migrationDirectories) {
-        await applyMigration(database, directory);
+        await applyPrismaMigration(database, directory);
       }
 
       const security = await database.query<{

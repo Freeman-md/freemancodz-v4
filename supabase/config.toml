@@ -179,9 +179,6 @@ otp_expiry = 3600
 
 # Uncomment to customize email template
 # The token-hash link is exchanged by the application Route Handler, not by Auth's default redirect.
-[auth.email.template.magic_link]
-subject = "Sign in to the portfolio admin"
-content_path = "./supabase/templates/magic-link.html"
 # [auth.email.template.invite]
 # subject = "You have been invited"
 # content_path = "./supabase/templates/invite.html"

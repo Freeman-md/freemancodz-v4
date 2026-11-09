@@ -10,8 +10,6 @@ test("proxy allows the homepage and working system routes", async () => {
     "/work/jpscents",
     "/work/missing-project",
     "/api/chat",
-    "/api/admin/media",
-    "/api/internal/search-index-worker",
     "/images/logo.svg",
     "/videos/portfolio-clip.webm",
     "/icon.svg",
@@ -53,4 +51,13 @@ test("public redirects retain query parameters and citation fragments", async ()
     response.headers.get("location"),
     "https://freeman.dev/?ref=portfolio#about-journey",
   );
+});
+
+test("former admin and auth pages return 404 without invoking authentication", async () => {
+  for (const path of ["/admin", "/admin/login", "/admin/projects", "/auth", "/auth/confirm"]) {
+    const response = await proxy(new NextRequest(`https://freeman.dev${path}`));
+
+    assert.equal(response.status, 404, path);
+    assert.equal(response.headers.has("location"), false);
+  }
 });

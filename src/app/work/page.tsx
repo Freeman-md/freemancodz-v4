@@ -1,3 +1,4 @@
+import { connection } from "next/server";
 import type { Metadata } from "next";
 import { publicPortfolioService } from "@/modules/composition";
 import { ProjectCard } from "../_portfolio/components/ProjectCard";
@@ -11,6 +12,7 @@ export const metadata: Metadata = {
 };
 
 export default async function WorkPage() {
+  await connection();
   const projects = await publicPortfolioService.listProjects();
 
   return (

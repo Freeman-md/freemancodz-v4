@@ -1,396 +1,273 @@
+import { applyPrismaMigration } from "../apply-prisma-migration";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
-import { readFile, readdir } from "node:fs/promises";
-import { resolve } from "node:path";
+import { readdir } from "node:fs/promises";
 import test from "node:test";
-import { PrismaPg } from "@prisma/adapter-pg";
 import { Client } from "pg";
+import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@/generated/prisma/client";
-import {
-  resetPortfolio,
-  seedPortfolio,
-  verifyPortfolio,
-} from "../../../prisma/portfolio-bootstrap";
-import type { PortfolioStorage } from "@/modules/portfolio/types";
-import { ContentBlockRepository } from "@/modules/portfolio/repositories/content-block.repository";
-import { MediaBlockRepository } from "@/modules/portfolio/repositories/media-block.repository";
-import { ProjectRepository } from "@/modules/portfolio/repositories/project.repository";
+import { PrismaPublicPortfolioRepository } from "@/modules/portfolio/repositories/public-portfolio.repository";
+import { PublicPortfolioService } from "@/modules/portfolio/services/public-portfolio.service";
+import { PortfolioSeedService } from "@/modules/portfolio/seed.service";
+import { verifySeedTarget } from "@/infrastructure/config/portfolio-seed";
+import { seedPortfolioSchema } from "@/modules/portfolio/data/portfolio.schema";
+import profile from "../../../prisma/seed-data/profile.json";
+import projects from "../../../prisma/seed-data/projects.json";
+import caseStudies from "../../../prisma/seed-data/project-case-studies.json";
+import experience from "../../../prisma/seed-data/experience.json";
+import services from "../../../prisma/seed-data/services.json";
 
-const adminConnectionUrl = process.env.PORTFOLIO_TEST_DATABASE_URL;
+const additive = "20261109130000_add_public_portfolio";
 
-const MILESTONE_15_MIGRATION = "20260812090000_rebuild_portfolio_content";
+const target = process.env.PORTFOLIO_TEST_DATABASE_URL;
 
-function hasPostgresCode(code: string) {
-  return (error: unknown) =>
-    typeof error === "object" && error !== null && "code" in error && error.code === code;
+const baseline = seedPortfolioSchema.parse({
+  profile,
+  projects,
+  caseStudies,
+  experience,
+  services,
+});
+
+const noEdits = {
+  profile: baseline.profile,
+  projects: [],
+  caseStudies: [],
+  experience: [],
+  services: [],
+};
+
+const legacyTables = [
+  "profiles",
+  "projects",
+  "experiences",
+  "content_blocks",
+  "icon_blocks",
+  "media_blocks",
+  "action_blocks",
+  "content_block_icon_blocks",
+  "content_block_media_blocks",
+  "content_block_action_blocks",
+  "content_block_children",
+  "profile_icon_blocks",
+  "experience_icon_blocks",
+  "site_chunks",
+  "search_index_jobs",
+];
+
+async function withDatabase(
+  verify: (sql: Client, prisma: PrismaClient, url: URL) => Promise<void>,
+) {
+  assert.ok(
+    target,
+    "Set PORTFOLIO_TEST_DATABASE_URL to a disposable PostgreSQL server with pgvector.",
+  );
+  const admin = new Client({ connectionString: target });
+
+  const name = `m24_test_${randomUUID().replaceAll("-", "")}`;
+
+  const url = new URL(target);
+
+  url.pathname = `/${name}`;
+  await admin.connect();
+  try {
+    await admin.query(`CREATE DATABASE "${name}"`);
+    const sql = new Client({ connectionString: url.href });
+
+    const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: url.href }) });
+
+    try {
+      await sql.connect();
+      await verify(sql, prisma, url);
+    } finally {
+      await prisma.$disconnect();
+      await sql.end();
+      await admin.query(`DROP DATABASE "${name}"`);
+    }
+  } finally {
+    await admin.end();
+  }
 }
 
-async function applyMigration(database: Client, directory: string) {
-  const sql = await readFile(
-    resolve(process.cwd(), "prisma/migrations", directory, "migration.sql"),
-    "utf8",
+async function visibleLegacyTables(sql: Client) {
+  const result = await sql.query<{ tablename: string }>(
+    "SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename = ANY($1)",
+    [legacyTables],
   );
 
-  await database.query(sql);
-}
-
-async function portfolioCounts(database: Client) {
-  const result = await database.query<{
-    profiles: string;
-    content_blocks: string;
-    icon_blocks: string;
-    media_blocks: string;
-    action_blocks: string;
-    projects: string;
-    experiences: string;
-  }>(`
-    SELECT
-      (SELECT COUNT(*) FROM profiles) AS profiles,
-      (SELECT COUNT(*) FROM content_blocks) AS content_blocks,
-      (SELECT COUNT(*) FROM icon_blocks) AS icon_blocks,
-      (SELECT COUNT(*) FROM media_blocks) AS media_blocks,
-      (SELECT COUNT(*) FROM action_blocks) AS action_blocks,
-      (SELECT COUNT(*) FROM projects) AS projects,
-      (SELECT COUNT(*) FROM experiences) AS experiences
-  `);
-
-  return Object.values(result.rows[0]!).map(Number);
+  return result.rows.map(({ tablename }) => tablename).sort();
 }
 
 test(
-  "Milestone 15 migrates, constrains, seeds, resets, and rolls back on disposable PostgreSQL",
-  { skip: !adminConnectionUrl, timeout: 120_000 },
-  async (context) => {
-    const databaseName = `milestone15_test_${randomUUID().replaceAll("-", "")}`;
-
-    const adminUrl = new URL(adminConnectionUrl!);
-
-    const databaseUrl = new URL(adminConnectionUrl!);
-
-    databaseUrl.pathname = `/${databaseName}`;
-    const admin = new Client({ connectionString: adminUrl.toString() });
-
-    let database: Client | undefined;
-
-    let prisma: PrismaClient | undefined;
-
-    await admin.connect();
-    await admin.query(`CREATE DATABASE "${databaseName}"`);
-
-    try {
-      database = new Client({ connectionString: databaseUrl.toString() });
-      await database.connect();
-
-      const migrationDirectories = (await readdir(resolve(process.cwd(), "prisma/migrations")))
-        .filter((directory) => /^\d+_/.test(directory))
+  "M24 additive release preserves old data and seeds safely on a pre-M24 database",
+  { timeout: 120_000 },
+  async () => {
+    await withDatabase(async (sql, prisma, url) => {
+      const migrations = (await readdir("prisma/migrations"))
+        .filter((entry) => /^\d+_/.test(entry))
         .sort();
 
-      const milestoneMigrationIndex = migrationDirectories.indexOf(MILESTONE_15_MIGRATION);
-
-      assert.notEqual(milestoneMigrationIndex, -1, "Expected the Milestone 15 migration.");
-
-      for (const directory of migrationDirectories.slice(0, milestoneMigrationIndex)) {
-        await applyMigration(database, directory);
+      for (const migration of migrations.filter((entry) => entry < additive)) {
+        await applyPrismaMigration(sql, migration);
       }
 
-      await database.query(`
-        INSERT INTO meetings (
-          google_event_id, name, email, timezone, reason, starts_at, ends_at, status,
-          raw_provider_payload
-        ) VALUES (
-          'protected-event', 'Protected', 'protected@example.test', 'Europe/London', 'proof',
-          NOW(), NOW() + INTERVAL '30 minutes', 'confirmed', '{}'
-        );
-        INSERT INTO site_chunks (
-          id, source_type, source_id, chunk_index, title, category, url, content, keywords, embedding
-        ) VALUES (
-          'protected-chunk', 'project', '00000000-0000-0000-0000-000000000001', 0,
-          'Protected', 'proof', '/work', 'protected', ARRAY['protected'],
-          array_fill(0::real, ARRAY[1536])::vector
-        );
-        INSERT INTO search_index_jobs (
-          source_type, source_id, operation, status, available_at, attempts
-        ) VALUES (
-          'project', '00000000-0000-0000-0000-000000000001', 'upsert', 'pending', NOW(), 0
-        );
-      `);
+      assert.deepEqual(await visibleLegacyTables(sql), [...legacyTables].sort());
+      await sql.query(`
+      INSERT INTO meetings (google_event_id, name, email, timezone, reason, starts_at, ends_at, status, raw_provider_payload)
+      VALUES ('m24-preserved', 'Fixture', 'fixture@example.test', 'UTC', 'Fixture', NOW(), NOW(), 'confirmed', '{}');
+      INSERT INTO rate_limits (scope, key_hash, rule_id, count, reset_at)
+      VALUES ('test', 'm24-preserved', 'fixture', 1, NOW());
+      INSERT INTO site_chunks (id, source_type, source_id, chunk_index, title, category, url, content, keywords, embedding)
+      VALUES ('retired-fixture', 'project', 'm24', 0, 'Fixture', 'fixture', '/work', 'Fixture', '{}',
+        array_fill(0::real, ARRAY[1536])::vector);
+    `);
+      const oldQueue = (await sql.query("SELECT * FROM search_index_jobs")).rows;
 
-      await applyMigration(database, MILESTONE_15_MIGRATION);
+      await applyPrismaMigration(sql, additive);
+      const seeder = new PortfolioSeedService(prisma);
 
-      await context.test("preserves protected rows and retrieval infrastructure", async () => {
-        const result = await database!.query<{
-          meetings: string;
-          chunks: string;
-          jobs: string;
-          match_function: boolean;
-        }>(`
-          SELECT
-            (SELECT COUNT(*) FROM meetings) AS meetings,
-            (SELECT COUNT(*) FROM site_chunks) AS chunks,
-            (SELECT COUNT(*) FROM search_index_jobs) AS jobs,
-            to_regprocedure('match_site_chunks(vector,integer,double precision)') IS NOT NULL
-              AS match_function
-        `);
+      const publicSite = new PublicPortfolioService(new PrismaPublicPortfolioRepository(prisma));
 
-        assert.deepEqual(result.rows[0], {
-          meetings: "1",
-          chunks: "1",
-          jobs: "1",
-          match_function: true,
-        });
-      });
+      const count = async () => await prisma.project.count();
 
-      await context.test(
-        "rejects invalid singleton, action, and ordered junction records",
-        async () => {
-          await assert.rejects(
-            database!.query(`
-            INSERT INTO profiles (
-              id, name, title, positioning, email, linkedin_url, github_url
-            ) VALUES (
-              'other', 'Other', 'Title', 'Position', 'other@example.test',
-              'https://example.test/linkedin', 'https://example.test/github'
-            )
-          `),
-            hasPostgresCode("23514"),
-          );
-          await database!.query(`
-          INSERT INTO profiles (name, title, positioning, email, linkedin_url, github_url)
-          VALUES (
-            'One', 'Title', 'Position', 'one@example.test',
-            'https://example.test/linkedin', 'https://example.test/github'
-          )
-        `);
-          await assert.rejects(
-            database!.query(`
-            INSERT INTO profiles (name, title, positioning, email, linkedin_url, github_url)
-            VALUES (
-              'Two', 'Title', 'Position', 'two@example.test',
-              'https://example.test/linkedin', 'https://example.test/github'
-            )
-          `),
-            hasPostgresCode("23505"),
-          );
-          const content = await database!.query<{ id: string }>(
-            `INSERT INTO content_blocks (url, "order") VALUES ('/', 1) RETURNING id`,
-          );
+      await assert.rejects(publicSite.getHomepage(), /unavailable or incomplete/);
+      const preview = await seeder.run(baseline, false);
 
-          const icons = await database!.query<{ id: string }>(`
-          INSERT INTO icon_blocks (label) VALUES ('One'), ('Two') RETURNING id
-        `);
+      assert.ok(preview.length > 25 && preview.every(({ change }) => change === "insert"));
+      assert.equal(await count(), 0);
+      assert.deepEqual(await seeder.run(baseline, true), preview);
+      assert.equal(await count(), 9);
+      assert.ok((await seeder.run(baseline, true)).every(({ change }) => change === "skip"));
+      assert.deepEqual((await sql.query("SELECT * FROM search_index_jobs")).rows, oldQueue);
 
-          await assert.rejects(
-            database!.query(`INSERT INTO action_blocks (id, variant) VALUES ($1, 'primary')`, [
-              icons.rows[0]!.id,
-            ]),
-            hasPostgresCode("23514"),
-          );
-          await database!.query(
-            `
-            INSERT INTO content_block_icon_blocks (content_block_id, icon_block_id, "order")
-            VALUES ($1, $2, 1)
-          `,
-            [content.rows[0]!.id, icons.rows[0]!.id],
-          );
-          await assert.rejects(
-            database!.query(
-              `
-              INSERT INTO content_block_icon_blocks (content_block_id, icon_block_id, "order")
-              VALUES ($1, $2, 1)
-            `,
-              [content.rows[0]!.id, icons.rows[1]!.id],
-            ),
-            hasPostgresCode("23505"),
-          );
-        },
+      const home = await publicSite.getHomepage();
+
+      assert.equal(home.profile.name, "Freeman Madudili");
+      assert.equal(home.featured.length, 3);
+      assert.equal(home.experience.length, 4);
+      assert.equal(home.services.length, 2);
+      assert.deepEqual(
+        (await publicSite.findProject("portfolio-assistant"))?.services.map(({ key }) => key),
+        ["product-development", "automation-ai"],
       );
+      assert.equal(await publicSite.findProject("missing"), null);
 
-      prisma = new PrismaClient({
-        adapter: new PrismaPg({ connectionString: databaseUrl.toString() }),
-      });
-
-      await resetPortfolio(prisma);
-
-      const storage: PortfolioStorage = {
-        ensurePublicBucket: async () => undefined,
-        getPublicUrl: (objectPath) => `https://portfolio.test/${objectPath}`,
+      const oneEdit = {
+        ...noEdits,
+        caseStudies: [{ ...baseline.caseStudies[0], outcome: "An isolated outcome edit." }],
       };
 
-      await context.test(
-        "rolls back every database seed record after a mid-seed failure",
-        async () => {
-          await database!.query(`
-          CREATE FUNCTION reject_portfolio_content_block() RETURNS trigger LANGUAGE plpgsql AS $$
-          BEGIN
-            RAISE EXCEPTION 'simulated portfolio seed failure';
-          END;
-          $$;
-          CREATE TRIGGER reject_portfolio_content_block
-          BEFORE INSERT ON content_blocks
-          FOR EACH ROW EXECUTE FUNCTION reject_portfolio_content_block();
-        `);
+      const planned = await seeder.run(oneEdit, false);
 
-          await assert.rejects(seedPortfolio(prisma!, storage), /simulated portfolio seed failure/);
-          assert.deepEqual(await portfolioCounts(database!), [0, 0, 0, 0, 0, 0, 0]);
-          await database!.query(`
-          DROP TRIGGER reject_portfolio_content_block ON content_blocks;
-          DROP FUNCTION reject_portfolio_content_block();
-        `);
+      assert.deepEqual(
+        planned.filter(({ change }) => change !== "skip"),
+        [{ record: "caseStudies", key: "jpscents", change: "update" }],
+      );
+      assert.notEqual(
+        (await publicSite.findProject("jpscents"))?.study?.outcome,
+        oneEdit.caseStudies[0].outcome,
+      );
+      await seeder.run(oneEdit, true);
+      assert.equal(
+        (await publicSite.findProject("jpscents"))?.study?.outcome,
+        oneEdit.caseStudies[0].outcome,
+      );
+      assert.equal(await count(), 9);
+      assert.equal(await prisma.projectCaseStudy.count(), 9);
+
+      const assistant = baseline.projects[3];
+
+      const onlyFirstLink = {
+        ...noEdits,
+        projects: [{ ...assistant, serviceKeys: ["product-development"] }],
+      };
+
+      await seeder.run(onlyFirstLink, true);
+      assert.equal((await publicSite.findProject(assistant.slug))?.services.length, 2);
+      await assert.rejects(
+        seeder.run(
+          { ...noEdits, projects: [{ ...assistant, serviceKeys: ["automation-ai"] }] },
+          true,
+        ),
+        /portfolio-assistant position 1 is occupied/,
+      );
+      await assert.rejects(
+        seeder.run({ ...noEdits, projects: [{ ...assistant, serviceKeys: ["unknown"] }] }, false),
+        /unknown service/,
+      );
+      await assert.rejects(
+        seeder.run(
+          { ...noEdits, caseStudies: [{ ...baseline.caseStudies[0], projectSlug: "missing" }] },
+          false,
+        ),
+        /unknown project/,
+      );
+
+      await seeder.run(
+        {
+          ...noEdits,
+          projects: [{ ...assistant, serviceKeys: [...assistant.serviceKeys].reverse() }],
         },
+        true,
+      );
+      assert.deepEqual(
+        (await publicSite.findProject(assistant.slug))?.services.map(({ key }) => key),
+        ["automation-ai", "product-development"],
       );
 
-      await context.test(
-        "seeds exact totals and resets only portfolio-domain records",
-        async () => {
-          await seedPortfolio(prisma!, storage);
-          assert.deepEqual(await verifyPortfolio(prisma!), {
-            profiles: 1,
-            projects: 8,
-            experiences: 4,
-            topLevelBlocks: 22,
-          });
-          assert.deepEqual(
-            await prisma!.project.findMany({ orderBy: { order: "asc" }, select: { title: true } }),
-            [
-              { title: "JPScents" },
-              { title: "Debby Art & Prints" },
-              { title: "Pay4Me / WithRadius" },
-              { title: "Portfolio Assistant" },
-              { title: "Email PA" },
-              { title: "AcrossTheHorizon" },
-              { title: "Shifty" },
-              { title: "Self-Healing Backend Operations System" },
-            ],
-          );
+      const expected = {
+        DATABASE_URL: url.href,
+        PORTFOLIO_SEED_ENVIRONMENT: "development",
+        PORTFOLIO_SEED_DATABASE: `${url.hostname}:${url.port || "5432"}${url.pathname}`,
+        PORTFOLIO_SEED_USER: decodeURIComponent(url.username),
+      };
 
-          const projectRepository = new ProjectRepository(prisma!);
-
-          const pay4Me = await projectRepository.findBySlug("pay4me-withradius");
-
-          assert.ok(pay4Me);
-
-          const mediaRepository = new MediaBlockRepository(prisma!);
-
-          const unownedMedia = await prisma!.mediaBlock.findFirst({
-            where: { coveredProject: null },
-          });
-
-          assert.ok(unownedMedia);
-          assert.equal(await mediaRepository.countSourceReferences(unownedMedia.source), 1);
-          await prisma!.profile.update({
-            where: { id: "global" },
-            data: { coverImage: unownedMedia.source },
-          });
-          assert.equal(await mediaRepository.countSourceReferences(unownedMedia.source), 2);
-
-          const projectCover = await prisma!.project.findFirstOrThrow({
-            where: { coverId: { not: null } },
-            include: { cover: true },
-          });
-
-          assert.ok(projectCover.cover);
-          assert.equal(
-            (await mediaRepository.countSourceReferences(projectCover.cover.source)) >= 2,
-            true,
-          );
-
-          await projectRepository.update(pay4Me.id, {
-            slug: pay4Me.slug,
-            title: pay4Me.title,
-            category: pay4Me.category,
-            problem: pay4Me.problem,
-            solution: pay4Me.solution,
-            outcome: pay4Me.outcome,
-            externalLinks: pay4Me.externalLinks,
-            featured: pay4Me.featured,
-            order: 2,
-            markdown: pay4Me.markdown,
-            visualBlock: "Pay4MeVisual",
-            visualText: pay4Me.visualText,
-          });
-          assert.deepEqual(
-            await prisma!.project.findMany({
-              where: { order: { in: [1, 2, 3] } },
-              orderBy: { order: "asc" },
-              select: { slug: true, order: true },
-            }),
-            [
-              { slug: "jpscents", order: 1 },
-              { slug: "pay4me-withradius", order: 2 },
-              { slug: "debby-arts", order: 3 },
-            ],
-          );
-
-          const parent = await prisma!.contentBlock.findFirst({
-            where: { children: { some: {} } },
-            include: { children: { orderBy: { order: "asc" } } },
-          });
-
-          assert.ok(parent);
-          const contentRepository = new ContentBlockRepository(prisma!);
-
-          const reversed = parent.children
-            .toReversed()
-            .map(({ childId }, order) => ({ id: childId, order }));
-
-          await contentRepository.replaceChildren(parent.id, reversed);
-          assert.deepEqual(
-            (
-              await prisma!.contentBlockChild.findMany({
-                where: { parentId: parent.id },
-                orderBy: { order: "asc" },
-              })
-            ).map(({ childId }) => childId),
-            reversed.map(({ id }) => id),
-          );
-
-          const blocksWithIcons = await prisma!.contentBlock.findMany({
-            include: { iconBlocks: { orderBy: { order: "asc" } } },
-          });
-
-          const reusableParent = blocksWithIcons.find(({ iconBlocks }) => iconBlocks.length > 1);
-
-          assert.ok(reusableParent);
-          const reversedIcons = reusableParent.iconBlocks
-            .toReversed()
-            .map(({ iconBlockId }, order) => ({ id: iconBlockId, order }));
-
-          await contentRepository.replaceIcons(reusableParent.id, reversedIcons);
-          assert.deepEqual(
-            (
-              await prisma!.contentBlockIconBlock.findMany({
-                where: { contentBlockId: reusableParent.id },
-                orderBy: { order: "asc" },
-              })
-            ).map(({ iconBlockId }) => iconBlockId),
-            reversedIcons.map(({ id }) => id),
-          );
-
-          await resetPortfolio(prisma!);
-          assert.deepEqual(await portfolioCounts(database!), [0, 0, 0, 0, 0, 0, 0]);
-          const protectedRows = await database!.query<{
-            meetings: string;
-            chunks: string;
-            jobs: string;
-          }>(`
-          SELECT
-            (SELECT COUNT(*) FROM meetings) AS meetings,
-            (SELECT COUNT(*) FROM site_chunks) AS chunks,
-            (SELECT COUNT(*) FROM search_index_jobs) AS jobs
-        `);
-
-          assert.deepEqual(protectedRows.rows[0], { meetings: "1", chunks: "1", jobs: "1" });
-        },
+      assert.throws(
+        () =>
+          verifySeedTarget("development", expected, {
+            DATABASE_URL: new URL("/different_database", url).href,
+          }),
+        /Inherited/,
       );
-    } finally {
-      await prisma?.$disconnect();
-      await database?.end();
-      await admin.query(
-        `SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = $1`,
-        [databaseName],
+
+      await sql.query(
+        "ALTER TABLE portfolio_project_case_studies ADD CHECK (outcome <> 'fixture rejects')",
       );
-      await admin.query(`DROP DATABASE IF EXISTS "${databaseName}"`);
-      await admin.end();
-    }
+      await assert.rejects(
+        seeder.run(
+          {
+            ...noEdits,
+            profile: { ...baseline.profile, name: "Must roll back" },
+            caseStudies: [{ ...baseline.caseStudies[0], outcome: "fixture rejects" }],
+          },
+          true,
+        ),
+      );
+      assert.equal((await publicSite.getHomepage()).profile.name, "Freeman Madudili");
+      assert.equal(
+        (await publicSite.findProject("jpscents"))?.study?.outcome,
+        oneEdit.caseStudies[0].outcome,
+      );
+
+      for (const table of [
+        "portfolio_profiles",
+        "portfolio_projects",
+        "portfolio_project_case_studies",
+        "portfolio_experiences",
+        "portfolio_services",
+        "portfolio_project_services",
+      ]) {
+        for (const role of ["anon", "authenticated", "service_role"]) {
+          const { rows } = await sql.query<{ exposed: boolean }>(
+            "SELECT has_table_privilege($1, $2, 'SELECT') AS exposed",
+            [role, table],
+          );
+
+          assert.equal(rows[0].exposed, false, `${role} can read ${table}`);
+        }
+      }
+
+      assert.deepEqual(await visibleLegacyTables(sql), [...legacyTables].sort());
+    });
   },
 );

@@ -115,25 +115,8 @@
   border-radius: 16px;
   background: var(--home-card);
 }
-.case-comparison > .case-media {
-  max-width: 740px;
-}
 .case-media-label {
-  min-height: 75px;
   padding: 13px 16px;
-}
-.case-media-label p,
-.case-media figcaption {
-  color: var(--page-muted);
-  font-size: 14px;
-  line-height: 21px;
-}
-.case-media-label p {
-  margin-top: 4px;
-}
-.case-media figcaption {
-  min-height: 76px;
-  padding: 16px;
 }
 .case-media-frame {
   position: relative;

@@ -21,7 +21,7 @@ Instances begin as `active`. Completion and cancellation are terminal and their 
 
 ## Assistant and browser boundary
 
-Every normal OpenAI iteration combines the portfolio assistant's global instructions and tools (`search_website`, `ask_user_choice`) with the current workflow context. With no active instance, that context can expose `start_workflow`. With an active instance, it exposes `cancel_workflow`, `switch_workflow` and only the definition tools available at the current state. A start tool result is therefore followed immediately by another model iteration using the selected workflow's surface.
+Every normal OpenAI iteration combines the portfolio assistant's global instructions and the `ask_user_choice` tool with the current workflow context. With no active instance, that context can expose `start_workflow`. With an active instance, it exposes `cancel_workflow`, `switch_workflow` and only the definition tools available at the current state. A start tool result is therefore followed immediately by another model iteration using the selected workflow's surface.
 
 An ordinary browser request carries:
 
@@ -92,7 +92,7 @@ Prisma migrations are the only migration source of truth. `workflow_instances` u
 Run the focused suite against a disposable non-production PostgreSQL server:
 
 ```bash
-PORTFOLIO_TEST_DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54332/postgres npm run test:workflow
+PORTFOLIO_TEST_DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54332/postgres npm test
 ```
 
 The suite creates and drops a random database, applies the complete historical migration chain, proves representative data survives the forward migration, verifies constraints and access controls, and exercises repository lifecycle persistence.

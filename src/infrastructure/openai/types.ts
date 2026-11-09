@@ -20,11 +20,6 @@ export type OpenAIResponseRequest = {
   signal: AbortSignal;
 };
 
-export type GeneratedEmbedding = { embedding: number[]; embeddingModel: string };
-
 export type OpenAITransport = {
   streamResponse(request: OpenAIResponseRequest): Promise<AsyncIterable<ResponseStreamEvent>>;
-  createEmbedding(input: string): Promise<number[] | undefined>;
-  createEmbeddings(inputs: string[]): Promise<GeneratedEmbedding[]>;
-  getEmbeddingModel(): string;
 };

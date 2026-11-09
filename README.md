@@ -1,118 +1,16 @@
 # Freeman Madudili portfolio
 
-This is a Next.js App Router portfolio. The current pages remain component-driven while the portfolio content backend is stored in PostgreSQL through Prisma. The floating assistant streams answers from OpenAI and retrieves evidence from a database-driven snapshot of the current portfolio.
+This Next.js App Router site reads the portfolio from PostgreSQL through Prisma. The assistant can handle general conversation and the existing contact, audit, and meeting workflows. It directs portfolio questions to Work while portfolio answers are unavailable.
 
-See [Portfolio Content System](docs/portfolio-content-system.md) for the completed content architecture, admin, authentication, caching, media and operations guide.
-See [Workflow Foundation](docs/workflow-foundation.md) for versioned workflow definitions, durable private instances, assistant integration, the meeting-booking migration, and extension guidance.
-
-## Structure
-
-- `src/app` contains routes, pages, layouts, thin HTTP adapters, and private folders for application UI, configuration, and frontend utilities.
-- Private folders under `src/app` own route- and layout-facing UI; browser interactions use colocated API adapters.
-- `src/modules` owns portfolio, assistant, workflow, meeting, rate-limit, and search-index capabilities. `src/modules/composition.ts` is the single server-only dependency assembly point for pages, routes, and entrypoints.
-- `src/infrastructure` owns Prisma, environment, vendor clients, and logging configuration; `src/entrypoints` owns one-shot job and maintenance adapters.
-- `src/contracts` owns runtime-validated HTTP and stream shapes.
-- `prisma/portfolio-seed-data.ts` is the canonical one-time bootstrap input transcribed from the approved Notion artifacts; runtime content comes from the database.
-  New UI belongs in the narrowest owning private app folder; backend use cases and persistence belong in the owning module. Server Components and Route Handlers select configured services from `src/modules/composition.ts`, while browser code flows through a colocated API adapter to a Route Handler. Process entrypoints are thin adapters over the same configured services. See `.agents/skills/nextjs-architecture/SKILL.md` for the authoritative standard.
+See the [portfolio operations guide](docs/portfolio-content-system.md) for the five editable inputs, seed commands, and staged release procedure. See [Workflow Foundation](docs/workflow-foundation.md) for durable workflow instances and confirmation rules.
 
 ## Local development
 
-Install dependencies and generate Prisma's client:
+Install dependencies with `npm ci`. Set the server variables described in `.env.example`, then run `npm run dev` against a migrated and seeded local database. Next.js reads PostgreSQL at request time. A production build requires no database connection.
 
-```bash
-npm install
-npm run prisma:validate
-npm run prisma:generate
-npm run dev
-```
+Prisma migrations under `prisma/migrations` are the schema history. Additive migration, seeding, deployment, and legacy cleanup are separate operations. Follow the staged release procedure before upgrading an existing database.
 
-Provide `DATABASE_URL` for Prisma. Portfolio storage requires `NEXT_PUBLIC_SUPABASE_URL` and the server-only Supabase secret documented in `.env.example`. Bootstrap creates or verifies the public `portfolio-media` bucket but does not require or upload local media files; media can be added later through the protected admin. `NEXT_PUBLIC_SUPABASE_URL` must be a valid HTTP(S) project URL outside local development; only an explicit development runtime may fall back to local Supabase. Assistant and indexing operations additionally require `OPENAI_API_KEY` and `OPENAI_EMBEDDING_MODEL`; chat rate limiting requires `RATE_LIMIT_HMAC_SECRET` and is durable in PostgreSQL; meeting booking requires the documented Google Calendar configuration. Workflow state is durable in PostgreSQL and needs no browser-state encryption configuration. The deployed daily worker requires `CRON_SECRET`.
-
-Prisma migrations in `prisma/migrations` are the only migration source of truth. The Supabase JavaScript client is server-only and used solely for the public `portfolio-media` Object Storage bucket.
-
-## Operations
-
-Apply local migrations, then recreate only the portfolio domain and verify it with:
-
-```bash
-npx prisma migrate deploy
-npm run portfolio:bootstrap:local
-npm run index:run
-```
-
-The disposable PostgreSQL regression suite requires an admin connection to a non-production local/test server so it can create and drop one randomly named database:
-
-```bash
-PORTFOLIO_TEST_DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54332/postgres npm run test:portfolio:database
-```
-
-For a new empty production environment, database migration and the one-time portfolio bootstrap remain separate guarded operations: `npm run prisma:migrate:production`, then `npm run portfolio:bootstrap:production -- --confirm-production`. The confirmation argument must be supplied by the operator; it is not built into the package script. The bootstrap refuses to overwrite an initialized portfolio domain.
-
-Managed Profile, Project-cover, and reusable media are uploaded through the protected admin. Administrators never enter Supabase public URLs: the server stores the canonical URL returned by Supabase Storage after validating the file and ownership. In local development, Next.js image optimization permits a loopback Storage origin only when the configured Supabase hostname is `localhost` or `127.0.0.1`; production private-IP optimization remains disabled. Repo-public Project covers may remain `/images/work/*` paths until replaced through the managed upload flow.
-
-### Search indexing
-
-Every committed portfolio mutation requests one coalesced `portfolio` rebuild through PostgreSQL statement triggers. The admin, bootstrap, cache invalidation, and other writers perform ordinary portfolio writes and never call indexing code. A worker reads the current Home, Work, About, and Audit data, embeds the complete small snapshot, and atomically replaces `site_chunks` only after preparation succeeds. The previous searchable snapshot therefore survives mapping, OpenAI, or database failures.
-
-The four operational commands are:
-
-```bash
-# Process one pending local job and exit
-npm run index:run
-
-# Process one pending production job and exit
-npm run index:run:production -- --confirm-production
-
-# Request and process one full local rebuild
-npm run index:rebuild
-
-# Request and process one full production rebuild
-npm run index:rebuild:production -- --confirm-production
-```
-
-The operator must supply `--confirm-production`; it is deliberately not built into either production script. Normal production processing runs once daily at `0 8 * * *` through Vercel Cron. A content change can therefore wait until the next daily run unless an operator invokes `index:run`; `index:rebuild` is for an explicit full refresh or recovery.
-
-The singleton job moves through `pending`, `processing`, `completed`, and `failed`. A claim counts as an attempt. A failure below three attempts makes the row immediately eligible for a later one-shot invocation; the third failure is terminal. With only the daily cron, those later attempts occur on later scheduled runs unless an operator invokes a manual command. A claim older than ten minutes is recovered without bypassing the limit, and a later portfolio mutation or explicit rebuild resets terminal work to a fresh pending request. A mutation that arrives during processing sets `rerun_requested`, so completion returns the job to pending instead of losing newer work.
-
-Inspect current operational state with a read-only query in a trusted database console:
-
-```sql
-SELECT job_key, status, rerun_requested, attempts, available_at, requested_at,
-       claimed_at, processed_at, last_error
-FROM public.search_index_jobs
-WHERE job_key = 'portfolio';
-```
-
-Vercel Runtime Logs expose the safe `search_index.worker_started`, `search_index.worker_skipped`, `search_index.worker_completed`, `search_index.worker_failed`, and `search_index.stale_job_recovered` events. They must not contain credentials, embeddings, raw provider payloads, or portfolio content bodies.
-
-For the Milestone 17 production rollout, pause the cron, deploy the reviewed application, apply the forward Prisma migration, confirm the migration-created singleton is pending, run `npm run index:run:production -- --confirm-production`, verify current chunks are searchable, and then re-enable the daily cron. Do not run the one-time portfolio bootstrap against an already initialized production portfolio.
-
-## Validation
-
-Assistant structured inputs require the additive Prisma migration
-`20261002090000_add_workflow_interactions` before deploying the updated application.
-It preserves workflow records and table permissions while adding revision-checked
-pending interactions. Apply it through the existing reviewed Prisma deployment
-process; do not deploy application code against the old schema. Browser restoration
-remains ID-only: messages and form drafts are never saved in browser storage.
-
-The assistant can present text, email, longer-answer and single-choice controls
-without starting a workflow. Conversational submissions are bounded, validated
-visitor input only; they cannot invoke workflow writes or actions. They are not
-persisted as workflow state or durably replay-protected. The shared form prevents duplicate browser
-submissions and locks uncertain submissions instead of retrying them. Workflow
-answers remain server-bound and revision-checked; collecting details or choosing
-continue never confirms sending, audit submission or booking. Contact fields and
-workflow choices are currently the supported structured workflow inputs; audit
-and meeting details retain their existing conversational collection.
-
-Collection starts conversationally, normally with one useful question or two
-closely related details. Presentations include a brief introduction even when the
-model emits only the presentation tool. Visitors may reply through ordinary chat
-instead; displayed choices are context, not confirmed answers, and older controls
-become inactive. Form drafts survive closing and mobile presentation changes in
-the current chat, but are still cleared on refresh. Continue/switch answers work
-through controls or chat and never grant final-submission permission.
+## Verification
 
 ```bash
 npm run prisma:validate
@@ -120,12 +18,9 @@ npm run prisma:generate
 npm run lint
 npm run typecheck
 npm test
-npm run test:workflow
-npm run test:portfolio:database
-npm run test:search-index
 npm run build
 ```
 
-## Testing
+Run `npm run test:portfolio:database` with `PORTFOLIO_TEST_DATABASE_URL` set to a disposable PostgreSQL server with pgvector available. The suite creates temporary databases and fails if the test connection is missing. Use the same isolated server when running `npm test` to also exercise the existing workflow, meeting, request and rate-limit database suites.
 
-Automate critical flows, agreed failures, and regressions that have occurred; use manual checks when they are clearer, and do not pursue a coverage percentage target. `npm run test:unit` runs focused deterministic units, `npm run test:integration` runs deterministic assistant flows using fakes plus conditionally configured database suites, and `npm test` runs both. `npm run test:workflow` covers definition, registry, lifecycle, adapter, meeting, migration, security, and repository behaviour; its disposable PostgreSQL case runs only when `PORTFOLIO_TEST_DATABASE_URL` is configured. `npm run test:search-index` uses the same disposable-server setting for its database suite. A skipped database suite is not evidence of database correctness. `npm run eval:assistant` is an explicit live OpenAI evaluation with the stable fixture and rubric in `tests/evals/assistant`; it is intentionally excluded from normal tests and CI.
+The browser journeys in `tests/e2e/homepage.mjs` and `tests/e2e/work.mjs` use a seeded production build with intercepted chat traffic. `HOMEPAGE_URL` can point them at a different base URL. Provide Playwright with Chromium and WebKit installed.

@@ -1,6 +1,7 @@
+import { applyPrismaMigration } from "../apply-prisma-migration";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
-import { readFile, readdir } from "node:fs/promises";
+import { readdir } from "node:fs/promises";
 import { resolve } from "node:path";
 import test from "node:test";
 import { PrismaPg } from "@prisma/adapter-pg";
@@ -19,15 +20,6 @@ const RATE_LIMIT_RULES = [
 function hasPostgresCode(code: string) {
   return (error: unknown) =>
     typeof error === "object" && error !== null && "code" in error && error.code === code;
-}
-
-async function applyMigration(database: Client, directory: string) {
-  const sql = await readFile(
-    resolve(process.cwd(), "prisma/migrations", directory, "migration.sql"),
-    "utf8",
-  );
-
-  await database.query(sql);
 }
 
 async function readRecords(database: Client, keyHash: string) {
@@ -93,7 +85,7 @@ test(
         .sort();
 
       for (const directory of migrationDirectories) {
-        await applyMigration(database, directory);
+        await applyPrismaMigration(database, directory);
       }
 
       const posture = await database.query<{

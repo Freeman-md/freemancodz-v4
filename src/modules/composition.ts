@@ -1,28 +1,16 @@
 import "server-only";
 
 import {
-  getAdminEmail,
+  getNotificationOwnerEmail,
   getGoogleCalendarConfig,
   getRateLimitHmacSecret,
   getResendConfig,
 } from "@/infrastructure/config/env";
-import { prisma } from "@/infrastructure/database/prisma";
+import { createPrismaClient, prisma } from "@/infrastructure/database/prisma";
 import { GoogleCalendarClient } from "@/infrastructure/google-calendar/client";
 import { logger } from "@/infrastructure/logging/logger";
 import { ResendClient } from "@/infrastructure/resend/client";
-import {
-  OpenAIClient,
-  createOpenAIClient,
-  getEmbeddingModel,
-  getResponseModel,
-} from "@/infrastructure/openai/client";
-import {
-  createSupabaseAdminAuthClient,
-  createSupabaseAuthClient,
-  createSupabaseStorageClient,
-} from "@/infrastructure/supabase/clients";
-import { AdminAuthService } from "./admin-auth/service";
-import { SupabaseAuth } from "@/infrastructure/supabase/auth";
+import { OpenAIClient, createOpenAIClient, getResponseModel } from "@/infrastructure/openai/client";
 import { AssistantService } from "./assistant/service";
 import { GLOBAL_ASSISTANT_TOOLS } from "./assistant/tools/definitions";
 import { AuditRequestRepository } from "./audit/repository";
@@ -32,25 +20,11 @@ import { ContactService } from "./contact/service";
 import { MeetingRepository } from "./meeting/repository";
 import { MeetingService } from "./meeting/service";
 import { NotificationService } from "./notification/service";
-import { ActionBlockRepository } from "./portfolio/repositories/action-block.repository";
-import { ContentBlockRepository } from "./portfolio/repositories/content-block.repository";
-import { ExperienceRepository } from "./portfolio/repositories/experience.repository";
-import { IconBlockRepository } from "./portfolio/repositories/icon-block.repository";
-import { MediaBlockRepository } from "./portfolio/repositories/media-block.repository";
-import { ProfileRepository } from "./portfolio/repositories/profile.repository";
-import { JsonPublicPortfolioRepository } from "./portfolio/repositories/public-portfolio.repository";
+import { PrismaPublicPortfolioRepository } from "./portfolio/repositories/public-portfolio.repository";
 import { PublicPortfolioService } from "./portfolio/services/public-portfolio.service";
-import { ProjectRepository } from "./portfolio/repositories/project.repository";
-import { SupabaseStorageProvider } from "@/infrastructure/supabase/storage";
-import { PortfolioAdministrationService } from "./portfolio/services/administration.service";
-import { PortfolioMediaService } from "./portfolio/services/media.service";
-import { PortfolioReadService } from "./portfolio/services/read.service";
+import { PortfolioSeedService } from "./portfolio/seed.service";
 import { RateLimitRepository } from "./rate-limit/repository";
 import { RateLimitService } from "./rate-limit/service";
-import { SearchIndexJobRepository } from "./search-index/repositories/search-index-job.repository";
-import { SiteChunkRepository } from "./search-index/repositories/site-chunk.repository";
-import { SearchIndexService } from "./search-index/service";
-import { SiteSearchService } from "./search-index/search";
 import { AuditWorkflowDefinition } from "./workflow/definitions/audit/audit.definition";
 import { AuditWorkflowProgressProjector } from "./workflow/definitions/audit/audit.progress";
 import { ContactWorkflowDefinition } from "./workflow/definitions/contact/contact.definition";
@@ -61,26 +35,17 @@ import { WorkflowInstanceRepository } from "./workflow/repository";
 import { WorkflowService } from "./workflow/service";
 import { WorkflowDefinitionRegistry } from "./workflow/registry";
 
-export { PortfolioAdministrationError } from "./portfolio/services/administration.service";
-
 // Shared infrastructure
-const openAIProvider = new OpenAIClient(createOpenAIClient, getEmbeddingModel, getResponseModel);
+const openAIProvider = new OpenAIClient(createOpenAIClient, getResponseModel);
 
 export { logger };
-
-// Admin authentication
-export const adminAuthService = new AdminAuthService(
-  new SupabaseAuth(createSupabaseAuthClient, createSupabaseAdminAuthClient),
-  getAdminEmail(),
-  logger,
-);
 
 // Notifications
 const resendClient = new ResendClient(getResendConfig);
 
 const notificationService = new NotificationService(
   resendClient,
-  () => ({ adminEmail: getAdminEmail(), fromEmail: getResendConfig().fromEmail }),
+  () => ({ adminEmail: getNotificationOwnerEmail(), fromEmail: getResendConfig().fromEmail }),
   logger,
 );
 
@@ -102,59 +67,14 @@ export const meetingService = new MeetingService(
 
 // Portfolio
 export const publicPortfolioService = new PublicPortfolioService(
-  new JsonPublicPortfolioRepository(),
+  new PrismaPublicPortfolioRepository(prisma),
 );
 
-const contentBlockRepository = new ContentBlockRepository(prisma);
+export function createPortfolioSeedSession(connection: string) {
+  const client = createPrismaClient(connection);
 
-const experienceRepository = new ExperienceRepository(prisma);
-
-const profileRepository = new ProfileRepository(prisma);
-
-const projectRepository = new ProjectRepository(prisma);
-
-const iconBlockRepository = new IconBlockRepository(prisma);
-
-const mediaBlockRepository = new MediaBlockRepository(prisma);
-
-const actionBlockRepository = new ActionBlockRepository(prisma);
-
-export const portfolioReadService = new PortfolioReadService(
-  profileRepository,
-  contentBlockRepository,
-  projectRepository,
-  experienceRepository,
-);
-export const portfolioAdministrationService = new PortfolioAdministrationService(
-  profileRepository,
-  contentBlockRepository,
-  iconBlockRepository,
-  actionBlockRepository,
-  mediaBlockRepository,
-  projectRepository,
-  experienceRepository,
-);
-export const portfolioMediaService = new PortfolioMediaService(
-  new SupabaseStorageProvider(createSupabaseStorageClient),
-  profileRepository,
-  mediaBlockRepository,
-  projectRepository,
-  logger,
-);
-
-// Search indexing
-const chunkRepository = new SiteChunkRepository(prisma);
-
-const jobRepository = new SearchIndexJobRepository(prisma);
-
-export const searchIndexService = new SearchIndexService(
-  portfolioReadService,
-  chunkRepository,
-  jobRepository,
-  openAIProvider,
-  logger,
-);
-export const siteSearchService = new SiteSearchService(chunkRepository);
+  return { service: new PortfolioSeedService(client), disconnect: () => client.$disconnect() };
+}
 
 // Workflows
 const auditWorkflowProgress = new AuditWorkflowProgressProjector();
@@ -183,9 +103,4 @@ export const rateLimitService = new RateLimitService(
 );
 
 // Assistant
-export const assistantService = new AssistantService(
-  openAIProvider,
-  siteSearchService,
-  logger,
-  workflowService,
-);
+export const assistantService = new AssistantService(openAIProvider, logger, workflowService);

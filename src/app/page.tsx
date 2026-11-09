@@ -1,9 +1,10 @@
+import { connection } from "next/server";
 import { publicPortfolioService } from "@/modules/composition";
 import { SiteLayout } from "./_components/layout/SiteLayout";
-import { SITE_OWNER_NAME, siteConfig } from "./_config/site-metadata";
+import { siteConfig } from "./_config/site-metadata";
 import { Contact, profiles } from "./_portfolio/components/Contact";
 import { Experience } from "./_portfolio/components/Experience";
-import { Hero, heroDescription } from "./_portfolio/components/Hero";
+import { Hero } from "./_portfolio/components/Hero";
 import { OutsideEngineering } from "./_portfolio/components/OutsideEngineering";
 import { SelectedWork } from "./_portfolio/components/SelectedWork";
 import { Services } from "./_portfolio/components/Services";
@@ -11,19 +12,17 @@ import { Testimonials } from "./_portfolio/components/Testimonials";
 import "./_portfolio/homepage.css";
 
 export default async function HomePage() {
-  const [featured, experience] = await Promise.all([
-    publicPortfolioService.listFeaturedProjects(),
-    publicPortfolioService.listExperienceStops(),
-  ]);
+  await connection();
+  const { profile, featured, experience, services } = await publicPortfolioService.getHomepage();
 
   const person = {
     "@context": "https://schema.org",
     "@type": "Person",
     "@id": `${siteConfig.url.origin}/#person`,
-    name: SITE_OWNER_NAME,
-    jobTitle: "Software Engineer",
+    name: profile.name,
+    jobTitle: profile.headline,
     url: siteConfig.url.toString(),
-    description: heroDescription,
+    description: profile.intro,
     sameAs: Object.values(profiles),
     image: new URL("/images/homepage/hero-slope-v3.png", siteConfig.url).href,
   };
@@ -36,10 +35,10 @@ export default async function HomePage() {
           __html: JSON.stringify(person).replace(/</g, "\\u003c"),
         }}
       />
-      <Hero />
+      <Hero profile={profile} />
       <SelectedWork projects={featured} />
-      <Experience stops={experience} />
-      <Services />
+      <Experience stops={experience} philosophy={profile.philosophy} />
+      <Services services={services} />
       <Testimonials />
       <OutsideEngineering />
       <Contact />

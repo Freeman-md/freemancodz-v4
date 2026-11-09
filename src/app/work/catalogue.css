@@ -70,16 +70,6 @@
   font-size: 12px;
   line-height: 17px;
 }
-.catalogue-card-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 7px;
-}
-.catalogue-card-tags li {
-  padding: 3px 8px;
-  border: 1px solid var(--page-line);
-  border-radius: 12px;
-}
 @media (prefers-reduced-motion: no-preference) {
   .catalogue-result {
     animation: home-fade 300ms ease-out both;

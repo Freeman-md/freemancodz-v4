@@ -7,41 +7,6 @@ datasource db {
   provider = "postgresql"
 }
 
-model SiteChunk {
-  id             String                      @id
-  sourceType     String                      @map("source_type")
-  sourceId       String                      @map("source_id")
-  chunkIndex     Int                         @map("chunk_index")
-  title          String
-  category       String
-  url            String
-  content        String
-  keywords       String[]
-  embedding      Unsupported("vector(1536)")
-  contentHash    String?                     @map("content_hash")
-  embeddingModel String?                     @map("embedding_model")
-  embeddedAt     DateTime?                   @map("embedded_at")
-  createdAt      DateTime                    @default(now())
-  updatedAt      DateTime                    @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
-
-  @@unique([sourceType, sourceId, chunkIndex])
-  @@map("site_chunks")
-}
-
-model SearchIndexJob {
-  jobKey         String    @id @default("portfolio") @map("job_key")
-  status         String    @default("pending")
-  rerunRequested Boolean   @default(false) @map("rerun_requested")
-  attempts       Int       @default(0)
-  availableAt    DateTime  @default(now()) @map("available_at") @db.Timestamptz(6)
-  requestedAt    DateTime  @default(now()) @map("requested_at") @db.Timestamptz(6)
-  claimedAt      DateTime? @map("claimed_at") @db.Timestamptz(6)
-  processedAt    DateTime? @map("processed_at") @db.Timestamptz(6)
-  lastError      String?   @map("last_error")
-
-  @@map("search_index_jobs")
-}
-
 model Meeting {
   id                 String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   googleEventId      String   @unique @map("google_event_id")
@@ -123,222 +88,93 @@ model RateLimit {
   @@map("rate_limits")
 }
 
-enum ProfileIconCollection {
-  AUDIENCE            @map("audience")
-  PRINCIPLES          @map("principles")
-  THINKING_PRINCIPLES @map("thinking_principles")
-  PROCESS_PRINCIPLES  @map("process_principles")
-  CONTROL_PRINCIPLES  @map("control_principles")
-  OUTCOMES            @map("outcomes")
+enum ProjectKind {
+  REAL_PROJECT @map("real-project")
+  EXPLORATION  @map("exploration")
 
-  @@map("profile_icon_collection")
-}
-
-enum MediaType {
-  IMAGE @map("image")
-  VIDEO @map("video")
-
-  @@map("media_type")
-}
-
-enum ActionVariant {
-  PRIMARY   @map("primary")
-  SECONDARY @map("secondary")
-  GHOST     @map("ghost")
-  LINK      @map("link")
-
-  @@map("action_variant")
+  @@map("portfolio_project_kind")
 }
 
 model Profile {
-  id              String             @id @default("global")
-  name            String
-  title           String
-  positioning     String
-  email           String
-  linkedInUrl     String             @map("linkedin_url")
-  githubUrl       String             @map("github_url")
-  coverImage      String?            @map("cover_image")
-  iconCollections ProfileIconBlock[]
-  createdAt       DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt       DateTime           @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  key        String @id @default("global")
+  name       String
+  headline   String
+  intro      String
+  philosophy String
 
-  @@map("profiles")
-}
-
-model ContentBlock {
-  id           String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  eyebrow      String?
-  title        String?
-  copy         String?
-  url          String
-  order        Int?
-  iconBlocks   ContentBlockIconBlock[]
-  mediaBlocks  ContentBlockMediaBlock[]
-  actionBlocks ContentBlockActionBlock[]
-  children     ContentBlockChild[]       @relation("ContentBlockParent")
-  parent       ContentBlockChild?        @relation("ContentBlockChild")
-  createdAt    DateTime                  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt    DateTime                  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
-
-  @@index([url, order])
-  @@map("content_blocks")
-}
-
-model IconBlock {
-  id                   String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  iconName             String?                 @map("icon_name")
-  label                String
-  copy                 String?
-  colour               String?
-  mediaBlock           MediaBlock?
-  actionBlock          ActionBlock?
-  contentBlockIcons    ContentBlockIconBlock[]
-  profileCollections   ProfileIconBlock[]
-  experienceIconBlocks ExperienceIconBlock[]
-  createdAt            DateTime                @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt            DateTime                @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
-
-  @@map("icon_blocks")
-}
-
-model MediaBlock {
-  id             String                   @id @db.Uuid
-  type           MediaType
-  source         String
-  altText        String                   @map("alt_text")
-  iconBlock      IconBlock                @relation(fields: [id], references: [id], onDelete: Cascade)
-  contentLinks   ContentBlockMediaBlock[]
-  coveredProject Project?
-
-  @@map("media_blocks")
-}
-
-model ActionBlock {
-  id               String                    @id @db.Uuid
-  variant          ActionVariant
-  url              String?
-  assistantMessage String?                   @map("assistant_message")
-  iconBlock        IconBlock                 @relation(fields: [id], references: [id], onDelete: Cascade)
-  contentLinks     ContentBlockActionBlock[]
-
-  @@map("action_blocks")
-}
-
-model ContentBlockIconBlock {
-  contentBlockId String       @map("content_block_id") @db.Uuid
-  iconBlockId    String       @map("icon_block_id") @db.Uuid
-  order          Int
-  contentBlock   ContentBlock @relation(fields: [contentBlockId], references: [id], onDelete: Cascade)
-  iconBlock      IconBlock    @relation(fields: [iconBlockId], references: [id], onDelete: Restrict)
-
-  @@id([contentBlockId, iconBlockId])
-  @@unique([contentBlockId, order])
-  @@index([iconBlockId])
-  @@map("content_block_icon_blocks")
-}
-
-model ContentBlockMediaBlock {
-  contentBlockId String       @map("content_block_id") @db.Uuid
-  mediaBlockId   String       @map("media_block_id") @db.Uuid
-  order          Int
-  contentBlock   ContentBlock @relation(fields: [contentBlockId], references: [id], onDelete: Cascade)
-  mediaBlock     MediaBlock   @relation(fields: [mediaBlockId], references: [id], onDelete: Restrict)
-
-  @@id([contentBlockId, mediaBlockId])
-  @@unique([contentBlockId, order])
-  @@index([mediaBlockId])
-  @@map("content_block_media_blocks")
-}
-
-model ContentBlockActionBlock {
-  contentBlockId String       @map("content_block_id") @db.Uuid
-  actionBlockId  String       @map("action_block_id") @db.Uuid
-  order          Int
-  contentBlock   ContentBlock @relation(fields: [contentBlockId], references: [id], onDelete: Cascade)
-  actionBlock    ActionBlock  @relation(fields: [actionBlockId], references: [id], onDelete: Restrict)
-
-  @@id([contentBlockId, actionBlockId])
-  @@unique([contentBlockId, order])
-  @@index([actionBlockId])
-  @@map("content_block_action_blocks")
-}
-
-model ContentBlockChild {
-  parentId String       @map("parent_id") @db.Uuid
-  childId  String       @unique @map("child_id") @db.Uuid
-  order    Int
-  parent   ContentBlock @relation("ContentBlockParent", fields: [parentId], references: [id], onDelete: Cascade)
-  child    ContentBlock @relation("ContentBlockChild", fields: [childId], references: [id], onDelete: Cascade)
-
-  @@id([parentId, childId])
-  @@unique([parentId, order])
-  @@map("content_block_children")
-}
-
-model ProfileIconBlock {
-  profileId   String                @map("profile_id")
-  iconBlockId String                @map("icon_block_id") @db.Uuid
-  collection  ProfileIconCollection
-  order       Int
-  profile     Profile               @relation(fields: [profileId], references: [id], onDelete: Cascade)
-  iconBlock   IconBlock             @relation(fields: [iconBlockId], references: [id], onDelete: Restrict)
-
-  @@id([profileId, collection, iconBlockId])
-  @@unique([profileId, collection, order])
-  @@index([iconBlockId])
-  @@map("profile_icon_blocks")
-}
-
-model Experience {
-  id         String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  title      String
-  tag        String?
-  copy       String
-  insight    String?
-  role       String?
-  startDate  DateTime?             @map("start_date") @db.Date
-  endDate    DateTime?             @map("end_date") @db.Date
-  order      Int                   @unique
-  iconBlocks ExperienceIconBlock[]
-  createdAt  DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt  DateTime              @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
-
-  @@map("experiences")
-}
-
-model ExperienceIconBlock {
-  experienceId String     @map("experience_id") @db.Uuid
-  iconBlockId  String     @map("icon_block_id") @db.Uuid
-  order        Int
-  experience   Experience @relation(fields: [experienceId], references: [id], onDelete: Cascade)
-  iconBlock    IconBlock  @relation(fields: [iconBlockId], references: [id], onDelete: Restrict)
-
-  @@id([experienceId, iconBlockId])
-  @@unique([experienceId, order])
-  @@index([iconBlockId])
-  @@map("experience_icon_blocks")
+  @@map("portfolio_profiles")
 }
 
 model Project {
-  id            String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  slug          String      @unique
-  title         String      @unique
-  category      String
-  problem       String
-  solution      String
-  outcome       String?
-  coverId       String?     @unique @map("cover_id") @db.Uuid
-  cover         MediaBlock? @relation(fields: [coverId], references: [id], onDelete: SetNull)
-  externalLinks String[]    @default([]) @map("external_links")
-  featured      Boolean     @default(false)
-  order         Int         @unique
-  markdown      String?
-  visualBlock   String?     @map("visual_block")
-  visualText    String?     @map("visual_text")
-  createdAt     DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt     DateTime    @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  slug         String           @id
+  title        String
+  summary      String
+  kind         ProjectKind
+  category     String
+  company      String?
+  cover        Json             @db.JsonB
+  links        Json             @db.JsonB
+  featured     Json?            @db.JsonB
+  questions    String[]         @default([])
+  displayOrder Int              @map("display_order")
+  caseStudy    ProjectCaseStudy?
+  serviceLinks ProjectService[]
 
-  @@index([featured, order])
-  @@map("projects")
+  @@map("portfolio_projects")
+}
+
+model ProjectCaseStudy {
+  projectSlug    String   @id @map("project_slug")
+  project        Project  @relation(fields: [projectSlug], references: [slug], onDelete: Cascade)
+  role           String
+  problem        String
+  contribution   String
+  outcome        String
+  capabilities   String[]
+  technologyKeys String[] @map("technology_keys")
+  evidenceUrls   String[] @default([]) @map("evidence_urls")
+  beforeUrl      String?  @map("before_url")
+  afterUrl       String?  @map("after_url")
+  serviceOffer   Json?    @map("service_offer") @db.JsonB
+
+  @@map("portfolio_project_case_studies")
+}
+
+model Experience {
+  key          String   @id
+  name         String
+  period       String
+  role         String
+  label        String
+  details      String[]
+  questions    String[] @default([])
+  displayOrder Int      @map("display_order")
+
+  @@map("portfolio_experiences")
+}
+
+model Service {
+  key          String           @id
+  title        String
+  description  String
+  requestDraft String           @map("request_draft")
+  examples     String[]
+  questions    String[]         @default([])
+  displayOrder Int              @map("display_order")
+  projectLinks ProjectService[]
+
+  @@map("portfolio_services")
+}
+
+model ProjectService {
+  projectSlug String  @map("project_slug")
+  serviceKey  String  @map("service_key")
+  position    Int
+  project     Project @relation(fields: [projectSlug], references: [slug], onDelete: Cascade)
+  service     Service @relation(fields: [serviceKey], references: [key], onDelete: Restrict)
+
+  @@id([projectSlug, serviceKey])
+  @@unique([projectSlug, position])
+  @@index([serviceKey])
+  @@map("portfolio_project_services")
 }

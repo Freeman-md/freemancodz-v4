@@ -97,7 +97,7 @@ export function ExperienceTimeline({
     >
       <ol className="home-timeline" ref={timeline}>
         {experienceStops.map((item, index) => (
-          <li key={item.name}>
+          <li key={item.key}>
             <button
               type="button"
               aria-haspopup="dialog"

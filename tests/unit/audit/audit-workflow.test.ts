@@ -237,7 +237,7 @@ test("retry after the request is created but workflow save fails returns one req
       new AuditWorkflowDefinition(audit.service, auditWorkflowProgress),
     ]),
     repository,
-    ["search_website"],
+    ["ask_user_choice"],
     { info() {}, error() {} },
   );
 

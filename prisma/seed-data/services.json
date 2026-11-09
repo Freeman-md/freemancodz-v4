@@ -1,0 +1,20 @@
+[
+  {
+    "key": "product-development",
+    "title": "Product development",
+    "description": "From a rough idea to a product people can use.",
+    "requestDraft": "I’d like to discuss product development.",
+    "examples": ["Web apps", "Mobile apps", "E-commerce"],
+    "questions": ["What can we build?", "How do we start?"],
+    "displayOrder": 1
+  },
+  {
+    "key": "automation-ai",
+    "title": "Automation + AI",
+    "description": "Make repetitive work easier to hand off, track and complete.",
+    "requestDraft": "I’d like to discuss automation and AI.",
+    "examples": ["Intake and routing", "Workflow automation", "AI-assisted triage"],
+    "questions": ["What can I automate?", "Where does AI help?"],
+    "displayOrder": 2
+  }
+]

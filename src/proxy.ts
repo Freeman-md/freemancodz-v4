@@ -1,6 +1,4 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { getAdminEmail } from "@/infrastructure/config/env";
-import { refreshSupabaseAuth } from "@/infrastructure/supabase/refresh-auth";
 
 const allowedGeneratedRoutes = new Set(["/opengraph-image", "/robots.txt", "/sitemap.xml"]);
 
@@ -23,27 +21,8 @@ export async function proxy(req: NextRequest) {
 
   const isApiRoute = path === "/api" || path.startsWith("/api/");
 
-  const isAdminRoute = normalizedPath === "/admin" || normalizedPath.startsWith("/admin/");
-
-  const isAuthRoute = normalizedPath.startsWith("/auth/");
-
-  if (isAdminRoute || isAuthRoute) {
-    const { response, claims } = await refreshSupabaseAuth(req);
-
-    const isApprovedAdmin =
-      typeof claims?.email === "string" && claims.email.toLowerCase() === getAdminEmail();
-
-    if (isAdminRoute && normalizedPath !== "/admin/login" && !isApprovedAdmin) {
-      return NextResponse.redirect(new URL("/admin/login", req.url), {
-        headers: response.headers,
-      });
-    }
-
-    if (normalizedPath === "/admin/login" && isApprovedAdmin) {
-      return NextResponse.redirect(new URL("/admin", req.url), { headers: response.headers });
-    }
-
-    return response;
+  if (/^\/(?:admin|auth)(?:\/|$)/.test(normalizedPath)) {
+    return new NextResponse(null, { status: 404 });
   }
 
   const isAllowedRoute =
