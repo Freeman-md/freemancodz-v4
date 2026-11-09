@@ -4,7 +4,6 @@ import OpenAI from "openai";
 import type { FunctionTool, ResponseInput } from "openai/resources/responses/responses";
 import { getOpenAIConfig } from "@/infrastructure/config/env";
 import type {
-  GeneratedEmbedding,
   OpenAIResponseInputItem,
   OpenAIResponseRequest,
   OpenAIResponseTool,
@@ -14,7 +13,6 @@ import type {
 export class OpenAIClient implements OpenAITransport {
   constructor(
     private readonly createClient: () => OpenAI,
-    private readonly getEmbeddingModelName: () => string,
     private readonly getResponseModelName: () => string,
   ) {}
 
@@ -31,41 +29,6 @@ export class OpenAIClient implements OpenAITransport {
       },
       { signal: request.signal },
     );
-  }
-
-  async createEmbedding(input: string) {
-    const response = await this.createClient().embeddings.create({
-      model: this.getEmbeddingModelName(),
-      input,
-    });
-
-    return response.data[0]?.embedding;
-  }
-
-  async createEmbeddings(inputs: string[]): Promise<GeneratedEmbedding[]> {
-    if (inputs.length === 0) {
-      return [];
-    }
-
-    const embeddingModel = this.getEmbeddingModelName();
-
-    const response = await this.createClient().embeddings.create({
-      model: embeddingModel,
-      input: inputs,
-    });
-
-    if (response.data.length !== inputs.length) {
-      throw new Error(`Expected ${inputs.length} embeddings but received ${response.data.length}.`);
-    }
-
-    return response.data.map((item) => ({
-      embedding: item.embedding,
-      embeddingModel,
-    }));
-  }
-
-  getEmbeddingModel() {
-    return this.getEmbeddingModelName();
   }
 
   private toResponseInput(input: OpenAIResponseInputItem[]): ResponseInput {
@@ -93,10 +56,6 @@ export function createOpenAIClient() {
   const openai = getOpenAIConfig();
 
   return new OpenAI({ apiKey: openai.apiKey });
-}
-
-export function getEmbeddingModel() {
-  return getOpenAIConfig().embeddingModel;
 }
 
 export function getResponseModel() {

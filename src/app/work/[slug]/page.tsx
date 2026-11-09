@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import { notFound } from "next/navigation";
+import { cache } from "react";
 import { publicPortfolioService } from "@/modules/composition";
-import { serviceLabels } from "@/modules/portfolio/data/project-case-study.schema";
 import { technologyLabels } from "@/modules/portfolio/data/technology-labels";
 import { Contact } from "../../_portfolio/components/Contact";
 import { HomeAction } from "../../_portfolio/components/HomeAction";
@@ -12,12 +12,19 @@ import "./case-study.css";
 
 type Props = { params: Promise<{ slug: string }> };
 
+export const dynamic = "error";
+export const dynamicParams = false;
+
 export async function generateStaticParams() {
-  return (await publicPortfolioService.listProjects()).map(({ slug }) => ({ slug }));
+  const projects = await publicPortfolioService.listProjects();
+
+  return projects.map(({ slug }) => ({ slug }));
 }
 
+const findProject = cache((slug: string) => publicPortfolioService.findProject(slug));
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const project = await publicPortfolioService.findProject((await params).slug);
+  const project = await findProject((await params).slug);
 
   if (!project) {
     return {
@@ -42,7 +49,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-const footerCopy = {
+const footerCopy: Record<string, { title: string; description: string } | undefined> = {
   "product-development": {
     title: "Need a product that fits how you work?",
     description: "Let’s build a product around the way your customers and team work.",
@@ -55,7 +62,7 @@ const footerCopy = {
 };
 
 export default async function CaseStudyPage({ params }: Props) {
-  const project = await publicPortfolioService.findProject((await params).slug);
+  const project = await findProject((await params).slug);
 
   if (!project) {
     notFound();
@@ -69,7 +76,13 @@ export default async function CaseStudyPage({ params }: Props) {
 
   const service = project.services[0];
 
-  const offer = project.serviceOffer ?? footerCopy[service];
+  const { study } = project;
+
+  const offer = study?.serviceOffer ??
+    footerCopy[service.key] ?? {
+      title: `Interested in ${service.title}?`,
+      description: service.description,
+    };
 
   return (
     <article className="case-study">
@@ -85,76 +98,75 @@ export default async function CaseStudyPage({ params }: Props) {
       <dl className="case-section case-facts case-pair" aria-label="Project facts">
         <div>
           <dt>Role</dt>
-          <dd>{project.contribution.role}</dd>
+          <dd>{study?.role ?? project.category}</dd>
           <dd className="case-kind">
             {exploration ? "Exploration" : "Real project"} · {project.category}
           </dd>
         </div>
         <div>
           <dt>Service</dt>
-          {project.services.map((key) => (
-            <dd key={key}>{serviceLabels[key]}</dd>
+          {project.services.map(({ key, title }) => (
+            <dd key={key}>{title}</dd>
           ))}
         </div>
       </dl>
 
-      <div className="case-section case-story case-pair">
-        <section>
-          <h2>The problem</h2>
-          <p>{project.problem}</p>
-        </section>
-        <section>
-          <h2>{exploration ? "What I explored" : "What I built"}</h2>
-          <p>{project.contribution.description}</p>
-        </section>
-      </div>
-
-      {project.comparison && (
-        <section className="case-section case-comparison" aria-labelledby="comparison">
-          <h2 id="comparison">{project.comparison.title}</h2>
-          <div className="case-pair">
-            <ProjectMedia media={project.comparison.before} label="Before" />
-            <ProjectMedia media={project.comparison.after} label="After" />
+      {study && (
+        <>
+          <div className="case-section case-story case-pair">
+            <section>
+              <h2>The problem</h2>
+              <p>{study.problem}</p>
+            </section>
+            <section>
+              <h2>{exploration ? "What I explored" : "What I built"}</h2>
+              <p>{study.contribution}</p>
+            </section>
           </div>
-        </section>
-      )}
-      {project.walkthrough && (
-        <section className="case-section case-comparison" aria-label="Project walkthrough">
-          <ProjectMedia media={project.walkthrough} label="Walkthrough" />
-        </section>
-      )}
 
-      <div className="case-section case-build">
-        <section className="case-outcome">
-          <h2>{exploration ? "What I learned" : "The outcome"}</h2>
-          <p>{project.outcome.summary}</p>
-        </section>
-        <div className="case-pair">
-          <section>
-            <h3>Key features</h3>
-            <ul className="case-tags">
-              {project.capabilities.map((label) => (
-                <li key={label}>{label}</li>
-              ))}
-            </ul>
-          </section>
-          <section>
-            <h3>Tools and technologies</h3>
-            <ul className="case-tags case-tech">
-              {project.technologies.map((key) => (
-                <li key={key}>{technologyLabels[key]}</li>
-              ))}
-            </ul>
-          </section>
-        </div>
-      </div>
+          {study.beforeUrl && study.afterUrl && (
+            <section className="case-section case-comparison" aria-labelledby="comparison">
+              <h2 id="comparison">Before and after</h2>
+              <div className="case-pair">
+                <ProjectMedia source={study.beforeUrl} poster={project.cover} label="Before" />
+                <ProjectMedia source={study.afterUrl} poster={project.cover} label="After" />
+              </div>
+            </section>
+          )}
+
+          <div className="case-section case-build">
+            <section className="case-outcome">
+              <h2>{exploration ? "What I learned" : "The outcome"}</h2>
+              <p>{study.outcome}</p>
+            </section>
+            <div className="case-pair">
+              <section>
+                <h3>Key features</h3>
+                <ul className="case-tags">
+                  {study.capabilities.map((label) => (
+                    <li key={label}>{label}</li>
+                  ))}
+                </ul>
+              </section>
+              <section>
+                <h3>Tools and technologies</h3>
+                <ul className="case-tags case-tech">
+                  {study.technologyKeys.map((key) => (
+                    <li key={key}>{technologyLabels[key]}</li>
+                  ))}
+                </ul>
+              </section>
+            </div>
+          </div>
+        </>
+      )}
 
       <section className="case-section case-questions" aria-labelledby="case-questions">
         <h2 id="case-questions">Ask about {project.title}</h2>
-        <QuestionChips subject={project.title} questions={project.suggestedQuestions} />
+        <QuestionChips subject={project.title} questions={project.questions} />
       </section>
 
-      <Contact offer={{ ...offer, action: `Request ${serviceLabels[service]}` }} />
+      <Contact offer={{ ...offer, action: `Request ${service.title}` }} />
     </article>
   );
 }

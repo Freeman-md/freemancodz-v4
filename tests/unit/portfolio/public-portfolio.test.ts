@@ -1,98 +1,217 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import profile from "../../../prisma/seed-data/profile.json";
+import projects from "../../../prisma/seed-data/projects.json";
+import caseStudies from "../../../prisma/seed-data/project-case-studies.json";
+import experience from "../../../prisma/seed-data/experience.json";
+import services from "../../../prisma/seed-data/services.json";
+import { seedPortfolioSchema } from "@/modules/portfolio/data/portfolio.schema";
 import {
-  JsonPublicPortfolioRepository,
-  type PublicPortfolioRepository,
-} from "@/modules/portfolio/repositories/public-portfolio.repository";
-import { PublicPortfolioService } from "@/modules/portfolio/services/public-portfolio.service";
+  PortfolioConfigurationError,
+  PublicPortfolioService,
+} from "@/modules/portfolio/services/public-portfolio.service";
+import { verifyPortfolioTarget } from "@/infrastructure/config/portfolio-database";
 
-test("the public catalogue has nine complete projects in the approved order", async () => {
-  const repository = new JsonPublicPortfolioRepository();
+const input = { profile, projects, caseStudies, experience, services };
 
-  const service = new PublicPortfolioService(repository);
-
-  const projects = await service.listProjects();
+test("the five editable inputs carry the approved baseline and stable service ordering", () => {
+  const seed = seedPortfolioSchema.parse(input);
 
   assert.deepEqual(
-    projects.map(({ slug }) => slug),
+    seed.projects.map(({ title }) => title),
     [
-      "jpscents",
-      "debby-arts",
-      "pay4me-withradius",
-      "portfolio-assistant",
-      "email-pa",
-      "across-the-horizon",
-      "interface-studies",
-      "email-sequencer",
-      "self-healing-backend-operations-system",
+      "JPScents",
+      "Debby Art & Prints",
+      "Pay4Me / WithRadius",
+      "Portfolio Assistant",
+      "Email PA",
+      "Across the Horizon",
+      "Interface Studies",
+      "Email Sequencer",
+      "Self-Healing Backend Ops",
     ],
   );
-  assert.equal(projects.filter(({ kind }) => kind === "real-project").length, 6);
-  assert.equal(projects.filter(({ kind }) => kind === "exploration").length, 3);
   assert.deepEqual(
-    (await service.listFeaturedProjects()).map(({ slug }) => slug),
-    projects.slice(0, 3).map(({ slug }) => slug),
+    seed.projects.filter(({ featured }) => featured).map(({ slug }) => slug),
+    ["jpscents", "debby-arts", "pay4me-withradius"],
   );
-  assert.equal(await service.findProject("missing-project"), null);
-  assert.deepEqual(await service.findProject("jpscents"), projects[0]);
+  assert.equal(seed.projects.filter(({ kind }) => kind === "real-project").length, 6);
   assert.deepEqual(
-    (await service.listExperienceStops()).map(({ name }) => name),
+    seed.caseStudies.map(({ projectSlug }) => projectSlug),
+    seed.projects.map(({ slug }) => slug),
+  );
+  assert.ok(
+    seed.caseStudies.every(({ beforeUrl, afterUrl }) => beforeUrl === null && afterUrl === null),
+  );
+  assert.deepEqual(
+    seed.experience.map(({ name }) => name),
     ["Nigeria", "Pay4Me", "Novier Labs", "London, today"],
   );
+  assert.deepEqual(
+    seed.services.map(({ title }) => title),
+    ["Product development", "Automation + AI"],
+  );
+  assert.deepEqual(seed.projects[3].serviceKeys, ["product-development", "automation-ai"]);
+  assert.equal(seed.profile.headline, "Software Engineer");
 });
 
-test("the JSON boundary rejects duplicate slugs, unsupported keys, unsafe destinations and incomplete media", async () => {
-  const [project] = await new JsonPublicPortfolioRepository().listProjects();
+test("seed validation rejects duplicate stable keys, unsafe links, unknown technologies and incomplete clips", () => {
+  const first = projects[0];
 
-  const samples = [
-    [project, project],
-    [{ ...project, services: ["unknown-service"] }],
-    [{ ...project, technologies: ["unknown-technology"] }],
-    [{ ...project, links: [{ kind: "live-site", label: "Unsafe", url: "javascript:void(0)" }] }],
-    [{ ...project, cover: { ...project.cover, source: "/images/../private.png" } }],
-    [{ ...project, comparison: { title: "Incomplete", before: project.comparison?.before } }],
-    [{ ...project, comparison: { ...project.comparison, after: { caption: "No poster" } } }],
-  ];
+  const study = caseStudies[0];
 
-  for (const input of samples) {
-    assert.throws(() => new JsonPublicPortfolioRepository(input), { name: "ZodError" });
+  for (const changes of [
+    { projects: [first, first] },
+    { projects: [{ ...first, serviceKeys: ["product-development", "product-development"] }] },
+    {
+      projects: [
+        {
+          ...first,
+          links: [{ kind: "live-site", label: "Invalid", url: "https://user:pwd@example.test" }],
+        },
+      ],
+    },
+    { caseStudies: [{ ...study, technologyKeys: ["imaginary-tool"] }] },
+    { caseStudies: [{ ...study, beforeUrl: "/videos/before.webm" }] },
+    {
+      caseStudies: [
+        { ...study, beforeUrl: "/videos/../before.webm", afterUrl: "/videos/after.webm" },
+      ],
+    },
+  ]) {
+    assert.equal(seedPortfolioSchema.safeParse({ ...input, ...changes }).success, false);
   }
 
-  assert.throws(() => new JsonPublicPortfolioRepository([project], [{ name: "Incomplete" }]), {
-    name: "ZodError",
-  });
+  assert.equal(
+    seedPortfolioSchema.safeParse({
+      ...input,
+      projects: [],
+      caseStudies: [{ ...study, beforeUrl: "/videos/before.webm", afterUrl: "/videos/after.webm" }],
+    }).success,
+    true,
+  );
 });
 
-test("public service reads use the injected repository and its featured flags", async () => {
-  const records = new JsonPublicPortfolioRepository();
+test("a seed verifies the configured environment and effective endpoint before opening a database session", () => {
+  const connection = "postgresql://local@127.0.0.1:5432/m24";
 
-  const [original, other] = await records.listProjects();
-
-  const [originalStop] = await records.listExperienceStops();
-
-  const featured = { ...original, title: "An alternate project", slug: "alternate" };
-
-  const stops = [{ ...originalStop, name: "Alternate chapter" }];
-
-  const unfeatured = { ...other, featured: undefined };
-
-  const repository: PublicPortfolioRepository = {
-    async listProjects() {
-      return [unfeatured, featured];
-    },
-    async findProject(slug) {
-      return slug === featured.slug ? featured : null;
-    },
-    async listExperienceStops() {
-      return stops;
-    },
+  const configuration = {
+    DATABASE_URL: connection,
+    PORTFOLIO_SEED_ENVIRONMENT: "development",
+    PORTFOLIO_SEED_DATABASE: "127.0.0.1:5432/m24",
+    PORTFOLIO_SEED_USER: "local",
   };
 
-  const service = new PublicPortfolioService(repository);
+  assert.deepEqual(verifyPortfolioTarget("development", configuration, {}), {
+    connection,
+    label: "development",
+  });
+  const portless = { ...configuration, DATABASE_URL: connection.replace(":5432", "") };
 
-  assert.deepEqual(await service.listProjects(), [unfeatured, featured]);
-  assert.deepEqual(await service.listFeaturedProjects(), [featured]);
-  assert.equal(await service.findProject("alternate"), featured);
-  assert.equal(await service.findProject(original.slug), null);
-  assert.equal(await service.listExperienceStops(), stops);
+  assert.throws(
+    () => verifyPortfolioTarget("development", portless, { PGPORT: "6543" }),
+    /Include the database port explicitly/,
+  );
+  assert.throws(
+    () =>
+      verifyPortfolioTarget("development", configuration, {
+        DATABASE_URL: portless.DATABASE_URL,
+        PGPORT: "6543",
+      }),
+    /Include the database port explicitly/,
+  );
+  assert.throws(
+    () => verifyPortfolioTarget("production", configuration, {}),
+    /expected production/,
+  );
+  assert.throws(
+    () =>
+      verifyPortfolioTarget("development", configuration, { DATABASE_URL: connection + "-other" }),
+    /Inherited/,
+  );
+  assert.throws(
+    () =>
+      verifyPortfolioTarget("development", configuration, {
+        DATABASE_URL: connection.replace("local@", "different@"),
+      }),
+    /Inherited/,
+  );
+  assert.throws(
+    () => verifyPortfolioTarget("development", { ...configuration, DATABASE_URL: undefined }, {}),
+    /Missing/,
+  );
+  assert.throws(
+    () =>
+      verifyPortfolioTarget(
+        "development",
+        { ...configuration, DATABASE_URL: connection + "?host=wrong.example" },
+        {},
+      ),
+    /ambiguous/,
+  );
+  assert.throws(
+    () => verifyPortfolioTarget("development", configuration, { PGOPTIONS: "-c role=other" }),
+    /expected development/,
+  );
+});
+
+test("the seed target refuses URLs that PostgreSQL drivers could interpret differently", () => {
+  const configuration = {
+    PORTFOLIO_SEED_ENVIRONMENT: "development",
+    PORTFOLIO_SEED_DATABASE: "127.0.0.1:5432/m24-review",
+    PORTFOLIO_SEED_USER: "fixture",
+  };
+
+  const canonical = "postgresql://fixture:fake%20password@127.0.0.1:5432/m24-review";
+
+  assert.equal(
+    verifyPortfolioTarget("development", { ...configuration, DATABASE_URL: canonical }, {})
+      .connection,
+    canonical,
+  );
+
+  for (const url of [
+    "postgresql://fixture:fake password@127.0.0.1:5432/m24%2Dreview",
+    "postgresql://fixture:fake%ZZ@127.0.0.1:5432/m24%2Dreview",
+    "postgresql://fixture@127%2E0.0.1:5432/m24-review",
+    "postgresql://fixture@127.0.0.1,other.example:5432/m24-review",
+    canonical.replace("m24-review", "m24%2Dreview"),
+  ]) {
+    assert.throws(
+      () => verifyPortfolioTarget("development", { ...configuration, DATABASE_URL: url }, {}),
+      /Missing or ambiguous portfolio DATABASE_URL/,
+    );
+    assert.throws(
+      () =>
+        verifyPortfolioTarget(
+          "development",
+          { ...configuration, DATABASE_URL: canonical },
+          { DATABASE_URL: url },
+        ),
+      /Missing or ambiguous portfolio DATABASE_URL/,
+    );
+  }
+});
+
+test("missing required homepage data and repository failures use a safe configuration error", async () => {
+  const service = new PublicPortfolioService({
+    getProfile: async () => null,
+    listProjects: async () => [],
+    findProject: async (slug) => {
+      if (slug === "db-error") {
+        throw new Error("private provider detail");
+      }
+
+      return null;
+    },
+    listExperienceStops: async () => [],
+    listServices: async () => [],
+  });
+
+  await assert.rejects(service.getHomepage(), PortfolioConfigurationError);
+  await assert.rejects(service.listProjects(), PortfolioConfigurationError);
+  await assert.rejects(service.findProject("db-error"), {
+    message: "Portfolio data could not be read. Check database access and portfolio migrations.",
+  });
+  assert.equal(await service.findProject("missing"), null);
 });

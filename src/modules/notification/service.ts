@@ -1,6 +1,6 @@
 import "server-only";
 
-import type { AuditRequest, ContactRequest } from "@/generated/prisma/client";
+import type { ContactRequest } from "@/generated/prisma/client";
 import type { Logger } from "@/infrastructure/logging/logger";
 import type { MeetingRecord } from "@/modules/meeting/types";
 
@@ -26,23 +26,6 @@ export class NotificationService {
     private readonly getConfig: () => NotificationConfig,
     private readonly logger: Logger,
   ) {}
-
-  notifyAuditSubmitted(request: AuditRequest): Promise<void> {
-    return this.send("audit-submitted", request.id, request.email, {
-      subject: `New audit request from ${request.name}`,
-      text: lines([
-        `Name: ${request.name}`,
-        `Email: ${request.email}`,
-        request.businessName ? `Business: ${request.businessName}` : null,
-        request.websiteUrl ? `Website: ${request.websiteUrl}` : null,
-        `Focus: ${request.focus}`,
-        `Current process: ${request.currentProcess}`,
-        `Friction: ${request.friction}`,
-        `Desired outcome: ${request.desiredOutcome}`,
-        request.additionalContext ? `Additional context: ${request.additionalContext}` : null,
-      ]),
-    });
-  }
 
   notifyMeetingBooked(meeting: MeetingRecord): Promise<void> {
     return this.send("meeting-booked", meeting.id, meeting.email, {
@@ -72,7 +55,7 @@ export class NotificationService {
   }
 
   private async send(
-    kind: "audit-submitted" | "meeting-booked" | "contact-submitted",
+    kind: "meeting-booked" | "contact-submitted",
     recordId: string,
     replyTo: string,
     content: { subject: string; text: string },

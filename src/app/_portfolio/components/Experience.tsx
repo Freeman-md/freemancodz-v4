@@ -4,13 +4,16 @@ import { SectionHeading } from "./SectionHeading";
 import { ExperienceTimeline } from "./ExperienceTimeline";
 import "./experience.css";
 
-export function Experience({ stops }: { stops: readonly ExperienceStop[] }) {
+export function Experience({
+  stops,
+  philosophy,
+}: {
+  stops: readonly ExperienceStop[];
+  philosophy: string;
+}) {
   return (
     <section className="home-section home-experience" aria-labelledby="experience">
-      <SectionHeading
-        id="experience"
-        description="I turn unclear requirements into practical decisions, then work with the team to get them shipped."
-      >
+      <SectionHeading id="experience" description={philosophy}>
         And a good developer brings clarity.
       </SectionHeading>
       <p className="home-experience-hint">

@@ -23,7 +23,6 @@ const legacyAnchors = new Map([
   ["/#about-outside", "/#outside-engineering"],
   ["/about#about-outside", "/#outside-engineering"],
   ["/#in-their-words", "/#testimonials"],
-  ["/#audit-proof", "/#work"],
 ]);
 
 export function assistantSourceDestination(url: string) {

@@ -1,4 +1,5 @@
 import "server-only";
+import { verifyPortfolioTarget } from "./portfolio-database";
 
 type RequiredEnvName = "DATABASE_URL" | "OPENAI_API_KEY" | "RATE_LIMIT_HMAC_SECRET";
 
@@ -13,13 +14,16 @@ function requireEnv(name: RequiredEnvName) {
 }
 
 export function getDatabaseUrl() {
+  if (process.env.VERCEL_ENV === "preview") {
+    return verifyPortfolioTarget("development", process.env, {}).connection;
+  }
+
   return requireEnv("DATABASE_URL");
 }
 
 export function getOpenAIConfig() {
   return {
     apiKey: requireEnv("OPENAI_API_KEY"),
-    embeddingModel: process.env.OPENAI_EMBEDDING_MODEL || "text-embedding-3-small",
     responseModel: process.env.OPENAI_MODEL || "gpt-4.1-mini",
   };
 }
@@ -28,32 +32,7 @@ export function getRateLimitHmacSecret() {
   return requireEnv("RATE_LIMIT_HMAC_SECRET");
 }
 
-export function getCronSecret() {
-  return process.env.CRON_SECRET;
-}
-
-export function getSupabaseStorageConfig() {
-  return {
-    url: requireEnvValue("NEXT_PUBLIC_SUPABASE_URL"),
-    secretKey: requireEnvValue("SUPABASE_SECRET_KEY"),
-  };
-}
-
-export function getSupabaseAdminAuthConfig() {
-  return {
-    url: requireEnvValue("NEXT_PUBLIC_SUPABASE_URL"),
-    secretKey: requireEnvValue("SUPABASE_SECRET_KEY"),
-  };
-}
-
-export function getSupabaseAuthConfig() {
-  return {
-    url: requireEnvValue("NEXT_PUBLIC_SUPABASE_URL"),
-    publishableKey: requireEnvValue("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY"),
-  };
-}
-
-export function getAdminEmail() {
+export function getNotificationOwnerEmail() {
   return (process.env.ADMIN_EMAIL || "freemanmadudili@gmail.com").trim().toLowerCase();
 }
 

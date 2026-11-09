@@ -19,7 +19,7 @@ export default function OpenGraphImage() {
         color: "#e6f1ff",
       }}
     >
-      <div style={{ fontSize: 24, marginBottom: 38 }}>
+      <div style={{ display: "flex", fontSize: 24, marginBottom: 38 }}>
         {siteConfig.shortName} · Software Engineer
       </div>
       <div style={{ fontSize: 83, letterSpacing: "-0.05em" }}>From first click.</div>

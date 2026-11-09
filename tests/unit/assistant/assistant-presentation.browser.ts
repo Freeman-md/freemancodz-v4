@@ -77,8 +77,8 @@ test("booking review submits the displayed revision and replaces obsolete contro
   });
 });
 
-test("audit and contact reviews submit the displayed snapshot and expose explicit retry", async () => {
-  for (const workflowId of ["audit", "contact"] as const) {
+test("contact reviews submit the displayed snapshot and expose explicit retry", async () => {
+  for (const workflowId of ["contact"] as const) {
     await withBrowser(async ({ container, root }) => {
       const actions: AssistantWorkflowAction[] = [];
 
@@ -107,7 +107,7 @@ test("audit and contact reviews submit the displayed snapshot and expose explici
       assert.equal(container.querySelector("input,textarea,select"), null);
       assert.match(
         container.querySelector("button")!.textContent!,
-        workflowId === "audit" ? /Submit audit request/ : /Send message/,
+        /Send message/,
       );
       await act(async () => container.querySelector("button")!.click());
       assert.deepEqual(actions[0], {
@@ -230,6 +230,7 @@ test("sources remap truthful destinations and omit retired sections", async () =
             { id: "work", title: "Debby Art & Prints", url: "/#debby-arts" },
             { id: "journey", title: "Journey", url: "/#about-journey" },
             { id: "audit", title: "Audit", url: "/#audit" },
+            { id: "audit-proof", title: "Audit proof", url: "/#audit-proof" },
             { id: "more", title: "More work", url: "/#work-additional" },
             { id: "external", title: "External", url: "//example.com/reference" },
           ],

@@ -8,6 +8,8 @@ const base = process.env.HOMEPAGE_URL ?? "http://localhost:3100";
 
 const artifacts = process.env.HOMEPAGE_ARTIFACTS;
 
+const documentReady = { waitUntil: "domcontentloaded" };
+
 const sections = [
   "hero-heading",
   "work",
@@ -108,7 +110,7 @@ async function journey(browser, phone) {
   const menuButton = page.locator(".site-menu-trigger");
 
   try {
-    await page.goto(base);
+    await page.goto(base, documentReady);
     await launcher.waitFor();
     assert.deepEqual(
       await page
@@ -185,7 +187,7 @@ async function journey(browser, phone) {
 
       await click(menuButton);
       await click(menu.getByRole("link", { name: "Freeman" }));
-      await page.waitForURL("**/#experience");
+      await page.waitForURL("**/#experience", documentReady);
       await focused(page.locator("#experience"));
     } else {
       await click(theme);
@@ -194,10 +196,10 @@ async function journey(browser, phone) {
           .getByRole("navigation", { name: "Main navigation" })
           .getByRole("link", { name: "Freeman" }),
       );
-      await page.waitForURL("**/#experience");
+      await page.waitForURL("**/#experience", documentReady);
     }
 
-    await page.reload();
+    await page.reload(documentReady);
     assert.equal(await page.locator("html").getAttribute("data-theme"), "light");
     await page.waitForFunction(() => {
       const heading = document.querySelector("#experience").getBoundingClientRect();
@@ -241,7 +243,7 @@ async function journey(browser, phone) {
       await focused(closeChat);
       await click(page.getByRole("link", { name: /JPScents.*jpscents/ }));
       await closeChat.waitFor({ state: "hidden" });
-      await page.waitForURL("**/#jpscents");
+      await page.waitForURL("**/#jpscents", documentReady);
       await focused(page.locator("#jpscents"));
       assert.equal(requests.length, 1);
       await page.emulateMedia({ reducedMotion: "reduce" });
@@ -312,7 +314,7 @@ async function journey(browser, phone) {
 
     const previous = page.getByRole("button", { name: "Previous testimonial" });
 
-    await page.evaluate(() => document.fonts.ready);
+    await page.waitForFunction(() => document.fonts.status === "loaded");
     if (phone) {
       await verifyQuotePreview(more);
     } else {
@@ -333,10 +335,9 @@ async function journey(browser, phone) {
     await more.waitFor();
     assert.equal(await more.getAttribute("aria-expanded"), "false");
 
-    const protectedResponse = await page.goto(`${base}/admin/projects`);
+    const retiredResponse = await page.request.get(`${base}/admin/projects`);
 
-    assert.equal(protectedResponse?.status(), 200);
-    assert.equal(new URL(page.url()).pathname, "/admin/login");
+    assert.equal(retiredResponse.status(), 404);
     assert.deepEqual(errors, []);
     console.log(
       `${browser.browserType().name()} ${phone ? "390px touch" : "1440px keyboard/pointer"}: passed`,
@@ -364,7 +365,7 @@ async function visualEvidence(browser) {
       hasTouch: width < 700 || height < 450,
     });
 
-    await page.goto(base);
+    await page.goto(base, documentReady);
     await page.evaluate(async () => {
       await document.fonts.ready;
       for (const image of document.images) {
@@ -406,7 +407,7 @@ async function visualEvidence(browser) {
     if (height < 450) {
       await page.getByRole("button", { name: "Open navigation" }).click();
       await page.getByRole("link", { name: "Let’s talk" }).click();
-      await page.waitForURL("**/#contact");
+      await page.waitForURL("**/#contact", documentReady);
     }
 
     await page.close();
@@ -414,7 +415,7 @@ async function visualEvidence(browser) {
 
   const page = await browser.newPage({ viewport: { width: 1440, height: 960 } });
 
-  await page.goto(base);
+  await page.goto(base, documentReady);
   await page.locator(".home-hero-labels").waitFor();
   for (const [index, elapsed] of [200, 600, 1050, 1600, 2150].entries()) {
     await page.evaluate((time) => {

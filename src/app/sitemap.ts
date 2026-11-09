@@ -2,6 +2,8 @@ import { publicPortfolioService } from "@/modules/composition";
 import type { MetadataRoute } from "next";
 import { siteConfig } from "./_config/site-metadata";
 
+export const dynamic = "error";
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const projects = await publicPortfolioService.listProjects();
 

@@ -1,13 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { AuditWorkflowProgressProjector } from "@/modules/workflow/definitions/audit/audit.progress";
 import { ContactWorkflowProgressProjector } from "@/modules/workflow/definitions/contact/contact.progress";
 import { MeetingBookingWorkflowProgressProjector } from "@/modules/workflow/definitions/meeting-booking/meeting-booking.progress";
 
 const interactionId = "11111111-1111-4111-8111-111111111111";
-
-const auditWorkflowProgress = new AuditWorkflowProgressProjector();
 
 const contactWorkflowProgress = new ContactWorkflowProgressProjector();
 
@@ -50,65 +47,6 @@ test("contact progress exposes ordered public fields and accurate missing requir
   assert.equal(prepared.phase, "awaiting_confirmation");
   assert.deepEqual(prepared.missingRequiredFields, []);
   assert.equal(JSON.stringify(prepared).includes("preparedInteractionId"), false);
-});
-
-test("audit progress exposes only its nine approved visitor fields", () => {
-  const collecting = auditWorkflowProgress.getProgress(
-    {
-      focus: "Checkout",
-      currentProcess: null,
-      friction: null,
-      desiredOutcome: null,
-      name: "Visitor",
-      email: "visitor@example.com",
-      businessName: "Example Ltd",
-      websiteUrl: "https://example.com",
-      additionalContext: null,
-      preparedInteractionId: null,
-    },
-    "active",
-  );
-
-  assert.equal(collecting.phase, "collecting");
-  assert.deepEqual(
-    collecting.fields.map(({ key }) => key),
-    [
-      "focus",
-      "currentProcess",
-      "friction",
-      "desiredOutcome",
-      "name",
-      "email",
-      "businessName",
-      "websiteUrl",
-      "additionalContext",
-    ],
-  );
-  assert.deepEqual(collecting.missingRequiredFields, [
-    "currentProcess",
-    "friction",
-    "desiredOutcome",
-  ]);
-  assert.equal(JSON.stringify(collecting).includes("preparedInteractionId"), false);
-
-  const completed = auditWorkflowProgress.getProgress(
-    {
-      focus: "Checkout",
-      currentProcess: "Manual review",
-      friction: "Slow handoffs",
-      desiredOutcome: "A prioritised plan",
-      name: "Visitor",
-      email: "visitor@example.com",
-      businessName: "Example Ltd",
-      websiteUrl: "https://example.com",
-      additionalContext: null,
-      preparedInteractionId: interactionId,
-    },
-    "completed",
-  );
-
-  assert.equal(completed.phase, "completed");
-  assert.deepEqual(completed.missingRequiredFields, []);
 });
 
 test("meeting progress exposes the selected slot without provider recovery state", () => {

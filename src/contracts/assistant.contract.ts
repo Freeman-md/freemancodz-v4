@@ -31,20 +31,6 @@ const workflowInstanceSchema = z
 const workflowStartSchema = z.discriminatedUnion("originEntry", [
   z
     .object({
-      workflowId: z.literal("audit"),
-      originPage: z.literal("/"),
-      originEntry: z.literal("home-audit-cta"),
-    })
-    .strict(),
-  z
-    .object({
-      workflowId: z.literal("audit"),
-      originPage: z.literal("/"),
-      originEntry: z.literal("assistant-starter-audit"),
-    })
-    .strict(),
-  z
-    .object({
       workflowId: z.literal("meeting-booking"),
       originPage: z.literal("/"),
       originEntry: z.literal("assistant-starter-meeting"),
@@ -69,7 +55,7 @@ const assistantMessageSchema = z
   .strict();
 
 export const assistantWorkflowActionSchema = z.union([
-  ...(["confirm_audit", "confirm_contact"] as const).map((action) =>
+  ...(["confirm_contact"] as const).map((action) =>
     z
       .object({
         action: z.literal(action),
@@ -78,7 +64,7 @@ export const assistantWorkflowActionSchema = z.union([
       })
       .strict(),
   ),
-  ...(["retry_audit", "retry_contact"] as const).map((action) =>
+  ...(["retry_contact"] as const).map((action) =>
     z.object({ action: z.literal(action), workflowInstanceId: workflowInstanceIdSchema }).strict(),
   ),
   z

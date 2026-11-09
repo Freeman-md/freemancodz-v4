@@ -4,6 +4,8 @@ import { ProjectCard } from "../_portfolio/components/ProjectCard";
 import { ProjectFilters } from "./_components/ProjectFilters";
 import "./catalogue.css";
 
+export const dynamic = "error";
+
 export const metadata: Metadata = {
   title: "Work",
   description: "Selected projects and explorations by Freeman Madudili.",

@@ -66,10 +66,19 @@ async function journey(browser, phone) {
     const more = page.getByRole("link", { name: "View rest of work" });
 
     await click(more);
-    await page.waitForURL("**/work");
+    await page.waitForURL("**/work", documentReady);
     await page.getByRole("heading", { name: "/ SELECTED WORK" }).waitFor();
+    await page.locator('head link[rel="canonical"][href$="/work"]').waitFor({ state: "attached" });
     assert.match(await page.title(), /^Work/);
-    assert.match(await page.locator('link[rel="canonical"]').getAttribute("href"), /\/work$/);
+    const workDocument = await (await page.request.get(`${base}/work`)).text();
+
+    assert.deepEqual(
+      Array.from(
+        workDocument.matchAll(/<link rel="canonical" href="([^"]+)"/g),
+        ([, href]) => new URL(href).pathname,
+      ),
+      ["/work"],
+    );
     assert.equal(await page.getByRole("link", { name: /View (all|rest of) work/ }).count(), 0);
     assert.equal(await page.locator("#catalogue-results .home-project-excerpts").count(), 0);
 
@@ -120,7 +129,7 @@ async function journey(browser, phone) {
 
     assert.equal(await assistantCard.getByRole("link").count(), 1);
     await click(page.getByRole("link", { name: "Read JPScents case study" }));
-    await page.waitForURL("**/work/jpscents");
+    await page.waitForURL("**/work/jpscents", documentReady);
     await page.getByRole("heading", { name: "JPScents", level: 1 }).waitFor();
     const refreshed = await page.reload(documentReady);
 
@@ -134,22 +143,11 @@ async function journey(browser, phone) {
       await page.getByRole("link", { name: "Visit JPScents", exact: true }).getAttribute("href"),
       "https://jpscents.shop",
     );
-    assert.deepEqual(await page.locator(".case-media h3").allTextContents(), ["Before", "After"]);
-    assert.equal(
-      await page.getByRole("button", { name: /^(Play|Pause) (Before|After)$/ }).count(),
-      0,
-    );
+    assert.equal(await page.locator(".case-comparison").count(), 0);
     assert.equal(
       await page.getByRole("button", { name: /Request Product development/ }).isDisabled(),
       true,
     );
-    const first = await page.locator(".case-media-frame").first().boundingBox();
-
-    const second = await page.locator(".case-media-frame").last().boundingBox();
-
-    assert.ok(Math.abs(first.width / first.height - 16 / 9) < 0.03);
-    assert.equal(Math.round(first.width), Math.round(second.width));
-    assert.ok(phone ? second.y > first.y : Math.abs(second.y - first.y) < 2);
     const question = page.getByRole("button", { name: "Why did you keep WhatsApp for payment?" });
 
     await click(question);
@@ -187,11 +185,21 @@ async function journey(browser, phone) {
     const missing = await page.goto(`${base}/work/missing-project`, documentReady);
 
     assert.equal(missing?.status(), 404);
-    assert.match(await missing.text(), /<h1[^>]*>Project not found<\/h1>/);
+    assert.match(await missing.text(), /<h1[^>]*>Page not found<\/h1>/);
     assert.equal(
       await page.getByRole("link", { name: "Back to Work" }).getAttribute("href"),
       "/work",
     );
+
+    for (const route of [
+      "/admin",
+      "/admin/login",
+      "/auth/confirm",
+      "/api/admin/media",
+      "/api/internal/search-index-worker",
+    ]) {
+      assert.equal((await page.request.get(base + route)).status(), 404, route);
+    }
 
     await page.goto(`${base}/work/jpscents`, documentReady);
     if (phone) {
@@ -213,7 +221,7 @@ async function journey(browser, phone) {
       );
     }
 
-    await page.waitForURL("**/#experience");
+    await page.waitForURL("**/#experience", documentReady);
     await page.waitForFunction(() => {
       const anchor = document.querySelector("#experience");
 
@@ -267,16 +275,21 @@ async function capture(browser) {
     ]) {
       await page.goto(base + path, documentReady);
 
-      for (const image of await page.locator("main img:visible").all()) {
-        await image.scrollIntoViewIfNeeded();
-      }
+      const artwork = "main img[alt]:not([alt=''])";
+
+      await page.locator(artwork).evaluateAll((images) => {
+        for (const image of images) {
+          image.loading = "eager";
+        }
+      });
 
       await page.waitForFunction(
-        () =>
+        (selector) =>
           document.fonts.status === "loaded" &&
-          Array.from(document.querySelectorAll("main img")).every(
+          Array.from(document.querySelectorAll(selector)).every(
             (image) => image.complete && image.naturalWidth > 0,
           ),
+        artwork,
       );
       await page.evaluate(() => window.scrollTo(0, 0));
       const actualWidth = await page.evaluate(() => document.documentElement.scrollWidth);
@@ -315,6 +328,16 @@ async function playback(browser) {
 
   page.setDefaultTimeout(8500);
   await page.goto(`${mediaBase}/work/jpscents`, documentReady);
+  assert.deepEqual(await page.locator(".case-media h3").allTextContents(), ["Before", "After"]);
+  const frames = await page.locator(".case-media-frame").all();
+
+  const first = await frames[0].boundingBox();
+
+  const second = await frames[1].boundingBox();
+
+  assert.ok(first && second && Math.abs(first.width / first.height - 16 / 9) < 0.03);
+  assert.equal(Math.round(first.width), Math.round(second.width));
+  assert.ok(Math.abs(first.y - second.y) < 2);
   const after = page.locator(".case-media").last();
 
   const video = after.locator("video");
@@ -351,14 +374,14 @@ async function playback(browser) {
   await play.click();
   await pause.waitFor();
   await page.locator("h1").scrollIntoViewIfNeeded();
-  await page.waitForFunction(() => document.querySelector(".case-media-frame video").paused);
+  await page.waitForFunction(() => document.querySelector(".case-media:last-child video").paused);
 
   await page.route("**/videos/portfolio-clip.webm", (route) =>
     route.fulfill({ status: 404, body: "Fixture unavailable" }),
   );
   await page.reload(documentReady);
   await video.scrollIntoViewIfNeeded();
-  await page.waitForFunction(() => document.querySelector(".case-media-frame video").error);
+  await page.waitForFunction(() => document.querySelector(".case-media:last-child video").error);
   assert.equal(await play.count(), 0);
   await after.locator("img").waitFor();
 

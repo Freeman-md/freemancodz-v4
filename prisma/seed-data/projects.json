@@ -1,0 +1,254 @@
+[
+  {
+    "slug": "jpscents",
+    "title": "JPScents",
+    "summary": "A fragrance storefront that lets customers choose what they want before contacting the owner on WhatsApp for payment and delivery.",
+    "kind": "real-project",
+    "category": "Fragrance commerce",
+    "company": "Novier Labs",
+    "cover": {
+      "source": "/images/projects/jpscents.webp",
+      "altText": "JPScents live perfume website",
+      "provenance": "V4 storefront capture, also used in the Paper case-study design",
+      "reference": "https://app.paper.design/file/01M5VJC7VWD8F9QYARYR43X33M/p-B-1"
+    },
+    "links": [
+      {
+        "kind": "live-site",
+        "label": "Visit JPScents",
+        "url": "https://jpscents.shop"
+      },
+      {
+        "kind": "repository",
+        "label": "View the JPScents repository",
+        "url": "https://github.com/JPScents/JPScents"
+      }
+    ],
+    "featured": {
+      "problem": "Choosing a scent meant a WhatsApp chat.",
+      "outcome": "Customers arrive ready to pay.",
+      "questions": ["Why WhatsApp?", "How is stock handled?"]
+    },
+    "questions": [
+      "Why did you keep WhatsApp for payment?",
+      "How does the storefront handle stock by size?"
+    ],
+    "displayOrder": 1,
+    "serviceKeys": ["product-development"]
+  },
+  {
+    "slug": "debby-arts",
+    "title": "Debby Art & Prints",
+    "summary": "An artwork and print services website that helps visitors explore the work and put together a custom request.",
+    "kind": "real-project",
+    "category": "Art and creative services",
+    "company": "Novier Labs",
+    "cover": {
+      "source": "/images/projects/debby-arts.webp",
+      "altText": "Debby Art & Prints live artwork and creative-services website",
+      "provenance": "V4 artwork site capture",
+      "reference": "https://github.com/DebbyArts/debbyarts/tree/edc09e5"
+    },
+    "links": [
+      {
+        "kind": "repository",
+        "label": "View the Debby Art & Prints repository",
+        "url": "https://github.com/DebbyArts/debbyarts"
+      }
+    ],
+    "featured": {
+      "problem": "Custom enquiries lacked useful detail.",
+      "outcome": "Defined the enquiry scope and plan.",
+      "questions": ["Why a portfolio?", "What makes a useful brief?"]
+    },
+    "questions": [
+      "How did you decide what to ask in a custom request?",
+      "How does the enquiry flow continue in WhatsApp?"
+    ],
+    "displayOrder": 2,
+    "serviceKeys": ["product-development"]
+  },
+  {
+    "slug": "pay4me-withradius",
+    "title": "Pay4Me / WithRadius",
+    "summary": "An international payments experience that helps students make payments for studying abroad.",
+    "kind": "real-project",
+    "category": "Fintech",
+    "company": "Pay4Me",
+    "cover": {
+      "source": "/images/work/withradius-hero.jpg",
+      "altText": "WithRadius homepage showing its international payment experience",
+      "provenance": "V4 WithRadius homepage capture",
+      "reference": "https://withradius.com/"
+    },
+    "links": [
+      {
+        "kind": "live-site",
+        "label": "Visit Radius",
+        "url": "https://withradius.com/"
+      }
+    ],
+    "featured": {
+      "problem": "Gateway checks delayed large payments.",
+      "outcome": "Team supported US$500k+ in transactions.",
+      "questions": ["Why a bank partner?", "What did you build?"]
+    },
+    "questions": [
+      "How did you test the same payment gateway in the browser?",
+      "What changed after the microfinance bank partnership?"
+    ],
+    "displayOrder": 3,
+    "serviceKeys": ["product-development"]
+  },
+  {
+    "slug": "portfolio-assistant",
+    "title": "Portfolio Assistant",
+    "summary": "An assistant that answers questions about my work with links to the portfolio and helps visitors get in touch or book a meeting.",
+    "kind": "real-project",
+    "category": "Customer guidance · AI product",
+    "cover": {
+      "source": "/images/case-studies/portfolio-assistant.svg",
+      "altText": "Illustration of a portfolio answer with sources and a request confirmation step",
+      "provenance": "Original illustration of the V4 assistant’s cited answers and confirmed actions, using sample content",
+      "reference": "https://github.com/Freeman-md/freemancodz-v4/pull/24"
+    },
+    "links": [],
+    "questions": [
+      "How does the assistant find and cite the right portfolio content?",
+      "How do you prevent the assistant from booking a meeting without confirmation?"
+    ],
+    "displayOrder": 4,
+    "serviceKeys": ["product-development", "automation-ai"]
+  },
+  {
+    "slug": "email-pa",
+    "title": "Email PA",
+    "summary": "A scheduled workflow that turns Outlook job application emails into Airtable updates and a Telegram summary.",
+    "kind": "real-project",
+    "category": "Operational workflow",
+    "cover": {
+      "source": "/images/case-studies/email-pa.webp",
+      "altText": "Sample job application email flowing from Outlook to an Airtable tracker",
+      "provenance": "Approved Paper workflow illustration with example data",
+      "reference": "https://app.paper.design/file/01M5VJC7VWD8F9QYARYR43X33M/p-2-0"
+    },
+    "links": [
+      {
+        "kind": "repository",
+        "label": "View the Email PA repository",
+        "url": "https://github.com/Freeman-md/email-pa"
+      }
+    ],
+    "questions": [
+      "How does Email PA avoid processing the same message twice?",
+      "How does it decide whether to create or update an Airtable job record?"
+    ],
+    "displayOrder": 5,
+    "serviceKeys": ["automation-ai"]
+  },
+  {
+    "slug": "across-the-horizon",
+    "title": "Across the Horizon",
+    "summary": "A study-abroad website rebuilt within its existing Laravel application, with book purchases, paid consultation bookings, and a blog.",
+    "kind": "real-project",
+    "category": "Study abroad",
+    "company": "Pay4Me",
+    "cover": {
+      "source": "/images/work/across-the-horizon.jpg",
+      "altText": "Across the Horizon study-abroad platform",
+      "provenance": "V4 Across the Horizon site capture",
+      "reference": "https://acrossthehorizon.net/"
+    },
+    "links": [
+      {
+        "kind": "live-site",
+        "label": "Visit Across the Horizon",
+        "url": "https://acrossthehorizon.net/"
+      }
+    ],
+    "questions": [
+      "How did you and the backend engineer work in the same Laravel codebase?",
+      "What did the rebuild include for book purchases and consultations?"
+    ],
+    "displayOrder": 6,
+    "serviceKeys": ["product-development"]
+  },
+  {
+    "slug": "interface-studies",
+    "title": "Interface Studies",
+    "summary": "Three interactive frontend studies exploring how people navigate an inbox, book a meeting, and find or act on a search result.",
+    "kind": "exploration",
+    "category": "Frontend interaction design",
+    "cover": {
+      "source": "/images/case-studies/interface-studies.webp",
+      "altText": "Composite of the inbox triage, booking and search studies",
+      "provenance": "Approved Paper composite of the three UI studies",
+      "reference": "https://app.paper.design/file/01M5VJC7VWD8F9QYARYR43X33M/p-2-0"
+    },
+    "links": [
+      {
+        "kind": "repository",
+        "label": "View the UI Builds repository",
+        "url": "https://github.com/Freeman-md/ui-builds"
+      }
+    ],
+    "questions": [
+      "How did you preserve keyboard focus when the interface changed?",
+      "What interaction patterns did you reuse across the three studies?"
+    ],
+    "displayOrder": 7,
+    "serviceKeys": ["product-development"]
+  },
+  {
+    "slug": "email-sequencer",
+    "title": "Email Sequencer",
+    "summary": "A dashboard for preparing, reviewing, and sending outreach through Gmail using an Airtable queue.",
+    "kind": "exploration",
+    "category": "Outreach automation",
+    "cover": {
+      "source": "/images/case-studies/email-sequencer.webp",
+      "altText": "Illustration of a queued outreach follow-up ready to review",
+      "provenance": "Archive V7 Email Sequencer workflow illustration",
+      "reference": "https://github.com/Freeman-md/freemancodz-v7/blob/5d997190742c3ff6d150637d2b4ebd3162212f29/src/components/sections/work/artwork/SequencerPreview.tsx"
+    },
+    "links": [
+      {
+        "kind": "repository",
+        "label": "View the Email Sequencer repository",
+        "url": "https://github.com/Freeman-md/email-sequencer"
+      }
+    ],
+    "questions": [
+      "How do follow-ups stay in the original Gmail conversation?",
+      "What happens when Gmail’s send result is uncertain?"
+    ],
+    "displayOrder": 8,
+    "serviceKeys": ["automation-ai"]
+  },
+  {
+    "slug": "self-healing-backend-operations-system",
+    "title": "Self-Healing Backend Ops",
+    "summary": "An MSc research testbed that compares rule-based and AI-assisted recovery from backend faults under the same safety controls.",
+    "kind": "exploration",
+    "category": "MSc research · Backend systems",
+    "cover": {
+      "source": "/images/case-studies/self-healing-backend-operations-system.webp",
+      "altText": "Illustration of the four checkpoints for verifying backend recovery",
+      "provenance": "Archive V7 recovery verification illustration",
+      "reference": "https://github.com/Freeman-md/freemancodz-v7/blob/5d997190742c3ff6d150637d2b4ebd3162212f29/src/components/sections/work/artwork/RecoveryPreview.tsx"
+    },
+    "links": [
+      {
+        "kind": "repository",
+        "label": "View the Self-Healing Backend Ops repository",
+        "url": "https://github.com/Freeman-md/self-healing-backend-ops"
+      }
+    ],
+    "questions": [
+      "How did you restrict what the AI recovery strategy could do?",
+      "How did you compare recovery against the rule-based baseline?"
+    ],
+    "displayOrder": 9,
+    "serviceKeys": ["automation-ai"]
+  }
+]

@@ -6,7 +6,6 @@ import { createChatPostHandler } from "@/app/api/chat/route";
 import type { Logger } from "@/infrastructure/logging/logger";
 import type { OpenAITransport } from "@/infrastructure/openai/types";
 import type { OpenAIResponseRequest } from "@/infrastructure/openai/types";
-import type { SiteSearch, SiteSearchResult } from "@/modules/search-index/types";
 import { AssistantService } from "@/modules/assistant/service";
 import type { ConsumeRateLimitInput, RateLimitResult } from "@/modules/rate-limit/rate-limit.types";
 import type { RateLimitService } from "@/modules/rate-limit/service";
@@ -14,8 +13,6 @@ import type { IWorkflowInstanceRepository } from "@/modules/workflow/interfaces"
 import type { WorkflowInstance } from "@/generated/prisma/client";
 import { MeetingBookingWorkflowDefinition } from "@/modules/workflow/definitions/meeting-booking/meeting-booking.definition";
 import { MeetingBookingWorkflowProgressProjector } from "@/modules/workflow/definitions/meeting-booking/meeting-booking.progress";
-import { AuditWorkflowDefinition } from "@/modules/workflow/definitions/audit/audit.definition";
-import { AuditWorkflowProgressProjector } from "@/modules/workflow/definitions/audit/audit.progress";
 import { ContactWorkflowDefinition } from "@/modules/workflow/definitions/contact/contact.definition";
 import { contactStateSchema } from "@/modules/workflow/definitions/contact/contact.schema";
 import { ContactWorkflowProgressProjector } from "@/modules/workflow/definitions/contact/contact.progress";
@@ -31,16 +28,6 @@ import { CalendarAvailabilityError } from "@/infrastructure/google-calendar/type
 import type { CalendarClient, CreatedCalendarEvent } from "@/infrastructure/google-calendar/types";
 import { MeetingService } from "@/modules/meeting/service";
 import type { MeetingServiceClient, MeetingRecord } from "@/modules/meeting/types";
-
-const source = {
-  id: "project-1",
-  title: "Grounded Assistant",
-  url: "/work",
-  content: "Freeman built a portfolio assistant with trusted sources.",
-  category: "AI engineering",
-  keywords: ["TypeScript", "Next.js"],
-  similarity: 0.9,
-} satisfies SiteSearchResult;
 
 const meetingSlot = {
   start: "2099-09-15T11:00:00.000Z",
@@ -73,9 +60,6 @@ function events(...values: Array<Record<string, unknown>>) {
 }
 
 function createAssistant({
-  chunks = [source],
-  embedding = async () => [0.1, 0.2],
-  search = async () => chunks,
   response = async () =>
     events(
       { type: "response.created", response: { id: "resp_current" } },
@@ -85,9 +69,6 @@ function createAssistant({
   rateLimit,
   meeting,
 }: {
-  chunks?: SiteSearchResult[];
-  embedding?: OpenAITransport["createEmbedding"];
-  search?: SiteSearch["search"];
   response?: (request: OpenAIResponseRequest) => ReturnType<OpenAITransport["streamResponse"]>;
   rateLimit?: Pick<RateLimitService, "consume">;
   meeting?: MeetingServiceClient;
@@ -104,18 +85,11 @@ function createAssistant({
   };
 
   const openai: OpenAITransport = {
-    getEmbeddingModel: () => "test-model",
-    createEmbedding: embedding,
-    createEmbeddings: async () => [],
     streamResponse: async (request) => {
       inputs.push(request);
 
       return response(request);
     },
-  };
-
-  const siteSearch: SiteSearch = {
-    search,
   };
 
   const meetingService = meeting ?? {
@@ -129,16 +103,6 @@ function createAssistant({
 
   const workflowService = new WorkflowService(
     new WorkflowDefinitionRegistry([
-      new AuditWorkflowDefinition(
-        {
-          submit: async (input) => ({
-            id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
-            ...input,
-            createdAt: new Date("2026-08-20T10:00:00.000Z"),
-          }),
-        },
-        new AuditWorkflowProgressProjector(),
-      ),
       new ContactWorkflowDefinition(
         {
           submit: async (input) => ({
@@ -155,11 +119,11 @@ function createAssistant({
       ),
     ]),
     workflowRepository,
-    ["search_website"],
+    ["ask_user_choice"],
     { info() {}, error() {} },
   );
 
-  const assistantService = new AssistantService(openai, siteSearch, logger, workflowService);
+  const assistantService = new AssistantService(openai, logger, workflowService);
 
   const rateLimitService: Pick<RateLimitService, "consume"> = rateLimit ?? {
     consume: async (input) => {
@@ -189,8 +153,8 @@ function chatRequest(body: unknown, signal?: AbortSignal) {
   });
 }
 
-test("audit/contact actions confirm saved summaries without invoking the model", async () => {
-  for (const kind of ["audit", "contact"] as const) {
+test("contact actions confirm saved summaries without invoking the model", async () => {
+  for (const kind of ["contact"] as const) {
     const { post, inputs, workflowService } = createAssistant();
 
     const instance = await workflowService.start(kind, {
@@ -199,17 +163,7 @@ test("audit/contact actions confirm saved summaries without invoking the model",
       originEntry: null,
     });
 
-    const fields =
-      kind === "audit"
-        ? {
-            name: "Visitor",
-            email: "visitor@example.test",
-            focus: "Orders",
-            currentProcess: "Inbox",
-            friction: "Slow replies",
-            desiredOutcome: "Clear next step",
-          }
-        : { name: "Visitor", email: "visitor@example.test", message: "Discuss a project" };
+    const fields = { name: "Visitor", email: "visitor@example.test", message: "Discuss a project" };
 
     await workflowService.executeTool(instance.id, {
       name: `update_${kind}_context`,
@@ -378,7 +332,7 @@ test("follow-up question preserves the previous response id and streams the new 
 });
 
 test(
-  "concurrent requests keep workflow transitions, sources and response checkpoints isolated",
+  "concurrent requests keep workflow transitions and response checkpoints isolated",
   { timeout: 5000 },
   async () => {
     let initialRequests = 0;
@@ -390,14 +344,6 @@ test(
     });
 
     const { post, workflowService, workflowRepository, errors } = createAssistant({
-      embedding: async (query) => [query === "Alpha" ? 1 : 2],
-      search: async ([key]) => [
-        {
-          ...source,
-          id: key === 1 ? "alpha-source" : "beta-source",
-          title: key === 1 ? "Alpha evidence" : "Beta evidence",
-        },
-      ],
       response: async (request) => {
         if (request.input[0]?.type === "function_call_output") {
           const label = request.previousResponseId === "resp_Alpha_tools" ? "Alpha" : "Beta";
@@ -433,7 +379,7 @@ test(
 
         return events(
           { type: "response.created", response: { id: `resp_${label}_tools` } },
-          { type: "response.output_text.delta", delta: `${label} searching.` },
+          { type: "response.output_text.delta", delta: `${label} updating.` },
           {
             type: "response.output_item.done",
             item: {
@@ -443,15 +389,6 @@ test(
               arguments: JSON.stringify({
                 updates: [{ field: "businessName", value: `${label} company` }],
               }),
-            },
-          },
-          {
-            type: "response.output_item.done",
-            item: {
-              type: "function_call",
-              call_id: `${label}-search`,
-              name: "search_website",
-              arguments: JSON.stringify({ query: label }),
             },
           },
         );
@@ -508,10 +445,7 @@ test(
           "done",
         ],
       );
-      assert.doesNotMatch(
-        output,
-        new RegExp(index === 0 ? "Beta|beta-source" : "Alpha|alpha-source"),
-      );
+      assert.doesNotMatch(output, new RegExp(index === 0 ? "Beta" : "Alpha"));
       assert.deepEqual(
         streamed.find((event) => event.type === "response_id"),
         { type: "response_id", responseId: `resp_${label}_final` },
@@ -522,10 +456,7 @@ test(
         }
 
         if (event.type === "sources") {
-          assert.deepEqual(
-            event.sources.map(({ id }) => id),
-            [index === 0 ? "alpha-source" : "beta-source"],
-          );
+          assert.deepEqual(event.sources, []);
         }
       }
 
@@ -539,18 +470,19 @@ test(
   },
 );
 
-test("a saved update or cancellation is streamed before a later tool failure", async () => {
+test("a saved update or cancellation is streamed before a provider continuation fails", async () => {
   for (const cancelled of [false, true]) {
     const { post, workflowService, workflowRepository, errors } = createAssistant({
-      embedding: async () => {
-        const saved = await workflowRepository.findById(instance.id);
+      response: async (request) => {
+        if (request.input[0]?.type === "function_call_output") {
+          const saved = await workflowRepository.findById(instance.id);
 
-        assert.equal(saved?.status, cancelled ? "cancelled" : "active");
-        assert.equal(saved?.revision, 1);
-        throw new Error("private provider details");
-      },
-      response: async () =>
-        events(
+          assert.equal(saved?.status, cancelled ? "cancelled" : "active");
+          assert.equal(saved?.revision, 1);
+          throw new Error("private provider details");
+        }
+
+        return events(
           { type: "response.created", response: { id: "resp_incomplete" } },
           {
             type: "response.output_item.done",
@@ -563,16 +495,8 @@ test("a saved update or cancellation is streamed before a later tool failure", a
                 : JSON.stringify({ updates: [{ field: "email", value: "saved@example.test" }] }),
             },
           },
-          {
-            type: "response.output_item.done",
-            item: {
-              type: "function_call",
-              call_id: "search-after-save",
-              name: "search_website",
-              arguments: '{"query":"Relevant work"}',
-            },
-          },
-        ),
+        );
+      },
     });
 
     const instance = await workflowService.start("contact", {
@@ -615,7 +539,7 @@ test("a saved update or cancellation is streamed before a later tool failure", a
         message: "assistant.response_failed",
         context: {
           category: "assistant_request_failed",
-          operation: "tool_execution",
+          operation: "provider_response",
           workflowInstanceId: cancelled ? null : instance.id,
         },
       },
@@ -624,22 +548,15 @@ test("a saved update or cancellation is streamed before a later tool failure", a
 });
 
 test("the bounded model loop stops before executing a fourth tool batch", async () => {
-  let searches = 0;
-
   const { inputs, post } = createAssistant({
-    embedding: async () => {
-      searches += 1;
-
-      return [0.1];
-    },
     response: async () =>
       events({
         type: "response.output_item.done",
         item: {
           type: "function_call",
           call_id: "again",
-          name: "search_website",
-          arguments: '{"query":"Freeman"}',
+          name: "unknown_tool",
+          arguments: "{}",
         },
       }),
   });
@@ -647,7 +564,7 @@ test("the bounded model loop stops before executing a fourth tool batch", async 
   const output = await readChatResponse(await post(chatRequest({ message: "Find relevant work" })));
 
   assert.equal(inputs.length, 4);
-  assert.equal(searches, 3);
+  assert.ok(inputs.slice(1).every(({ input }) => input[0]?.type === "function_call_output"));
   assert.deepEqual(
     output
       .trim()
@@ -745,43 +662,35 @@ test("a restored workflow supplies known progress to the model and public stream
   assert.doesNotMatch(output, /preparedInteractionId/);
 });
 
-test("website tool results are accumulated and supplied to the next response", async () => {
+test("a portfolio question uses the temporary Work notice without legacy tools or citations", async () => {
+  const notice =
+    "Portfolio answers are temporarily unavailable. You can browse the projects on [Work](/work).";
+
   const { inputs, post } = createAssistant({
-    response: async (request) =>
-      request.input[0]?.type === "function_call_output"
-        ? events(
-            { type: "response.created", response: { id: "resp_final" } },
-            { type: "response.output_text.delta", delta: "A grounded answer." },
-            { type: "response.completed", response: { id: "resp_final" } },
-          )
-        : events(
-            { type: "response.created", response: { id: "resp_tool" } },
-            {
-              type: "response.output_item.done",
-              item: {
-                type: "function_call",
-                call_id: "call_search",
-                name: "search_website",
-                arguments: '{"query":"Freeman assistant"}',
-              },
-            },
-            { type: "response.completed", response: { id: "resp_tool" } },
-          ),
+    response: async (request) => {
+      assert.ok(request.instructions.includes(notice));
+      assert.doesNotMatch(request.instructions, /search_website/);
+
+      return events(
+        { type: "response.output_text.delta", delta: notice },
+        { type: "response.completed", response: { id: "resp_notice" } },
+      );
+    },
   });
 
   const output = await readChatResponse(
     await post(
       chatRequest({
-        message: "Tell me about Freeman's work.",
-        previousResponseId: null,
+        message: "What has Freeman built?",
+        previousResponseId: "resp_from_previous_release",
       }),
     ),
   );
 
-  assert.equal(inputs.length, 2);
-  assert.equal(inputs[1]?.input[0]?.type, "function_call_output");
-  assert.match(output, /Grounded Assistant/);
-  assert.match(output, /A grounded answer\./);
+  assert.equal(inputs.length, 1);
+  assert.ok(inputs[0].tools.every(({ name }) => name !== "search_website"));
+  assert.ok(output.includes(notice));
+  assert.match(output, /"sources":\[\]/);
 });
 
 test("starting a workflow changes instructions and tools on the next iteration in one request", async () => {
@@ -814,15 +723,17 @@ test("starting a workflow changes instructions and tools on the next iteration i
 
   assert.deepEqual(
     inputs[0]?.tools.map(({ name }) => name),
-    ["ask_user_choice", "search_website", "start_workflow"],
+    ["ask_user_choice", "start_workflow"],
   );
-  assert.match(inputs[0]?.instructions ?? "", /audit: Request a free review/);
-  assert.match(JSON.stringify(inputs[0]?.tools[2]?.parameters), /"audit"/);
+  assert.doesNotMatch(inputs[0]?.instructions ?? "", /audit: Request a free review/);
+  assert.match(
+    JSON.stringify(inputs[0]?.tools.find(({ name }) => name === "start_workflow")?.parameters),
+    /"contact"/,
+  );
   assert.deepEqual(
     inputs[1]?.tools.map(({ name }) => name),
     [
       "ask_user_choice",
-      "search_website",
       "cancel_workflow",
       "switch_workflow",
       "find_meeting_slots",
@@ -839,43 +750,6 @@ test("starting a workflow changes instructions and tools on the next iteration i
   assert.doesNotMatch(output, /availableSlots|pendingBooking|visitor@example\.com/);
 });
 
-test("an Audit CTA starts deterministically with bounded origin metadata", async () => {
-  const { inputs, post, workflowRepository } = createAssistant();
-
-  const output = await readChatResponse(
-    await post(
-      chatRequest({
-        message: "I would like to claim my free customer journey and workflow audit.",
-        workflowStart: {
-          workflowId: "audit",
-          originPage: "/",
-          originEntry: "home-audit-cta",
-        },
-      }),
-    ),
-  );
-
-  const stored = await workflowRepository.findById("00000000-0000-4000-8000-000000000001");
-
-  assert.equal(stored?.workflowId, "audit");
-  assert.equal(stored?.workflowVersion, 1);
-  assert.equal(stored?.originChannel, "web");
-  assert.equal(stored?.originPage, "/");
-  assert.equal(stored?.originEntry, "home-audit-cta");
-  assert.deepEqual(
-    inputs[0]?.tools.map(({ name }) => name),
-    [
-      "ask_user_choice",
-      "search_website",
-      "cancel_workflow",
-      "switch_workflow",
-      "update_audit_context",
-    ],
-  );
-  assert.match(inputs[0]?.instructions ?? "", /free customer journey and workflow Audit/);
-  assert.match(output, /"workflowId":"audit"/);
-});
-
 test("an explicit start replaces a restored terminal workflow instance", async () => {
   const { post, workflowRepository, workflowService } = createAssistant();
 
@@ -890,12 +764,12 @@ test("an explicit start replaces a restored terminal workflow instance", async (
   const output = await readChatResponse(
     await post(
       chatRequest({
-        message: "I would like to request an audit.",
+        message: "I would like to send a message.",
         workflowInstanceId: finished.id,
         workflowStart: {
-          workflowId: "audit",
+          workflowId: "contact",
           originPage: "/",
-          originEntry: "assistant-starter-audit",
+          originEntry: "assistant-starter-contact",
         },
       }),
     ),
@@ -903,7 +777,7 @@ test("an explicit start replaces a restored terminal workflow instance", async (
 
   const started = await workflowRepository.findById("00000000-0000-4000-8000-000000000002");
 
-  assert.equal(started?.workflowId, "audit");
+  assert.equal(started?.workflowId, "contact");
   assert.equal(started?.status, "active");
   assert.match(output, /"id":"00000000-0000-4000-8000-000000000002"/);
   assert.match(output, /"status":"active"/);
@@ -1046,7 +920,7 @@ test("initial workflow conflict cannot mutate; an ordinary switch reply creates 
       if (turn === 1) {
         return toolResponse(
           "resp_conflict",
-          { name: "switch_workflow", arguments: '{"workflowId":"audit"}' },
+          { name: "switch_workflow", arguments: '{"workflowId":"meeting-booking"}' },
           { name: "ask_user_choice", arguments: JSON.stringify(choice) },
         );
       }
@@ -1058,12 +932,12 @@ test("initial workflow conflict cannot mutate; an ordinary switch reply creates 
       if (turn === 3) {
         return toolResponse(
           "resp_switch",
-          { name: "switch_workflow", arguments: '{"workflowId":"audit"}' },
+          { name: "switch_workflow", arguments: '{"workflowId":"meeting-booking"}' },
           { name: "submit_contact", arguments: "{}" },
         );
       }
 
-      return textResponse("resp_switched", "What would you like the audit to help with?");
+      return textResponse("resp_switched", "When would you like to meet?");
     },
   });
 
@@ -1076,12 +950,12 @@ test("initial workflow conflict cannot mutate; an ordinary switch reply creates 
   const output = await readChatResponse(
     await post(
       chatRequest({
-        message: "I'd like an audit",
+        message: "I'd like a meeting",
         workflowInstanceId: current.id,
         workflowStart: {
-          workflowId: "audit",
+          workflowId: "meeting-booking",
           originPage: "/",
-          originEntry: "assistant-starter-audit",
+          originEntry: "assistant-starter-meeting",
         },
       }),
     ),
@@ -1112,7 +986,7 @@ test("initial workflow conflict cannot mutate; an ordinary switch reply creates 
     (instance) => instance.id !== current.id,
   );
 
-  assert.equal(replacement?.workflowId, "audit");
+  assert.equal(replacement?.workflowId, "meeting-booking");
   assert.equal(replacement?.status, "active");
   assert.match(switched, /"phase":"collecting"/);
 });
@@ -1586,56 +1460,6 @@ test("terminal workflow metadata clears the active surface without streaming pri
   );
 });
 
-test("a search with no results still lets the model respond", async () => {
-  const { post } = createAssistant({
-    chunks: [],
-  });
-
-  const output = await readChatResponse(
-    await post(
-      chatRequest({
-        message: "What is Freeman's favourite planet?",
-        previousResponseId: null,
-      }),
-    ),
-  );
-
-  assert.match(output, /A grounded answer\./);
-});
-
-test("retrieval failure returns the existing safe stream error", async () => {
-  const { post } = createAssistant({
-    embedding: async () => {
-      throw new Error("embedding unavailable");
-    },
-    response: async () =>
-      events(
-        { type: "response.created", response: { id: "resp_tool" } },
-        {
-          type: "response.output_item.done",
-          item: {
-            type: "function_call",
-            call_id: "call_search",
-            name: "search_website",
-            arguments: '{"query":"Freeman projects"}',
-          },
-        },
-        { type: "response.completed", response: { id: "resp_tool" } },
-      ),
-  });
-
-  const output = await readChatResponse(
-    await post(
-      chatRequest({
-        message: "What has Freeman built?",
-        previousResponseId: null,
-      }),
-    ),
-  );
-
-  assert.match(output, /The assistant could not respond\. Please try again\./);
-});
-
 test("OpenAI streaming failure returns the existing safe stream error", async () => {
   const { errors, post } = createAssistant({
     response: async () =>
@@ -1725,14 +1549,7 @@ test("aborted request stops without emitting a response", async () => {
 test("aborting after a streamed delta skips later tools and final events", async () => {
   const controller = new AbortController();
 
-  let searches = 0;
-
   const { post, inputs, errors } = createAssistant({
-    embedding: async () => {
-      searches += 1;
-
-      return [0.1];
-    },
     response: async () =>
       (async function* () {
         yield { type: "response.output_text.delta", delta: "Partial answer." };
@@ -1742,8 +1559,8 @@ test("aborting after a streamed delta skips later tools and final events", async
           item: {
             type: "function_call",
             call_id: "after-abort",
-            name: "search_website",
-            arguments: '{"query":"Freeman"}',
+            name: "ask_user_choice",
+            arguments: "{}",
           },
         };
       })() as never,
@@ -1761,7 +1578,6 @@ test("aborting after a streamed delta skips later tools and final events", async
     [{ type: "delta", delta: "Partial answer." }],
   );
   assert.equal(inputs.length, 1);
-  assert.equal(searches, 0);
   assert.deepEqual(errors, []);
 });
 

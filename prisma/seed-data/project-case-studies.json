@@ -1,0 +1,243 @@
+[
+  {
+    "projectSlug": "jpscents",
+    "role": "Software Engineer at Novier Labs",
+    "problem": "The owner walked each customer through the catalogue on WhatsApp before taking payment.",
+    "contribution": "I built a storefront for browsing fragrances, checking stock by size and saving selections. I kept payment and delivery arrangements on WhatsApp.",
+    "outcome": "Customers arrive in WhatsApp with their selections ready. The owner can move straight to payment and delivery arrangements.",
+    "capabilities": [
+      "Fragrance catalogue",
+      "Stock availability by size",
+      "WhatsApp order handoff",
+      "Inventory and order administration"
+    ],
+    "technologyKeys": [
+      "nextjs",
+      "react",
+      "typescript",
+      "tailwindcss",
+      "shadcn-ui",
+      "motion",
+      "prisma",
+      "postgresql",
+      "supabase",
+      "vercel"
+    ],
+    "evidenceUrls": ["https://github.com/JPScents/JPScents/blob/32c020e/README.md"],
+    "beforeUrl": null,
+    "afterUrl": null,
+    "serviceOffer": {
+      "title": "Need a storefront that fits how you sell?",
+      "description": "Let’s build a product around how your customers browse, choose and order."
+    }
+  },
+  {
+    "projectSlug": "debby-arts",
+    "role": "Software Engineer at Novier Labs",
+    "problem": "Customers needed a clearer way to explore artwork, printing and personalisation services and explain what they wanted before starting a conversation.",
+    "contribution": "I assessed how the business handled artwork sales, printing services, and custom orders. I then built the website and guided enquiry flow so visitors could explore the work and put together a useful brief before continuing on WhatsApp.",
+    "outcome": "Visitors can browse the artwork and services, then assemble a structured request before continuing the conversation on WhatsApp.",
+    "capabilities": [
+      "Artwork gallery",
+      "Print and personalisation service catalogue",
+      "Guided enquiry form",
+      "WhatsApp enquiry handoff"
+    ],
+    "technologyKeys": [
+      "nextjs",
+      "react",
+      "typescript",
+      "tailwindcss",
+      "shadcn-ui",
+      "motion",
+      "prisma",
+      "postgresql",
+      "supabase",
+      "vercel"
+    ],
+    "evidenceUrls": ["https://github.com/DebbyArts/debbyarts/tree/edc09e5"],
+    "beforeUrl": null,
+    "afterUrl": null
+  },
+  {
+    "projectSlug": "pay4me-withradius",
+    "role": "Frontend Developer at Pay4Me",
+    "problem": "Additional verification and slow support from third-party payment gateways delayed large payments for students studying abroad.",
+    "contribution": "I worked with the senior frontend lead, who later became Head of Engineering, on the Pay4Me website, including its UI and frontend interactions. I collaborated with backend engineers and mobile developers on connecting the app to the payment gateway. My integration work was connecting Pay4Me.Pay in the browser to test payments through the same backend gateway used by the mobile app. This tested a potential browser fallback when someone could not pay through the app.",
+    "outcome": "The direct agreement with a microfinance bank gave Pay4Me a way to handle larger payments under agreed terms.",
+    "capabilities": [
+      "International student payments",
+      "Browser payment integration for testing",
+      "Shared payment gateway for web and mobile"
+    ],
+    "technologyKeys": ["laravel", "php", "vuejs", "tailwindcss", "typescript", "mysql"],
+    "evidenceUrls": ["https://withradius.com/"],
+    "beforeUrl": null,
+    "afterUrl": null
+  },
+  {
+    "projectSlug": "portfolio-assistant",
+    "role": "Software Engineer · Personal Project",
+    "problem": "Visitors with specific questions had to piece together answers across the portfolio and then find a separate way to get in touch or arrange a meeting.",
+    "contribution": "I built the chat interface, streamed answers using the OpenAI Responses API, and indexed my portfolio content for semantic search in PostgreSQL with pgvector. The assistant can cite the portfolio sections it retrieved. I built guided workflows with progress saved on the server, so visitors can resume after a refresh. The assistant helps collect details and show a summary, and the visitor explicitly confirms before a request is submitted or a meeting is booked through Google Calendar.",
+    "outcome": "Visitors can ask a specific question, open the relevant source, and move from an answer to a contact request or confirmed meeting in the same conversation.",
+    "capabilities": [
+      "Streamed portfolio answers with source links",
+      "Semantic search over portfolio content",
+      "Guided choices and saved workflow progress",
+      "Contact and meeting booking with explicit confirmation"
+    ],
+    "technologyKeys": [
+      "nextjs",
+      "react",
+      "typescript",
+      "tailwindcss",
+      "motion",
+      "zod",
+      "openai-api",
+      "prisma",
+      "postgresql",
+      "pgvector",
+      "google-calendar-api",
+      "vercel"
+    ],
+    "evidenceUrls": ["https://github.com/Freeman-md/freemancodz-v4/pull/24"],
+    "beforeUrl": null,
+    "afterUrl": null
+  },
+  {
+    "projectSlug": "email-pa",
+    "role": "Software Engineer · Personal project",
+    "problem": "Assessment requests, interview invitations, rejections, and other job application updates were easy to miss in a noisy inbox. Keeping the application tracker current also meant reading and copying updates by hand.",
+    "contribution": "I built a scheduled Node.js service that fetches Outlook mail through Microsoft Graph and uses Airtable to track which messages it has already processed. I used structured OpenAI responses to classify relevance and application status, and Airtable MCP to look up candidate job records. The service applies the resulting create, update, or skip decision in Airtable and sends a summary to Telegram.",
+    "outcome": "The workflow turns job application emails into structured Airtable updates and sends a Telegram digest of each run, giving me one place to review what changed and which messages could not be processed.",
+    "capabilities": [
+      "Scheduled Outlook retrieval with overlapping windows",
+      "Message deduplication by Microsoft Graph ID",
+      "AI classification of job application updates",
+      "Airtable job matching and record updates",
+      "Telegram run summary"
+    ],
+    "technologyKeys": [
+      "nodejs",
+      "typescript",
+      "microsoft-graph",
+      "msal-node",
+      "openai-api",
+      "zod",
+      "airtable",
+      "telegram-bot-api",
+      "render"
+    ],
+    "evidenceUrls": [
+      "https://github.com/Freeman-md/email-pa/blob/main/src/process-email.ts",
+      "https://github.com/Freeman-md/email-pa/blob/main/render.yaml"
+    ],
+    "beforeUrl": null,
+    "afterUrl": null
+  },
+  {
+    "projectSlug": "across-the-horizon",
+    "role": "Frontend Developer at Pay4Me",
+    "problem": "The study-abroad site needed a rebuild before launch. The new customer experience had to support book purchases, paid consultations, and blog content within the existing application.",
+    "contribution": "I worked with a product designer and a backend engineer to rebuild the site within the existing Laravel codebase. I built Vue.js screens connected to Laravel through Inertia.js, so the frontend and backend could be developed together in the same application. We integrated book purchases, consultation booking and payment, and the blog.",
+    "outcome": "The rebuilt site supported book purchases and paid consultation bookings at launch.",
+    "capabilities": [
+      "Site-wide frontend rebuild",
+      "Book purchases and payment integration",
+      "Consultation booking and payment",
+      "Blog"
+    ],
+    "technologyKeys": ["laravel", "vuejs", "inertiajs", "tailwindcss", "mysql"],
+    "evidenceUrls": ["https://acrossthehorizon.net/", "https://acrossthehorizon.net/blog"],
+    "beforeUrl": null,
+    "afterUrl": null
+  },
+  {
+    "projectSlug": "interface-studies",
+    "role": "Software Engineer · Personal Project",
+    "problem": "Interactions like moving through a list, changing a time slot, or filtering search results can interrupt a task when selection, focus, or previous input is lost.",
+    "contribution": "I built three interactive studies in one React showcase. In Triage, I paired keyboard navigation with a peek preview and restored focus when details closed. In Booking, I preserved the selected slot and entered details when users went back. In Search, I kept the selected result when possible during filtering and reset contextual actions when the result changed. I used shared UI primitives and motion timings across the studies, with reduced-motion behaviour where appropriate.",
+    "outcome": "The showcase demonstrates how preserving selection, focus, and input helps people continue a task as the interface changes. It includes fictional inbox data and simulated booking availability and confirmation.",
+    "capabilities": [
+      "Linear-inspired triage with keyboard navigation and a peek preview",
+      "Cal.com-inspired booking with simulated availability and preserved form state",
+      "Raycast-inspired search with filtered results and contextual actions",
+      "Shared motion patterns with reduced-motion support"
+    ],
+    "technologyKeys": [
+      "react",
+      "typescript",
+      "vite",
+      "tailwindcss",
+      "shadcn-ui",
+      "base-ui",
+      "motion",
+      "lucide"
+    ],
+    "evidenceUrls": ["https://github.com/Freeman-md/ui-builds/blob/master/README.md"],
+    "beforeUrl": null,
+    "afterUrl": null
+  },
+  {
+    "projectSlug": "email-sequencer",
+    "role": "Software Engineer · Personal Project",
+    "problem": "Managing outreach across an Airtable tracker and multiple Gmail accounts made it easy to lose track of due follow-ups, send from the wrong account, or retry a send whose result was unclear.",
+    "contribution": "I built a dashboard and a scheduled sending runner. The dashboard uses the OpenAI Responses API to prepare follow-up drafts in Airtable for review. The runner checks sending windows, pacing, replies, and do-not-contact status. It rotates initial emails across available Gmail accounts and keeps follow-ups in the original sender’s thread. I added a persistent record of send attempts so an uncertain Gmail response pauses sending until the operator checks and resolves it.",
+    "outcome": "I used the sequencer to send real outreach emails. The dashboard let me review drafts, pace sends across Gmail accounts, and check uncertain send results before continuing.",
+    "capabilities": [
+      "AI-assisted follow-up drafts for operator review",
+      "Timezone-aware sending schedules and mailbox pacing",
+      "Follow-ups bound to the original Gmail sender and thread",
+      "Reply and do-not-contact checks before sending",
+      "Persistent send-attempt records and reconciliation"
+    ],
+    "technologyKeys": [
+      "nextjs",
+      "react",
+      "typescript",
+      "nodejs",
+      "zod",
+      "airtable",
+      "gmail-api",
+      "openai-api",
+      "docker"
+    ],
+    "evidenceUrls": ["https://github.com/Freeman-md/email-sequencer/blob/a279b9e/README.md"],
+    "beforeUrl": null,
+    "afterUrl": null
+  },
+  {
+    "projectSlug": "self-healing-backend-operations-system",
+    "role": "Software Engineer · MSc Research",
+    "problem": "Backend faults often require an operator to diagnose the cause, choose a safe recovery action, and verify the result. The research asked how a rules-based system and an AI-assisted system would handle the same faults under controlled conditions.",
+    "contribution": "I built a local Docker Compose testbed with a managed backend and a separate service that monitors it and coordinates recovery. I implemented a rule-based baseline and two AI-assisted recovery strategies. Each strategy executes through the same policy checks and list of allowed actions. The system checks fresh health evidence before declaring recovery and escalates when the policy requires it. I also built a local operator dashboard and experiment tooling to inject controlled faults and record decisions, actions, and results.",
+    "outcome": "The testbed produced recorded local evidence for comparing recovery strategies, including verified recovery, escalation, timing, and safety checks.",
+    "capabilities": [
+      "Health monitoring and controlled fault injection",
+      "Rule-based baseline and AI-assisted recovery strategies",
+      "Allowlisted Docker actions and escalation on unsafe or unsupported cases",
+      "Recovery verification from fresh health evidence",
+      "Operator dashboard and experiment evidence exports"
+    ],
+    "technologyKeys": [
+      "nodejs",
+      "typescript",
+      "express",
+      "prisma",
+      "postgresql",
+      "zod",
+      "openai-api",
+      "docker",
+      "react",
+      "vite",
+      "tailwindcss",
+      "prometheus-client"
+    ],
+    "evidenceUrls": [
+      "https://github.com/Freeman-md/self-healing-backend-ops/blob/52c7386/README.md"
+    ],
+    "beforeUrl": null,
+    "afterUrl": null
+  }
+]

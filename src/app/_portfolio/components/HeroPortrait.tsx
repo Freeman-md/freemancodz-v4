@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import Image from "next/image";
 
-export function HeroPortrait() {
+export function HeroPortrait({ name }: { name: string }) {
   const portrait = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -56,7 +56,7 @@ export function HeroPortrait() {
       <div className="home-portrait-scroll" ref={portrait}>
         <Image
           src="/images/homepage/hero-slope-v3.png"
-          alt="Freeman Madudili"
+          alt={name}
           width={1145}
           height={1374}
           sizes="(max-width: 700px) 340px, 435px"

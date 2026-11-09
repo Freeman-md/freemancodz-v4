@@ -402,14 +402,6 @@ export class WorkflowService implements IWorkflowService {
     }
   }
 
-  confirmAuditRequest(instanceId: string, expectedRevision: number) {
-    return this.confirmSubmission(instanceId, "audit", expectedRevision);
-  }
-
-  retryAuditRequest(instanceId: string) {
-    return this.retrySubmission(instanceId, "audit");
-  }
-
   confirmContactMessage(instanceId: string, expectedRevision: number) {
     return this.confirmSubmission(instanceId, "contact", expectedRevision);
   }
@@ -418,7 +410,7 @@ export class WorkflowService implements IWorkflowService {
     return this.retrySubmission(instanceId, "contact");
   }
 
-  private async loadSubmission(instanceId: string, workflowId: "audit" | "contact") {
+  private async loadSubmission(instanceId: string, workflowId: "contact") {
     const instance = await this.loadInstance(instanceId);
 
     if (instance.workflowId !== workflowId) {
@@ -463,7 +455,7 @@ export class WorkflowService implements IWorkflowService {
 
   private async confirmSubmission(
     instanceId: string,
-    workflowId: "audit" | "contact",
+    workflowId: "contact",
     expectedRevision: number,
   ): Promise<WorkflowToolExecutionResult> {
     if (!Number.isInteger(expectedRevision) || expectedRevision < 0) {
@@ -526,7 +518,7 @@ export class WorkflowService implements IWorkflowService {
 
   private async retrySubmission(
     instanceId: string,
-    workflowId: "audit" | "contact",
+    workflowId: "contact",
   ): Promise<WorkflowToolExecutionResult> {
     const { instance, definition, state } = await this.loadSubmission(instanceId, workflowId);
 
@@ -1096,7 +1088,7 @@ function toWorkflowPublicInstance(
 }
 
 function isWorkflowExecutionFrozen(instance: WorkflowInstance, state: Prisma.JsonObject) {
-  if (instance.workflowId === "audit" || instance.workflowId === "contact") {
+  if (instance.workflowId === "contact") {
     return state.confirmedRevision != null;
   }
 
@@ -1132,7 +1124,7 @@ function getConfirmationAction(
     return {};
   }
 
-  if (instance.workflowId === "audit" || instance.workflowId === "contact") {
+  if (instance.workflowId === "contact") {
     if (progress.phase === "processing") {
       return { confirmationAction: "retry" };
     }

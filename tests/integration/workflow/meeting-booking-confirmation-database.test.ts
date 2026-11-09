@@ -27,12 +27,8 @@ import { meetingBookingStateSchema } from "@/modules/workflow/definitions/meetin
 import { WorkflowDefinitionRegistry } from "@/modules/workflow/registry";
 import { WorkflowInstanceRepository } from "@/modules/workflow/repository";
 import { WorkflowService } from "@/modules/workflow/service";
-import { AuditService } from "@/modules/audit/service";
-import { AuditRequestRepository } from "@/modules/audit/repository";
 import { ContactService } from "@/modules/contact/service";
 import { ContactRequestRepository } from "@/modules/contact/repository";
-import { AuditWorkflowDefinition } from "@/modules/workflow/definitions/audit/audit.definition";
-import { AuditWorkflowProgressProjector } from "@/modules/workflow/definitions/audit/audit.progress";
 import { ContactWorkflowDefinition } from "@/modules/workflow/definitions/contact/contact.definition";
 import { ContactWorkflowProgressProjector } from "@/modules/workflow/definitions/contact/contact.progress";
 
@@ -178,7 +174,6 @@ test(
       for (const migration of [
         "20260803090000_add_meetings",
         "20260820120000_add_workflow_instances",
-        "20260820130000_add_audit_requests",
         "20260923200500_add_contact_requests",
         "20261002090000_add_workflow_interactions",
         "20261008120000_remove_workflow_pending_interaction",
@@ -198,7 +193,6 @@ test(
 
       context.beforeEach(async () => {
         await prisma!.$transaction([
-          prisma!.auditRequest.deleteMany(),
           prisma!.contactRequest.deleteMany(),
           prisma!.meeting.deleteMany(),
           prisma!.workflowInstance.deleteMany(),
@@ -958,13 +952,20 @@ test(
         );
       }
 
-      for (const kind of ["audit", "contact"] as const) {
+      for (const kind of ["contact"] as const) {
         const definitions = [
-          new AuditWorkflowDefinition(
-            new AuditService(new AuditRequestRepository(prisma!), {
-              notifyAuditSubmitted: async () => {},
-            }),
-            new AuditWorkflowProgressProjector(),
+          new MeetingBookingWorkflowDefinition(
+            {
+              findAvailableSlots: async () => [],
+              isSlotAvailable: async () => false,
+              bookMeeting: async () => {
+                throw new Error("Unexpected booking");
+              },
+              reconcileMeeting: async () => {
+                throw new Error("Unexpected reconciliation");
+              },
+            },
+            new MeetingBookingWorkflowProgressProjector(),
           ),
           new ContactWorkflowDefinition(
             new ContactService(new ContactRequestRepository(prisma!), {
@@ -981,12 +982,9 @@ test(
           });
 
         const confirm = (service: WorkflowService, id: string, revision: number) =>
-          kind === "audit"
-            ? service.confirmAuditRequest(id, revision)
-            : service.confirmContactMessage(id, revision);
+          service.confirmContactMessage(id, revision);
 
-        const retry = (service: WorkflowService, id: string) =>
-          kind === "audit" ? service.retryAuditRequest(id) : service.retryContactMessage(id);
+        const retry = (service: WorkflowService, id: string) => service.retryContactMessage(id);
 
         const prepareSubmission = async (service: WorkflowService) => {
           const instance = await service.start(kind, {
@@ -995,17 +993,11 @@ test(
             originEntry: null,
           });
 
-          const fields =
-            kind === "audit"
-              ? {
-                  name: "Visitor",
-                  email: "visitor@example.test",
-                  focus: "Orders",
-                  currentProcess: "Inbox",
-                  friction: "Slow replies",
-                  desiredOutcome: "Clear next step",
-                }
-              : { name: "Visitor", email: "visitor@example.test", message: "Discuss a project" };
+          const fields = {
+            name: "Visitor",
+            email: "visitor@example.test",
+            message: "Discuss a project",
+          };
 
           await service.executeTool(instance.id, {
             name: `update_${kind}_context`,
@@ -1025,9 +1017,7 @@ test(
         };
 
         const count = (id: string) =>
-          kind === "audit"
-            ? prisma!.auditRequest.count({ where: { workflowInstanceId: id } })
-            : prisma!.contactRequest.count({ where: { workflowInstanceId: id } });
+          prisma!.contactRequest.count({ where: { workflowInstanceId: id } });
 
         await context.test(
           `${kind}: concurrent confirmation and retries create one matching request`,
@@ -1130,7 +1120,7 @@ test(
                   rawArguments: JSON.stringify(
                     mutation === "correction"
                       ? { updates: [{ field: "name", value: "Corrected visitor" }] }
-                      : { workflowId: kind === "audit" ? "contact" : "audit" },
+                      : { workflowId: "meeting-booking" },
                   ),
                   interactionId: randomUUID(),
                   startContext: { originChannel: "test", originPage: null, originEntry: null },

@@ -105,7 +105,7 @@ test("starts the latest version with supplied origin and exposes only safe publi
     /positive integer version/,
   );
 
-  const service = new WorkflowService(registry, repository, ["search_website"], {
+  const service = new WorkflowService(registry, repository, ["ask_user_choice"], {
     info() {},
     error() {},
   });
@@ -337,9 +337,9 @@ test("rejects collisions across global, control, and definition tool names", asy
   const repository = new MemoryWorkflowInstanceRepository();
 
   const service = new WorkflowService(
-    new WorkflowDefinitionRegistry([createDefinition(1, { toolName: "search_website" })]),
+    new WorkflowDefinitionRegistry([createDefinition(1, { toolName: "ask_user_choice" })]),
     repository,
-    ["search_website"],
+    ["ask_user_choice"],
     { info() {}, error() {} },
   );
 

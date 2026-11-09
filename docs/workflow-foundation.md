@@ -21,7 +21,7 @@ Instances begin as `active`. Completion and cancellation are terminal and their 
 
 ## Assistant and browser boundary
 
-Every normal OpenAI iteration combines the portfolio assistant's global instructions and tools (`search_website`, `ask_user_choice`) with the current workflow context. With no active instance, that context can expose `start_workflow`. With an active instance, it exposes `cancel_workflow`, `switch_workflow` and only the definition tools available at the current state. A start tool result is therefore followed immediately by another model iteration using the selected workflow's surface.
+Every normal OpenAI iteration combines the portfolio assistant's global instructions and the `ask_user_choice` tool with the current workflow context. With no active instance, that context can expose `start_workflow`. With an active instance, it exposes `cancel_workflow`, `switch_workflow` and only the definition tools available at the current state. A start tool result is therefore followed immediately by another model iteration using the selected workflow's surface.
 
 An ordinary browser request carries:
 
@@ -43,9 +43,9 @@ The global `ask_user_choice` tool accepts a model-written question and two to si
 
 The picker temporarily replaces the composer. Selecting and sending an option submits its exact text through the ordinary chat request; “Write my own reply” restores text entry without sending anything. Choices are memory-only, never stored on a workflow, and disappear on refresh. The normal workflow tools still validate details and switch atomically. Neither a choice nor typed confirmation can authorise meeting booking; the saved summary's Confirm booking button is required. Read-only progress is unchanged.
 
-## Audit and contact confirmation
+## Contact confirmation
 
-Audit and contact use the same explicit confirmation boundary: `confirm_audit` / `confirm_contact` submit only the saved workflow ID and displayed revision. `retry_audit` / `retry_contact` recover that same accepted request. Typed approval and model tools cannot submit either request. The application displays the saved progress fields in a read-only confirmation summary.
+Contact uses an explicit confirmation boundary: `confirm_contact` submits only the saved workflow ID and displayed revision. `retry_contact` recovers that same accepted request. Typed approval and model tools cannot submit the request. The application displays the saved progress fields in a read-only confirmation summary.
 
 Before submission, the workflow saves `confirmedRevision` in its existing JSON state through a revision-checked write. Accepted fields are frozen against corrections, cancellation and switching. Existing states without this optional marker remain readable. Recovery uses the existing unique workflow-instance key, checks that the saved request matches the accepted fields before notification, and reconciles completion-save failures without overwriting newer state. Notifications retain their current best-effort handling and stable idempotency keys; completion does not guarantee email delivery.
 
@@ -92,7 +92,7 @@ Prisma migrations are the only migration source of truth. `workflow_instances` u
 Run the focused suite against a disposable non-production PostgreSQL server:
 
 ```bash
-PORTFOLIO_TEST_DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54332/postgres npm run test:workflow
+PORTFOLIO_TEST_DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54332/postgres npm test
 ```
 
 The suite creates and drops a random database, applies the complete historical migration chain, proves representative data survives the forward migration, verifies constraints and access controls, and exercises repository lifecycle persistence.

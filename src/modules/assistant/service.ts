@@ -10,9 +10,8 @@ import type {
   OpenAIResponseInputItem,
   OpenAIResponseRequest,
 } from "@/infrastructure/openai/types";
-import type { SiteSearch } from "@/modules/search-index/types";
 import type { Logger } from "@/infrastructure/logging/logger";
-import type { AssistantSource, AssistantStreamEvent } from "@/contracts/assistant.contract";
+import type { AssistantStreamEvent } from "@/contracts/assistant.contract";
 import { START_WORKFLOW_TOOL_NAME, SWITCH_WORKFLOW_TOOL_NAME } from "@/modules/workflow/constants";
 import type { IWorkflowService } from "@/modules/workflow/interfaces";
 import type { WorkflowAssistantContext, WorkflowPublicInstance } from "@/modules/workflow/types";
@@ -21,7 +20,6 @@ import type { AssistantChoice } from "@/contracts/assistant-choice.contract";
 export class AssistantService {
   constructor(
     private readonly openai: OpenAITransport,
-    private readonly siteSearch: SiteSearch,
     private readonly logger: Logger,
     private readonly workflow: IWorkflowService,
   ) {}
@@ -47,7 +45,6 @@ export class AssistantService {
       workflowEndedThisInteraction: false,
       didStreamText: false,
       choice: null,
-      sources: new Map(),
       operation: "workflow_context",
     };
 
@@ -193,13 +190,6 @@ export class AssistantService {
 
   private executeWorkflowAction(request: Extract<AssistantResponseInput, { action: string }>) {
     switch (request.action) {
-      case "confirm_audit":
-        return this.workflow.confirmAuditRequest(
-          request.workflowInstanceId,
-          request.expectedRevision,
-        );
-      case "retry_audit":
-        return this.workflow.retryAuditRequest(request.workflowInstanceId);
       case "confirm_contact":
         return this.workflow.confirmContactMessage(
           request.workflowInstanceId,
@@ -393,14 +383,7 @@ export class AssistantService {
     write: WriteEvent,
   ): Promise<Record<string, unknown>> {
     if (GLOBAL_ASSISTANT_TOOLS.some(({ name }) => name === toolCall.name)) {
-      const result = await executeGlobalAssistantTool(toolCall.name, toolCall.arguments, {
-        openai: this.openai,
-        siteSearch: this.siteSearch,
-      });
-
-      for (const source of result.sources) {
-        state.sources.set(source.id, source);
-      }
+      const result = executeGlobalAssistantTool(toolCall.name, toolCall.arguments);
 
       if (result.choice) {
         state.choice = result.choice;
@@ -478,7 +461,7 @@ export class AssistantService {
   }
 
   private writeFinalEvents(state: ResponseState, write: WriteEvent) {
-    write({ type: "sources", sources: [...state.sources.values()] });
+    write({ type: "sources", sources: [] });
     if (!state.didStreamText && !state.choice) {
       write({ type: "delta", delta: FALLBACK_ANSWER });
     }
@@ -561,6 +544,5 @@ type ResponseState = {
   workflowEndedThisInteraction: boolean;
   didStreamText: boolean;
   choice: AssistantChoice | null;
-  sources: Map<string, AssistantSource>;
   operation: string;
 };

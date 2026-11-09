@@ -1,39 +1,88 @@
 import "server-only";
-
-import type { ExperienceStop } from "@/contracts/public-portfolio.contract";
-import projects from "../data/projects.json";
-import experienceStops from "../data/experience-stops.json";
+import { type Prisma, type PrismaClient } from "@/generated/prisma/client";
+import { ProjectKind } from "@/generated/prisma/enums";
 import {
-  experienceStopsSchema,
-  projectCatalogueSchema,
-  type ProjectCaseStudy,
-} from "../data/project-case-study.schema";
+  caseStudySchema,
+  experienceSchema,
+  serviceSchema,
+  profileSchema,
+  publicProjectSchema,
+  type PortfolioCaseStudy,
+  type PortfolioExperience,
+  type PortfolioProfile,
+  type PortfolioProject,
+  type PortfolioService,
+} from "../data/portfolio.schema";
 
 export interface PublicPortfolioRepository {
-  listProjects(): Promise<readonly ProjectCaseStudy[]>;
-  findProject(slug: string): Promise<ProjectCaseStudy | null>;
-  listExperienceStops(): Promise<readonly ExperienceStop[]>;
+  getProfile(): Promise<PortfolioProfile | null>;
+  listProjects(): Promise<readonly PortfolioProject[]>;
+  findProject(slug: string): Promise<ProjectRecord | null>;
+  listExperienceStops(): Promise<readonly PortfolioExperience[]>;
+  listServices(): Promise<readonly PortfolioService[]>;
 }
 
-export class JsonPublicPortfolioRepository implements PublicPortfolioRepository {
-  private readonly projects: readonly ProjectCaseStudy[];
+type ProjectRecord = PortfolioProject & {
+  study: PortfolioCaseStudy | null;
+  serviceLinks: readonly { position: number; service: PortfolioService }[];
+};
 
-  private readonly stops: readonly ExperienceStop[];
+function mapProject(row: Prisma.ProjectGetPayload<object>) {
+  return publicProjectSchema.parse({
+    ...row,
+    kind: row.kind === ProjectKind.EXPLORATION ? "exploration" : "real-project",
+    company: row.company ?? undefined,
+    featured: row.featured ?? undefined,
+  });
+}
 
-  constructor(projectRecords: unknown = projects, experienceRecords: unknown = experienceStops) {
-    this.projects = projectCatalogueSchema.parse(projectRecords);
-    this.stops = experienceStopsSchema.parse(experienceRecords);
+export class PrismaPublicPortfolioRepository implements PublicPortfolioRepository {
+  constructor(private readonly db: PrismaClient) {}
+
+  async getProfile() {
+    const row = await this.db.profile.findUnique({ where: { key: "global" } });
+
+    return row && profileSchema.parse(row);
   }
 
   async listProjects() {
-    return this.projects;
+    const rows = await this.db.project.findMany();
+
+    return rows.map(mapProject);
   }
 
   async findProject(slug: string) {
-    return this.projects.find((project) => project.slug === slug) ?? null;
+    const row = await this.db.project.findUnique({
+      where: { slug },
+      include: { caseStudy: true, serviceLinks: { include: { service: true } } },
+    });
+
+    if (!row) {
+      return null;
+    }
+
+    const { caseStudy, serviceLinks, ...project } = row;
+
+    return {
+      ...mapProject(project),
+      study:
+        caseStudy &&
+        caseStudySchema.parse({
+          ...caseStudy,
+          serviceOffer: caseStudy.serviceOffer ?? undefined,
+        }),
+      serviceLinks: serviceLinks.map(({ position, service }) => ({
+        position,
+        service: serviceSchema.parse(service),
+      })),
+    };
   }
 
   async listExperienceStops() {
-    return this.stops;
+    return (await this.db.experience.findMany()).map((row) => experienceSchema.parse(row));
+  }
+
+  async listServices() {
+    return (await this.db.service.findMany()).map((row) => serviceSchema.parse(row));
   }
 }
