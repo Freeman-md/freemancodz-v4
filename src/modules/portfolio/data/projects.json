@@ -1,0 +1,517 @@
+[
+  {
+    "slug": "jpscents",
+    "title": "JPScents",
+    "summary": "A fragrance storefront that lets customers choose what they want before contacting the owner on WhatsApp for payment and delivery.",
+    "kind": "real-project",
+    "category": "Fragrance commerce",
+    "company": "Novier Labs",
+    "cover": {
+      "source": "/images/projects/jpscents.webp",
+      "altText": "JPScents live perfume website",
+      "provenance": "V4 storefront capture, also used in the Paper case-study design",
+      "reference": "https://app.paper.design/file/01M5VJC7VWD8F9QYARYR43X33M/p-B-1"
+    },
+    "services": ["product-development"],
+    "capabilities": [
+      "Fragrance catalogue",
+      "Stock availability by size",
+      "WhatsApp order handoff",
+      "Inventory and order administration"
+    ],
+    "technologies": [
+      "nextjs",
+      "react",
+      "typescript",
+      "tailwindcss",
+      "shadcn-ui",
+      "motion",
+      "prisma",
+      "postgresql",
+      "supabase",
+      "vercel"
+    ],
+    "problem": "The owner walked each customer through the catalogue on WhatsApp before taking payment.",
+    "contribution": {
+      "role": "Software Engineer at Novier Labs",
+      "description": "I built a storefront for browsing fragrances, checking stock by size and saving selections. I kept payment and delivery arrangements on WhatsApp."
+    },
+    "outcome": {
+      "summary": "Customers arrive in WhatsApp with their selections ready. The owner can move straight to payment and delivery arrangements."
+    },
+    "links": [
+      {
+        "kind": "live-site",
+        "label": "Visit JPScents",
+        "url": "https://jpscents.shop"
+      },
+      {
+        "kind": "repository",
+        "label": "View the JPScents repository",
+        "url": "https://github.com/JPScents/JPScents"
+      }
+    ],
+    "suggestedQuestions": [
+      "Why did you keep WhatsApp for payment?",
+      "How does the storefront handle stock by size?"
+    ],
+    "evidence": ["https://github.com/JPScents/JPScents/blob/32c020e/README.md"],
+    "cardCover": {
+      "source": "/images/homepage/jpscents.jpg",
+      "altText": "JPScents live perfume website",
+      "provenance": "Approved Paper catalogue artwork",
+      "reference": "https://app.paper.design/file/01M5VJC7VWD8F9QYARYR43X33M/p-2-0"
+    },
+    "featured": {
+      "problem": "Choosing a scent meant a WhatsApp chat.",
+      "outcome": "Customers arrive ready to pay.",
+      "questions": ["Why WhatsApp?", "How is stock handled?"]
+    },
+    "catalogueTags": ["Web app", "E-commerce"],
+    "comparison": {
+      "title": "From browsing in chat to ordering with a selection",
+      "before": {
+        "poster": {
+          "source": "/images/case-studies/jpscents-before.webp",
+          "altText": "Sample WhatsApp conversation about choosing a fragrance",
+          "provenance": "Illustrative reconstruction",
+          "reference": "https://app.paper.design/file/01M5VJC7VWD8F9QYARYR43X33M/p-B-1"
+        },
+        "caption": "The customer asks what’s in stock and picks a fragrance in chat."
+      },
+      "after": {
+        "poster": {
+          "source": "/images/projects/jpscents.webp",
+          "altText": "JPScents live perfume website",
+          "provenance": "Storefront still",
+          "reference": "https://app.paper.design/file/01M5VJC7VWD8F9QYARYR43X33M/p-B-1"
+        },
+        "caption": "The customer chooses a size on the site and opens WhatsApp with their selection ready."
+      }
+    },
+    "serviceOffer": {
+      "title": "Need a storefront that fits how you sell?",
+      "description": "Let’s build a product around how your customers browse, choose and order."
+    }
+  },
+  {
+    "slug": "debby-arts",
+    "title": "Debby Art & Prints",
+    "summary": "An artwork and print services website that helps visitors explore the work and put together a custom request.",
+    "kind": "real-project",
+    "category": "Art and creative services",
+    "company": "Novier Labs",
+    "cover": {
+      "source": "/images/projects/debby-arts.webp",
+      "altText": "Debby Art & Prints live artwork and creative-services website",
+      "provenance": "V4 artwork site capture",
+      "reference": "https://github.com/DebbyArts/debbyarts/tree/edc09e5"
+    },
+    "services": ["product-development"],
+    "capabilities": [
+      "Artwork gallery",
+      "Print and personalisation service catalogue",
+      "Guided enquiry form",
+      "WhatsApp enquiry handoff"
+    ],
+    "technologies": [
+      "nextjs",
+      "react",
+      "typescript",
+      "tailwindcss",
+      "shadcn-ui",
+      "motion",
+      "prisma",
+      "postgresql",
+      "supabase",
+      "vercel"
+    ],
+    "problem": "Customers needed a clearer way to explore artwork, printing and personalisation services and explain what they wanted before starting a conversation.",
+    "contribution": {
+      "role": "Software Engineer at Novier Labs",
+      "description": "I assessed how the business handled artwork sales, printing services, and custom orders. I then built the website and guided enquiry flow so visitors could explore the work and put together a useful brief before continuing on WhatsApp."
+    },
+    "outcome": {
+      "summary": "Visitors can browse the artwork and services, then assemble a structured request before continuing the conversation on WhatsApp."
+    },
+    "links": [
+      {
+        "kind": "repository",
+        "label": "View the Debby Art & Prints repository",
+        "url": "https://github.com/DebbyArts/debbyarts"
+      }
+    ],
+    "suggestedQuestions": [
+      "How did you decide what to ask in a custom request?",
+      "How does the enquiry flow continue in WhatsApp?"
+    ],
+    "evidence": ["https://github.com/DebbyArts/debbyarts/tree/edc09e5"],
+    "cardCover": {
+      "source": "/images/homepage/debby.jpg",
+      "altText": "Debby Art & Prints live artwork and creative-services website",
+      "provenance": "Approved Paper catalogue artwork",
+      "reference": "https://app.paper.design/file/01M5VJC7VWD8F9QYARYR43X33M/p-2-0"
+    },
+    "featured": {
+      "problem": "Custom enquiries lacked useful detail.",
+      "outcome": "Defined the enquiry scope and plan.",
+      "questions": ["Why a portfolio?", "What makes a useful brief?"]
+    },
+    "catalogueTags": ["Web app", "Guided enquiries"]
+  },
+  {
+    "slug": "pay4me-withradius",
+    "title": "Pay4Me / WithRadius",
+    "summary": "An international payments experience that helps students make payments for studying abroad.",
+    "kind": "real-project",
+    "category": "Fintech",
+    "company": "Pay4Me",
+    "cover": {
+      "source": "/images/work/withradius-hero.jpg",
+      "altText": "WithRadius homepage showing its international payment experience",
+      "provenance": "V4 WithRadius homepage capture",
+      "reference": "https://withradius.com/"
+    },
+    "services": ["product-development"],
+    "capabilities": [
+      "International student payments",
+      "Browser payment integration for testing",
+      "Shared payment gateway for web and mobile"
+    ],
+    "technologies": ["laravel", "php", "vuejs", "tailwindcss", "typescript", "mysql"],
+    "problem": "Additional verification and slow support from third-party payment gateways delayed large payments for students studying abroad.",
+    "contribution": {
+      "role": "Frontend Developer at Pay4Me",
+      "description": "I worked with the senior frontend lead, who later became Head of Engineering, on the Pay4Me website, including its UI and frontend interactions. I collaborated with backend engineers and mobile developers on connecting the app to the payment gateway. My integration work was connecting Pay4Me.Pay in the browser to test payments through the same backend gateway used by the mobile app. This tested a potential browser fallback when someone could not pay through the app."
+    },
+    "outcome": {
+      "summary": "The direct agreement with a microfinance bank gave Pay4Me a way to handle larger payments under agreed terms."
+    },
+    "links": [
+      {
+        "kind": "live-site",
+        "label": "Visit Radius",
+        "url": "https://withradius.com/"
+      }
+    ],
+    "suggestedQuestions": [
+      "How did you test the same payment gateway in the browser?",
+      "What changed after the microfinance bank partnership?"
+    ],
+    "evidence": ["https://withradius.com/"],
+    "featured": {
+      "problem": "Gateway checks delayed large payments.",
+      "outcome": "Team supported US$500k+ in transactions.",
+      "questions": ["Why a bank partner?", "What did you build?"]
+    },
+    "catalogueTags": ["Payments", "Frontend"]
+  },
+  {
+    "slug": "portfolio-assistant",
+    "title": "Portfolio Assistant",
+    "summary": "An assistant that answers questions about my work with links to the portfolio and helps visitors get in touch or book a meeting.",
+    "kind": "real-project",
+    "category": "Customer guidance · AI product",
+    "services": ["product-development", "automation-ai"],
+    "capabilities": [
+      "Streamed portfolio answers with source links",
+      "Semantic search over portfolio content",
+      "Guided choices and saved workflow progress",
+      "Contact and meeting booking with explicit confirmation"
+    ],
+    "technologies": [
+      "nextjs",
+      "react",
+      "typescript",
+      "tailwindcss",
+      "motion",
+      "zod",
+      "openai-api",
+      "prisma",
+      "postgresql",
+      "pgvector",
+      "google-calendar-api",
+      "vercel"
+    ],
+    "problem": "Visitors with specific questions had to piece together answers across the portfolio and then find a separate way to get in touch or arrange a meeting.",
+    "contribution": {
+      "role": "Software Engineer · Personal Project",
+      "description": "I built the chat interface, streamed answers using the OpenAI Responses API, and indexed my portfolio content for semantic search in PostgreSQL with pgvector. The assistant can cite the portfolio sections it retrieved. I built guided workflows with progress saved on the server, so visitors can resume after a refresh. The assistant helps collect details and show a summary, and the visitor explicitly confirms before a request is submitted or a meeting is booked through Google Calendar."
+    },
+    "outcome": {
+      "summary": "Visitors can ask a specific question, open the relevant source, and move from an answer to a contact request or confirmed meeting in the same conversation."
+    },
+    "links": [],
+    "suggestedQuestions": [
+      "How does the assistant find and cite the right portfolio content?",
+      "How do you prevent the assistant from booking a meeting without confirmation?"
+    ],
+    "cover": {
+      "source": "/images/case-studies/portfolio-assistant.svg",
+      "altText": "Illustration of a portfolio answer with sources and a request confirmation step",
+      "provenance": "Original illustration of the V4 assistant’s cited answers and confirmed actions, using sample content",
+      "reference": "https://github.com/Freeman-md/freemancodz-v4/pull/24"
+    },
+    "evidence": ["https://github.com/Freeman-md/freemancodz-v4/pull/24"],
+    "catalogueTags": ["AI assistant", "Workflows"]
+  },
+  {
+    "slug": "email-pa",
+    "title": "Email PA",
+    "summary": "A scheduled workflow that turns Outlook job application emails into Airtable updates and a Telegram summary.",
+    "kind": "real-project",
+    "category": "Operational workflow",
+    "services": ["automation-ai"],
+    "capabilities": [
+      "Scheduled Outlook retrieval with overlapping windows",
+      "Message deduplication by Microsoft Graph ID",
+      "AI classification of job application updates",
+      "Airtable job matching and record updates",
+      "Telegram run summary"
+    ],
+    "technologies": [
+      "nodejs",
+      "typescript",
+      "microsoft-graph",
+      "msal-node",
+      "openai-api",
+      "zod",
+      "airtable",
+      "telegram-bot-api",
+      "render"
+    ],
+    "problem": "Assessment requests, interview invitations, rejections, and other job application updates were easy to miss in a noisy inbox. Keeping the application tracker current also meant reading and copying updates by hand.",
+    "contribution": {
+      "role": "Software Engineer · Personal project",
+      "description": "I built a scheduled Node.js service that fetches Outlook mail through Microsoft Graph and uses Airtable to track which messages it has already processed. I used structured OpenAI responses to classify relevance and application status, and Airtable MCP to look up candidate job records. The service applies the resulting create, update, or skip decision in Airtable and sends a summary to Telegram."
+    },
+    "outcome": {
+      "summary": "The workflow turns job application emails into structured Airtable updates and sends a Telegram digest of each run, giving me one place to review what changed and which messages could not be processed."
+    },
+    "links": [
+      {
+        "kind": "repository",
+        "label": "View the Email PA repository",
+        "url": "https://github.com/Freeman-md/email-pa"
+      }
+    ],
+    "suggestedQuestions": [
+      "How does Email PA avoid processing the same message twice?",
+      "How does it decide whether to create or update an Airtable job record?"
+    ],
+    "cover": {
+      "source": "/images/case-studies/email-pa.webp",
+      "altText": "Sample job application email flowing from Outlook to an Airtable tracker",
+      "provenance": "Approved Paper workflow illustration with example data",
+      "reference": "https://app.paper.design/file/01M5VJC7VWD8F9QYARYR43X33M/p-2-0"
+    },
+    "evidence": [
+      "https://github.com/Freeman-md/email-pa/blob/main/src/process-email.ts",
+      "https://github.com/Freeman-md/email-pa/blob/main/render.yaml"
+    ],
+    "catalogueTags": ["Automation", "Email", "Integrations"]
+  },
+  {
+    "slug": "across-the-horizon",
+    "title": "Across the Horizon",
+    "summary": "A study-abroad website rebuilt within its existing Laravel application, with book purchases, paid consultation bookings, and a blog.",
+    "kind": "real-project",
+    "category": "Study abroad",
+    "company": "Pay4Me",
+    "cover": {
+      "source": "/images/work/across-the-horizon.jpg",
+      "altText": "Across the Horizon study-abroad platform",
+      "provenance": "V4 Across the Horizon site capture",
+      "reference": "https://acrossthehorizon.net/"
+    },
+    "services": ["product-development"],
+    "capabilities": [
+      "Site-wide frontend rebuild",
+      "Book purchases and payment integration",
+      "Consultation booking and payment",
+      "Blog"
+    ],
+    "technologies": ["laravel", "vuejs", "inertiajs", "tailwindcss", "mysql"],
+    "problem": "The study-abroad site needed a rebuild before launch. The new customer experience had to support book purchases, paid consultations, and blog content within the existing application.",
+    "contribution": {
+      "role": "Frontend Developer at Pay4Me",
+      "description": "I worked with a product designer and a backend engineer to rebuild the site within the existing Laravel codebase. I built Vue.js screens connected to Laravel through Inertia.js, so the frontend and backend could be developed together in the same application. We integrated book purchases, consultation booking and payment, and the blog."
+    },
+    "outcome": {
+      "summary": "The rebuilt site supported book purchases and paid consultation bookings at launch."
+    },
+    "links": [
+      {
+        "kind": "live-site",
+        "label": "Visit Across the Horizon",
+        "url": "https://acrossthehorizon.net/"
+      }
+    ],
+    "suggestedQuestions": [
+      "How did you and the backend engineer work in the same Laravel codebase?",
+      "What did the rebuild include for book purchases and consultations?"
+    ],
+    "evidence": ["https://acrossthehorizon.net/", "https://acrossthehorizon.net/blog"],
+    "catalogueTags": ["Web app", "Bookings"]
+  },
+  {
+    "slug": "interface-studies",
+    "title": "Interface Studies",
+    "summary": "Three interactive frontend studies exploring how people navigate an inbox, book a meeting, and find or act on a search result.",
+    "kind": "exploration",
+    "category": "Frontend interaction design",
+    "services": ["product-development"],
+    "capabilities": [
+      "Linear-inspired triage with keyboard navigation and a peek preview",
+      "Cal.com-inspired booking with simulated availability and preserved form state",
+      "Raycast-inspired search with filtered results and contextual actions",
+      "Shared motion patterns with reduced-motion support"
+    ],
+    "technologies": [
+      "react",
+      "typescript",
+      "vite",
+      "tailwindcss",
+      "shadcn-ui",
+      "base-ui",
+      "motion",
+      "lucide"
+    ],
+    "problem": "Interactions like moving through a list, changing a time slot, or filtering search results can interrupt a task when selection, focus, or previous input is lost.",
+    "contribution": {
+      "role": "Software Engineer · Personal Project",
+      "description": "I built three interactive studies in one React showcase. In Triage, I paired keyboard navigation with a peek preview and restored focus when details closed. In Booking, I preserved the selected slot and entered details when users went back. In Search, I kept the selected result when possible during filtering and reset contextual actions when the result changed. I used shared UI primitives and motion timings across the studies, with reduced-motion behaviour where appropriate."
+    },
+    "outcome": {
+      "summary": "The showcase demonstrates how preserving selection, focus, and input helps people continue a task as the interface changes. It includes fictional inbox data and simulated booking availability and confirmation."
+    },
+    "links": [
+      {
+        "kind": "repository",
+        "label": "View the UI Builds repository",
+        "url": "https://github.com/Freeman-md/ui-builds"
+      }
+    ],
+    "suggestedQuestions": [
+      "How did you preserve keyboard focus when the interface changed?",
+      "What interaction patterns did you reuse across the three studies?"
+    ],
+    "cover": {
+      "source": "/images/case-studies/interface-studies.webp",
+      "altText": "Composite of the inbox triage, booking and search studies",
+      "provenance": "Approved Paper composite of the three UI studies",
+      "reference": "https://app.paper.design/file/01M5VJC7VWD8F9QYARYR43X33M/p-2-0"
+    },
+    "evidence": ["https://github.com/Freeman-md/ui-builds/blob/master/README.md"],
+    "catalogueTags": ["Search", "Booking", "Triage"]
+  },
+  {
+    "slug": "email-sequencer",
+    "title": "Email Sequencer",
+    "summary": "A dashboard for preparing, reviewing, and sending outreach through Gmail using an Airtable queue.",
+    "kind": "exploration",
+    "category": "Outreach automation",
+    "services": ["automation-ai"],
+    "capabilities": [
+      "AI-assisted follow-up drafts for operator review",
+      "Timezone-aware sending schedules and mailbox pacing",
+      "Follow-ups bound to the original Gmail sender and thread",
+      "Reply and do-not-contact checks before sending",
+      "Persistent send-attempt records and reconciliation"
+    ],
+    "technologies": [
+      "nextjs",
+      "react",
+      "typescript",
+      "nodejs",
+      "zod",
+      "airtable",
+      "gmail-api",
+      "openai-api",
+      "docker"
+    ],
+    "problem": "Managing outreach across an Airtable tracker and multiple Gmail accounts made it easy to lose track of due follow-ups, send from the wrong account, or retry a send whose result was unclear.",
+    "contribution": {
+      "role": "Software Engineer · Personal Project",
+      "description": "I built a dashboard and a scheduled sending runner. The dashboard uses the OpenAI Responses API to prepare follow-up drafts in Airtable for review. The runner checks sending windows, pacing, replies, and do-not-contact status. It rotates initial emails across available Gmail accounts and keeps follow-ups in the original sender’s thread. I added a persistent record of send attempts so an uncertain Gmail response pauses sending until the operator checks and resolves it."
+    },
+    "outcome": {
+      "summary": "I used the sequencer to send real outreach emails. The dashboard let me review drafts, pace sends across Gmail accounts, and check uncertain send results before continuing."
+    },
+    "links": [
+      {
+        "kind": "repository",
+        "label": "View the Email Sequencer repository",
+        "url": "https://github.com/Freeman-md/email-sequencer"
+      }
+    ],
+    "suggestedQuestions": [
+      "How do follow-ups stay in the original Gmail conversation?",
+      "What happens when Gmail’s send result is uncertain?"
+    ],
+    "cover": {
+      "source": "/images/case-studies/email-sequencer.webp",
+      "altText": "Illustration of a queued outreach follow-up ready to review",
+      "provenance": "Archive V7 Email Sequencer workflow illustration",
+      "reference": "https://github.com/Freeman-md/freemancodz-v7/blob/5d997190742c3ff6d150637d2b4ebd3162212f29/src/components/sections/work/artwork/SequencerPreview.tsx"
+    },
+    "evidence": ["https://github.com/Freeman-md/email-sequencer/blob/a279b9e/README.md"],
+    "catalogueTags": ["Automation", "Outreach"]
+  },
+  {
+    "slug": "self-healing-backend-operations-system",
+    "title": "Self-Healing Backend Ops",
+    "summary": "An MSc research testbed that compares rule-based and AI-assisted recovery from backend faults under the same safety controls.",
+    "kind": "exploration",
+    "category": "MSc research · Backend systems",
+    "services": ["automation-ai"],
+    "capabilities": [
+      "Health monitoring and controlled fault injection",
+      "Rule-based baseline and AI-assisted recovery strategies",
+      "Allowlisted Docker actions and escalation on unsafe or unsupported cases",
+      "Recovery verification from fresh health evidence",
+      "Operator dashboard and experiment evidence exports"
+    ],
+    "technologies": [
+      "nodejs",
+      "typescript",
+      "express",
+      "prisma",
+      "postgresql",
+      "zod",
+      "openai-api",
+      "docker",
+      "react",
+      "vite",
+      "tailwindcss",
+      "prometheus-client"
+    ],
+    "problem": "Backend faults often require an operator to diagnose the cause, choose a safe recovery action, and verify the result. The research asked how a rules-based system and an AI-assisted system would handle the same faults under controlled conditions.",
+    "contribution": {
+      "role": "Software Engineer · MSc Research",
+      "description": "I built a local Docker Compose testbed with a managed backend and a separate service that monitors it and coordinates recovery. I implemented a rule-based baseline and two AI-assisted recovery strategies. Each strategy executes through the same policy checks and list of allowed actions. The system checks fresh health evidence before declaring recovery and escalates when the policy requires it. I also built a local operator dashboard and experiment tooling to inject controlled faults and record decisions, actions, and results."
+    },
+    "outcome": {
+      "summary": "The testbed produced recorded local evidence for comparing recovery strategies, including verified recovery, escalation, timing, and safety checks."
+    },
+    "links": [
+      {
+        "kind": "repository",
+        "label": "View the Self-Healing Backend Ops repository",
+        "url": "https://github.com/Freeman-md/self-healing-backend-ops"
+      }
+    ],
+    "suggestedQuestions": [
+      "How did you restrict what the AI recovery strategy could do?",
+      "How did you compare recovery against the rule-based baseline?"
+    ],
+    "cover": {
+      "source": "/images/case-studies/self-healing-backend-operations-system.webp",
+      "altText": "Illustration of the four checkpoints for verifying backend recovery",
+      "provenance": "Archive V7 recovery verification illustration",
+      "reference": "https://github.com/Freeman-md/freemancodz-v7/blob/5d997190742c3ff6d150637d2b4ebd3162212f29/src/components/sections/work/artwork/RecoveryPreview.tsx"
+    },
+    "evidence": ["https://github.com/Freeman-md/self-healing-backend-ops/blob/52c7386/README.md"],
+    "catalogueTags": ["Recovery", "Backend systems"]
+  }
+]

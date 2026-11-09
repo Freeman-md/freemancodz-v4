@@ -48,10 +48,6 @@
   background: #081522;
   color: #e6f1ff;
 }
-.home-art-action[aria-disabled] {
-  color: #a8b7ca;
-  cursor: default;
-}
 a.home-art-action:hover {
   color: #64ffda;
   border-color: #64ffda;
@@ -90,7 +86,7 @@ a.home-art-action:hover {
   text-align: center;
   font-size: 13px;
 }
-.home-work-more > span {
+.home-work-more > a {
   display: inline-flex;
   gap: 8px;
   min-height: 44px;
@@ -115,7 +111,7 @@ a.home-art-action:hover {
 .home-work-more {
   margin-top: 16px;
 }
-.home-work-more > span {
+.home-work-more > a {
   min-height: 52px;
 }
 @media (max-width: 700px) {
@@ -148,4 +144,9 @@ a.home-art-action:hover {
   .home-project-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+}
+
+.home-work-more > a:hover {
+  border-color: var(--home-accent);
+  color: var(--page-text);
 }

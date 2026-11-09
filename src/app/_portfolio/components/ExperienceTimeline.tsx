@@ -4,10 +4,14 @@ import { Dialog } from "@base-ui/react/dialog";
 import { X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { dispatchOpenPortfolioChat, type AssistantDraft } from "../../_assistant/assistant.events";
-import { experienceStops } from "./experience-stops";
+import type { ExperienceStop } from "@/contracts/public-portfolio.contract";
 import { QuestionChips } from "./QuestionChips";
 
-export function ExperienceTimeline() {
+export function ExperienceTimeline({
+  experienceStops,
+}: {
+  experienceStops: readonly ExperienceStop[];
+}) {
   const [selected, setSelected] = useState<number | null>(null);
 
   const [open, setOpen] = useState(false);
@@ -48,7 +52,7 @@ export function ExperienceTimeline() {
         stop.toggleAttribute(
           "data-reached",
           (reduced.matches || top <= innerHeight * 0.75) &&
-            progress >= index / (experienceStops.length - 1),
+            progress >= index / Math.max(1, experienceStops.length - 1),
         );
       });
     }
@@ -74,7 +78,7 @@ export function ExperienceTimeline() {
       window.removeEventListener("resize", schedule);
       reduced.removeEventListener("change", schedule);
     };
-  }, []);
+  }, [experienceStops.length]);
 
   const stop = selected === null ? null : experienceStops[selected];
 

@@ -6,10 +6,14 @@ import { proxy } from "@/proxy";
 test("proxy allows the homepage and working system routes", async () => {
   for (const path of [
     "/",
+    "/work",
+    "/work/jpscents",
+    "/work/missing-project",
     "/api/chat",
     "/api/admin/media",
     "/api/internal/search-index-worker",
     "/images/logo.svg",
+    "/videos/portfolio-clip.webm",
     "/icon.svg",
     "/opengraph-image",
     "/robots.txt",
@@ -23,7 +27,6 @@ test("proxy allows the homepage and working system routes", async () => {
 
 test("proxy redirects every other public page to the homepage", async () => {
   for (const path of [
-    "/work",
     "/about",
     "/audit",
     "/home-old",
@@ -42,7 +45,12 @@ test("proxy redirects every other public page to the homepage", async () => {
 });
 
 test("public redirects retain query parameters and citation fragments", async () => {
-  const response = await proxy(new NextRequest("https://freeman.dev/about?ref=portfolio#about-journey"));
+  const response = await proxy(
+    new NextRequest("https://freeman.dev/about?ref=portfolio#about-journey"),
+  );
 
-  assert.equal(response.headers.get("location"), "https://freeman.dev/?ref=portfolio#about-journey");
+  assert.equal(
+    response.headers.get("location"),
+    "https://freeman.dev/?ref=portfolio#about-journey",
+  );
 });

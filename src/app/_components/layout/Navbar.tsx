@@ -194,7 +194,7 @@ export function Navbar() {
 
     pendingHash.current = null;
     if (hash) {
-      followHomeAnchor(hash);
+      followHomeAnchor(`/${hash}`);
     } else if (restoreFocus.current) {
       trigger.current?.focus({ preventScroll: true });
     }
@@ -246,6 +246,7 @@ export function Navbar() {
       <div className="site-nav">
         <Link
           href="/#top"
+          prefetch={false}
           aria-label="Freemancodz home"
           className="site-wordmark"
           tabIndex={active ? -1 : undefined}

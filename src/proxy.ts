@@ -17,6 +17,7 @@ export async function proxy(req: NextRequest) {
     path.startsWith("/_next/") ||
     path.startsWith("/_vercel/") ||
     path.startsWith("/images/") ||
+    path.startsWith("/videos/") ||
     path === "/favicon.ico" ||
     path === "/icon.svg";
 
@@ -45,7 +46,11 @@ export async function proxy(req: NextRequest) {
     return response;
   }
 
-  const isAllowedRoute = normalizedPath === "/" || allowedGeneratedRoutes.has(path);
+  const isAllowedRoute =
+    normalizedPath === "/" ||
+    normalizedPath === "/work" ||
+    /^\/work\/[^/]+$/.test(normalizedPath) ||
+    allowedGeneratedRoutes.has(path);
 
   if (isAsset || isApiRoute || isAllowedRoute) {
     return NextResponse.next();

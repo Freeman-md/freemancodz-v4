@@ -1,3 +1,4 @@
+import { publicPortfolioService } from "@/modules/composition";
 import { SiteLayout } from "./_components/layout/SiteLayout";
 import { SITE_OWNER_NAME, siteConfig } from "./_config/site-metadata";
 import { Contact, profiles } from "./_portfolio/components/Contact";
@@ -9,7 +10,12 @@ import { Services } from "./_portfolio/components/Services";
 import { Testimonials } from "./_portfolio/components/Testimonials";
 import "./_portfolio/homepage.css";
 
-export default function HomePage() {
+export default async function HomePage() {
+  const [featured, experience] = await Promise.all([
+    publicPortfolioService.listFeaturedProjects(),
+    publicPortfolioService.listExperienceStops(),
+  ]);
+
   const person = {
     "@context": "https://schema.org",
     "@type": "Person",
@@ -31,8 +37,8 @@ export default function HomePage() {
         }}
       />
       <Hero />
-      <SelectedWork />
-      <Experience />
+      <SelectedWork projects={featured} />
+      <Experience stops={experience} />
       <Services />
       <Testimonials />
       <OutsideEngineering />
