@@ -188,7 +188,7 @@ test("sources belong to their answer and disappear when no evidence is returned"
   });
 });
 
-test("source display deduplicates only identical title and URL pairs", async () => {
+test("source display deduplicates by displayed title and destination", async () => {
   await withBrowser(async ({ container, root }) => {
     await act(async () => {
       root.render(
@@ -215,7 +215,7 @@ test("source display deduplicates only identical title and URL pairs", async () 
       [
         ["JPScents", "/#jpscents"],
         ["Fragrance discovery", "/#jpscents"],
-        ["JPScents", "https://jpscents.shop"],
+        ["JPScents", "https://jpscents.shop/"],
       ],
     );
   });
@@ -231,15 +231,16 @@ test("sources remap truthful destinations and omit retired sections", async () =
             { id: "journey", title: "Journey", url: "/#about-journey" },
             { id: "audit", title: "Audit", url: "/#audit" },
             { id: "more", title: "More work", url: "/#work-additional" },
+            { id: "external", title: "External", url: "//example.com/reference" },
           ],
         }),
       ),
     );
     assert.deepEqual(
       Array.from(container.querySelectorAll("a"), (link) => link.getAttribute("href")),
-      ["/#debby-arts", "/#experience"],
+      ["/#debby-arts", "/#experience", "https://example.com/reference"],
     );
-    assert.match(container.textContent ?? "", /Sources · 2/);
+    assert.match(container.textContent ?? "", /Sources · 3/);
   });
 });
 

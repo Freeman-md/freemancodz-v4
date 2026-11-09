@@ -63,7 +63,6 @@
 }
 .home-quote-frame {
   position: relative;
-  overflow: clip;
 }
 .home-quote-text {
   color: var(--home-quote-muted, var(--page-muted));
@@ -96,9 +95,13 @@
   visibility: hidden;
   pointer-events: none;
 }
+.home-quote-tail,
 .home-quote-suffix {
   white-space: nowrap;
+}
+.home-quote-suffix {
   font-size: 0.68em;
+  line-height: 1;
   color: var(--home-accent);
 }
 .home-quote-suffix button {

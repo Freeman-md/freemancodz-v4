@@ -25,6 +25,7 @@ type AssistantMessagesProps = {
   messagesEndRef: RefObject<HTMLDivElement | null>;
   shouldReduceMotion: boolean | null;
   onStarterAction: (action: StarterAction) => void;
+  onInternalSource?: (href: string) => void;
 };
 
 export function AssistantMessages({
@@ -35,6 +36,7 @@ export function AssistantMessages({
   messagesEndRef,
   shouldReduceMotion,
   onStarterAction,
+  onInternalSource,
 }: AssistantMessagesProps) {
   return (
     <ScrollArea
@@ -117,7 +119,9 @@ export function AssistantMessages({
                   ) : null}
                 </div>
 
-                {message.sources ? <AssistantSources sources={message.sources} /> : null}
+                {message.sources ? (
+                  <AssistantSources sources={message.sources} onInternalSource={onInternalSource} />
+                ) : null}
               </motion.article>
             ))}
         </AnimatePresence>

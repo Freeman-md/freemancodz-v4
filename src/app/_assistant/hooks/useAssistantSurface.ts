@@ -56,6 +56,11 @@ export function useAssistantSurface({
     setIsOpen(true);
   }
 
+  function closeWithoutFocusReturn() {
+    returnFocus.current = null;
+    setIsOpen(false);
+  }
+
   function openDraft(draft: AssistantDraft) {
     setInput(draft.text);
     setSubject(draft.subject);
@@ -104,5 +109,6 @@ export function useAssistantSurface({
     textareaRef,
     messagesEndRef,
     openChat,
+    closeWithoutFocusReturn,
   };
 }

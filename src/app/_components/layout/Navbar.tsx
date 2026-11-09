@@ -11,6 +11,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { followHomeAnchor } from "../../_utils/follow-home-anchor";
 import { ThemeToggle } from "./ThemeToggle";
 import "./navbar.css";
 
@@ -193,15 +194,7 @@ export function Navbar() {
 
     pendingHash.current = null;
     if (hash) {
-      const destination = document.getElementById(hash.slice(1));
-
-      if (window.location.hash !== hash) {
-        window.history.pushState(null, "", hash);
-      }
-
-      destination?.scrollIntoView();
-
-      destination?.focus({ preventScroll: true });
+      followHomeAnchor(hash);
     } else if (restoreFocus.current) {
       trigger.current?.focus({ preventScroll: true });
     }

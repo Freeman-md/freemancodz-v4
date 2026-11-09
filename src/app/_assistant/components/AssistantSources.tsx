@@ -6,9 +6,10 @@ import type { AssistantSource } from "@/contracts/assistant.contract";
 
 type AssistantSourcesProps = {
   sources: AssistantSource[];
+  onInternalSource?: (href: string) => void;
 };
 
-export function AssistantSources({ sources }: AssistantSourcesProps) {
+export function AssistantSources({ sources, onInternalSource }: AssistantSourcesProps) {
   const identities = new Set<string>();
 
   const visibleSources = sources.flatMap((source) => {
@@ -46,6 +47,21 @@ export function AssistantSources({ sources }: AssistantSourcesProps) {
             <li key={source.id}>
               <a
                 href={source.url}
+                onClick={(event) => {
+                  if (
+                    external ||
+                    !onInternalSource ||
+                    event.metaKey ||
+                    event.ctrlKey ||
+                    event.shiftKey ||
+                    event.altKey
+                  ) {
+                    return;
+                  }
+
+                  event.preventDefault();
+                  onInternalSource(source.url);
+                }}
                 target={external ? "_blank" : undefined}
                 rel={external ? "noreferrer" : undefined}
                 aria-label={external ? `${source.title} (opens in a new tab)` : undefined}

@@ -11,6 +11,7 @@ import { AssistantWorkflowProgress } from "./AssistantWorkflowProgress";
 import { useAssistant } from "../hooks/useAssistant";
 import { useAssistantSurface } from "../hooks/useAssistantSurface";
 import { MAX_MESSAGE_LENGTH } from "../constants";
+import { followHomeAnchor } from "../../_utils/follow-home-anchor";
 
 export function FloatingPortfolioChat() {
   const {
@@ -39,9 +40,12 @@ export function FloatingPortfolioChat() {
     textareaRef,
     messagesEndRef,
     openChat,
+    closeWithoutFocusReturn,
   } = useAssistantSurface({ messages, isLoading, setInput });
 
   const previousChoice = useRef(choice);
+
+  const pendingSource = useRef<string | null>(null);
 
   useEffect(() => {
     if (isOpen && previousChoice.current && !choice) {
@@ -71,13 +75,33 @@ export function FloatingPortfolioChat() {
     }
   }
 
+  function closeForSource(href: string) {
+    pendingSource.current = href;
+    closeWithoutFocusReturn();
+  }
+
+  function finishClose(open: boolean) {
+    if (open || !pendingSource.current) {
+      return;
+    }
+
+    const href = pendingSource.current;
+
+    pendingSource.current = null;
+    followHomeAnchor(href);
+  }
+
   const panel = (
     <Dialog.Popup
       className="portfolio-chat-surface"
       initialFocus={closeRef}
-      finalFocus={() =>
-        returnFocus.current?.isConnected ? returnFocus.current : launcherRef.current
-      }
+      finalFocus={() => {
+        if (!returnFocus.current) {
+          return false;
+        }
+
+        return returnFocus.current.isConnected ? returnFocus.current : launcherRef.current;
+      }}
     >
       <header className="assistant-header">
         <div>
@@ -97,6 +121,7 @@ export function FloatingPortfolioChat() {
         messagesEndRef={messagesEndRef}
         shouldReduceMotion={shouldReduceMotion}
         onStarterAction={(action) => void handleStarterAction(action)}
+        onInternalSource={isMobile ? closeForSource : undefined}
       >
         {workflowInstance && (
           <AssistantWorkflowConfirmation
@@ -130,7 +155,12 @@ export function FloatingPortfolioChat() {
 
   return (
     <div className="assistant-root">
-      <Dialog.Root open={isOpen} onOpenChange={setIsOpen} modal={isMobile}>
+      <Dialog.Root
+        open={isOpen}
+        onOpenChange={setIsOpen}
+        onOpenChangeComplete={finishClose}
+        modal={isMobile}
+      >
         <Dialog.Trigger
           className="assistant-launcher"
           aria-label="Open portfolio chat"

@@ -13,24 +13,36 @@ function findPreview(text: string, measure: HTMLDivElement, width: number) {
     return text;
   }
 
-  // Measure with the same unbreakable suffix as the visible control.
-  const content = document.createTextNode("");
+  // The last word and control share one unbreakable tail in the probe and visible quote.
+  const prefix = document.createTextNode("");
+
+  const lastWord = document.createTextNode("");
+
+  const tail = document.createElement("span");
 
   const suffix = document.createElement("span");
 
+  const button = document.createElement("button");
+
+  tail.className = "home-quote-tail";
   suffix.className = "home-quote-suffix";
-  suffix.textContent = "… read more";
-  measure.replaceChildren(content, suffix);
-  const ends = Array.from(text.matchAll(/\S+(?=\s|$)/g), (word) => word.index + word[0].length);
+  button.textContent = "read more";
+  suffix.append("… ", button);
+  tail.append(lastWord, suffix);
+  measure.replaceChildren(prefix, tail);
+  const words = Array.from(text.matchAll(/\S+/g));
 
   let low = 0;
 
-  let high = ends.length - 1;
+  let high = words.length - 1;
 
   while (low < high) {
     const middle = Math.ceil((low + high) / 2);
 
-    content.textContent = text.slice(0, ends[middle]);
+    const word = words[middle];
+
+    prefix.textContent = text.slice(0, word.index);
+    lastWord.textContent = word[0];
     if (measure.offsetHeight <= limit) {
       low = middle;
     } else {
@@ -38,7 +50,9 @@ function findPreview(text: string, measure: HTMLDivElement, width: number) {
     }
   }
 
-  return text.slice(0, ends[low]);
+  const word = words[low];
+
+  return text.slice(0, word.index + word[0].length);
 }
 
 export function TestimonialQuote({ quote }: { quote: string }) {
@@ -100,7 +114,10 @@ export function TestimonialQuote({ quote }: { quote: string }) {
     }
 
     const animation = wrapper.animate(
-      [{ height: `${start}px` }, { height: `${content.current.offsetHeight}px` }],
+      [
+        { height: `${start}px`, overflow: "clip" },
+        { height: `${content.current.offsetHeight}px`, overflow: "clip" },
+      ],
       { duration: 200, easing: "ease-out" },
     );
 
@@ -130,7 +147,7 @@ export function TestimonialQuote({ quote }: { quote: string }) {
     <div className="home-quote-frame" ref={frame}>
       <div className="home-quote-text" ref={content}>
         <span style={{ "--quote-word-count": count } as CSSProperties}>
-          {parts.map((part, index) =>
+          {parts.slice(0, -1).map((part, index) =>
             index % 2 === 0 ? (
               <span
                 className="home-quote-word"
@@ -143,25 +160,33 @@ export function TestimonialQuote({ quote }: { quote: string }) {
               part
             ),
           )}
-        </span>
-        {hasMore && (
-          <span className="home-quote-suffix">
-            {expanded ? " " : "… "}
-            <button
-              type="button"
-              aria-expanded={expanded}
-              aria-label={
-                expanded ? "Read less of this testimonial" : "Read more of this testimonial"
-              }
-              onClick={() => {
-                nextStartHeight.current = frame.current?.getBoundingClientRect().height ?? null;
-                setExpanded(!expanded);
-              }}
+          <span className={expanded ? undefined : "home-quote-tail"}>
+            <span
+              className="home-quote-word"
+              style={{ "--quote-word": count - 1 } as CSSProperties}
             >
-              {expanded ? "read less" : "read more"}
-            </button>
+              {parts.at(-1)}
+            </span>
+            {hasMore && (
+              <span className="home-quote-suffix">
+                {expanded ? " " : "… "}
+                <button
+                  type="button"
+                  aria-expanded={expanded}
+                  aria-label={
+                    expanded ? "Read less of this testimonial" : "Read more of this testimonial"
+                  }
+                  onClick={() => {
+                    nextStartHeight.current = frame.current?.getBoundingClientRect().height ?? null;
+                    setExpanded(!expanded);
+                  }}
+                >
+                  {expanded ? "read less" : "read more"}
+                </button>
+              </span>
+            )}
           </span>
-        )}
+        </span>
       </div>
       <div className="home-quote-text home-quote-measure" ref={measure} aria-hidden="true" />
     </div>

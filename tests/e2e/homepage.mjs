@@ -42,6 +42,33 @@ async function focused(locator) {
   await locator.and(locator.page().locator(":focus")).waitFor();
 }
 
+async function verifyQuotePreview(control) {
+  await control.waitFor();
+  const { lineCount, sharesLastLine } = await control.evaluate((button) => {
+    const text = button.closest(".home-quote-text");
+
+    const words = Array.from(text.querySelectorAll(".home-quote-word"), (word) =>
+      word.getBoundingClientRect(),
+    );
+
+    const last = words.at(-1);
+
+    const label = button.getBoundingClientRect();
+
+    const lineHeight = parseFloat(getComputedStyle(text).lineHeight);
+
+    const lineCount = Math.round((last.top - words[0].top) / lineHeight) + 1;
+
+    const sharesLastLine =
+      Math.abs((label.top + label.bottom - last.top - last.bottom) / 2) < lineHeight / 2;
+
+    return { lineCount, sharesLastLine };
+  });
+
+  assert.equal(lineCount, 4, "collapsed testimonial displays four lines of quote text");
+  assert.ok(sharesLastLine, "read more shares the fourth line");
+}
+
 async function journey(browser, phone) {
   const viewport = phone ? { width: 390, height: 844 } : { width: 1440, height: 960 };
 
@@ -215,6 +242,17 @@ async function journey(browser, phone) {
     await click(closeChat);
     await closeChat.waitFor({ state: "hidden" });
     await focused(whatsApp);
+    if (phone) {
+      await page.emulateMedia({ reducedMotion: "no-preference" });
+      await click(launcher);
+      await focused(closeChat);
+      await click(page.getByRole("link", { name: /JPScents.*jpscents/ }));
+      await closeChat.waitFor({ state: "hidden" });
+      await page.waitForURL("**/#jpscents");
+      await focused(page.locator("#jpscents"));
+      assert.equal(requests.length, 1);
+      await page.emulateMedia({ reducedMotion: "reduce" });
+    }
 
     const pay4me = page.getByRole("button", { name: /2022–2023 Pay4Me/ });
 
@@ -281,12 +319,15 @@ async function journey(browser, phone) {
 
     const previous = page.getByRole("button", { name: "Previous testimonial" });
 
-    if (!phone) {
+    await page.evaluate(() => document.fonts.ready);
+    if (phone) {
+      await verifyQuotePreview(more);
+    } else {
       assert.equal(await more.count(), 0);
     }
 
     await click(next);
-    await more.waitFor();
+    await verifyQuotePreview(more);
     await more.focus();
     await more.press("Enter");
     await focused(less);
@@ -417,18 +458,32 @@ async function visualEvidence(browser) {
   }
 
   await page.getByRole("button", { name: "Next testimonial" }).click();
+  const more = page.getByRole("button", { name: "Read more of this testimonial" });
+
+  await verifyQuotePreview(more);
   await page
-    .getByRole("button", { name: "Read more of this testimonial" })
-    .scrollIntoViewIfNeeded();
-  await page.screenshot({ path: join(artifacts, "quote-0.jpg"), quality: 75 });
-  await page.getByRole("button", { name: "Read more of this testimonial" }).click();
-  await page.getByRole("button", { name: "Read less of this testimonial" }).waitFor();
-  await page.screenshot({ path: join(artifacts, "quote-1.jpg"), quality: 75 });
-  await page
-    .locator(".home-quote-frame")
-    .evaluate(async (frame) =>
-      Promise.all(frame.getAnimations().map((animation) => animation.finished)),
+    .locator(".home-testimonial")
+    .evaluate((quote) =>
+      window.scrollBy({ top: quote.getBoundingClientRect().top - 210, behavior: "instant" }),
     );
+  await page
+    .locator(".home-testimonial-reveal")
+    .evaluate(async (section) =>
+      Promise.all(section.getAnimations({ subtree: true }).map((animation) => animation.finished)),
+    );
+  await more.evaluate((button) => button.focus({ preventScroll: true }));
+  await page.screenshot({ path: join(artifacts, "quote-0.jpg"), quality: 75 });
+  await page.keyboard.press("Enter");
+  const frame = page.locator(".home-quote-frame");
+
+  await frame.evaluate((quote) => {
+    const animation = quote.getAnimations()[0];
+
+    animation.pause();
+    animation.currentTime = 95;
+  });
+  await page.screenshot({ path: join(artifacts, "quote-1.jpg"), quality: 75 });
+  await frame.evaluate((quote) => quote.getAnimations()[0].finish());
   await page.screenshot({ path: join(artifacts, "quote-2.jpg"), quality: 75 });
   await page.close();
 }

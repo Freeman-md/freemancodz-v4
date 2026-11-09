@@ -37,12 +37,16 @@ export function assistantSourceDestination(url: string) {
     return null;
   }
 
-  if (source.protocol !== "https:" && source.protocol !== "http:") {
+  if (
+    (source.protocol !== "https:" && source.protocol !== "http:") ||
+    source.username ||
+    source.password
+  ) {
     return null;
   }
 
   if (source.origin !== base) {
-    return url;
+    return source.href;
   }
 
   const path = source.pathname.replace(/\/$/, "") || "/";

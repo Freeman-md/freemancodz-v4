@@ -7,7 +7,7 @@ export const heroDescription =
 
 export function Hero() {
   return (
-    <section className="home-hero" id="top" aria-labelledby="hero-heading">
+    <section className="home-hero" id="top" tabIndex={-1} aria-labelledby="hero-heading">
       <div className="home-hero-intro">
         <h1 id="hero-heading">
           <span>From first click.</span> <span>To a job well done.</span>
