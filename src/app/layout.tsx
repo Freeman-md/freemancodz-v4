@@ -1,13 +1,10 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, JetBrains_Mono, Manrope } from "next/font/google";
 import "./globals.css";
 import "./_assistant/assistant.css";
-import { SiteLayout } from "./_components/layout/SiteLayout";
-import { FloatingPortfolioChat } from "./_assistant/components/FloatingPortfolioChat";
 import { Analytics } from "@vercel/analytics/next";
 import { siteConfig } from "./_config/site-metadata";
 import { THEME_INIT_SCRIPT } from "./_config/theme";
-import { getCachedPublicProfile } from "./_portfolio/data/cached-public-data";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
@@ -20,6 +17,8 @@ const storyFont = Manrope({
   subsets: ["latin"],
   variable: "--font-story",
 });
+
+export const viewport: Viewport = { viewportFit: "cover" };
 
 export const metadata: Metadata = {
   metadataBase: siteConfig.url,
@@ -80,13 +79,11 @@ export const metadata: Metadata = {
   },
   category: "technology",
 };
-export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const profile = await getCachedPublicProfile();
-
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html
       lang="en"
-      data-theme="light"
+      data-theme="dark"
       suppressHydrationWarning
       className={`${inter.variable} ${jetbrains.variable} ${storyFont.variable}`}
     >
@@ -94,10 +91,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
       </head>
       <body className="font-sans antialiased">
-        <SiteLayout linkedInUrl={profile.linkedInUrl} githubUrl={profile.githubUrl}>
-          {children}
-        </SiteLayout>
-        <FloatingPortfolioChat />
+        {children}
         <Analytics />
       </body>
     </html>

@@ -1,31 +1,38 @@
 "use client";
 
-import Link from "next/link";
 import { FileTextIcon } from "lucide-react";
+import { assistantSourceDestination } from "../source-destination";
 import type { AssistantSource } from "@/contracts/assistant.contract";
 
 type AssistantSourcesProps = {
   sources: AssistantSource[];
+  onInternalSource?: (href: string) => void;
 };
 
-export function AssistantSources({ sources }: AssistantSourcesProps) {
-  if (sources.length === 0) {
-    return null;
-  }
-
+export function AssistantSources({ sources, onInternalSource }: AssistantSourcesProps) {
   const identities = new Set<string>();
 
-  const visibleSources = sources.filter(({ title, url }) => {
-    const identity = JSON.stringify([title, url]);
+  const visibleSources = sources.flatMap((source) => {
+    const url = assistantSourceDestination(source.url);
+
+    if (!url) {
+      return [];
+    }
+
+    const identity = JSON.stringify([source.title, url]);
 
     if (identities.has(identity)) {
-      return false;
+      return [];
     }
 
     identities.add(identity);
 
-    return true;
+    return [{ ...source, url }];
   });
+
+  if (!visibleSources.length) {
+    return null;
+  }
 
   return (
     <section aria-label="Sources" className="assistant-sources mt-5 border-t border-black/8 pt-4">
@@ -36,21 +43,32 @@ export function AssistantSources({ sources }: AssistantSourcesProps) {
         {visibleSources.map((source) => {
           const external = isExternalUrl(source.url);
 
-          // Native hash navigation notifies the project explorer and disclosure listeners.
-          const SourceLink =
-            external || source.url.startsWith("/#") || source.url.startsWith("#") ? "a" : Link;
-
           return (
             <li key={source.id}>
-              <SourceLink
+              <a
                 href={source.url}
+                onClick={(event) => {
+                  if (
+                    external ||
+                    !onInternalSource ||
+                    event.metaKey ||
+                    event.ctrlKey ||
+                    event.shiftKey ||
+                    event.altKey
+                  ) {
+                    return;
+                  }
+
+                  event.preventDefault();
+                  onInternalSource(source.url);
+                }}
                 target={external ? "_blank" : undefined}
                 rel={external ? "noreferrer" : undefined}
                 aria-label={external ? `${source.title} (opens in a new tab)` : undefined}
                 className="flex min-h-12 items-start gap-3 py-2.5 outline-none focus-visible:ring-2 focus-visible:ring-signal-400/40"
               >
                 <SourceContent source={source} />
-              </SourceLink>
+              </a>
             </li>
           );
         })}

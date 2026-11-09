@@ -17,7 +17,7 @@ export const siteConfig = {
   shortName: SITE_OWNER_NAME,
   title: `${SITE_OWNER_NAME} | Software Engineer`,
   description:
-    "Freeman Madudili is a London-based software engineer building customer-facing products, AI applications and reliable workflows—from understanding the problem to delivery.",
+    "Freeman Madudili is a London-based software engineer building intuitive interfaces and reliable workflows that simplify business operations, using AI where it helps.",
   url: getSiteUrl(),
   ogImage: "/opengraph-image",
   keywords: [

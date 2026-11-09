@@ -7,7 +7,6 @@ import { AssistantWorkflowProgress } from "@/app/_assistant/components/Assistant
 import { AssistantSources } from "@/app/_assistant/components/AssistantSources";
 import { AssistantWorkflowConfirmation } from "@/app/_assistant/components/AssistantWorkflowConfirmation";
 import type { AssistantWorkflowAction } from "@/contracts/assistant.contract";
-import { PortfolioProjectExplorer } from "@/app/_portfolio/components/PortfolioWorkScene/PortfolioProjectExplorer";
 import type { WorkflowPublicInstance } from "@/contracts/assistant.contract";
 
 test("booking review submits the displayed revision and replaces obsolete controls", async () => {
@@ -166,8 +165,8 @@ test("sources belong to their answer and disappear when no evidence is returned"
 
     assert.match(container.textContent ?? "", /Sources · 2/);
     assert.match(container.textContent ?? "", /Selected work/);
-    assert.match(container.textContent ?? "", /\/work/);
-    assert.equal(container.querySelector('a[href="/work"]')?.getAttribute("target"), null);
+    assert.match(container.textContent ?? "", /\/#work/);
+    assert.equal(container.querySelector('a[href="/#work"]')?.getAttribute("target"), null);
     assert.equal(
       container.querySelector('a[href="https://example.com/reference"]')?.getAttribute("target"),
       "_blank",
@@ -189,7 +188,7 @@ test("sources belong to their answer and disappear when no evidence is returned"
   });
 });
 
-test("source display deduplicates only identical title and URL pairs", async () => {
+test("source display deduplicates by displayed title and destination", async () => {
   await withBrowser(async ({ container, root }) => {
     await act(async () => {
       root.render(
@@ -216,65 +215,32 @@ test("source display deduplicates only identical title and URL pairs", async () 
       [
         ["JPScents", "/#jpscents"],
         ["Fragrance discovery", "/#jpscents"],
-        ["JPScents", "https://jpscents.shop"],
+        ["JPScents", "https://jpscents.shop/"],
       ],
     );
   });
 });
 
-test("same-page source clicks reveal hidden projects without dismissing the assistant", async () => {
+test("sources remap truthful destinations and omit retired sections", async () => {
   await withBrowser(async ({ container, root }) => {
-    await act(async () => {
+    await act(async () =>
       root.render(
-        createElement(
-          "div",
-          null,
-          createElement(PortfolioProjectExplorer, {
-            panels: [
-              { slug: "jpscents", title: "JPScents", content: "Perfume project" },
-              { slug: "debby-arts", title: "Debby Art & Prints", content: "Creative project" },
-            ],
-          }),
-          createElement(
-            "aside",
-            { "aria-label": "Portfolio assistant" },
-            createElement(AssistantSources, {
-              sources: [
-                { id: "debby", title: "Debby Art & Prints", url: "/#debby-arts" },
-                { id: "jp", title: "JPScents", url: "#jpscents" },
-              ],
-            }),
-          ),
-        ),
-      );
-    });
-
-    const jp = container.querySelector<HTMLElement>('article[data-project-slug="jpscents"]');
-
-    const debby = container.querySelector<HTMLElement>('article[data-project-slug="debby-arts"]');
-
-    assert.ok(jp);
-    assert.ok(debby);
-    assert.equal(jp.hidden, false);
-    assert.equal(debby.hidden, true);
-
-    for (const [href, selected, hidden] of [
-      ["/#debby-arts", debby, jp],
-      ["#jpscents", jp, debby],
-    ] as const) {
-      const source = container.querySelector<HTMLAnchorElement>(`aside a[href="${href}"]`);
-
-      assert.ok(source);
-      await act(async () => {
-        source.click();
-        // JSDOM schedules native anchor navigation and its hashchange event asynchronously.
-        await new Promise((resolve) => setTimeout(resolve, 30));
-      });
-      assert.equal(window.location.hash, `#${selected.dataset.projectSlug}`);
-      assert.equal(selected.hidden, false);
-      assert.equal(hidden.hidden, true);
-      assert.ok(container.querySelector('aside[aria-label="Portfolio assistant"]'));
-    }
+        createElement(AssistantSources, {
+          sources: [
+            { id: "work", title: "Debby Art & Prints", url: "/#debby-arts" },
+            { id: "journey", title: "Journey", url: "/#about-journey" },
+            { id: "audit", title: "Audit", url: "/#audit" },
+            { id: "more", title: "More work", url: "/#work-additional" },
+            { id: "external", title: "External", url: "//example.com/reference" },
+          ],
+        }),
+      ),
+    );
+    assert.deepEqual(
+      Array.from(container.querySelectorAll("a"), (link) => link.getAttribute("href")),
+      ["/#debby-arts", "/#experience", "https://example.com/reference"],
+    );
+    assert.match(container.textContent ?? "", /Sources · 3/);
   });
 });
 

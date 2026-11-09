@@ -1,0 +1,45 @@
+export const experienceStops = [
+  {
+    name: "Nigeria",
+    period: "Before 2022",
+    role: "Where my story began.",
+    label: "Before 2022 · Personal chapter",
+    detail: "Where my story began, before my first product engineering role at Pay4Me.",
+    questions: ["How did you get started?", "What led you to Pay4Me?"],
+  },
+  {
+    name: "Pay4Me",
+    period: "2022–2023",
+    role: "Frontend Developer",
+    label: "Frontend Developer · Jan 2022–Feb 2023",
+    detail: [
+      "Built customer-facing features with product teams, designers and senior engineers.",
+      "Helped build the payment experience around a microfinance bank partnership.",
+      "Delivered Clear Assessment’s administration and Birbur’s host booking experience.",
+      "The team’s payment workflows supported over US$500,000 in transactions.",
+    ],
+    questions: ["Why a bank partner?", "What did you build?"],
+  },
+  {
+    name: "Novier Labs",
+    period: "2023–2025",
+    role: "Software Engineer",
+    label: "Software Engineer · Aug 2023–Jul 2025",
+    detail: [
+      "Started TruTech as its first developer and built task, application, portfolio, payment and admin flows across three user roles.",
+      "Led BARSS delivery with a mobile engineer and product designer.",
+      "Built the JPScents storefront.",
+      "Proposed a clearer enquiry journey for Debby.",
+    ],
+    questions: ["How did you lead BARSS?", "What shaped the scope?"],
+  },
+  {
+    name: "London, today",
+    period: "Present",
+    role: "A new chapter in London.",
+    label: "Present · Personal chapter",
+    detail:
+      "I’m based in London today. My Computer Science MSc work at Middlesex explored guarded recovery for backend operations.",
+    questions: ["What did you research?", "What are you working on?"],
+  },
+] as const;

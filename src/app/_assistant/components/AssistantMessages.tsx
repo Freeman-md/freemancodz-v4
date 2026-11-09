@@ -8,48 +8,14 @@ import { cn } from "@/app/_utils/class-names";
 import type { ChatMessage } from "../types";
 import { AssistantMarkdown } from "./AssistantMarkdown";
 import { AssistantSources } from "./AssistantSources";
-import type { AssistantWorkflowStart } from "@/contracts/assistant.contract";
 
-export type StarterAction = {
-  label: string;
-  message: string;
-  workflowStart: AssistantWorkflowStart | null;
-};
+const ASSISTANT_STARTER_ACTIONS = [
+  "What has Freeman built?",
+  "How can Freeman help my business?",
+  "Tell me about Freeman’s experience.",
+] as const;
 
-const ASSISTANT_STARTER_ACTIONS: readonly StarterAction[] = [
-  {
-    label: "Ask about my work",
-    message: "Tell me about Freeman's work.",
-    workflowStart: null,
-  },
-  {
-    label: "Request a free audit",
-    message: "I'd like to request a free audit.",
-    workflowStart: {
-      workflowId: "audit",
-      originPage: "/",
-      originEntry: "assistant-starter-audit",
-    },
-  },
-  {
-    label: "Book a meeting",
-    message: "I'd like to book a meeting with Freeman.",
-    workflowStart: {
-      workflowId: "meeting-booking",
-      originPage: "/",
-      originEntry: "assistant-starter-meeting",
-    },
-  },
-  {
-    label: "Leave a message",
-    message: "I'd like to leave Freeman a message.",
-    workflowStart: {
-      workflowId: "contact",
-      originPage: "/",
-      originEntry: "assistant-starter-contact",
-    },
-  },
-];
+export type StarterAction = (typeof ASSISTANT_STARTER_ACTIONS)[number];
 
 type AssistantMessagesProps = {
   children?: ReactNode;
@@ -59,6 +25,7 @@ type AssistantMessagesProps = {
   messagesEndRef: RefObject<HTMLDivElement | null>;
   shouldReduceMotion: boolean | null;
   onStarterAction: (action: StarterAction) => void;
+  onInternalSource?: (href: string) => void;
 };
 
 export function AssistantMessages({
@@ -69,6 +36,7 @@ export function AssistantMessages({
   messagesEndRef,
   shouldReduceMotion,
   onStarterAction,
+  onInternalSource,
 }: AssistantMessagesProps) {
   return (
     <ScrollArea
@@ -79,31 +47,26 @@ export function AssistantMessages({
           <motion.div
             initial={shouldReduceMotion ? false : { opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            className="flex flex-1 flex-col justify-center gap-7 py-8"
+            className="flex flex-1 flex-col gap-4"
           >
             <div className="flex flex-col gap-2">
-              <h2 className="text-balance font-sans text-2xl font-semibold tracking-tight text-ink">
-                What brings you here?
+              <h2 className="text-balance font-display text-[23px] font-semibold tracking-tight text-ink">
+                What would you like to know?
               </h2>
-              <p className="max-w-[38ch] text-pretty text-base/7 text-muted">
-                Ask about Freeman’s work, or start a request.
+              <p className="max-w-[38ch] text-pretty text-sm/6 text-muted">
+                Ask about Freeman’s work, services or experience.
               </p>
             </div>
-            <div
-              aria-label="Start a conversation"
-              className="assistant-starters divide-y divide-black/8"
-            >
+            <div aria-label="Start a conversation" className="assistant-starters">
               {ASSISTANT_STARTER_ACTIONS.map((action) => (
                 <button
-                  key={action.label}
+                  key={action}
                   type="button"
-                  className="group relative flex min-h-14 w-full items-center justify-between gap-3 py-3 text-left outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-signal-400/40 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="group relative flex min-h-11 w-full items-center justify-between gap-3 px-3 py-2 text-left outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-signal-400/40 disabled:cursor-not-allowed disabled:opacity-50"
                   disabled={isLoading}
                   onClick={() => onStarterAction(action)}
                 >
-                  <span className="block font-sans text-base/6 font-medium text-ink">
-                    {action.label}
-                  </span>
+                  <span className="block font-sans text-sm/5 font-medium text-ink">{action}</span>
                   <ArrowRightIcon
                     aria-hidden="true"
                     className="size-4 shrink-0 stroke-muted group-hover:stroke-ink"
@@ -156,7 +119,9 @@ export function AssistantMessages({
                   ) : null}
                 </div>
 
-                {message.sources ? <AssistantSources sources={message.sources} /> : null}
+                {message.sources ? (
+                  <AssistantSources sources={message.sources} onInternalSource={onInternalSource} />
+                ) : null}
               </motion.article>
             ))}
         </AnimatePresence>

@@ -1,21 +1,15 @@
 import type { ReactNode } from "react";
-import { Footer } from "./Footer";
+import { FloatingPortfolioChat } from "../../_assistant/components/FloatingPortfolioChat";
 import { Navbar } from "./Navbar";
 
-export function SiteLayout({
-  children,
-  linkedInUrl,
-  githubUrl,
-}: {
-  children: ReactNode;
-  linkedInUrl: string;
-  githubUrl: string;
-}) {
+export function SiteLayout({ children }: { children: ReactNode }) {
   return (
-    <>
+    <div className="public-site">
       <Navbar />
-      <main id="main-content">{children}</main>
-      <Footer linkedInUrl={linkedInUrl} githubUrl={githubUrl} />
-    </>
+      <main id="main-content" className="homepage" tabIndex={-1}>
+        {children}
+      </main>
+      <FloatingPortfolioChat />
+    </div>
   );
 }

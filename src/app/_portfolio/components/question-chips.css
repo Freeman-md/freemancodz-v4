@@ -1,0 +1,55 @@
+.home-questions {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 4px;
+  border-top: 1px dashed var(--page-line);
+  padding-top: 8px;
+}
+.home-questions > svg {
+  flex: none;
+  color: var(--page-muted);
+}
+.home-chip-window {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+.home-chip-window:has([data-more])::after {
+  content: "";
+  position: absolute;
+  inset: 0 0 0 auto;
+  width: 26px;
+  pointer-events: none;
+  background: linear-gradient(to right, transparent, var(--chip-background, var(--home-card)));
+}
+.home-chip-window:has(:focus-visible)::after {
+  display: none;
+}
+.home-chip-scroll {
+  display: flex;
+  gap: 7px;
+  padding: 4px;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  scrollbar-width: none;
+}
+.home-chip-scroll button {
+  flex: none;
+  min-height: 44px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--page-line);
+  background: var(--home-chip);
+  color: var(--page-text);
+  font-size: 13px;
+  line-height: 18px;
+  white-space: nowrap;
+}
+.home-chip-scroll button:hover {
+  border-color: var(--home-accent);
+}
+.home-chip-scroll button:focus-visible {
+  outline-width: 2px;
+  outline-offset: 2px;
+}

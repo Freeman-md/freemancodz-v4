@@ -1,0 +1,60 @@
+.home-outside {
+  display: grid;
+  gap: 34px;
+}
+.home-photo-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 28px;
+}
+.home-photo-grid figure {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  border-radius: 14px;
+  overflow: clip;
+  background: var(--home-card);
+}
+.home-photo-grid img {
+  object-fit: cover;
+  object-position: center 49%;
+}
+.home-photo-grid figure:last-child img {
+  object-position: center;
+}
+.home-photo-grid figcaption {
+  position: absolute;
+  inset: auto 0 0;
+  padding: 30px 12px 12px;
+  background: linear-gradient(transparent, rgb(2 12 27 / 82%));
+  color: #e6f1ff;
+  font-size: 13px;
+}
+@media (hover: hover) and (pointer: fine) {
+  .home-photo-grid figcaption {
+    opacity: 0;
+  }
+  .home-photo-grid figure:is(:hover, :focus) figcaption {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .home-photo-grid figcaption {
+    transition: opacity 120ms ease;
+  }
+}
+@media (max-width: 700px) {
+  .home-outside {
+    gap: 28px;
+  }
+  .home-photo-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+  .home-photo-grid figure {
+    aspect-ratio: 3 / 4;
+  }
+  .home-photo-grid figure:last-child {
+    grid-column: 1 / -1;
+    aspect-ratio: 4 / 3;
+  }
+}

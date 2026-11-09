@@ -1,0 +1,105 @@
+:root {
+  --home-gutter: clamp(24px, 5.556vw, 80px);
+  --home-accent: #087d69;
+  --home-card: #fff;
+  --home-chip: #eef5f4;
+  --home-panel: #fff;
+  --home-strong: #10243a;
+  --home-section-space: 144px;
+}
+.homepage {
+  overflow: clip;
+}
+:root[data-theme="dark"] {
+  --home-accent: #64ffda;
+  --home-card: #0c1a2b;
+  --home-chip: #102235;
+  --home-panel: #0b1a2c;
+  --home-strong: #e6f1ff;
+}
+.home-section {
+  width: min(100%, calc(1280px + var(--home-gutter) * 2));
+  margin-inline: auto;
+  padding: var(--home-section-space) var(--home-gutter);
+}
+.home-section-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: 14px 40px;
+}
+.home-section-heading h2 {
+  max-width: 655px;
+  font:
+    500 52px/56px var(--font-display),
+    sans-serif;
+  letter-spacing: -0.045em;
+  text-wrap: balance;
+}
+.home-section-heading p {
+  flex: 0 1 390px;
+  color: var(--page-muted);
+  font-size: 18px;
+  line-height: 28px;
+}
+.home-action {
+  display: inline-flex;
+  min-height: 52px;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  padding: 0 21px;
+  border: 1px solid transparent;
+  border-radius: 100vw;
+  background: var(--brand-primary);
+  color: var(--brand-secondary);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 18px;
+}
+.home-action:hover {
+  background: var(--brand-primary-hover);
+}
+.home-reveal > * {
+  --reveal-delay: 0ms;
+}
+.home-reveal > :nth-child(2) {
+  --reveal-delay: 45ms;
+}
+.home-reveal > :nth-child(3) {
+  --reveal-delay: 90ms;
+}
+@keyframes home-fade {
+  from {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .home-reveal > * {
+    transition:
+      opacity 180ms ease-out var(--reveal-delay),
+      translate 180ms ease-out var(--reveal-delay);
+  }
+  .home-reveal > [data-reveal-pending]:not(:focus-within) {
+    opacity: 0;
+    translate: 0 8px;
+  }
+}
+@media (max-width: 700px) {
+  .homepage {
+    --home-section-space: 96px;
+  }
+  .home-section-heading {
+    display: grid;
+    align-items: start;
+  }
+  .home-section-heading h2 {
+    font-size: 34px;
+    line-height: 38px;
+    text-wrap: initial;
+  }
+  .home-section-heading p {
+    font-size: 16px;
+    line-height: 25px;
+  }
+}
