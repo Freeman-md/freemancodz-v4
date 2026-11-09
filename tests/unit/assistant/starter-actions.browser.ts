@@ -60,47 +60,18 @@ test("shared starter actions dispatch exact starts, disappear after conversation
 
   try {
     const expected: StarterAction[] = [
-      {
-        label: "Ask about my work",
-        message: "Tell me about Freeman's work.",
-        workflowStart: null,
-      },
-      {
-        label: "Request a free audit",
-        message: "I'd like to request a free audit.",
-        workflowStart: {
-          workflowId: "audit",
-          originPage: "/",
-          originEntry: "assistant-starter-audit",
-        },
-      },
-      {
-        label: "Book a meeting",
-        message: "I'd like to book a meeting with Freeman.",
-        workflowStart: {
-          workflowId: "meeting-booking",
-          originPage: "/",
-          originEntry: "assistant-starter-meeting",
-        },
-      },
-      {
-        label: "Leave a message",
-        message: "I'd like to leave Freeman a message.",
-        workflowStart: {
-          workflowId: "contact",
-          originPage: "/",
-          originEntry: "assistant-starter-contact",
-        },
-      },
+      "What has Freeman built?",
+      "How can Freeman help my business?",
+      "Tell me about Freeman’s experience.",
     ];
 
     for (const action of expected) {
-      await act(async () => root.render(createElement(Harness, { key: `action-${action.label}` })));
+      await act(async () => root.render(createElement(Harness, { key: `action-${action}` })));
       assert.deepEqual(
         Array.from(container.querySelectorAll("button"), (element) => element.textContent?.trim()),
-        expected.map(({ label }) => label),
+        expected,
       );
-      await act(async () => button(action.label).click());
+      await act(async () => button(action).click());
       assert.equal(container.querySelector('[aria-label="Start a conversation"]'), null);
     }
 
@@ -111,8 +82,8 @@ test("shared starter actions dispatch exact starts, disappear after conversation
       assert.equal(element.disabled, true);
     }
 
-    button("Leave a message").click();
-    assert.equal(selected.length, 4);
+    button(expected[0]).click();
+    assert.equal(selected.length, 3);
   } finally {
     await act(async () => root.unmount());
     dom.window.close();

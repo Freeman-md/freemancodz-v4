@@ -90,32 +90,18 @@ test("mobile assistant restores page scrolling after every dismissal and unmount
       root.render(createElement(FloatingPortfolioChat));
     });
 
-    await open();
-    assert.equal(button("Expand assistant").getAttribute("aria-expanded"), "false");
-
-    await act(async () => {
-      button("Expand assistant").click();
-    });
-    assert.equal(button("Minimise assistant").getAttribute("aria-expanded"), "true");
-
-    await act(async () => {
-      button("Minimise assistant").click();
-      button("Close assistant", true).click();
-    });
-    await settleScrollLock();
-
-    for (const dismissal of ["close", "backdrop", "escape"]) {
+    for (const dismissal of ["close", "escape"]) {
       await open();
+      const close = button("Close assistant");
+
       await act(async () => {
         if (dismissal === "escape") {
-          dom.window.document.dispatchEvent(
+          close.dispatchEvent(
             new dom.window.KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
           );
-
-          return;
+        } else {
+          close.click();
         }
-
-        button("Close assistant", dismissal === "close").click();
       });
       await settleScrollLock();
       assert.equal(dom.window.document.body.style.overflowY, "auto", dismissal);

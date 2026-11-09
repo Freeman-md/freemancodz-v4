@@ -2,8 +2,6 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { JSDOM } from "jsdom";
 import { act, createElement } from "react";
-import { AssistantTriggerButton } from "@/app/_assistant/components/AssistantTriggerButton";
-import { FloatingPortfolioChat } from "@/app/_assistant/components/FloatingPortfolioChat";
 import { dispatchOpenPortfolioChat } from "@/app/_assistant/assistant.events";
 
 function doneResponse() {
@@ -13,6 +11,7 @@ function doneResponse() {
 test("assistant surface opens without submitting and remains dismissible while a response is processing", async () => {
   const dom = new JSDOM("<!doctype html><html><body><main></main></body></html>", {
     url: "http://localhost:3000",
+    pretendToBeVisual: true,
   });
 
   const previous = new Map<string, PropertyDescriptor | undefined>();
@@ -22,6 +21,12 @@ test("assistant surface opens without submitting and remains dismissible while a
     self: dom.window,
     document: dom.window.document,
     HTMLElement: dom.window.HTMLElement,
+    Element: dom.window.Element,
+    HTMLButtonElement: dom.window.HTMLButtonElement,
+    MutationObserver: dom.window.MutationObserver,
+    getComputedStyle: dom.window.getComputedStyle.bind(dom.window),
+    requestAnimationFrame: dom.window.requestAnimationFrame.bind(dom.window),
+    cancelAnimationFrame: dom.window.cancelAnimationFrame.bind(dom.window),
     Node: dom.window.Node,
     CustomEvent: dom.window.CustomEvent,
     IS_REACT_ACT_ENVIRONMENT: true,
@@ -55,10 +60,13 @@ test("assistant surface opens without submitting and remains dismissible while a
 
   const { createRoot } = await import("react-dom/client");
 
+  const { FloatingPortfolioChat } =
+    await import("@/app/_assistant/components/FloatingPortfolioChat");
+
   const root = createRoot(container);
 
   function button(label: string) {
-    const found = Array.from(container.querySelectorAll("button")).find(
+    const found = Array.from(dom.window.document.querySelectorAll("button")).find(
       (element) =>
         element.textContent?.trim() === label || element.getAttribute("aria-label") === label,
     );
@@ -69,50 +77,41 @@ test("assistant surface opens without submitting and remains dismissible while a
   }
 
   function surfaceIsOpen() {
-    return Boolean(container.querySelector("#portfolio-chat-input"));
+    return Boolean(dom.window.document.querySelector("#portfolio-chat-input"));
   }
 
   try {
-    await act(async () => {
+    await act(async () =>
       root.render(
         createElement(
           "div",
           null,
-          createElement(AssistantTriggerButton, null, "Ask my assistant"),
-          createElement(AssistantTriggerButton, null, "Ask your own question"),
+          createElement(
+            "button",
+            {
+              onClick: (event) =>
+                dispatchOpenPortfolioChat({
+                  draft: { subject: "JPScents", text: "Why WhatsApp?" },
+                  returnFocus: event.currentTarget,
+                }),
+            },
+            "Why WhatsApp?",
+          ),
           createElement(FloatingPortfolioChat),
         ),
-      );
-    });
-
-    await act(async () => {
-      button("Ask my assistant").click();
-    });
-    assert.equal(surfaceIsOpen(), true);
+      ),
+    );
+    await act(async () => button("Why WhatsApp?").click());
+    assert.equal(dom.window.document.querySelector("textarea")?.value, "Why WhatsApp?");
+    assert.match(dom.window.document.body.textContent ?? "", /About JPScents/);
     assert.deepEqual(requestBodies, []);
-    assert.equal(button("Send message").disabled, true);
 
-    await act(async () => {
-      button("Close assistant").click();
-    });
-    assert.equal(surfaceIsOpen(), false);
-
-    await act(async () => {
-      button("Ask your own question").click();
-    });
-    assert.equal(surfaceIsOpen(), true);
-
-    await act(async () => {
-      button("Close assistant").click();
-      dispatchOpenPortfolioChat({ message: "Explicit audit intent" });
-      await Promise.resolve();
-    });
-    assert.equal(surfaceIsOpen(), true);
+    await act(async () => button("Send message").click());
     assert.deepEqual(
       requestBodies.map((body) => JSON.parse(body)),
       [
         {
-          message: "Explicit audit intent",
+          message: "Context: JPScents\n\nWhy WhatsApp?",
           previousResponseId: null,
           workflowInstanceId: null,
         },

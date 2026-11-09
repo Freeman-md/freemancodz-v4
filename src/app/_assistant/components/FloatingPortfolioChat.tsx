@@ -1,10 +1,7 @@
 "use client";
 
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Dialog } from "@base-ui/react/dialog";
-import { Maximize2Icon, MessageSquareIcon, Minimize2Icon, XIcon } from "lucide-react";
-import { Button } from "@/app/_components/ui/Button";
-import { cn } from "@/app/_utils/class-names";
+import { Bot, X } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { AssistantChoice } from "./AssistantChoice";
 import { AssistantWorkflowConfirmation } from "./AssistantWorkflowConfirmation";
@@ -13,6 +10,7 @@ import { AssistantMessages, type StarterAction } from "./AssistantMessages";
 import { AssistantWorkflowProgress } from "./AssistantWorkflowProgress";
 import { useAssistant } from "../hooks/useAssistant";
 import { useAssistantSurface } from "../hooks/useAssistantSurface";
+import { MAX_MESSAGE_LENGTH } from "../constants";
 
 export function FloatingPortfolioChat() {
   const {
@@ -28,27 +26,20 @@ export function FloatingPortfolioChat() {
     submitWorkflowAction,
   } = useAssistant();
 
-  const shouldReduceMotion = useReducedMotion();
-
   const {
-    closeChat,
-    handleLauncherFocus,
-    isExpanded,
-    isMobile,
     isOpen,
+    setIsOpen,
+    subject,
+    setSubject,
+    isMobile,
+    shouldReduceMotion,
     launcherRef,
+    closeRef,
+    returnFocus,
+    textareaRef,
     messagesEndRef,
     openChat,
-    shellRef,
-    surfaceTransition,
-    textareaRef,
-    toggleExpanded,
-  } = useAssistantSurface({
-    isLoading,
-    messages,
-    shouldReduceMotion,
-    submitMessage,
-  });
+  } = useAssistantSurface({ messages, isLoading, setInput });
 
   const previousChoice = useRef(choice);
 
@@ -60,216 +51,97 @@ export function FloatingPortfolioChat() {
     previousChoice.current = choice;
   }, [choice, isOpen, textareaRef]);
 
-  const isMobileSheet = isMobile && isOpen;
+  const context = subject ? `Context: ${subject}\n\n` : "";
 
-  const launcherWidth = isMobile ? 52 : 154;
+  const maxLength = MAX_MESSAGE_LENGTH - context.length;
 
   async function handleSubmit() {
-    if (canSubmit) {
-      await submitMessage(input);
+    if (!canSubmit || input.trim().length > maxLength) {
+      return;
     }
+
+    setSubject(null);
+    await submitMessage(context + input.trim());
   }
 
   async function handleStarterAction(action: StarterAction) {
     if (!isLoading && messages.length === 0) {
-      await submitMessage(action.message, action.workflowStart);
+      setSubject(null);
+      await submitMessage(action);
     }
   }
 
-  const surface = (
-    <motion.div
-      layout={!isMobile}
-      initial={false}
-      animate={{
-        maxWidth: isOpen ? 560 : launcherWidth,
-        backgroundColor: isOpen ? "var(--assistant-surface, #ffffff)" : "var(--brand-primary)",
-        borderColor:
-          isMobileSheet && isExpanded
-            ? "rgba(0,0,0,0)"
-            : isOpen
-              ? "var(--assistant-line, rgba(0,0,0,0.12))"
-              : "rgba(255,255,255,0.1)",
-        boxShadow: isMobileSheet
-          ? "var(--assistant-shadow, 0 -28px 80px -48px rgba(0,0,0,0.42))"
-          : isOpen
-            ? "var(--assistant-shadow, 0 28px 80px -38px rgba(0,0,0,0.36))"
-            : "var(--assistant-shadow, 0 26px 80px -34px rgba(0,0,0,0.72))",
-      }}
-      transition={surfaceTransition}
-      style={{ transformOrigin: "50% 100%" }}
-      role="dialog"
-      aria-modal={isMobileSheet || undefined}
-      aria-labelledby="portfolio-chat-title"
-      className={cn(
-        "portfolio-chat-surface pointer-events-auto flex w-full flex-col overflow-hidden border",
-        isMobileSheet
-          ? isExpanded
-            ? "h-dvh max-w-none rounded-none bg-white"
-            : "h-[75dvh] max-w-none rounded-t-3xl rounded-b-none bg-white"
-          : "rounded-3xl",
-        !isMobileSheet && (isOpen ? "h-[min(45rem,calc(100dvh-2.5rem))]" : "h-12"),
-      )}
-    >
-      {isOpen ? (
-        <motion.div
-          initial={isMobileSheet && !shouldReduceMotion ? { opacity: 0, y: 24 } : false}
-          animate={{ opacity: 1, y: 0 }}
-          transition={shouldReduceMotion ? { duration: 0 } : { duration: isMobileSheet ? 0.2 : 0 }}
-          className="flex min-h-0 flex-1 flex-col"
-        >
-          <header className="assistant-header flex h-[4.5rem] shrink-0 items-center justify-between gap-3 border-b border-black/8 bg-white px-4 py-3 sm:h-[5.5rem] sm:px-6 sm:py-4">
-            <div className="min-w-0">
-              <h1 id="portfolio-chat-title" className="font-sans text-lg/6 font-semibold text-ink">
-                Freeman’s assistant
-              </h1>
-              <p className="font-sans text-xs/4 text-muted">AI · Portfolio &amp; enquiries</p>
-            </div>
-
-            <div className="flex shrink-0 items-center gap-1">
-              {isMobile ? (
-                <Button
-                  type="button"
-                  aria-label={isExpanded ? "Minimise assistant" : "Expand assistant"}
-                  aria-expanded={isExpanded}
-                  variant="ghost"
-                  size="icon-sm"
-                  className="assistant-control relative rounded-full"
-                  onClick={toggleExpanded}
-                >
-                  {isExpanded ? (
-                    <Minimize2Icon aria-hidden="true" className="size-4" />
-                  ) : (
-                    <Maximize2Icon aria-hidden="true" className="size-4" />
-                  )}
-                  <span
-                    aria-hidden="true"
-                    className="pointer-fine:hidden absolute top-1/2 left-1/2 size-[max(100%,3rem)] -translate-1/2"
-                  />
-                </Button>
-              ) : null}
-              <Button
-                type="button"
-                aria-label="Close assistant"
-                variant="ghost"
-                size="icon-sm"
-                className="assistant-control relative rounded-full"
-                onClick={closeChat}
-              >
-                <XIcon aria-hidden="true" className="size-4" />
-                <span
-                  aria-hidden="true"
-                  className="pointer-fine:hidden absolute top-1/2 left-1/2 size-[max(100%,3rem)] -translate-1/2"
-                />
-              </Button>
-            </div>
-          </header>
-
-          {workflowInstance ? (
-            <AssistantWorkflowProgress key={workflowInstance.id} instance={workflowInstance} />
-          ) : null}
-
-          <AssistantMessages
-            isLoading={isLoading}
-            messages={messages}
-            messagesEndRef={messagesEndRef}
-            shouldReduceMotion={shouldReduceMotion}
-            onStarterAction={(action) => void handleStarterAction(action)}
-          >
-            {workflowInstance ? (
-              <AssistantWorkflowConfirmation
-                instance={workflowInstance}
-                isLoading={isLoading}
-                onSubmit={submitWorkflowAction}
-              />
-            ) : null}
-          </AssistantMessages>
-
-          {choice ? (
-            <AssistantChoice
-              key={messages.at(-1)?.id}
-              choice={choice}
-              isLoading={isLoading}
-              onSend={submitMessage}
-              onWriteReply={dismissChoice}
-            />
-          ) : (
-            <AssistantComposer
-              canSubmit={canSubmit}
-              input={input}
-              onInputChange={setInput}
-              onSubmit={handleSubmit}
-              textareaRef={textareaRef}
-            />
-          )}
-        </motion.div>
-      ) : (
-        <Button
-          ref={launcherRef}
-          type="button"
-          aria-label="Open portfolio chat"
-          onClick={openChat}
-          onFocus={handleLauncherFocus}
-          variant="ghost"
-          className="assistant-launcher h-12 w-full justify-center gap-2 rounded-none px-4 text-left text-ink hover:bg-black/5 hover:text-ink"
-        >
-          <MessageSquareIcon aria-hidden="true" className="size-4" />
-          <span className="hidden text-[13px] font-medium sm:inline">Ask assistant</span>
-        </Button>
-      )}
-    </motion.div>
-  );
-
   const panel = (
-    <div
-      className={cn(
-        "pointer-events-none fixed inset-x-0 bottom-0 z-50 px-3 pb-[max(env(safe-area-inset-bottom),0.75rem)] sm:px-5 sm:pb-[max(env(safe-area-inset-bottom),1.25rem)]",
-        isMobileSheet ? "h-dvh px-0 pb-0" : null,
-      )}
+    <Dialog.Popup
+      className="portfolio-chat-surface"
+      initialFocus={closeRef}
+      finalFocus={() =>
+        returnFocus.current?.isConnected ? returnFocus.current : launcherRef.current
+      }
     >
-      <AnimatePresence>
-        {isMobileSheet ? (
-          <motion.button
-            type="button"
-            aria-label="Close assistant"
-            initial={shouldReduceMotion ? false : { opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={shouldReduceMotion ? { opacity: 1 } : { opacity: 0 }}
-            transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.18 }}
-            className="pointer-events-auto fixed inset-0 z-0 bg-black/35"
-            onClick={closeChat}
-          />
-        ) : null}
-      </AnimatePresence>
-      <div
-        ref={shellRef}
-        className={cn(
-          "relative z-10 ml-auto flex w-full max-w-[35rem] justify-end",
-          isMobileSheet ? "h-full max-w-none items-end" : null,
-        )}
+      <header className="assistant-header">
+        <div>
+          <Dialog.Title>Freeman’s assistant</Dialog.Title>
+          <p>AI assistant</p>
+        </div>
+        <Dialog.Close className="assistant-control" aria-label="Close assistant" ref={closeRef}>
+          <X size={19} aria-hidden="true" />
+        </Dialog.Close>
+      </header>
+      {workflowInstance && (
+        <AssistantWorkflowProgress key={workflowInstance.id} instance={workflowInstance} />
+      )}
+      <AssistantMessages
+        isLoading={isLoading}
+        messages={messages}
+        messagesEndRef={messagesEndRef}
+        shouldReduceMotion={shouldReduceMotion}
+        onStarterAction={(action) => void handleStarterAction(action)}
       >
-        {isMobileSheet ? (
-          <Dialog.Popup
-            render={surface}
-            aria-labelledby="portfolio-chat-title"
-            finalFocus={launcherRef}
+        {workflowInstance && (
+          <AssistantWorkflowConfirmation
+            instance={workflowInstance}
+            isLoading={isLoading}
+            onSubmit={submitWorkflowAction}
           />
-        ) : (
-          surface
         )}
-      </div>
-    </div>
+      </AssistantMessages>
+      {choice && !subject ? (
+        <AssistantChoice
+          key={messages.at(-1)?.id}
+          choice={choice}
+          isLoading={isLoading}
+          onSend={submitMessage}
+          onWriteReply={dismissChoice}
+        />
+      ) : (
+        <AssistantComposer
+          canSubmit={canSubmit && input.trim().length <= maxLength}
+          input={input}
+          subject={subject}
+          onInputChange={setInput}
+          onSubmit={handleSubmit}
+          textareaRef={textareaRef}
+          maxLength={maxLength}
+        />
+      )}
+    </Dialog.Popup>
   );
 
   return (
-    <Dialog.Root
-      open={isMobileSheet}
-      onOpenChange={(open) => {
-        if (!open) {
-          closeChat();
-        }
-      }}
-    >
-      {isMobileSheet ? <Dialog.Portal>{panel}</Dialog.Portal> : panel}
-    </Dialog.Root>
+    <div className="assistant-root">
+      <Dialog.Root open={isOpen} onOpenChange={setIsOpen} modal={isMobile}>
+        <Dialog.Trigger
+          className="assistant-launcher"
+          aria-label="Open portfolio chat"
+          ref={launcherRef}
+          onClick={openChat}
+          hidden={isOpen}
+        >
+          <Bot size={22} aria-hidden="true" />
+        </Dialog.Trigger>
+        <Dialog.Portal>{panel}</Dialog.Portal>
+      </Dialog.Root>
+    </div>
   );
 }

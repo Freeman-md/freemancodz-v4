@@ -1,105 +1,80 @@
 "use client";
 
 import { useEffect, useEffectEvent, useRef, useState, useSyncExternalStore } from "react";
-import type { Transition } from "framer-motion";
-import { OPEN_PORTFOLIO_CHAT_EVENT, type OpenPortfolioChatDetail } from "../assistant.events";
+import {
+  OPEN_PORTFOLIO_CHAT_EVENT,
+  type AssistantDraft,
+  type OpenPortfolioChatDetail,
+} from "../assistant.events";
 import type { ChatMessage } from "../types";
-import type { AssistantWorkflowStart } from "@/contracts/assistant.contract";
 
-type UseAssistantSurfaceOptions = {
-  isLoading: boolean;
-  messages: ChatMessage[];
-  shouldReduceMotion: boolean | null;
-  submitMessage: (message: string, workflowStart?: AssistantWorkflowStart | null) => Promise<void>;
-};
+function useMedia(query: string) {
+  return useSyncExternalStore(
+    (onChange) => {
+      const media = window.matchMedia(query);
 
-const MOBILE_MEDIA_QUERY = "(max-width: 639px)";
+      media.addEventListener("change", onChange);
 
-function subscribeToMobileViewport(onChange: () => void) {
-  const mediaQuery = window.matchMedia(MOBILE_MEDIA_QUERY);
-
-  mediaQuery.addEventListener("change", onChange);
-
-  return () => mediaQuery.removeEventListener("change", onChange);
-}
-
-function getMobileViewportSnapshot() {
-  return window.matchMedia(MOBILE_MEDIA_QUERY).matches;
-}
-
-function getServerMobileViewportSnapshot() {
-  return false;
+      return () => media.removeEventListener("change", onChange);
+    },
+    () => window.matchMedia(query).matches,
+    () => false,
+  );
 }
 
 export function useAssistantSurface({
-  isLoading,
   messages,
-  shouldReduceMotion,
-  submitMessage,
-}: UseAssistantSurfaceOptions) {
+  isLoading,
+  setInput,
+}: {
+  messages: ChatMessage[];
+  isLoading: boolean;
+  setInput: (text: string) => void;
+}) {
   const [isOpen, setIsOpen] = useState(false);
 
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [subject, setSubject] = useState<string | null>(null);
 
-  const [shouldRestoreLauncherFocus, setShouldRestoreLauncherFocus] = useState(false);
+  const isMobile = useMedia("(max-width: 639px), (max-height: 530px) and (orientation: landscape)");
 
-  const isMobile = useSyncExternalStore(
-    subscribeToMobileViewport,
-    getMobileViewportSnapshot,
-    getServerMobileViewportSnapshot,
-  );
+  const shouldReduceMotion = useMedia("(prefers-reduced-motion: reduce)");
 
-  const shellRef = useRef<HTMLDivElement | null>(null);
+  const launcherRef = useRef<HTMLButtonElement>(null);
 
-  const launcherRef = useRef<HTMLButtonElement | null>(null);
+  const closeRef = useRef<HTMLButtonElement>(null);
 
-  const shouldIgnoreLauncherFocusRef = useRef(false);
+  const returnFocus = useRef<HTMLElement | null>(null);
 
-  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const latestMessage = messages.at(-1);
 
   function openChat() {
+    returnFocus.current = launcherRef.current;
     setIsOpen(true);
   }
 
-  function closeChat() {
-    shouldIgnoreLauncherFocusRef.current = true;
-    setIsOpen(false);
-    setIsExpanded(false);
-    setShouldRestoreLauncherFocus(true);
+  function openDraft(draft: AssistantDraft) {
+    setInput(draft.text);
+    setSubject(draft.subject);
+    setIsOpen(true);
   }
 
-  function handleLauncherFocus() {
-    if (shouldIgnoreLauncherFocusRef.current) {
-      shouldIgnoreLauncherFocusRef.current = false;
-      setShouldRestoreLauncherFocus(false);
-
+  const handleTriggerOpen = useEffectEvent((detail?: OpenPortfolioChatDetail) => {
+    if (!detail) {
       return;
     }
 
-    if (!isMobile) {
-      openChat();
-    }
-  }
-
-  function toggleExpanded() {
-    setIsExpanded((expanded) => !expanded);
-  }
-
-  const handleTriggerOpen = useEffectEvent(async (detail?: OpenPortfolioChatDetail) => {
-    openChat();
-
-    if (detail?.message) {
-      await submitMessage(detail.message, detail.workflowStart ?? null);
-    }
+    returnFocus.current = detail.returnFocus;
+    openDraft(detail.draft);
+    closeRef.current?.focus({ preventScroll: true });
   });
 
   useEffect(() => {
     function handleOpenEvent(event: Event) {
-      void handleTriggerOpen((event as CustomEvent<OpenPortfolioChatDetail>).detail);
+      handleTriggerOpen((event as CustomEvent<OpenPortfolioChatDetail>).detail);
     }
 
     window.addEventListener(OPEN_PORTFOLIO_CHAT_EVENT, handleOpenEvent);
@@ -108,96 +83,26 @@ export function useAssistantSurface({
   }, []);
 
   useEffect(() => {
-    const mediaQuery = window.matchMedia(MOBILE_MEDIA_QUERY);
-
-    function resetExpansionOnDesktop() {
-      if (!mediaQuery.matches) {
-        setIsExpanded(false);
-      }
+    if (isOpen && latestMessage) {
+      messagesEndRef.current?.scrollIntoView({
+        block: "nearest",
+        behavior: shouldReduceMotion ? "auto" : "smooth",
+      });
     }
-
-    mediaQuery.addEventListener("change", resetExpansionOnDesktop);
-
-    return () => mediaQuery.removeEventListener("change", resetExpansionOnDesktop);
-  }, []);
-
-  useEffect(() => {
-    if (isOpen && !isMobile) {
-      textareaRef.current?.focus();
-    }
-  }, [isMobile, isOpen]);
-
-  useEffect(() => {
-    if (!isOpen && shouldRestoreLauncherFocus) {
-      launcherRef.current?.focus();
-    }
-  }, [isOpen, shouldRestoreLauncherFocus]);
-
-  useEffect(() => {
-    if (!isOpen) {
-      return;
-    }
-
-    messagesEndRef.current?.scrollIntoView({
-      block: "end",
-      behavior: shouldReduceMotion ? "auto" : "smooth",
-    });
-  }, [
-    isLoading,
-    isOpen,
-    messages.length,
-    latestMessage?.content,
-    latestMessage?.sources,
-    shouldReduceMotion,
-  ]);
-
-  useEffect(() => {
-    if (!isOpen) {
-      return;
-    }
-
-    function handlePointerDown(event: PointerEvent) {
-      const target = event.target;
-
-      if (target instanceof Node && !shellRef.current?.contains(target)) {
-        closeChat();
-      }
-    }
-
-    function handleEscape(event: globalThis.KeyboardEvent) {
-      if (event.key === "Escape") {
-        closeChat();
-      }
-    }
-
-    if (!isMobile) {
-      document.addEventListener("pointerdown", handlePointerDown);
-    }
-
-    document.addEventListener("keydown", handleEscape);
-
-    return () => {
-      document.removeEventListener("pointerdown", handlePointerDown);
-      document.removeEventListener("keydown", handleEscape);
-    };
-  }, [isMobile, isOpen]);
-
-  const surfaceTransition: Transition = shouldReduceMotion
-    ? { duration: 0 }
-    : { type: "spring", stiffness: 420, damping: 38, mass: 0.9 };
+  }, [isLoading, isOpen, latestMessage, shouldReduceMotion]);
 
   return {
-    closeChat,
-    handleLauncherFocus,
-    isExpanded,
-    isMobile,
     isOpen,
+    setIsOpen,
+    subject,
+    setSubject,
+    isMobile,
+    shouldReduceMotion,
     launcherRef,
+    closeRef,
+    returnFocus,
+    textareaRef,
     messagesEndRef,
     openChat,
-    shellRef,
-    surfaceTransition,
-    textareaRef,
-    toggleExpanded,
   };
 }

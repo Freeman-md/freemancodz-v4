@@ -180,3 +180,184 @@
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+.assistant-launcher {
+  position: fixed;
+  z-index: 50;
+  right: max(24px, env(safe-area-inset-right));
+  bottom: max(24px, env(safe-area-inset-bottom));
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: #64ffda;
+  color: #020c1b;
+  box-shadow: 0 6px 20px rgb(2 12 27 / 25%);
+}
+.assistant-launcher[hidden] {
+  visibility: hidden;
+}
+.assistant-launcher:hover {
+  background: #93ffe5;
+}
+.portfolio-chat-surface {
+  --assistant-surface: #fff;
+  --assistant-canvas: #fff;
+  --assistant-text: #142c35;
+  --assistant-muted: #516773;
+  --assistant-line: #c5d2d9;
+  --assistant-accent: #126b59;
+  position: fixed;
+  z-index: 65;
+  right: max(24px, env(safe-area-inset-right));
+  bottom: max(24px, env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  overflow: clip;
+  width: min(440px, calc(100vw - 48px));
+  height: min(640px, calc(100dvh - 48px));
+  border: 1px solid var(--assistant-line);
+  border-radius: 20px;
+  background: var(--assistant-surface);
+  color: var(--assistant-text);
+  box-shadow: 0 18px 64px rgb(2 12 27 / 26%);
+}
+:root[data-theme="dark"] .portfolio-chat-surface {
+  --assistant-canvas: #071526;
+  --assistant-surface: #071526;
+  --assistant-text: #e6f1ff;
+  --assistant-muted: #a8b7ca;
+  --assistant-line: #263b50;
+}
+.assistant-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  min-height: 84px;
+  padding: 12px 20px 12px 24px;
+  flex: none;
+  border-bottom: 1px solid var(--assistant-line);
+}
+.assistant-header h2 {
+  font:
+    600 18px/26px var(--font-display),
+    sans-serif;
+}
+.assistant-header p {
+  color: var(--assistant-muted);
+  font-size: 12px;
+  line-height: 18px;
+  margin-top: 3px;
+}
+.assistant-control,
+.assistant-send {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+}
+.assistant-control:hover {
+  background: var(--home-chip);
+}
+.assistant-messages {
+  background: var(--assistant-canvas);
+}
+.assistant-starters {
+  display: grid;
+  gap: 8px;
+}
+.assistant-starters > button {
+  border: 1px solid var(--assistant-line);
+  border-radius: 12px;
+}
+.assistant-starters > button:hover {
+  background: var(--home-chip);
+}
+.assistant-composer {
+  flex: none;
+  display: grid;
+  gap: 8px;
+  border-top: 1px solid var(--assistant-line);
+  padding: 16px 20px max(20px, env(safe-area-inset-bottom));
+  color: var(--assistant-text);
+}
+.assistant-composer label {
+  font-size: 13px;
+  font-weight: 600;
+}
+.assistant-draft-subject {
+  font-size: 13px;
+  color: var(--assistant-accent);
+  overflow-wrap: anywhere;
+}
+.assistant-composer-field {
+  display: flex;
+  align-items: end;
+  padding: 8px;
+  gap: 8px;
+  border: 1px solid var(--assistant-line);
+  border-radius: 12px;
+}
+.assistant-composer-field:focus-within {
+  border-color: var(--assistant-accent);
+}
+.assistant-composer textarea {
+  flex: 1;
+  min-width: 0;
+  resize: none;
+  background: transparent;
+  color: inherit;
+  outline: none;
+  font-size: 16px;
+  line-height: 24px;
+  padding: 4px;
+}
+.assistant-composer textarea::placeholder {
+  color: var(--assistant-muted);
+}
+.assistant-send {
+  background: #64ffda;
+  color: #020c1b;
+}
+.assistant-send:disabled {
+  background: var(--home-chip);
+  color: var(--assistant-muted);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .portfolio-chat-surface {
+    transition:
+      transform 200ms ease-out,
+      opacity 180ms ease-out;
+  }
+  .portfolio-chat-surface:is([data-starting-style], [data-ending-style]) {
+    transform: translateY(14px) scale(0.985);
+    opacity: 0;
+  }
+}
+@media (max-width: 639px), (max-height: 530px) and (orientation: landscape) {
+  .assistant-launcher {
+    width: 48px;
+    height: 48px;
+    right: max(16px, env(safe-area-inset-right));
+    bottom: max(16px, env(safe-area-inset-bottom));
+  }
+  .portfolio-chat-surface {
+    inset: 0;
+    width: 100%;
+    height: 100dvh;
+    border: 0;
+    border-radius: 0;
+  }
+  .assistant-header {
+    min-height: calc(72px + env(safe-area-inset-top));
+    padding: max(10px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 10px
+      max(16px, env(safe-area-inset-left));
+  }
+  .assistant-composer {
+    padding-inline: max(16px, env(safe-area-inset-left)) max(16px, env(safe-area-inset-right));
+  }
+}

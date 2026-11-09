@@ -1,0 +1,135 @@
+.home-contact {
+  text-align: center;
+  padding-bottom: calc(112px + env(safe-area-inset-bottom));
+}
+.home-available {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  padding-inline: 12px;
+  border: 1px solid var(--page-line);
+  border-radius: 999px;
+  background: var(--home-chip);
+  font-size: 12px;
+}
+.home-available::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--home-accent);
+}
+.home-contact h2 {
+  margin-top: 28px;
+  font:
+    500 clamp(36px, 5vw, 64px)/1.125 var(--font-display),
+    sans-serif;
+  letter-spacing: -0.035em;
+  text-wrap: balance;
+}
+.home-contact-copy {
+  max-width: 600px;
+  margin: 20px auto 26px;
+  font-size: 18px;
+  line-height: 28px;
+  color: var(--page-muted);
+}
+.home-profiles {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 96px;
+}
+.home-profiles a {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  padding: 6px 13px;
+  border: 1px solid var(--page-line);
+  border-radius: 999px;
+  background: var(--home-chip);
+  font-size: 13px;
+}
+.home-profiles a:hover {
+  border-color: var(--home-accent);
+}
+.home-profiles img {
+  border-radius: 50%;
+  object-fit: cover;
+}
+@media (max-width: 700px) {
+  .home-contact h2 {
+    font-size: clamp(30px, 9vw, 36px);
+  }
+  .home-contact-copy {
+    font-size: 16px;
+    line-height: 25px;
+  }
+  .home-profiles {
+    display: grid;
+    grid-template-columns: auto auto;
+    margin-top: 64px;
+  }
+}
+
+.home-profiles li:first-child a {
+  background: #fff;
+  color: #10243a;
+  border-color: #c5d2d9;
+  padding-left: 8px;
+  gap: 10px;
+}
+
+.home-contact-reveal {
+  display: grid;
+  justify-items: center;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .home-contact-reveal[data-reveal-pending]:not(:focus-within) {
+    opacity: 0;
+  }
+  .home-contact-reveal[data-reveal-played] .home-available {
+    animation: home-fade 250ms ease-out both;
+  }
+  .home-contact-reveal[data-reveal-played] h2 {
+    animation: home-contact-heading 400ms 150ms ease-out both;
+  }
+  .home-contact-reveal[data-reveal-played] .home-contact-copy {
+    animation: home-fade 350ms 300ms ease-out both;
+  }
+  .home-contact-reveal[data-reveal-played] .home-action {
+    animation: home-contact-action 300ms 450ms ease-out both;
+  }
+  .home-contact-reveal[data-reveal-played] li {
+    animation: home-fade 350ms var(--contact-delay, 650ms) ease-out both;
+  }
+  .home-contact-reveal li:nth-child(2) {
+    --contact-delay: 700ms;
+  }
+  .home-contact-reveal li:nth-child(3) {
+    --contact-delay: 750ms;
+  }
+  .home-contact-reveal li:nth-child(4) {
+    --contact-delay: 800ms;
+  }
+  .home-contact-reveal[data-reveal-played] a:focus-visible,
+  .home-contact-reveal[data-reveal-played] li:focus-within {
+    animation: none;
+  }
+}
+@keyframes home-contact-heading {
+  from {
+    opacity: 0;
+    translate: 0 16px;
+  }
+}
+@keyframes home-contact-action {
+  from {
+    opacity: 0;
+    translate: 0 6px;
+  }
+}

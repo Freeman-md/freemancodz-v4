@@ -1,0 +1,22 @@
+import { Info } from "lucide-react";
+import { SectionHeading } from "./SectionHeading";
+import { ExperienceTimeline } from "./ExperienceTimeline";
+import "./experience.css";
+
+export function Experience() {
+  return (
+    <section className="home-section home-experience" aria-labelledby="experience">
+      <SectionHeading
+        id="experience"
+        description="I turn unclear requirements into practical decisions, then work with the team to get them shipped."
+      >
+        And a good developer brings clarity.
+      </SectionHeading>
+      <p className="home-experience-hint">
+        <Info aria-hidden="true" size={17} />
+        Select a stop to learn more.
+      </p>
+      <ExperienceTimeline />
+    </section>
+  );
+}

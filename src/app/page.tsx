@@ -1,55 +1,42 @@
-import { PortfolioStory } from "./_portfolio/components/PortfolioStory/PortfolioStory";
-import { siteConfig } from "./_config/site-metadata";
-import {
-  createHomePresentationData,
-  createWorkPresentationData,
-  createAboutPresentationData,
-  createAuditPresentationData,
-} from "./_portfolio/data/presentation.mapper";
-import {
-  getCachedHomePageData,
-  getCachedWorkPageData,
-  getCachedAboutPageData,
-  getCachedAuditPageData,
-} from "./_portfolio/data/cached-public-data";
+import { SiteLayout } from "./_components/layout/SiteLayout";
+import { SITE_OWNER_NAME, siteConfig } from "./_config/site-metadata";
+import { Contact, profiles } from "./_portfolio/components/Contact";
+import { Experience } from "./_portfolio/components/Experience";
+import { Hero, heroDescription } from "./_portfolio/components/Hero";
+import { OutsideEngineering } from "./_portfolio/components/OutsideEngineering";
+import { SelectedWork } from "./_portfolio/components/SelectedWork";
+import { Services } from "./_portfolio/components/Services";
+import { Testimonials } from "./_portfolio/components/Testimonials";
+import "./_portfolio/homepage.css";
 
-export default async function HomePage() {
-  const [homeData, workData, aboutData, auditData] = await Promise.all([
-    getCachedHomePageData(),
-    getCachedWorkPageData(),
-    getCachedAboutPageData(),
-    getCachedAuditPageData(),
-  ]);
-
-  const home = createHomePresentationData(homeData);
-
-  const work = createWorkPresentationData(workData);
-
-  const about = createAboutPresentationData(aboutData);
-
-  const audit = createAuditPresentationData(auditData);
-
+export default function HomePage() {
   const person = {
     "@context": "https://schema.org",
     "@type": "Person",
     "@id": `${siteConfig.url.origin}/#person`,
-    name: homeData.profile.name,
-    jobTitle: homeData.profile.title,
+    name: SITE_OWNER_NAME,
+    jobTitle: "Software Engineer",
     url: siteConfig.url.toString(),
-    description: siteConfig.description,
-    sameAs: [homeData.profile.linkedInUrl, homeData.profile.githubUrl].filter(Boolean),
-    ...(homeData.profile.coverImage ? { image: homeData.profile.coverImage } : {}),
+    description: heroDescription,
+    sameAs: Object.values(profiles),
+    image: new URL("/images/homepage/hero-slope-v3.png", siteConfig.url).href,
   };
 
   return (
-    <>
+    <SiteLayout>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
           __html: JSON.stringify(person).replace(/</g, "\\u003c"),
         }}
       />
-      <PortfolioStory home={home} work={work} about={about} audit={audit} />
-    </>
+      <Hero />
+      <SelectedWork />
+      <Experience />
+      <Services />
+      <Testimonials />
+      <OutsideEngineering />
+      <Contact />
+    </SiteLayout>
   );
 }

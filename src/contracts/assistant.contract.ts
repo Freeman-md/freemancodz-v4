@@ -125,17 +125,9 @@ export const assistantStreamEventSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("error"), error: z.string() }).strict(),
 ]);
 
-export const assistantTriggerDetailSchema = z
-  .object({
-    message: z.string().trim().min(1).max(MAX_MESSAGE_LENGTH).optional(),
-    workflowStart: workflowStartSchema.optional(),
-  })
-  .strict();
-
 export type AssistantRequest = z.infer<typeof assistantRequestSchema>;
 export type AssistantWorkflowAction = z.infer<typeof assistantWorkflowActionSchema>;
 export type AssistantStreamEvent = z.infer<typeof assistantStreamEventSchema>;
 export type AssistantSource = z.infer<typeof sourceSchema>;
-export type AssistantTriggerDetail = z.infer<typeof assistantTriggerDetailSchema>;
 export type AssistantWorkflowStart = z.infer<typeof workflowStartSchema>;
 export type WorkflowPublicInstance = z.infer<typeof workflowInstanceSchema>;

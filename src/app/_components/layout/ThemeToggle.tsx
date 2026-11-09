@@ -14,7 +14,7 @@ function subscribe(onChange: () => void) {
 
   function syncPreference(event: StorageEvent) {
     if (event.key === THEME_STORAGE_KEY || event.key === null) {
-      document.documentElement.dataset.theme = event.newValue === "dark" ? "dark" : "light";
+      document.documentElement.dataset.theme = event.newValue === "light" ? "light" : "dark";
     }
   }
 
@@ -31,7 +31,7 @@ function getSnapshot() {
 }
 
 function getServerSnapshot() {
-  return false;
+  return true;
 }
 
 export function ThemeToggle() {
