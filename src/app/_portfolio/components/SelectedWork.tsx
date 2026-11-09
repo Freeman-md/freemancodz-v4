@@ -20,7 +20,7 @@ export function SelectedWork({ projects }: { projects: readonly ProjectCardData[
         ))}
       </SectionReveal>
       <div className="home-work-more">
-        <Link href="/work">
+        <Link href="/work" prefetch={false}>
           View rest of work
           <ArrowRight size={16} aria-hidden="true" />
         </Link>
