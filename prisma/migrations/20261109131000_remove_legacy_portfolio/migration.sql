@@ -2,11 +2,27 @@ BEGIN;
 
 DO $$
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM public.portfolio_profiles WHERE key = 'global')
+  IF (
+    EXISTS (SELECT 1 FROM public.content_block_children)
+    OR EXISTS (SELECT 1 FROM public.content_block_icon_blocks)
+    OR EXISTS (SELECT 1 FROM public.content_block_media_blocks)
+    OR EXISTS (SELECT 1 FROM public.content_block_action_blocks)
+    OR EXISTS (SELECT 1 FROM public.profile_icon_blocks)
+    OR EXISTS (SELECT 1 FROM public.experience_icon_blocks)
+    OR EXISTS (SELECT 1 FROM public.projects)
+    OR EXISTS (SELECT 1 FROM public.profiles)
+    OR EXISTS (SELECT 1 FROM public.experiences)
+    OR EXISTS (SELECT 1 FROM public.content_blocks)
+    OR EXISTS (SELECT 1 FROM public.action_blocks)
+    OR EXISTS (SELECT 1 FROM public.media_blocks)
+    OR EXISTS (SELECT 1 FROM public.icon_blocks)
+    OR EXISTS (SELECT 1 FROM public.site_chunks)
+  ) AND (
+    NOT EXISTS (SELECT 1 FROM public.portfolio_profiles WHERE key = 'global')
     OR NOT EXISTS (SELECT 1 FROM public.portfolio_projects WHERE featured IS NOT NULL)
     OR NOT EXISTS (SELECT 1 FROM public.portfolio_experiences)
     OR NOT EXISTS (SELECT 1 FROM public.portfolio_services)
-  THEN
+  ) THEN
     RAISE EXCEPTION 'Apply the portfolio seed before removing the legacy tables.';
   END IF;
 END $$;

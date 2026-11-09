@@ -77,8 +77,8 @@ test("booking review submits the displayed revision and replaces obsolete contro
   });
 });
 
-test("audit and contact reviews submit the displayed snapshot and expose explicit retry", async () => {
-  for (const workflowId of ["audit", "contact"] as const) {
+test("contact reviews submit the displayed snapshot and expose explicit retry", async () => {
+  for (const workflowId of ["contact"] as const) {
     await withBrowser(async ({ container, root }) => {
       const actions: AssistantWorkflowAction[] = [];
 
@@ -107,7 +107,7 @@ test("audit and contact reviews submit the displayed snapshot and expose explici
       assert.equal(container.querySelector("input,textarea,select"), null);
       assert.match(
         container.querySelector("button")!.textContent!,
-        workflowId === "audit" ? /Submit audit request/ : /Send message/,
+        /Send message/,
       );
       await act(async () => container.querySelector("button")!.click());
       assert.deepEqual(actions[0], {

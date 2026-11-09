@@ -309,6 +309,35 @@ test(
         oneEdit.caseStudies[0].outcome,
       );
       assert.equal(await count(), 9);
+
+      await applyPrismaMigration(sql, "20261109140000_remove_audit_requests");
+      assert.equal(
+        (await sql.query("SELECT to_regclass('public.audit_requests') AS name")).rows[0].name,
+        null,
+      );
+      assert.equal(
+        (
+          await sql.query(
+            "SELECT count(*)::int AS count FROM workflow_instances WHERE workflow_id = 'audit'",
+          )
+        ).rows[0].count,
+        0,
+      );
+      for (const table of ["meetings", "rate_limits", "contact_requests"]) {
+        assert.deepEqual(
+          (await sql.query(`SELECT * FROM ${table} ORDER BY 1`)).rows,
+          preserved.get(table),
+        );
+      }
+
+      assert.equal(
+        (
+          await sql.query(
+            "SELECT count(*)::int AS count FROM workflow_instances WHERE workflow_id = 'contact'",
+          )
+        ).rows[0].count,
+        1,
+      );
     });
   },
 );
@@ -334,3 +363,21 @@ test(
     });
   },
 );
+
+test("a fresh database replays every migration before seeding", { timeout: 120_000 }, async () => {
+  await withDatabase(async (sql, prisma) => {
+    for (const migration of await migrationsInOrder()) {
+      await applyPrismaMigration(sql, migration);
+    }
+
+    assert.deepEqual(await visibleLegacyTables(sql), []);
+    assert.equal(
+      (await sql.query("SELECT to_regclass('public.audit_requests') AS name")).rows[0].name,
+      null,
+    );
+    const seed = new PortfolioSeedService(new PrismaPortfolioSeedRepository(prisma));
+
+    await seed.run(baseline, true);
+    assert.equal(await prisma.project.count(), 9);
+  });
+});

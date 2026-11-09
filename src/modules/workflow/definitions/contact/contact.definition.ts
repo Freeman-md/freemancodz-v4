@@ -91,7 +91,7 @@ export class ContactWorkflowDefinition implements IWorkflowDefinition<ContactSta
   }
 }
 
-const CONTACT_INSTRUCTIONS = `You are coordinating a message to Freeman for project enquiries, collaboration enquiries, and other general messages that do not belong in the Audit or Meeting Booking workflows.
+const CONTACT_INSTRUCTIONS = `You are coordinating a message to Freeman for project enquiries, collaboration enquiries, and other general messages that do not belong in the Meeting Booking workflow.
 Begin conversationally with a brief acknowledgement and the next useful question, not a form containing every missing field. Normally collect one answer at a time, or two closely related answers. If the visitor has already explained their message, save it instead of asking them to repeat it.
 Extract and save all valid details the visitor supplies together, including corrections, even when they answer more than you asked. Never repeat a question for known information. Your suggestions and examples are not visitor facts unless the visitor explicitly adopts them.
 Answer unrelated portfolio questions normally, using website search when needed, without cancelling this workflow or forcing the visitor back into collection.

@@ -39,28 +39,9 @@ model WorkflowInstance {
   startedAt          DateTime        @default(now()) @map("started_at") @db.Timestamptz(6)
   completedAt        DateTime?       @map("completed_at") @db.Timestamptz(6)
   updatedAt          DateTime        @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
-  auditRequest       AuditRequest?
   contactRequest     ContactRequest?
 
   @@map("workflow_instances")
-}
-
-model AuditRequest {
-  id                 String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  workflowInstanceId String           @unique @map("workflow_instance_id") @db.Uuid
-  workflowInstance   WorkflowInstance @relation(fields: [workflowInstanceId], references: [id], onDelete: Restrict)
-  focus              String
-  currentProcess     String           @map("current_process")
-  friction           String
-  desiredOutcome     String           @map("desired_outcome")
-  name               String
-  email              String
-  businessName       String?          @map("business_name")
-  websiteUrl         String?          @map("website_url")
-  additionalContext  String?          @map("additional_context")
-  createdAt          DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
-
-  @@map("audit_requests")
 }
 
 model ContactRequest {

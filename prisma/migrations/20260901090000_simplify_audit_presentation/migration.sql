@@ -19,6 +19,10 @@ BEGIN
       WHERE relation.child_id = block.id
     );
 
+  IF before_after_root_count = 0 AND NOT EXISTS (SELECT 1 FROM public.content_blocks) THEN
+    RETURN;
+  END IF;
+
   IF before_after_root_count <> 1 THEN
     RAISE EXCEPTION 'Expected exactly one Before/After audit root, found %.', before_after_root_count;
   END IF;
@@ -125,6 +129,11 @@ BEGIN
     AND NOT EXISTS (
       SELECT 1 FROM public.content_block_children AS relation WHERE relation.child_id = block.id
     );
+
+  IF symptoms_root_count = 0 AND proof_root_count = 0 AND cta_root_count = 0
+    AND NOT EXISTS (SELECT 1 FROM public.content_blocks) THEN
+    RETURN;
+  END IF;
 
   IF symptoms_root_count <> 1 OR proof_root_count <> 1 OR cta_root_count <> 1 THEN
     RAISE EXCEPTION 'Expected exactly one audit symptoms, proof, and CTA root.';

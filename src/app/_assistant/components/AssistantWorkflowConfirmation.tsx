@@ -22,18 +22,16 @@ export function AssistantWorkflowConfirmation({
 
   const kind = instance.workflowId === "meeting-booking" ? "booking" : instance.workflowId;
 
-  if (kind !== "audit" && kind !== "contact" && kind !== "booking") {
+  if (kind !== "contact" && kind !== "booking") {
     return null;
   }
 
   const confirmLabels = {
-    audit: "Submit audit request",
     contact: "Send message",
     booking: "Confirm booking",
   };
 
   const retryLabels = {
-    audit: "Retry audit request",
     contact: "Retry message",
     booking: "Retry booking",
   };
@@ -79,22 +77,12 @@ export function AssistantWorkflowConfirmation({
             void onSubmit(
               instance.confirmationAction === "confirm"
                 ? {
-                    action:
-                      kind === "audit"
-                        ? "confirm_audit"
-                        : kind === "contact"
-                          ? "confirm_contact"
-                          : "confirm_booking",
+                    action: kind === "contact" ? "confirm_contact" : "confirm_booking",
                     workflowInstanceId: instance.id,
                     expectedRevision: instance.revision,
                   }
                 : {
-                    action:
-                      kind === "audit"
-                        ? "retry_audit"
-                        : kind === "contact"
-                          ? "retry_contact"
-                          : "retry_booking",
+                    action: kind === "contact" ? "retry_contact" : "retry_booking",
                     workflowInstanceId: instance.id,
                   },
             )

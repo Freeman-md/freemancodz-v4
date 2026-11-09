@@ -13,8 +13,6 @@ import { ResendClient } from "@/infrastructure/resend/client";
 import { OpenAIClient, createOpenAIClient, getResponseModel } from "@/infrastructure/openai/client";
 import { AssistantService } from "./assistant/service";
 import { GLOBAL_ASSISTANT_TOOLS } from "./assistant/tools/definitions";
-import { AuditRequestRepository } from "./audit/repository";
-import { AuditService as AuditRequestService } from "./audit/service";
 import { ContactRequestRepository } from "./contact/repository";
 import { ContactService } from "./contact/service";
 import { MeetingRepository } from "./meeting/repository";
@@ -26,8 +24,6 @@ import { PrismaPortfolioSeedRepository } from "./portfolio/repositories/portfoli
 import { PortfolioSeedService } from "./portfolio/seed.service";
 import { RateLimitRepository } from "./rate-limit/repository";
 import { RateLimitService } from "./rate-limit/service";
-import { AuditWorkflowDefinition } from "./workflow/definitions/audit/audit.definition";
-import { AuditWorkflowProgressProjector } from "./workflow/definitions/audit/audit.progress";
 import { ContactWorkflowDefinition } from "./workflow/definitions/contact/contact.definition";
 import { ContactWorkflowProgressProjector } from "./workflow/definitions/contact/contact.progress";
 import { MeetingBookingWorkflowDefinition } from "./workflow/definitions/meeting-booking/meeting-booking.definition";
@@ -50,11 +46,7 @@ const notificationService = new NotificationService(
   logger,
 );
 
-// Audit, contact, and meetings
-export const auditRequestService = new AuditRequestService(
-  new AuditRequestRepository(prisma),
-  notificationService,
-);
+// Contact and meetings
 export const contactService = new ContactService(
   new ContactRequestRepository(prisma),
   notificationService,
@@ -81,14 +73,11 @@ export function createPortfolioSeedSession(connection: string) {
 }
 
 // Workflows
-const auditWorkflowProgress = new AuditWorkflowProgressProjector();
-
 const contactWorkflowProgress = new ContactWorkflowProgressProjector();
 
 const meetingBookingWorkflowProgress = new MeetingBookingWorkflowProgressProjector();
 
 const workflowRegistry = new WorkflowDefinitionRegistry([
-  new AuditWorkflowDefinition(auditRequestService, auditWorkflowProgress),
   new ContactWorkflowDefinition(contactService, contactWorkflowProgress),
   new MeetingBookingWorkflowDefinition(meetingService, meetingBookingWorkflowProgress),
 ]);

@@ -1,6 +1,6 @@
 # Freeman Madudili portfolio
 
-This Next.js App Router site reads the portfolio from PostgreSQL through Prisma. The assistant can handle general conversation and the existing contact, audit, and meeting workflows. It directs portfolio questions to Work while portfolio answers are unavailable.
+This Next.js App Router site reads the portfolio from PostgreSQL through Prisma. The assistant can handle general conversation and the existing contact and meeting workflows. It directs portfolio questions to Work while portfolio answers are unavailable.
 
 See the [portfolio operations guide](docs/portfolio-content-system.md) for the five editable inputs, seed commands, and staged release procedure. See [Workflow Foundation](docs/workflow-foundation.md) for durable workflow instances and confirmation rules.
 

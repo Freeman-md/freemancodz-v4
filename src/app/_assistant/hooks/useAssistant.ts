@@ -150,8 +150,6 @@ export function useAssistant() {
         {
           confirm_booking: "Confirm booking",
           retry_booking: "Retry booking",
-          confirm_audit: "Submit audit request",
-          retry_audit: "Retry audit request",
           confirm_contact: "Send message",
           retry_contact: "Retry message",
         }[request.action],

@@ -190,13 +190,6 @@ export class AssistantService {
 
   private executeWorkflowAction(request: Extract<AssistantResponseInput, { action: string }>) {
     switch (request.action) {
-      case "confirm_audit":
-        return this.workflow.confirmAuditRequest(
-          request.workflowInstanceId,
-          request.expectedRevision,
-        );
-      case "retry_audit":
-        return this.workflow.retryAuditRequest(request.workflowInstanceId);
       case "confirm_contact":
         return this.workflow.confirmContactMessage(
           request.workflowInstanceId,

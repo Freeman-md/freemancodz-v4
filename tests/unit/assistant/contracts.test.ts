@@ -4,7 +4,7 @@ import test from "node:test";
 import { assistantRequestSchema, assistantStreamEventSchema } from "@/contracts/assistant.contract";
 import { assistantChoiceSchema } from "@/contracts/assistant-choice.contract";
 
-for (const kind of ["booking", "audit", "contact"]) {
+for (const kind of ["booking", "contact"]) {
   test(`${kind} actions cannot carry messages or editable details`, () => {
     const action = {
       action: `confirm_${kind}`,
@@ -96,40 +96,8 @@ test("assistant request recovers from malformed previous response IDs", () => {
   assert.equal(result.previousResponseId, "resp_123");
 });
 
-test("deterministic Audit start accepts only the homepage Audit CTA origin", () => {
-  const request = {
-    message: "Start my audit",
-    workflowStart: {
-      workflowId: "audit",
-      originPage: "/",
-      originEntry: "home-audit-cta",
-    },
-  };
-
-  assert.equal(assistantRequestSchema.safeParse(request).success, true);
-  assert.equal(
-    assistantRequestSchema.safeParse({
-      ...request,
-      workflowStart: { ...request.workflowStart, originPage: "/work" },
-    }).success,
-    false,
-  );
-  assert.equal(
-    assistantRequestSchema.safeParse({
-      ...request,
-      workflowStart: { ...request.workflowStart, originEntry: "unknown-audit-cta" },
-    }).success,
-    false,
-  );
-});
-
 test("assistant starter workflow starts accept only approved workflow and origin pairs", () => {
   for (const workflowStart of [
-    {
-      workflowId: "audit",
-      originPage: "/",
-      originEntry: "assistant-starter-audit",
-    },
     {
       workflowId: "meeting-booking",
       originPage: "/",
@@ -245,6 +213,28 @@ test("assistant stream contract accepts known events and rejects malformed event
         progress: { phase: "collecting", fields: [], missingRequiredFields: [] },
       },
       state: { email: "private@example.com" },
+    }).success,
+    false,
+  );
+});
+
+test("retired audit starts and actions are rejected", () => {
+  assert.equal(
+    assistantRequestSchema.safeParse({
+      message: "Start",
+      workflowStart: {
+        workflowId: "audit",
+        originPage: "/",
+        originEntry: "home-audit-cta",
+      },
+    }).success,
+    false,
+  );
+  assert.equal(
+    assistantRequestSchema.safeParse({
+      action: "confirm_audit",
+      workflowInstanceId: "11111111-1111-4111-8111-111111111111",
+      expectedRevision: 0,
     }).success,
     false,
   );

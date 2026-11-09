@@ -1,27 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import type { AuditRequest, ContactRequest, Prisma } from "@/generated/prisma/client";
+import type { ContactRequest, Prisma } from "@/generated/prisma/client";
 import { ResendClient } from "@/infrastructure/resend/client";
-import { AuditService } from "@/modules/audit/service";
 import { ContactService } from "@/modules/contact/service";
 import type { MeetingRecord } from "@/modules/meeting/types";
 import { NotificationService } from "@/modules/notification/service";
-
-const audit: AuditRequest = {
-  id: "audit-1",
-  workflowInstanceId: "11111111-1111-4111-8111-111111111111",
-  focus: "Onboarding",
-  currentProcess: "Manual inbox",
-  friction: "Slow follow-up",
-  desiredOutcome: "Clear next step",
-  name: "Audit Visitor",
-  email: "audit@example.com",
-  businessName: "Audit Co",
-  websiteUrl: "https://example.com",
-  additionalContext: "Time-sensitive",
-  createdAt: new Date("2026-09-23T10:00:00.000Z"),
-};
 
 const contact: ContactRequest = {
   id: "contact-1",
@@ -49,17 +33,8 @@ const meeting: MeetingRecord = {
   updatedAt: new Date("2026-09-23T12:00:00.000Z"),
 };
 
-test("recovered audit/contact records must match before owner notification", async () => {
+test("recovered contact records must match before owner notification", async () => {
   let notifications = 0;
-
-  const auditService = new AuditService(
-    { createOrFind: async () => audit, list: async () => [] },
-    {
-      notifyAuditSubmitted: async () => {
-        notifications++;
-      },
-    },
-  );
 
   const contactService = new ContactService(
     { createOrFind: async () => contact, list: async () => [] },
@@ -70,19 +45,15 @@ test("recovered audit/contact records must match before owner notification", asy
     },
   );
 
-  const { id: _auditId, createdAt: _auditDate, ...auditInput } = audit;
-
   const { id: _contactId, createdAt: _contactDate, ...contactInput } = contact;
 
-  await assert.rejects(auditService.submit({ ...auditInput, name: "Different" }), /does not match/);
   await assert.rejects(
     contactService.submit({ ...contactInput, message: "Different" }),
     /does not match/,
   );
   assert.equal(notifications, 0);
-  await auditService.submit(auditInput);
   await contactService.submit(contactInput);
-  assert.equal(notifications, 2);
+  assert.equal(notifications, 1);
 });
 
 test("Resend client uses the current Email API request shape without exposing response bodies", async () => {
@@ -177,7 +148,6 @@ test("owner notifications use configured addressing, useful content, reply-to an
     { info: () => undefined, error: () => undefined },
   );
 
-  await service.notifyAuditSubmitted(audit);
   await service.notifyMeetingBooked(meeting);
   await service.notifyContactSubmitted(contact);
 
@@ -192,12 +162,6 @@ test("owner notifications use configured addressing, useful content, reply-to an
       {
         from: "Portfolio <from@example.com>",
         to: "owner@example.com",
-        replyTo: audit.email,
-        idempotencyKey: "audit-submitted/audit-1",
-      },
-      {
-        from: "Portfolio <from@example.com>",
-        to: "owner@example.com",
         replyTo: meeting.email,
         idempotencyKey: "meeting-booked/meeting-1",
       },
@@ -209,13 +173,12 @@ test("owner notifications use configured addressing, useful content, reply-to an
       },
     ],
   );
-  assert.match(sent[0]!.text, /Onboarding/);
-  assert.match(sent[1]!.text, /calendar\.example/);
-  assert.equal(sent[1]!.text.includes("rawProviderPayload"), false);
-  assert.match(sent[2]!.text, /Could we collaborate/);
+  assert.match(sent[0]!.text, /calendar\.example/);
+  assert.equal(sent[0]!.text.includes("rawProviderPayload"), false);
+  assert.match(sent[1]!.text, /Could we collaborate/);
 });
 
-test("notification failure is safely logged without failing a durable Audit or Contact submission", async () => {
+test("notification failure is safely logged without failing a durable Contact submission", async () => {
   const errors: Array<{ message: string; context: unknown }> = [];
 
   const notifications = new NotificationService(
@@ -230,18 +193,6 @@ test("notification failure is safely logged without failing a durable Audit or C
 
   const order: string[] = [];
 
-  const auditService = new AuditService(
-    {
-      createOrFind: async () => {
-        order.push("audit-persisted");
-
-        return audit;
-      },
-      list: async () => [],
-    },
-    notifications,
-  );
-
   const contactService = new ContactService(
     {
       createOrFind: async () => {
@@ -255,21 +206,6 @@ test("notification failure is safely logged without failing a durable Audit or C
   );
 
   assert.equal(
-    await auditService.submit({
-      workflowInstanceId: audit.workflowInstanceId,
-      focus: audit.focus,
-      currentProcess: audit.currentProcess,
-      friction: audit.friction,
-      desiredOutcome: audit.desiredOutcome,
-      name: audit.name,
-      email: audit.email,
-      businessName: audit.businessName,
-      websiteUrl: audit.websiteUrl,
-      additionalContext: audit.additionalContext,
-    }),
-    audit,
-  );
-  assert.equal(
     await contactService.submit({
       workflowInstanceId: contact.workflowInstanceId,
       name: contact.name,
@@ -279,12 +215,8 @@ test("notification failure is safely logged without failing a durable Audit or C
     }),
     contact,
   );
-  assert.deepEqual(order, ["audit-persisted", "contact-persisted"]);
+  assert.deepEqual(order, ["contact-persisted"]);
   assert.deepEqual(errors, [
-    {
-      message: "notification.owner_email_failed",
-      context: { kind: "audit-submitted", recordId: "audit-1", category: "provider" },
-    },
     {
       message: "notification.owner_email_failed",
       context: { kind: "contact-submitted", recordId: "contact-1", category: "provider" },

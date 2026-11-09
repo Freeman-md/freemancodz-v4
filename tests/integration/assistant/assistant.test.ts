@@ -13,8 +13,6 @@ import type { IWorkflowInstanceRepository } from "@/modules/workflow/interfaces"
 import type { WorkflowInstance } from "@/generated/prisma/client";
 import { MeetingBookingWorkflowDefinition } from "@/modules/workflow/definitions/meeting-booking/meeting-booking.definition";
 import { MeetingBookingWorkflowProgressProjector } from "@/modules/workflow/definitions/meeting-booking/meeting-booking.progress";
-import { AuditWorkflowDefinition } from "@/modules/workflow/definitions/audit/audit.definition";
-import { AuditWorkflowProgressProjector } from "@/modules/workflow/definitions/audit/audit.progress";
 import { ContactWorkflowDefinition } from "@/modules/workflow/definitions/contact/contact.definition";
 import { contactStateSchema } from "@/modules/workflow/definitions/contact/contact.schema";
 import { ContactWorkflowProgressProjector } from "@/modules/workflow/definitions/contact/contact.progress";
@@ -105,16 +103,6 @@ function createAssistant({
 
   const workflowService = new WorkflowService(
     new WorkflowDefinitionRegistry([
-      new AuditWorkflowDefinition(
-        {
-          submit: async (input) => ({
-            id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
-            ...input,
-            createdAt: new Date("2026-08-20T10:00:00.000Z"),
-          }),
-        },
-        new AuditWorkflowProgressProjector(),
-      ),
       new ContactWorkflowDefinition(
         {
           submit: async (input) => ({
@@ -165,8 +153,8 @@ function chatRequest(body: unknown, signal?: AbortSignal) {
   });
 }
 
-test("audit/contact actions confirm saved summaries without invoking the model", async () => {
-  for (const kind of ["audit", "contact"] as const) {
+test("contact actions confirm saved summaries without invoking the model", async () => {
+  for (const kind of ["contact"] as const) {
     const { post, inputs, workflowService } = createAssistant();
 
     const instance = await workflowService.start(kind, {
@@ -175,17 +163,7 @@ test("audit/contact actions confirm saved summaries without invoking the model",
       originEntry: null,
     });
 
-    const fields =
-      kind === "audit"
-        ? {
-            name: "Visitor",
-            email: "visitor@example.test",
-            focus: "Orders",
-            currentProcess: "Inbox",
-            friction: "Slow replies",
-            desiredOutcome: "Clear next step",
-          }
-        : { name: "Visitor", email: "visitor@example.test", message: "Discuss a project" };
+    const fields = { name: "Visitor", email: "visitor@example.test", message: "Discuss a project" };
 
     await workflowService.executeTool(instance.id, {
       name: `update_${kind}_context`,
@@ -747,10 +725,10 @@ test("starting a workflow changes instructions and tools on the next iteration i
     inputs[0]?.tools.map(({ name }) => name),
     ["ask_user_choice", "start_workflow"],
   );
-  assert.match(inputs[0]?.instructions ?? "", /audit: Request a free review/);
+  assert.doesNotMatch(inputs[0]?.instructions ?? "", /audit: Request a free review/);
   assert.match(
     JSON.stringify(inputs[0]?.tools.find(({ name }) => name === "start_workflow")?.parameters),
-    /"audit"/,
+    /"contact"/,
   );
   assert.deepEqual(
     inputs[1]?.tools.map(({ name }) => name),
@@ -772,37 +750,6 @@ test("starting a workflow changes instructions and tools on the next iteration i
   assert.doesNotMatch(output, /availableSlots|pendingBooking|visitor@example\.com/);
 });
 
-test("an Audit CTA starts deterministically with bounded origin metadata", async () => {
-  const { inputs, post, workflowRepository } = createAssistant();
-
-  const output = await readChatResponse(
-    await post(
-      chatRequest({
-        message: "I would like to claim my free customer journey and workflow audit.",
-        workflowStart: {
-          workflowId: "audit",
-          originPage: "/",
-          originEntry: "home-audit-cta",
-        },
-      }),
-    ),
-  );
-
-  const stored = await workflowRepository.findById("00000000-0000-4000-8000-000000000001");
-
-  assert.equal(stored?.workflowId, "audit");
-  assert.equal(stored?.workflowVersion, 1);
-  assert.equal(stored?.originChannel, "web");
-  assert.equal(stored?.originPage, "/");
-  assert.equal(stored?.originEntry, "home-audit-cta");
-  assert.deepEqual(
-    inputs[0]?.tools.map(({ name }) => name),
-    ["ask_user_choice", "cancel_workflow", "switch_workflow", "update_audit_context"],
-  );
-  assert.match(inputs[0]?.instructions ?? "", /free customer journey and workflow Audit/);
-  assert.match(output, /"workflowId":"audit"/);
-});
-
 test("an explicit start replaces a restored terminal workflow instance", async () => {
   const { post, workflowRepository, workflowService } = createAssistant();
 
@@ -817,12 +764,12 @@ test("an explicit start replaces a restored terminal workflow instance", async (
   const output = await readChatResponse(
     await post(
       chatRequest({
-        message: "I would like to request an audit.",
+        message: "I would like to send a message.",
         workflowInstanceId: finished.id,
         workflowStart: {
-          workflowId: "audit",
+          workflowId: "contact",
           originPage: "/",
-          originEntry: "assistant-starter-audit",
+          originEntry: "assistant-starter-contact",
         },
       }),
     ),
@@ -830,7 +777,7 @@ test("an explicit start replaces a restored terminal workflow instance", async (
 
   const started = await workflowRepository.findById("00000000-0000-4000-8000-000000000002");
 
-  assert.equal(started?.workflowId, "audit");
+  assert.equal(started?.workflowId, "contact");
   assert.equal(started?.status, "active");
   assert.match(output, /"id":"00000000-0000-4000-8000-000000000002"/);
   assert.match(output, /"status":"active"/);
@@ -973,7 +920,7 @@ test("initial workflow conflict cannot mutate; an ordinary switch reply creates 
       if (turn === 1) {
         return toolResponse(
           "resp_conflict",
-          { name: "switch_workflow", arguments: '{"workflowId":"audit"}' },
+          { name: "switch_workflow", arguments: '{"workflowId":"meeting-booking"}' },
           { name: "ask_user_choice", arguments: JSON.stringify(choice) },
         );
       }
@@ -985,12 +932,12 @@ test("initial workflow conflict cannot mutate; an ordinary switch reply creates 
       if (turn === 3) {
         return toolResponse(
           "resp_switch",
-          { name: "switch_workflow", arguments: '{"workflowId":"audit"}' },
+          { name: "switch_workflow", arguments: '{"workflowId":"meeting-booking"}' },
           { name: "submit_contact", arguments: "{}" },
         );
       }
 
-      return textResponse("resp_switched", "What would you like the audit to help with?");
+      return textResponse("resp_switched", "When would you like to meet?");
     },
   });
 
@@ -1003,12 +950,12 @@ test("initial workflow conflict cannot mutate; an ordinary switch reply creates 
   const output = await readChatResponse(
     await post(
       chatRequest({
-        message: "I'd like an audit",
+        message: "I'd like a meeting",
         workflowInstanceId: current.id,
         workflowStart: {
-          workflowId: "audit",
+          workflowId: "meeting-booking",
           originPage: "/",
-          originEntry: "assistant-starter-audit",
+          originEntry: "assistant-starter-meeting",
         },
       }),
     ),
@@ -1039,7 +986,7 @@ test("initial workflow conflict cannot mutate; an ordinary switch reply creates 
     (instance) => instance.id !== current.id,
   );
 
-  assert.equal(replacement?.workflowId, "audit");
+  assert.equal(replacement?.workflowId, "meeting-booking");
   assert.equal(replacement?.status, "active");
   assert.match(switched, /"phase":"collecting"/);
 });

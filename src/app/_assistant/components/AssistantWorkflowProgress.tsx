@@ -11,7 +11,6 @@ type AssistantWorkflowProgressProps = {
 };
 
 const WORKFLOW_TITLES: Record<string, string> = {
-  audit: "Free audit",
   "meeting-booking": "Book a meeting",
   contact: "Leave a message",
 };
@@ -25,18 +24,12 @@ const PHASE_LABELS: Record<WorkflowProgress["phase"], string> = {
 };
 
 const FIELD_LABELS: Record<string, string> = {
-  additionalContext: "Additional context",
   businessName: "Business or organisation",
-  currentProcess: "Current process",
-  desiredOutcome: "Desired outcome",
   email: "Email",
-  focus: "Focus",
-  friction: "Friction",
   message: "Message",
   name: "Name",
   reason: "Topic",
   selectedSlot: "Time",
-  websiteUrl: "Website",
 };
 
 export function AssistantWorkflowProgress({ instance }: AssistantWorkflowProgressProps) {
