@@ -1,5 +1,5 @@
 import "server-only";
-import { verifySeedTarget } from "./portfolio-seed";
+import { verifyPortfolioTarget } from "./portfolio-database";
 
 type RequiredEnvName = "DATABASE_URL" | "OPENAI_API_KEY" | "RATE_LIMIT_HMAC_SECRET";
 
@@ -15,7 +15,7 @@ function requireEnv(name: RequiredEnvName) {
 
 export function getDatabaseUrl() {
   if (process.env.VERCEL_ENV === "preview") {
-    return verifySeedTarget("development", process.env, {}).connection;
+    return verifyPortfolioTarget("development", process.env, {}).connection;
   }
 
   return requireEnv("DATABASE_URL");

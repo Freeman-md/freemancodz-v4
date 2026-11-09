@@ -10,7 +10,7 @@ import {
   PortfolioConfigurationError,
   PublicPortfolioService,
 } from "@/modules/portfolio/services/public-portfolio.service";
-import { verifySeedTarget } from "@/infrastructure/config/portfolio-seed";
+import { verifyPortfolioTarget } from "@/infrastructure/config/portfolio-database";
 
 const input = { profile, projects, caseStudies, experience, services };
 
@@ -102,29 +102,47 @@ test("a seed verifies the configured environment and effective endpoint before o
     PORTFOLIO_SEED_USER: "local",
   };
 
-  assert.deepEqual(verifySeedTarget("development", configuration, {}), {
+  assert.deepEqual(verifyPortfolioTarget("development", configuration, {}), {
     connection,
     label: "development",
   });
-  assert.throws(() => verifySeedTarget("production", configuration, {}), /expected production/);
+  const portless = { ...configuration, DATABASE_URL: connection.replace(":5432", "") };
+
   assert.throws(
-    () => verifySeedTarget("development", configuration, { DATABASE_URL: connection + "-other" }),
+    () => verifyPortfolioTarget("development", portless, { PGPORT: "6543" }),
+    /Include the database port explicitly/,
+  );
+  assert.throws(
+    () =>
+      verifyPortfolioTarget("development", configuration, {
+        DATABASE_URL: portless.DATABASE_URL,
+        PGPORT: "6543",
+      }),
+    /Include the database port explicitly/,
+  );
+  assert.throws(
+    () => verifyPortfolioTarget("production", configuration, {}),
+    /expected production/,
+  );
+  assert.throws(
+    () =>
+      verifyPortfolioTarget("development", configuration, { DATABASE_URL: connection + "-other" }),
     /Inherited/,
   );
   assert.throws(
     () =>
-      verifySeedTarget("development", configuration, {
+      verifyPortfolioTarget("development", configuration, {
         DATABASE_URL: connection.replace("local@", "different@"),
       }),
     /Inherited/,
   );
   assert.throws(
-    () => verifySeedTarget("development", { ...configuration, DATABASE_URL: undefined }, {}),
+    () => verifyPortfolioTarget("development", { ...configuration, DATABASE_URL: undefined }, {}),
     /Missing/,
   );
   assert.throws(
     () =>
-      verifySeedTarget(
+      verifyPortfolioTarget(
         "development",
         { ...configuration, DATABASE_URL: connection + "?host=wrong.example" },
         {},
@@ -132,7 +150,7 @@ test("a seed verifies the configured environment and effective endpoint before o
     /ambiguous/,
   );
   assert.throws(
-    () => verifySeedTarget("development", configuration, { PGOPTIONS: "-c role=other" }),
+    () => verifyPortfolioTarget("development", configuration, { PGOPTIONS: "-c role=other" }),
     /expected development/,
   );
 });

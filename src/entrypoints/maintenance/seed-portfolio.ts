@@ -1,5 +1,8 @@
 import { readFile } from "node:fs/promises";
-import { loadSeedTarget, SeedTargetError } from "@/infrastructure/config/portfolio-seed";
+import {
+  loadPortfolioTarget,
+  PortfolioTargetError,
+} from "@/infrastructure/config/portfolio-database";
 import { createPortfolioSeedSession } from "@/modules/composition";
 import { PortfolioSeedError } from "@/modules/portfolio/seed.error";
 
@@ -11,7 +14,9 @@ async function run(args: string[]) {
     throw new PortfolioSeedError("Use only --production and --apply.");
   }
 
-  const target = await loadSeedTarget(args.includes("--production") ? "production" : "development");
+  const target = await loadPortfolioTarget(
+    args.includes("--production") ? "production" : "development",
+  );
 
   const apply = args.includes("--apply");
 
@@ -59,7 +64,7 @@ async function run(args: string[]) {
 
 run(process.argv.slice(2)).catch((error: unknown) => {
   console.error(
-    error instanceof SeedTargetError || error instanceof PortfolioSeedError
+    error instanceof PortfolioTargetError || error instanceof PortfolioSeedError
       ? error.message
       : "The portfolio seed failed. Check database access, migrations and concurrent writes.",
   );

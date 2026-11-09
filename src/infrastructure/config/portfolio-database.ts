@@ -1,8 +1,8 @@
 import "server-only";
 
-export type SeedEnvironment = "development" | "production";
+export type PortfolioEnvironment = "development" | "production";
 
-export class SeedTargetError extends Error {}
+export class PortfolioTargetError extends Error {}
 
 const supportedOptions = new Set([
   "sslmode",
@@ -29,6 +29,7 @@ function databaseIdentity(connection: string | undefined) {
     if (
       !["postgres:", "postgresql:"].includes(url.protocol) ||
       !url.hostname ||
+      !url.port ||
       !/^[a-zA-Z0-9_.-]+$/.test(user) ||
       !/^[a-zA-Z0-9_.-]+$/.test(database) ||
       url.hash ||
@@ -39,14 +40,16 @@ function databaseIdentity(connection: string | undefined) {
       throw new Error();
     }
 
-    return { address: `${url.hostname.toLowerCase()}:${url.port || "5432"}/${database}`, user };
+    return { address: `${url.hostname.toLowerCase()}:${url.port}/${database}`, user };
   } catch {
-    throw new SeedTargetError("Missing or ambiguous DATABASE_URL for portfolio seeding.");
+    throw new PortfolioTargetError(
+      "Missing or ambiguous portfolio DATABASE_URL. Include the database port explicitly.",
+    );
   }
 }
 
-export function verifySeedTarget(
-  environment: SeedEnvironment,
+export function verifyPortfolioTarget(
+  environment: PortfolioEnvironment,
   configuration: Record<string, string | undefined>,
   inherited: Record<string, string | undefined>,
 ) {
@@ -62,8 +65,8 @@ export function verifySeedTarget(
     inherited.PGOPTIONS ||
     configuration.PGOPTIONS
   ) {
-    throw new SeedTargetError(
-      `The configured database does not match the expected ${environment} seed target.`,
+    throw new PortfolioTargetError(
+      `The configured database does not match the expected ${environment} portfolio target.`,
     );
   }
 
@@ -71,14 +74,16 @@ export function verifySeedTarget(
     const inheritedTarget = databaseIdentity(inherited.DATABASE_URL);
 
     if (inheritedTarget.address !== target.address || inheritedTarget.user !== target.user) {
-      throw new SeedTargetError("Inherited DATABASE_URL points to a different seed target.");
+      throw new PortfolioTargetError(
+        "Inherited DATABASE_URL points to a different portfolio target.",
+      );
     }
   }
 
   return { connection, label: environment };
 }
 
-export async function loadSeedTarget(environment: SeedEnvironment) {
+export async function loadPortfolioTarget(environment: PortfolioEnvironment) {
   const { config } = await import("dotenv");
 
   const path = environment === "production" ? ".env.production.local" : ".env";
@@ -88,8 +93,10 @@ export async function loadSeedTarget(environment: SeedEnvironment) {
   const result = config({ path, processEnv: configuration, quiet: true });
 
   if (result.error) {
-    throw new SeedTargetError(`The ${environment} seed configuration could not be loaded.`);
+    throw new PortfolioTargetError(
+      `The ${environment} portfolio database configuration could not be loaded.`,
+    );
   }
 
-  return verifySeedTarget(environment, configuration, process.env);
+  return verifyPortfolioTarget(environment, configuration, process.env);
 }
