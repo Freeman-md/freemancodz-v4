@@ -30,8 +30,10 @@ const response =
     {
       type: "sources",
       sources: [
-        { id: "journey", title: "Career journey", url: "/#about-journey" },
-        { id: "project", title: "JPScents", url: "/#jpscents" },
+        { id: "journey", title: "Career journey", url: "/#experience" },
+        { id: "project", title: "JPScents", url: "/work/jpscents" },
+        { id: "services", title: "Services", url: "/#services" },
+        { id: "profile", title: "Profile", url: "/#top" },
         { id: "retired", title: "Retired audit", url: "/#audit" },
       ],
     },
@@ -231,7 +233,7 @@ async function journey(browser, phone) {
     );
     assert.equal(
       await page.getByRole("link", { name: /JPScents.*jpscents/ }).getAttribute("href"),
-      "/#jpscents",
+      "/work/jpscents",
     );
     assert.equal(await page.getByText("Retired audit").count(), 0);
     await click(closeChat);
@@ -239,15 +241,30 @@ async function journey(browser, phone) {
     await focused(whatsApp);
     if (phone) {
       await page.emulateMedia({ reducedMotion: "no-preference" });
-      await click(launcher);
-      await focused(closeChat);
-      await click(page.getByRole("link", { name: /JPScents.*jpscents/ }));
-      await closeChat.waitFor({ state: "hidden" });
-      await page.waitForURL("**/#jpscents", documentReady);
-      await focused(page.locator("#jpscents"));
-      assert.equal(requests.length, 1);
-      await page.emulateMedia({ reducedMotion: "reduce" });
     }
+
+    await click(launcher);
+    await focused(closeChat);
+    const experienceSource = page.getByRole("link", { name: /Career journey/ });
+
+    if (phone) {
+      await click(experienceSource);
+    } else {
+      await experienceSource.focus();
+      await experienceSource.press("Enter");
+    }
+
+    await closeChat.waitFor({ state: "hidden" });
+    await page.waitForURL("**/#experience", documentReady);
+    await focused(page.locator("#experience[data-portfolio-highlight]"));
+    assert.equal(
+      await page
+        .locator("#experience")
+        .evaluate((heading) => getComputedStyle(heading).animationName),
+      phone ? "portfolio-anchor-highlight" : "none",
+    );
+    assert.equal(requests.length, 1);
+    await page.emulateMedia({ reducedMotion: "reduce" });
 
     const pay4me = page.getByRole("button", { name: /2022–2023 Pay4Me/ });
 
@@ -338,6 +355,29 @@ async function journey(browser, phone) {
     const retiredResponse = await page.request.get(`${base}/admin/projects`);
 
     assert.equal(retiredResponse.status(), 404);
+    for (const [title, hash] of [
+      ["Services", "services"],
+      ["Profile", "top"],
+    ]) {
+      await click(launcher);
+      await focused(closeChat);
+      await click(
+        page
+          .getByRole("link", { name: new RegExp(`^${title}`) })
+          .and(page.locator(`[href="/#${hash}"]`))
+          .and(page.locator(".assistant-sources a")),
+      );
+      await closeChat.waitFor({ state: "hidden" });
+      await page.waitForURL(`**/#${hash}`, documentReady);
+      await focused(page.locator(`#${hash}[data-portfolio-highlight]`));
+    }
+
+    await click(launcher);
+    await focused(closeChat);
+    await click(page.getByRole("link", { name: /JPScents.*jpscents/ }));
+    await page.waitForURL("**/work/jpscents", documentReady);
+    await closeChat.waitFor({ state: "hidden" });
+    await page.getByRole("heading", { name: "JPScents", exact: true, level: 1 }).waitFor();
     assert.deepEqual(errors, []);
     console.log(
       `${browser.browserType().name()} ${phone ? "390px touch" : "1440px keyboard/pointer"}: passed`,

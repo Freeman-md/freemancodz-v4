@@ -1,6 +1,6 @@
 # Freeman Madudili portfolio
 
-This Next.js App Router site reads the portfolio from PostgreSQL through Prisma. The assistant can handle general conversation and the existing contact and meeting workflows. It directs portfolio questions to Work while portfolio answers are unavailable.
+This Next.js App Router site reads the portfolio from PostgreSQL through Prisma. The assistant can handle general conversation and the existing contact and meeting workflows. It answers portfolio questions from indexed published records and links to the related portfolio pages.
 
 See the [portfolio operations guide](docs/portfolio-content-system.md) for the five editable inputs, seed commands, and staged release procedure. See [Workflow Foundation](docs/workflow-foundation.md) for durable workflow instances and confirmation rules.
 
@@ -12,6 +12,7 @@ To start over on local Supabase, confirm Prisma shows `127.0.0.1:54332` before a
 
 ```bash
 npx prisma migrate reset && npm run portfolio:seed:local -- --apply
+npm run portfolio:index
 ```
 
 For a new empty database, use `npm run prisma:migrate` in place of the reset.

@@ -105,10 +105,7 @@ test("contact reviews submit the displayed snapshot and expose explicit retry", 
 
       await render(instance);
       assert.equal(container.querySelector("input,textarea,select"), null);
-      assert.match(
-        container.querySelector("button")!.textContent!,
-        /Send message/,
-      );
+      assert.match(container.querySelector("button")!.textContent!, /Send message/);
       await act(async () => container.querySelector("button")!.click());
       assert.deepEqual(actions[0], {
         action: `confirm_${workflowId}`,
@@ -147,7 +144,7 @@ test("sources belong to their answer and disappear when no evidence is returned"
               role: "assistant",
               content: "Here is the relevant work.",
               sources: [
-                { id: "internal", title: "Selected work", url: "/work" },
+                { id: "internal", title: "Selected work", url: "/work/jpscents" },
                 {
                   id: "external",
                   title: "External reference",
@@ -163,13 +160,13 @@ test("sources belong to their answer and disappear when no evidence is returned"
       );
     });
 
-    assert.match(container.textContent ?? "", /Sources · 2/);
+    assert.match(container.textContent ?? "", /Related portfolio sources · 1/);
     assert.match(container.textContent ?? "", /Selected work/);
-    assert.match(container.textContent ?? "", /\/#work/);
-    assert.equal(container.querySelector('a[href="/#work"]')?.getAttribute("target"), null);
+    assert.match(container.textContent ?? "", /\/work\/jpscents/);
+    assert.equal(container.querySelector('a[href="/work/jpscents"]')?.getAttribute("target"), null);
     assert.equal(
       container.querySelector('a[href="https://example.com/reference"]')?.getAttribute("target"),
-      "_blank",
+      undefined,
     );
 
     await act(async () => {
@@ -184,64 +181,45 @@ test("sources belong to their answer and disappear when no evidence is returned"
       );
     });
 
-    assert.doesNotMatch(container.textContent ?? "", /Sources ·/);
+    assert.doesNotMatch(container.textContent ?? "", /Related portfolio sources/);
   });
 });
 
-test("source display deduplicates by displayed title and destination", async () => {
+test("sources keep four portfolio destinations, deduplicate and preserve modified clicks", async () => {
   await withBrowser(async ({ container, root }) => {
+    const destinations = ["/work/jpscents", "/#experience", "/#services", "/#top"];
+
+    const followed: string[] = [];
+
     await act(async () => {
       root.render(
         createElement(AssistantSources, {
           sources: [
-            { id: "first-chunk", title: "JPScents", url: "/#jpscents" },
-            { id: "second-chunk", title: "JPScents", url: "/#jpscents" },
-            { id: "different-title", title: "Fragrance discovery", url: "/#jpscents" },
-            { id: "different-url", title: "JPScents", url: "https://jpscents.shop" },
+            ...destinations.map((url) => ({ id: url, title: url, url })),
+            { id: "same", title: "Different title", url: destinations[0] },
+            { id: "retired", title: "Retired", url: "/#jpscents" },
+            { id: "external", title: "External", url: "https://example.com" },
           ],
+          onInternalSource: (href) => followed.push(href),
         }),
       );
     });
-
-    assert.match(container.textContent ?? "", /Sources · 3/);
     const links = Array.from(container.querySelectorAll("a"));
 
-    assert.equal(links.length, 3);
     assert.deepEqual(
-      links.map((link) => [
-        link.querySelector(".font-medium")?.textContent,
-        link.getAttribute("href"),
-      ]),
-      [
-        ["JPScents", "/#jpscents"],
-        ["Fragrance discovery", "/#jpscents"],
-        ["JPScents", "https://jpscents.shop/"],
-      ],
+      links.map((link) => link.getAttribute("href")),
+      destinations,
     );
-  });
-});
+    assert.match(container.textContent ?? "", /Related portfolio sources · 4/);
+    const MouseEvent = container.ownerDocument.defaultView!.MouseEvent;
 
-test("sources remap truthful destinations and omit retired sections", async () => {
-  await withBrowser(async ({ container, root }) => {
-    await act(async () =>
-      root.render(
-        createElement(AssistantSources, {
-          sources: [
-            { id: "work", title: "Debby Art & Prints", url: "/#debby-arts" },
-            { id: "journey", title: "Journey", url: "/#about-journey" },
-            { id: "audit", title: "Audit", url: "/#audit" },
-            { id: "audit-proof", title: "Audit proof", url: "/#audit-proof" },
-            { id: "more", title: "More work", url: "/#work-additional" },
-            { id: "external", title: "External", url: "//example.com/reference" },
-          ],
-        }),
-      ),
-    );
-    assert.deepEqual(
-      Array.from(container.querySelectorAll("a"), (link) => link.getAttribute("href")),
-      ["/#debby-arts", "/#experience", "https://example.com/reference"],
-    );
-    assert.match(container.textContent ?? "", /Sources · 3/);
+    const modified = new MouseEvent("click", { bubbles: true, cancelable: true, metaKey: true });
+
+    links[0].dispatchEvent(modified);
+    assert.equal(modified.defaultPrevented, false);
+    assert.deepEqual(followed, []);
+    links[0].click();
+    assert.deepEqual(followed, [destinations[0]]);
   });
 });
 

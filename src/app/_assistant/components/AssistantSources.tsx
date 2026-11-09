@@ -19,7 +19,7 @@ export function AssistantSources({ sources, onInternalSource }: AssistantSources
       return [];
     }
 
-    const identity = JSON.stringify([source.title, url]);
+    const identity = url;
 
     if (identities.has(identity)) {
       return [];
@@ -35,21 +35,22 @@ export function AssistantSources({ sources, onInternalSource }: AssistantSources
   }
 
   return (
-    <section aria-label="Sources" className="assistant-sources mt-5 border-t border-black/8 pt-4">
+    <section
+      aria-label="Related portfolio sources"
+      className="assistant-sources mt-5 border-t border-black/8 pt-4"
+    >
       <p className="font-sans text-sm/5 font-medium text-muted">
-        Sources · {visibleSources.length}
+        Related portfolio sources · {visibleSources.length}
       </p>
       <ul role="list" className="mt-3 flex flex-col gap-1">
         {visibleSources.map((source) => {
-          const external = isExternalUrl(source.url);
-
           return (
             <li key={source.id}>
               <a
                 href={source.url}
                 onClick={(event) => {
                   if (
-                    external ||
+                    event.button !== 0 ||
                     !onInternalSource ||
                     event.metaKey ||
                     event.ctrlKey ||
@@ -62,9 +63,6 @@ export function AssistantSources({ sources, onInternalSource }: AssistantSources
                   event.preventDefault();
                   onInternalSource(source.url);
                 }}
-                target={external ? "_blank" : undefined}
-                rel={external ? "noreferrer" : undefined}
-                aria-label={external ? `${source.title} (opens in a new tab)` : undefined}
                 className="flex min-h-12 items-start gap-3 py-2.5 outline-none focus-visible:ring-2 focus-visible:ring-signal-400/40"
               >
                 <SourceContent source={source} />
@@ -86,27 +84,9 @@ function SourceContent({ source }: { source: AssistantSource }) {
           {source.title}
         </span>
         <span className="block break-words font-sans text-sm/5 text-muted [overflow-wrap:anywhere]">
-          {formatSourcePath(source.url)}
+          {source.url}
         </span>
       </span>
     </>
   );
-}
-
-function isExternalUrl(url: string) {
-  return /^https?:\/\//i.test(url);
-}
-
-function formatSourcePath(url: string) {
-  if (!isExternalUrl(url)) {
-    return url;
-  }
-
-  try {
-    const parsed = new URL(url);
-
-    return `${parsed.hostname}${parsed.pathname === "/" ? "" : parsed.pathname}`;
-  } catch {
-    return url;
-  }
 }

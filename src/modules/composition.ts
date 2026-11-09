@@ -11,14 +11,20 @@ import { GoogleCalendarClient } from "@/infrastructure/google-calendar/client";
 import { logger } from "@/infrastructure/logging/logger";
 import { ResendClient } from "@/infrastructure/resend/client";
 import { OpenAIClient, createOpenAIClient, getResponseModel } from "@/infrastructure/openai/client";
+import { OpenAIEmbeddings } from "@/infrastructure/openai/embeddings";
 import { AssistantService } from "./assistant/service";
-import { GLOBAL_ASSISTANT_TOOLS } from "./assistant/tools/definitions";
+import { GLOBAL_ASSISTANT_TOOLS, PORTFOLIO_SEARCH_TOOL } from "./assistant/tools/definitions";
 import { ContactRequestRepository } from "./contact/repository";
 import { ContactService } from "./contact/service";
 import { MeetingRepository } from "./meeting/repository";
 import { MeetingService } from "./meeting/service";
 import { NotificationService } from "./notification/service";
 import { PrismaPublicPortfolioRepository } from "./portfolio/repositories/public-portfolio.repository";
+import { PrismaPortfolioSearchRepository } from "./portfolio/repositories/portfolio-search.repository";
+import {
+  PortfolioIndexService,
+  PortfolioSearchService,
+} from "./portfolio/services/portfolio-search.service";
 import { PublicPortfolioService } from "./portfolio/services/public-portfolio.service";
 import { PrismaPortfolioSeedRepository } from "./portfolio/repositories/portfolio-seed.repository";
 import { PortfolioSeedService } from "./portfolio/seed.service";
@@ -34,6 +40,8 @@ import { WorkflowDefinitionRegistry } from "./workflow/registry";
 
 // Shared infrastructure
 const openAIProvider = new OpenAIClient(createOpenAIClient, getResponseModel);
+
+const embeddings = new OpenAIEmbeddings(createOpenAIClient);
 
 export { logger };
 
@@ -72,6 +80,19 @@ export function createPortfolioSeedSession(connection: string) {
   };
 }
 
+export function createPortfolioIndexSession(connection: string) {
+  const client = createPrismaClient(connection);
+
+  return {
+    service: new PortfolioIndexService(
+      new PrismaPublicPortfolioRepository(client),
+      new PrismaPortfolioSearchRepository(client),
+      embeddings,
+    ),
+    disconnect: () => client.$disconnect(),
+  };
+}
+
 // Workflows
 const contactWorkflowProgress = new ContactWorkflowProgressProjector();
 
@@ -85,7 +106,7 @@ const workflowRegistry = new WorkflowDefinitionRegistry([
 export const workflowService = new WorkflowService(
   workflowRegistry,
   new WorkflowInstanceRepository(prisma),
-  GLOBAL_ASSISTANT_TOOLS.map(({ name }) => name),
+  [...GLOBAL_ASSISTANT_TOOLS, PORTFOLIO_SEARCH_TOOL].map(({ name }) => name),
   logger,
 );
 
@@ -96,4 +117,9 @@ export const rateLimitService = new RateLimitService(
 );
 
 // Assistant
-export const assistantService = new AssistantService(openAIProvider, logger, workflowService);
+export const assistantService = new AssistantService(
+  openAIProvider,
+  logger,
+  workflowService,
+  new PortfolioSearchService(new PrismaPortfolioSearchRepository(prisma), embeddings),
+);

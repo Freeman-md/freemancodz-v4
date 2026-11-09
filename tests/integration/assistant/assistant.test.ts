@@ -68,10 +68,12 @@ function createAssistant({
     ),
   rateLimit,
   meeting,
+  portfolioSearch,
 }: {
   response?: (request: OpenAIResponseRequest) => ReturnType<OpenAITransport["streamResponse"]>;
   rateLimit?: Pick<RateLimitService, "consume">;
   meeting?: MeetingServiceClient;
+  portfolioSearch?: ConstructorParameters<typeof AssistantService>[3];
 } = {}) {
   const inputs: OpenAIResponseRequest[] = [];
 
@@ -123,7 +125,7 @@ function createAssistant({
     { info() {}, error() {} },
   );
 
-  const assistantService = new AssistantService(openai, logger, workflowService);
+  const assistantService = new AssistantService(openai, logger, workflowService, portfolioSearch);
 
   const rateLimitService: Pick<RateLimitService, "consume"> = rateLimit ?? {
     consume: async (input) => {
@@ -662,36 +664,109 @@ test("a restored workflow supplies known progress to the model and public stream
   assert.doesNotMatch(output, /preparedInteractionId/);
 });
 
-test("a portfolio question uses the temporary Work notice without legacy tools or citations", async () => {
-  const notice =
-    "Portfolio answers are temporarily unavailable. You can browse the projects on [Work](/work).";
-
-  const { inputs, post } = createAssistant({
-    response: async (request) => {
-      assert.ok(request.instructions.includes(notice));
-      assert.doesNotMatch(request.instructions, /search_website/);
-
-      return events(
-        { type: "response.output_text.delta", delta: notice },
-        { type: "response.completed", response: { id: "resp_notice" } },
-      );
+function portfolioCall(query: string, id = "call_search") {
+  return {
+    type: "response.output_item.done",
+    item: {
+      type: "function_call",
+      call_id: id,
+      name: "search_portfolio",
+      arguments: JSON.stringify({ query }),
     },
+  };
+}
+
+for (const [message, query, title, url] of [
+  ["What was your role there?", "Freeman's role on JPScents", "JPScents", "/work/jpscents"],
+  ["Where has Freeman worked?", "Freeman work experience", "Experience", "/#experience"],
+  [
+    "Can Freeman automate a process?",
+    "Freeman process automation services",
+    "Services",
+    "/#services",
+  ],
+]) {
+  test(`portfolio search grounds the answer to: ${message}`, async () => {
+    const searched: string[] = [];
+
+    const excerpt = `Published evidence for ${title}`;
+
+    const { inputs, post } = createAssistant({
+      portfolioSearch: {
+        search: async (value) => {
+          searched.push(value);
+
+          return [{ excerpt, source: { id: title, title, url } }];
+        },
+      },
+      response: async (request) => {
+        if (request.input[0]?.type === "function_call_output") {
+          assert.ok(JSON.stringify(request.input).includes(excerpt));
+          assert.ok(request.tools.every(({ name }) => name !== "search_portfolio"));
+
+          return events(
+            { type: "response.output_text.delta", delta: excerpt },
+            { type: "response.completed", response: { id: "resp_answer" } },
+          );
+        }
+
+        assert.equal(request.previousResponseId, "resp_prior");
+        assert.ok(request.tools.some(({ name }) => name === "search_portfolio"));
+
+        return events(
+          { type: "response.output_text.delta", delta: "Discard this preamble" },
+          portfolioCall(query),
+          portfolioCall(query, "duplicate"),
+          { type: "response.completed", response: { id: "resp_search" } },
+        );
+      },
+    });
+
+    const output = await readChatResponse(
+      await post(chatRequest({ message, previousResponseId: "resp_prior" })),
+    );
+
+    assert.deepEqual(searched, [query]);
+    assert.equal(inputs.length, 2);
+    assert.ok(output.includes(excerpt));
+    assert.ok(output.includes(url));
+    assert.doesNotMatch(output, /Discard this preamble/);
   });
+}
 
-  const output = await readChatResponse(
-    await post(
-      chatRequest({
-        message: "What has Freeman built?",
-        previousResponseId: "resp_from_previous_release",
-      }),
-    ),
-  );
+for (const unavailable of [false, true]) {
+  test(`portfolio search returns a safe limitation when ${unavailable ? "unavailable" : "empty"}`, async () => {
+    const { post } = createAssistant({
+      portfolioSearch: {
+        search: async () => {
+          if (unavailable) {
+            throw new Error("private provider error");
+          }
 
-  assert.equal(inputs.length, 1);
-  assert.ok(inputs[0].tools.every(({ name }) => name !== "search_website"));
-  assert.ok(output.includes(notice));
-  assert.match(output, /"sources":\[\]/);
-});
+          return [];
+        },
+      },
+      response: async (request) =>
+        request.input[0]?.type === "function_call_output"
+          ? events(
+              { type: "response.output_text.delta", delta: "Unsupported claim" },
+              { type: "response.completed", response: { id: "resp_answer" } },
+            )
+          : events(portfolioCall("Freeman astronaut missions"), {
+              type: "response.completed",
+              response: { id: "resp_search" },
+            }),
+    });
+
+    const output = await readChatResponse(
+      await post(chatRequest({ message: "What astronaut missions did Freeman do?" })),
+    );
+
+    assert.match(output, unavailable ? /couldn’t search/ : /enough/);
+    assert.match(output, /"sources":\[\]/);
+    assert.doesNotMatch(output, /Unsupported claim|private provider error/);
+  });
+}
 
 test("starting a workflow changes instructions and tools on the next iteration in one request", async () => {
   const { inputs, post } = createAssistant({

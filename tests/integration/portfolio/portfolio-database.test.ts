@@ -1,3 +1,8 @@
+import { PrismaPortfolioSearchRepository } from "@/modules/portfolio/repositories/portfolio-search.repository";
+import {
+  PortfolioIndexService,
+  PortfolioSearchService,
+} from "@/modules/portfolio/services/portfolio-search.service";
 import { applyPrismaMigration, portfolioSeedFixture } from "../apply-prisma-migration";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
@@ -381,3 +386,119 @@ test("a fresh database replays every migration before seeding", { timeout: 120_0
     assert.equal(await prisma.project.count(), 9);
   });
 });
+
+test(
+  "M25 refreshes the published search index atomically and retrieves ranked evidence",
+  { timeout: 120_000 },
+  async () => {
+    await withDatabase(async (sql, prisma) => {
+      for (const migration of await migrationsInOrder()) {
+        await applyPrismaMigration(sql, migration);
+      }
+
+      const portfolio = new PrismaPublicPortfolioRepository(prisma);
+
+      const seed = new PortfolioSeedService(new PrismaPortfolioSeedRepository(prisma));
+
+      const repository = new PrismaPortfolioSearchRepository(prisma);
+
+      const vector = (match: number, other: number) => [
+        match,
+        other,
+        ...Array<number>(1534).fill(0),
+      ];
+
+      const embedder = {
+        embed: async (inputs: readonly string[]) =>
+          inputs.map((input) => {
+            if (input === "JPScents query") {
+              return vector(1, 0);
+            }
+
+            if (input === "unsupported query") {
+              return vector(-1, 0);
+            }
+
+            return input.startsWith("Project case study: JPScents\n")
+              ? vector(1, 0)
+              : vector(1, 0.7);
+          }),
+      };
+
+      const index = new PortfolioIndexService(portfolio, repository, embedder);
+
+      const search = new PortfolioSearchService(repository, embedder);
+
+      const query = (input: string) => search.search(input, new AbortController().signal);
+
+      const snapshot = async () =>
+        (
+          await sql.query(
+            "SELECT key, excerpt, embedding::text FROM public.portfolio_search_documents ORDER BY key",
+          )
+        ).rows;
+
+      await assert.rejects(index.refresh(true), /incomplete/);
+      await seed.run(baseline, true);
+      assert.equal((await index.refresh(false)).length, 16);
+      assert.deepEqual(await snapshot(), []);
+      assert.equal((await index.refresh(true)).length, 16);
+      const original = await snapshot();
+
+      assert.equal(original.length, 16);
+      await index.refresh(true);
+      assert.deepEqual(await snapshot(), original);
+      const ranked = await query("JPScents query");
+
+      assert.equal(ranked.length, 4);
+      assert.equal(ranked[0].source.url, "/work/jpscents");
+      assert.deepEqual(await query("unsupported query"), []);
+
+      const outcome = "An isolated outcome for the M25 search rehearsal.";
+
+      await seed.run(
+        {
+          ...noEdits,
+          caseStudies: [{ ...baseline.caseStudies[0], outcome }],
+        },
+        true,
+      );
+      assert.equal((await portfolio.findProject("jpscents"))?.study?.outcome, outcome);
+      assert.ok(!(await query("JPScents query"))[0].excerpt.includes(outcome));
+      await index.refresh(true);
+      assert.ok((await query("JPScents query"))[0].excerpt.includes(outcome));
+      const refreshed = await snapshot();
+
+      const unavailable = new PortfolioIndexService(portfolio, repository, {
+        embed: async () => {
+          throw new Error("offline");
+        },
+      });
+
+      await assert.rejects(unavailable.refresh(true), /offline/);
+      const malformed = new PortfolioIndexService(portfolio, repository, {
+        embed: async () => [[1]],
+      });
+
+      await assert.rejects(malformed.refresh(true), /embedding batch/);
+      assert.deepEqual(await snapshot(), refreshed);
+
+      await sql.query(
+        "ALTER TABLE public.portfolio_search_documents ADD CHECK (key <> 'project:jpscents') NOT VALID",
+      );
+      await assert.rejects(index.refresh(true));
+      assert.deepEqual(await snapshot(), refreshed);
+      await sql.query("DELETE FROM public.portfolio_profiles");
+      await assert.rejects(index.refresh(true), /incomplete/);
+      assert.deepEqual(await snapshot(), refreshed);
+      for (const role of ["anon", "authenticated", "service_role"]) {
+        const { rows } = await sql.query<{ exposed: boolean }>(
+          "SELECT has_table_privilege($1, 'public.portfolio_search_documents', 'SELECT') AS exposed",
+          [role],
+        );
+
+        assert.equal(rows[0].exposed, false);
+      }
+    });
+  },
+);

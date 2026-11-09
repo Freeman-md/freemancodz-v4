@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { FALLBACK_ANSWER, MAX_TOOL_CALL_ITERATIONS } from "./constants";
 import { CHAT_SYSTEM_PROMPT } from "./prompt";
 import type { AssistantResponseInput } from "./types";
-import { GLOBAL_ASSISTANT_TOOLS } from "./tools/definitions";
+import { GLOBAL_ASSISTANT_TOOLS, PORTFOLIO_SEARCH_TOOL } from "./tools/definitions";
 import { executeGlobalAssistantTool } from "./tools/execute";
 import type {
   OpenAITransport,
@@ -11,17 +11,26 @@ import type {
   OpenAIResponseRequest,
 } from "@/infrastructure/openai/types";
 import type { Logger } from "@/infrastructure/logging/logger";
-import type { AssistantStreamEvent } from "@/contracts/assistant.contract";
+import { z } from "zod";
+import type { PortfolioSearchService } from "@/modules/portfolio/services/portfolio-search.service";
+import type { AssistantSource, AssistantStreamEvent } from "@/contracts/assistant.contract";
 import { START_WORKFLOW_TOOL_NAME, SWITCH_WORKFLOW_TOOL_NAME } from "@/modules/workflow/constants";
 import type { IWorkflowService } from "@/modules/workflow/interfaces";
 import type { WorkflowAssistantContext, WorkflowPublicInstance } from "@/modules/workflow/types";
 import type { AssistantChoice } from "@/contracts/assistant-choice.contract";
+
+const searchArguments = z.strictObject({ query: z.string().trim().min(1).max(240) });
+
+const searchUnavailable = "I couldn’t search the portfolio just now. Please try again shortly.";
+
+const searchEmpty = "I couldn’t find enough information in the portfolio to answer that.";
 
 export class AssistantService {
   constructor(
     private readonly openai: OpenAITransport,
     private readonly logger: Logger,
     private readonly workflow: IWorkflowService,
+    private readonly portfolioSearch?: Pick<PortfolioSearchService, "search">,
   ) {}
 
   createResponse(request: AssistantResponseInput) {
@@ -45,6 +54,10 @@ export class AssistantService {
       workflowEndedThisInteraction: false,
       didStreamText: false,
       choice: null,
+      search: null,
+      workflowRequested: Boolean(request.workflowStart),
+      sources: [],
+      completed: false,
       operation: "workflow_context",
     };
 
@@ -218,7 +231,32 @@ export class AssistantService {
       const request = this.createModelRequest(state, workflowContext, iteration);
 
       state.operation = "provider_response";
-      const toolCalls = await this.streamModelResponse(request, state, write);
+      const failedSearch = state.search === "empty" || state.search === "unavailable";
+
+      const suppressAnswer =
+        failedSearch && !state.activeWorkflowInstanceId && !state.workflowRequested;
+
+      const beforeSearch = request.tools.some(({ name }) => name === PORTFOLIO_SEARCH_TOOL.name);
+
+      const buffered: AssistantStreamEvent[] = [];
+
+      const toolCalls = await this.streamModelResponse(
+        request,
+        state,
+        beforeSearch || suppressAnswer ? (event) => buffered.push(event) : write,
+      );
+
+      const searched = toolCalls.some(({ name }) => name === PORTFOLIO_SEARCH_TOOL.name);
+
+      if (suppressAnswer) {
+        state.didStreamText = false;
+      } else if (!searched && !state.signal.aborted) {
+        for (const event of buffered) {
+          write(event);
+        }
+      } else if (searched && beforeSearch) {
+        state.didStreamText = false;
+      }
 
       if (state.signal.aborted) {
         return;
@@ -282,7 +320,11 @@ export class AssistantService {
         : CHAT_SYSTEM_PROMPT,
       tools: state.workflowConflict
         ? GLOBAL_ASSISTANT_TOOLS.filter(({ name }) => name === "ask_user_choice")
-        : [...GLOBAL_ASSISTANT_TOOLS, ...workflowTools],
+        : [
+            ...GLOBAL_ASSISTANT_TOOLS,
+            ...workflowTools,
+            ...(this.portfolioSearch && state.search === null ? [PORTFOLIO_SEARCH_TOOL] : []),
+          ],
       previousResponseId: state.responseId,
       signal: state.signal,
     };
@@ -296,7 +338,7 @@ export class AssistantService {
   ) {
     const toolCalls: ToolCall[] = [];
 
-    let completed = false;
+    state.completed = false;
 
     const response = await this.openai.streamResponse(request);
 
@@ -307,7 +349,7 @@ export class AssistantService {
 
       if (event.type === "response.created" || event.type === "response.completed") {
         state.responseId = event.response.id;
-        completed = event.type === "response.completed";
+        state.completed = event.type === "response.completed";
       }
 
       if (event.type === "response.output_text.delta" && event.delta) {
@@ -332,7 +374,7 @@ export class AssistantService {
       }
     }
 
-    if (requireCompleted && !state.signal.aborted && !completed) {
+    if (requireCompleted && !state.signal.aborted && !state.completed) {
       throw new Error("The model response did not complete.");
     }
 
@@ -382,6 +424,10 @@ export class AssistantService {
     workflowContext: WorkflowAssistantContext,
     write: WriteEvent,
   ): Promise<Record<string, unknown>> {
+    if (toolCall.name === PORTFOLIO_SEARCH_TOOL.name && !state.workflowConflict) {
+      return this.searchPortfolio(toolCall.arguments, state);
+    }
+
     if (GLOBAL_ASSISTANT_TOOLS.some(({ name }) => name === toolCall.name)) {
       const result = executeGlobalAssistantTool(toolCall.name, toolCall.arguments);
 
@@ -406,6 +452,7 @@ export class AssistantService {
       };
     }
 
+    state.workflowRequested = true;
     const result = await this.workflow.executeTool(state.activeWorkflowInstanceId, {
       name: toolCall.name,
       rawArguments: toolCall.arguments,
@@ -430,6 +477,46 @@ export class AssistantService {
     write({ type: "workflow_instance", instance: result.instance });
 
     return result.output;
+  }
+
+  private async searchPortfolio(rawArguments: string, state: ResponseState) {
+    if (!this.portfolioSearch || state.search !== null) {
+      return {
+        error: "search_limit",
+        message: "Use the portfolio result already provided for this turn.",
+      };
+    }
+
+    state.search = "unavailable";
+
+    try {
+      const args: unknown = JSON.parse(rawArguments);
+
+      const { query } = searchArguments.parse(args);
+
+      const matches = await this.portfolioSearch.search(query, state.signal);
+
+      if (!matches.length) {
+        state.search = "empty";
+
+        return { error: "insufficient_information", message: searchEmpty };
+      }
+
+      state.search = "found";
+      state.sources = Array.from(
+        new Map(matches.map(({ source }) => [source.url, source])).values(),
+      );
+
+      return { excerpts: matches.map(({ excerpt, source }) => ({ title: source.title, excerpt })) };
+    } catch {
+      if (!state.signal.aborted) {
+        this.logger.error("assistant.portfolio_search_failed", {
+          category: "portfolio_search_unavailable",
+        });
+      }
+
+      return { error: "search_unavailable", message: searchUnavailable };
+    }
   }
 
   private async finishChoiceResponse(state: ResponseState, write: WriteEvent) {
@@ -461,9 +548,19 @@ export class AssistantService {
   }
 
   private writeFinalEvents(state: ResponseState, write: WriteEvent) {
-    write({ type: "sources", sources: [] });
+    write({
+      type: "sources",
+      sources: state.completed && state.didStreamText && !state.choice ? state.sources : [],
+    });
     if (!state.didStreamText && !state.choice) {
-      write({ type: "delta", delta: FALLBACK_ANSWER });
+      const delta =
+        state.search === "empty"
+          ? searchEmpty
+          : state.search === "unavailable"
+            ? searchUnavailable
+            : FALLBACK_ANSWER;
+
+      write({ type: "delta", delta });
     }
 
     if (state.responseId) {
@@ -544,5 +641,9 @@ type ResponseState = {
   workflowEndedThisInteraction: boolean;
   didStreamText: boolean;
   choice: AssistantChoice | null;
+  workflowRequested: boolean;
+  search: "found" | "empty" | "unavailable" | null;
+  sources: AssistantSource[];
+  completed: boolean;
   operation: string;
 };
