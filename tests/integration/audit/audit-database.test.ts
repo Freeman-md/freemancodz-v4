@@ -64,7 +64,7 @@ test(
       assert.notEqual(migrationDirectories.indexOf(AUDIT_MIGRATION), -1);
 
       for (const directory of migrationDirectories) {
-        await applyPrismaMigration(database, directory);
+        await applyPrismaMigration(database, directory, databaseUrl.href);
       }
 
       const security = await database.query<{

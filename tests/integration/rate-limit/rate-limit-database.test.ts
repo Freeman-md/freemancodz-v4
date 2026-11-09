@@ -85,7 +85,7 @@ test(
         .sort();
 
       for (const directory of migrationDirectories) {
-        await applyPrismaMigration(database, directory);
+        await applyPrismaMigration(database, directory, databaseUrl.href);
       }
 
       const posture = await database.query<{

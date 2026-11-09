@@ -66,7 +66,7 @@ test(
       assert.notEqual(workflowMigrationIndex, -1);
 
       for (const directory of migrationDirectories.slice(0, workflowMigrationIndex)) {
-        await applyPrismaMigration(database, directory);
+        await applyPrismaMigration(database, directory, databaseUrl.href);
       }
 
       await database.query(`
@@ -81,7 +81,7 @@ test(
       `);
 
       for (const directory of migrationDirectories.slice(workflowMigrationIndex)) {
-        await applyPrismaMigration(database, directory);
+        await applyPrismaMigration(database, directory, databaseUrl.href);
       }
 
       const migrated = await database.query<{
