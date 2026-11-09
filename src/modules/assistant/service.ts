@@ -60,6 +60,7 @@ export class AssistantService {
       didStreamText: false,
       choice: null,
       search: null,
+      searchNotice: null,
       workflowRequested: Boolean(request.workflowStart),
       sources: [],
       completed: false,
@@ -85,10 +86,7 @@ export class AssistantService {
               workflowInstanceId: state.activeWorkflowInstanceId,
             });
 
-            if (
-              (state.search === "empty" || state.search === "unavailable") &&
-              state.didStreamText
-            ) {
+            if (state.searchNotice) {
               // An error event replaces the whole answer in the client. Keep the search limitation visible.
               state.choice = null;
               state.responseId = request.previousResponseId;
@@ -313,6 +311,7 @@ export class AssistantService {
       ) {
         const limitation = state.search === "unavailable" ? searchUnavailable : searchEmpty;
 
+        state.searchNotice = limitation;
         write({ type: "delta", delta: state.workflowRequested ? `${limitation}\n\n` : limitation });
         state.didStreamText = true;
         if (!state.workflowRequested && !state.choice) {
@@ -407,6 +406,7 @@ export class AssistantService {
     function refuse() {
       rejected = true;
       state.sources = [];
+      state.searchNotice = searchEmpty;
       state.didStreamText = true;
       write({ type: "delta", delta: searchEmpty });
     }
@@ -695,6 +695,10 @@ export class AssistantService {
 
     if (state.choice) {
       write({ type: "choice", choice: state.choice });
+      if (state.searchNotice) {
+        // The choice clears earlier transcript text. Preserve the portfolio notice beside the options.
+        write({ type: "delta", delta: state.searchNotice });
+      }
     }
 
     if (state.workflowInstance) {
@@ -769,6 +773,7 @@ type ResponseState = {
   choice: AssistantChoice | null;
   workflowRequested: boolean;
   search: "found" | "empty" | "unavailable" | "not_needed" | null;
+  searchNotice: string | null;
   sources: AssistantSource[];
   completed: boolean;
   operation: string;

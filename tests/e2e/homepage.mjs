@@ -42,6 +42,27 @@ const response =
     .map((event) => JSON.stringify(event))
     .join("\n") + "\n";
 
+const mixedQuestion = "Did Freeman pilot Apollo 11? I also want to leave a message.";
+
+const portfolioNotice = "I couldn’t find enough information in the portfolio to answer that.";
+
+const mixedResponse =
+  [
+    { type: "delta", delta: `${portfolioNotice}\n\n` },
+    { type: "sources", sources: [] },
+    {
+      type: "choice",
+      choice: {
+        question: "What kind of message is this?",
+        options: ["Software consulting", "Collaboration"],
+      },
+    },
+    { type: "delta", delta: portfolioNotice },
+    { type: "done" },
+  ]
+    .map((event) => JSON.stringify(event))
+    .join("\n") + "\n";
+
 async function focused(locator) {
   await locator.and(locator.page().locator(":focus")).waitFor();
 }
@@ -93,8 +114,13 @@ async function journey(browser, phone) {
 
   page.on("pageerror", (error) => errors.push(error.message));
   await page.route("**/api/chat", async (route) => {
-    requests.push(route.request().postDataJSON());
-    await route.fulfill({ contentType: "application/x-ndjson", body: response });
+    const request = route.request().postDataJSON();
+
+    requests.push(request);
+    await route.fulfill({
+      contentType: "application/x-ndjson",
+      body: request.message === mixedQuestion ? mixedResponse : response,
+    });
   });
 
   const click = (locator) => (phone ? locator.tap() : locator.click());
@@ -378,6 +404,15 @@ async function journey(browser, phone) {
     await page.waitForURL("**/work/jpscents", documentReady);
     await closeChat.waitFor({ state: "hidden" });
     await page.getByRole("heading", { name: "JPScents", exact: true, level: 1 }).waitFor();
+    await click(launcher);
+    await message.fill(mixedQuestion);
+    await click(page.getByRole("button", { name: "Send message" }));
+    await page.getByText("What kind of message is this?", { exact: true }).waitFor();
+    await page.getByText("Software consulting", { exact: true }).waitFor();
+    const notice = page.getByText(portfolioNotice, { exact: true });
+
+    await notice.waitFor();
+    assert.equal(await notice.count(), 1);
     assert.deepEqual(errors, []);
     console.log(
       `${browser.browserType().name()} ${phone ? "390px touch" : "1440px keyboard/pointer"}: passed`,

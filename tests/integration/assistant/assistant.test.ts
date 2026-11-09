@@ -938,6 +938,63 @@ test("a mixed Contact turn keeps the search limitation if the workflow continuat
   assert.doesNotMatch(output, /"type":"error"|provider offline|continuation offline/);
 });
 
+test("a portfolio limitation remains after a Contact choice clears earlier text", async () => {
+  const choice = {
+    question: "What kind of message is this?",
+    options: ["Software consulting", "Collaboration"],
+  };
+
+  const { post } = createAssistant({
+    portfolioSearch: { search: async () => [] },
+    response: async (request) => {
+      if (request.requireTool) {
+        return events(portfolioCall("Apollo 11 lunar module pilot", "call_search", true), {
+          type: "response.completed",
+          response: { id: "resp_search" },
+        });
+      }
+
+      if (request.tools.length) {
+        return toolResponse("resp_options", {
+          name: "ask_user_choice",
+          arguments: JSON.stringify(choice),
+        });
+      }
+
+      return textResponse("resp_choice_ready", "Duplicate workflow copy that should stay hidden");
+    },
+  });
+
+  const output = await readChatResponse(
+    await post(
+      chatRequest({
+        message: "Did Freeman pilot Apollo 11? I also want to leave a message.",
+        workflowStart: {
+          workflowId: "contact",
+          originPage: "/",
+          originEntry: "assistant-starter-contact",
+        },
+      }),
+    ),
+  );
+
+  const parsed = output
+    .trim()
+    .split("\n")
+    .map((line) => assistantStreamEventSchema.parse(JSON.parse(line)));
+
+  const choiceIndex = parsed.findIndex((event) => event.type === "choice");
+
+  assert.ok(choiceIndex >= 0);
+  assert.deepEqual(parsed[choiceIndex], { type: "choice", choice });
+  assert.deepEqual(parsed[choiceIndex + 1], {
+    type: "delta",
+    delta: "I couldn’t find enough information in the portfolio to answer that.",
+  });
+  assert.match(output, /"sources":\[\]/);
+  assert.doesNotMatch(output, /Duplicate workflow copy/);
+});
+
 test("starting a workflow changes instructions and tools on the next iteration in one request", async () => {
   const { inputs, post } = createAssistant({
     response: async (request) =>
