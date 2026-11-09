@@ -1,9 +1,10 @@
-import { connection } from "next/server";
 import type { Metadata } from "next";
 import { publicPortfolioService } from "@/modules/composition";
 import { ProjectCard } from "../_portfolio/components/ProjectCard";
 import { ProjectFilters } from "./_components/ProjectFilters";
 import "./catalogue.css";
+
+export const dynamic = "error";
 
 export const metadata: Metadata = {
   title: "Work",
@@ -12,7 +13,6 @@ export const metadata: Metadata = {
 };
 
 export default async function WorkPage() {
-  await connection();
   const projects = await publicPortfolioService.listProjects();
 
   return (

@@ -22,6 +22,7 @@ import { MeetingService } from "./meeting/service";
 import { NotificationService } from "./notification/service";
 import { PrismaPublicPortfolioRepository } from "./portfolio/repositories/public-portfolio.repository";
 import { PublicPortfolioService } from "./portfolio/services/public-portfolio.service";
+import { PrismaPortfolioSeedRepository } from "./portfolio/repositories/portfolio-seed.repository";
 import { PortfolioSeedService } from "./portfolio/seed.service";
 import { RateLimitRepository } from "./rate-limit/repository";
 import { RateLimitService } from "./rate-limit/service";
@@ -73,7 +74,10 @@ export const publicPortfolioService = new PublicPortfolioService(
 export function createPortfolioSeedSession(connection: string) {
   const client = createPrismaClient(connection);
 
-  return { service: new PortfolioSeedService(client), disconnect: () => client.$disconnect() };
+  return {
+    service: new PortfolioSeedService(new PrismaPortfolioSeedRepository(client)),
+    disconnect: () => client.$disconnect(),
+  };
 }
 
 // Workflows

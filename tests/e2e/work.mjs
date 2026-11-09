@@ -68,8 +68,17 @@ async function journey(browser, phone) {
     await click(more);
     await page.waitForURL("**/work");
     await page.getByRole("heading", { name: "/ SELECTED WORK" }).waitFor();
+    await page.locator('head link[rel="canonical"][href$="/work"]').waitFor({ state: "attached" });
     assert.match(await page.title(), /^Work/);
-    assert.match(await page.locator('link[rel="canonical"]').getAttribute("href"), /\/work$/);
+    const workDocument = await (await page.request.get(`${base}/work`)).text();
+
+    assert.deepEqual(
+      Array.from(
+        workDocument.matchAll(/<link rel="canonical" href="([^"]+)"/g),
+        ([, href]) => new URL(href).pathname,
+      ),
+      ["/work"],
+    );
     assert.equal(await page.getByRole("link", { name: /View (all|rest of) work/ }).count(), 0);
     assert.equal(await page.locator("#catalogue-results .home-project-excerpts").count(), 0);
 
@@ -176,7 +185,7 @@ async function journey(browser, phone) {
     const missing = await page.goto(`${base}/work/missing-project`, documentReady);
 
     assert.equal(missing?.status(), 404);
-    assert.match(await missing.text(), /<h1[^>]*>Project not found<\/h1>/);
+    assert.match(await missing.text(), /<h1[^>]*>Page not found<\/h1>/);
     assert.equal(
       await page.getByRole("link", { name: "Back to Work" }).getAttribute("href"),
       "/work",
@@ -266,16 +275,21 @@ async function capture(browser) {
     ]) {
       await page.goto(base + path, documentReady);
 
-      for (const image of await page.locator("main img:visible").all()) {
-        await image.scrollIntoViewIfNeeded();
-      }
+      const artwork = "main img[alt]:not([alt=''])";
+
+      await page.locator(artwork).evaluateAll((images) => {
+        for (const image of images) {
+          image.loading = "eager";
+        }
+      });
 
       await page.waitForFunction(
-        () =>
+        (selector) =>
           document.fonts.status === "loaded" &&
-          Array.from(document.querySelectorAll("main img")).every(
+          Array.from(document.querySelectorAll(selector)).every(
             (image) => image.complete && image.naturalWidth > 0,
           ),
+        artwork,
       );
       await page.evaluate(() => window.scrollTo(0, 0));
       const actualWidth = await page.evaluate(() => document.documentElement.scrollWidth);

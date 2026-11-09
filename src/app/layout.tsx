@@ -32,9 +32,6 @@ export const metadata: Metadata = {
   creator: siteConfig.shortName,
   publisher: siteConfig.shortName,
   keywords: siteConfig.keywords,
-  alternates: {
-    canonical: "/",
-  },
   icons: {
     icon: "/icon.svg",
     shortcut: "/icon.svg",

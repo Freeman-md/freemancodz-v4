@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { loadSeedTarget, SeedTargetError } from "@/infrastructure/config/portfolio-seed";
 import { createPortfolioSeedSession } from "@/modules/composition";
-import { PortfolioSeedError } from "@/modules/portfolio/seed.service";
+import { PortfolioSeedError } from "@/modules/portfolio/seed.error";
 
 async function run(args: string[]) {
   if (

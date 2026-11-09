@@ -155,7 +155,7 @@ test("missing required homepage data and repository failures use a safe configur
   await assert.rejects(service.getHomepage(), PortfolioConfigurationError);
   await assert.rejects(service.listProjects(), PortfolioConfigurationError);
   await assert.rejects(service.findProject("db-error"), {
-    message: "The portfolio data is unavailable or incomplete.",
+    message: "Portfolio data could not be read. Check database access and portfolio migrations.",
   });
   assert.equal(await service.findProject("missing"), null);
 });

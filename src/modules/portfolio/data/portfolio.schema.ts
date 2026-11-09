@@ -50,7 +50,7 @@ export const profileSchema = z.strictObject({
   intro: text,
   philosophy: text,
 });
-export const projectSchema = z.strictObject({
+export const publicProjectSchema = z.strictObject({
   slug: stableKey,
   title: text,
   summary: text,
@@ -62,6 +62,8 @@ export const projectSchema = z.strictObject({
   featured: featuredSchema.optional(),
   questions: strings.default([]),
   displayOrder: position,
+});
+export const projectSchema = publicProjectSchema.extend({
   serviceKeys: z
     .array(stableKey)
     .nonempty()
@@ -139,5 +141,6 @@ export const seedPortfolioSchema = z
 export type PortfolioSeed = z.infer<typeof seedPortfolioSchema>;
 export type PortfolioProfile = z.infer<typeof profileSchema>;
 export type PortfolioService = z.infer<typeof serviceSchema>;
-export type PortfolioProject = Omit<z.infer<typeof projectSchema>, "serviceKeys">;
+export type PortfolioProject = z.infer<typeof publicProjectSchema>;
+export type PortfolioExperience = z.infer<typeof experienceSchema>;
 export type PortfolioCaseStudy = z.infer<typeof caseStudySchema>;

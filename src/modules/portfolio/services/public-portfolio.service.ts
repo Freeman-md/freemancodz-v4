@@ -1,10 +1,19 @@
 import "server-only";
+import type { ExperienceStop } from "@/contracts/public-portfolio.contract";
 import type { PublicPortfolioRepository } from "../repositories/public-portfolio.repository";
 
-export class PortfolioConfigurationError extends Error {
-  constructor() {
-    super("The portfolio data is unavailable or incomplete.");
-  }
+const incomplete = "Portfolio content is incomplete. Apply the portfolio seed before building.";
+
+const unreadable =
+  "Portfolio data could not be read. Check database access and portfolio migrations.";
+
+export class PortfolioConfigurationError extends Error {}
+
+function displayOrder<T extends { displayOrder: number }>(
+  rows: readonly T[],
+  key: (row: T) => string,
+) {
+  return rows.toSorted((a, b) => a.displayOrder - b.displayOrder || key(a).localeCompare(key(b)));
 }
 
 export class PublicPortfolioService {
@@ -20,40 +29,69 @@ export class PublicPortfolioService {
       ]),
     );
 
-    const featured = projects.filter((project) => project.featured);
+    const featured = displayOrder(projects, ({ slug }) => slug).filter(
+      (project) => project.featured,
+    );
 
     if (!profile || !featured.length || !experience.length || !services.length) {
-      throw new PortfolioConfigurationError();
+      throw new PortfolioConfigurationError(incomplete);
     }
 
-    return { profile, featured, experience, services };
+    const stops: ExperienceStop[] = displayOrder(experience, ({ key }) => key).map(
+      ({ key, name, period, role, label, details, questions }) => ({
+        key,
+        name,
+        period,
+        role,
+        label,
+        detail: details.length === 1 ? details[0] : details,
+        questions,
+      }),
+    );
+
+    return {
+      profile,
+      featured,
+      experience: stops,
+      services: displayOrder(services, ({ key }) => key),
+    };
   }
 
   async listProjects() {
     const projects = await this.read(() => this.repository.listProjects());
 
     if (!projects.length) {
-      throw new PortfolioConfigurationError();
+      throw new PortfolioConfigurationError(incomplete);
     }
 
-    return projects;
+    return displayOrder(projects, ({ slug }) => slug);
   }
 
   async findProject(slug: string) {
-    const project = await this.read(() => this.repository.findProject(slug));
+    const record = await this.read(() => this.repository.findProject(slug));
 
-    if (project && !project.services.length) {
-      throw new PortfolioConfigurationError();
+    if (!record) {
+      return null;
     }
 
-    return project;
+    const { serviceLinks, ...project } = record;
+
+    if (!serviceLinks.length) {
+      throw new PortfolioConfigurationError(incomplete);
+    }
+
+    const services = serviceLinks
+      .toSorted((a, b) => a.position - b.position)
+      .map(({ service }) => service);
+
+    return { ...project, services };
   }
 
   private async read<T>(query: () => Promise<T>) {
     try {
       return await query();
     } catch {
-      throw new PortfolioConfigurationError();
+      throw new PortfolioConfigurationError(unreadable);
     }
   }
 }

@@ -7,7 +7,9 @@ import { getDatabaseUrl } from "@/infrastructure/config/env";
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
 export function createPrismaClient(connectionString = getDatabaseUrl()) {
-  return new PrismaClient({ adapter: new PrismaPg({ connectionString }) });
+  return new PrismaClient({
+    adapter: new PrismaPg({ connectionString, connectionTimeoutMillis: 5_000 }),
+  });
 }
 
 function getPrismaClient() {

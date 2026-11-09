@@ -1,6 +1,6 @@
 # Portfolio data and release procedure
 
-Home, Work, project pages and the sitemap read PostgreSQL on each request. `publicPortfolioService` selects and orders public data for Server Components. The project and service keys are permanent because they identify URLs, case studies and relationships.
+Home, Work, every published project page, its metadata, and the sitemap are built from PostgreSQL. Server Components call `publicPortfolioService` for ordering and featured selection. The repository alone reads portfolio records with Prisma. Published pages use the built content until the next successful deployment. The project and service keys are permanent because they identify URLs, case studies and relationships.
 
 ## Edit and seed
 
@@ -21,14 +21,14 @@ Use a checked-in image under `public/images` for each project cover. Both clip U
 
 The development command loads `.env`. The production command loads `.env.production.local`. In each file, set `DATABASE_URL`, `PORTFOLIO_SEED_ENVIRONMENT` (`development` or `production`), `PORTFOLIO_SEED_DATABASE` (the expected `host:port/database`), and `PORTFOLIO_SEED_USER` (the expected connection username). For a pooler, include any project suffix in that username. Enter the expected values from the intended database settings. A conflicting inherited `DATABASE_URL` causes the command to fail before connecting. The commands report the environment label, changed record keys and totals.
 
-Apply recalculates the plan in a transaction. Omitted rows and service links stay in place. A retained link can block a requested position, so include every link being moved when reordering. A failed batch leaves the previous data intact. Keep seed writes separate from builds and migrations.
+Apply recalculates the plan in a transaction. Omitted rows and service links stay in place. A retained link can block a requested position, so include every link being moved when reordering. A failed batch leaves the previous data intact. Keep seed writes separate from builds and migrations. To publish an edit, preview and apply the seed, then rebuild and deploy with access to the seeded database. The old deployment continues to show its built content until the new one succeeds.
 
 ## M24 rollout
 
 1. Check out the preparation SHA recorded in the PR. This revision includes `20261109130000_add_public_portfolio` and the seed command. Apply migrations with `npm run prisma:migrate:production`, then preview and apply the production seed. Run the migration from a shell without an inherited `DATABASE_URL`, so it uses the intended production configuration. The old app can still serve its legacy tables during this step.
-2. Deploy the reviewed final app. Verify Home, Work, a case study, the sitemap, a missing slug and the assistant notice. The previous release can still be restored while the legacy tables exist.
+2. Build the reviewed final app with read access to the seeded database, then deploy it. Verify Home, Work, a case study, the sitemap, a missing slug and the assistant notice. The previous release can still be restored while the legacy tables exist.
 3. Take a recoverable backup. Run `npm run prisma:migrate:production` from the final SHA to apply the cleanup. Verify the retired tables and search functions are gone and existing workflow, request, meeting and rate-limit rows remain.
 
-Repeat this sequence on an isolated Preview database before production. Set its `DATABASE_URL` and the three development target identifiers above on the M24 Vercel Preview branch. A Preview without matching target identifiers refuses the database connection. Use the target-specific configuration when applying migrations and seed data outside Vercel.
+Repeat this sequence on an isolated Preview database before production. Set its `DATABASE_URL` and the three development target identifiers above on the M24 Vercel Preview branch. A Preview build without matching target identifiers refuses the database connection. For the public portfolio, Preview needs the database during the build only. Its chat and visitor workflows still need a database at runtime. Use the target-specific configuration when applying migrations and seed data outside Vercel.
 
 The historical migration `20260901090000_simplify_audit_presentation` assumes a previously initialized audit page. The disposable migration suite starts with an empty database and supplies the four historical root rows immediately before that migration. An existing pre-M24 database has already passed that migration. Use an isolated database restored from a compatible pre-M24 schema or the test fixture when rehearsing an upgrade.

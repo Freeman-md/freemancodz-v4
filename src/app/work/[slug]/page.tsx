@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import { notFound } from "next/navigation";
-import { connection } from "next/server";
 import { cache } from "react";
 import { publicPortfolioService } from "@/modules/composition";
 import { technologyLabels } from "@/modules/portfolio/data/technology-labels";
@@ -13,11 +12,16 @@ import "./case-study.css";
 
 type Props = { params: Promise<{ slug: string }> };
 
-const findProject = cache(async (slug: string) => {
-  await connection();
+export const dynamic = "error";
+export const dynamicParams = false;
 
-  return publicPortfolioService.findProject(slug);
-});
+export async function generateStaticParams() {
+  const projects = await publicPortfolioService.listProjects();
+
+  return projects.map(({ slug }) => ({ slug }));
+}
+
+const findProject = cache((slug: string) => publicPortfolioService.findProject(slug));
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const project = await findProject((await params).slug);

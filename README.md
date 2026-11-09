@@ -6,7 +6,7 @@ See the [portfolio operations guide](docs/portfolio-content-system.md) for the f
 
 ## Local development
 
-Install dependencies with `npm ci`. Set the server variables described in `.env.example`, then run `npm run dev` against a migrated and seeded local database. Next.js reads PostgreSQL at request time. A production build requires no database connection.
+Install dependencies with `npm ci`. Set the server variables described in `.env.example`, then run `npm run dev` against a migrated and seeded local database. Development reads the seeded database. Production builds prerender the portfolio from PostgreSQL. Published portfolio pages serve the built content even when the database is unavailable. Chat and its workflows still use the database at runtime.
 
 Prisma migrations under `prisma/migrations` are the schema history. Additive migration, seeding, deployment, and legacy cleanup are separate operations. Follow the staged release procedure before upgrading an existing database.
 

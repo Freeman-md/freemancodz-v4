@@ -22,7 +22,7 @@ export async function proxy(req: NextRequest) {
   const isApiRoute = path === "/api" || path.startsWith("/api/");
 
   if (/^\/(?:admin|auth)(?:\/|$)/.test(normalizedPath)) {
-    return new NextResponse(null, { status: 404 });
+    return new NextResponse("Not found", { status: 404 });
   }
 
   const isAllowedRoute =

@@ -1,10 +1,10 @@
-import { connection } from "next/server";
 import { publicPortfolioService } from "@/modules/composition";
 import type { MetadataRoute } from "next";
 import { siteConfig } from "./_config/site-metadata";
 
+export const dynamic = "error";
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  await connection();
   const projects = await publicPortfolioService.listProjects();
 
   return [

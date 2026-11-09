@@ -333,10 +333,9 @@ async function journey(browser, phone) {
     await more.waitFor();
     assert.equal(await more.getAttribute("aria-expanded"), "false");
 
-    const protectedResponse = await page.goto(`${base}/admin/projects`);
+    const retiredResponse = await page.request.get(`${base}/admin/projects`);
 
-    assert.equal(protectedResponse?.status(), 200);
-    assert.equal(new URL(page.url()).pathname, "/admin/login");
+    assert.equal(retiredResponse.status(), 404);
     assert.deepEqual(errors, []);
     console.log(
       `${browser.browserType().name()} ${phone ? "390px touch" : "1440px keyboard/pointer"}: passed`,

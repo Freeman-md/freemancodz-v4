@@ -2,16 +2,13 @@ import "server-only";
 import { type Prisma, type PrismaClient } from "@/generated/prisma/client";
 import { ProjectKind } from "@/generated/prisma/enums";
 import {
-  experienceStopSchema,
-  type ExperienceStop,
-  type ProjectKind as PublicKind,
-} from "@/contracts/public-portfolio.contract";
-import {
   caseStudySchema,
-  coverSchema,
-  featuredSchema,
-  linksSchema,
+  experienceSchema,
+  serviceSchema,
+  profileSchema,
+  publicProjectSchema,
   type PortfolioCaseStudy,
+  type PortfolioExperience,
   type PortfolioProfile,
   type PortfolioProject,
   type PortfolioService,
@@ -20,29 +17,23 @@ import {
 export interface PublicPortfolioRepository {
   getProfile(): Promise<PortfolioProfile | null>;
   listProjects(): Promise<readonly PortfolioProject[]>;
-  findProject(slug: string): Promise<ProjectDetail | null>;
-  listExperienceStops(): Promise<readonly ExperienceStop[]>;
+  findProject(slug: string): Promise<ProjectRecord | null>;
+  listExperienceStops(): Promise<readonly PortfolioExperience[]>;
   listServices(): Promise<readonly PortfolioService[]>;
 }
 
-export type ProjectDetail = PortfolioProject & {
+type ProjectRecord = PortfolioProject & {
   study: PortfolioCaseStudy | null;
-  services: readonly PortfolioService[];
+  serviceLinks: readonly { position: number; service: PortfolioService }[];
 };
 
-export function toDatabaseKind(kind: PublicKind): ProjectKind {
-  return kind === "exploration" ? ProjectKind.EXPLORATION : ProjectKind.REAL_PROJECT;
-}
-
-function mapProject(row: Prisma.ProjectGetPayload<object>): PortfolioProject {
-  return {
+function mapProject(row: Prisma.ProjectGetPayload<object>) {
+  return publicProjectSchema.parse({
     ...row,
     kind: row.kind === ProjectKind.EXPLORATION ? "exploration" : "real-project",
     company: row.company ?? undefined,
-    cover: coverSchema.parse(row.cover),
-    links: linksSchema.parse(row.links),
-    featured: row.featured === null ? undefined : featuredSchema.parse(row.featured),
-  };
+    featured: row.featured ?? undefined,
+  });
 }
 
 export class PrismaPublicPortfolioRepository implements PublicPortfolioRepository {
@@ -51,13 +42,11 @@ export class PrismaPublicPortfolioRepository implements PublicPortfolioRepositor
   async getProfile() {
     const row = await this.db.profile.findUnique({ where: { key: "global" } });
 
-    return row && { ...row, key: "global" as const };
+    return row && profileSchema.parse(row);
   }
 
   async listProjects() {
-    const rows = await this.db.project.findMany({
-      orderBy: [{ displayOrder: "asc" }, { slug: "asc" }],
-    });
+    const rows = await this.db.project.findMany();
 
     return rows.map(mapProject);
   }
@@ -65,10 +54,7 @@ export class PrismaPublicPortfolioRepository implements PublicPortfolioRepositor
   async findProject(slug: string) {
     const row = await this.db.project.findUnique({
       where: { slug },
-      include: {
-        caseStudy: true,
-        serviceLinks: { orderBy: { position: "asc" }, include: { service: true } },
-      },
+      include: { caseStudy: true, serviceLinks: { include: { service: true } } },
     });
 
     if (!row) {
@@ -81,30 +67,22 @@ export class PrismaPublicPortfolioRepository implements PublicPortfolioRepositor
       ...mapProject(project),
       study:
         caseStudy &&
-        caseStudySchema.parse({ ...caseStudy, serviceOffer: caseStudy.serviceOffer ?? undefined }),
-      services: serviceLinks.map(({ service }) => service),
+        caseStudySchema.parse({
+          ...caseStudy,
+          serviceOffer: caseStudy.serviceOffer ?? undefined,
+        }),
+      serviceLinks: serviceLinks.map(({ position, service }) => ({
+        position,
+        service: serviceSchema.parse(service),
+      })),
     };
   }
 
   async listExperienceStops() {
-    const rows = await this.db.experience.findMany({
-      orderBy: [{ displayOrder: "asc" }, { key: "asc" }],
-    });
-
-    return rows.map(({ key, name, period, role, label, details, questions }) =>
-      experienceStopSchema.parse({
-        key,
-        name,
-        period,
-        role,
-        label,
-        detail: details.length === 1 ? details[0] : details,
-        questions,
-      }),
-    );
+    return (await this.db.experience.findMany()).map((row) => experienceSchema.parse(row));
   }
 
-  listServices() {
-    return this.db.service.findMany({ orderBy: [{ displayOrder: "asc" }, { key: "asc" }] });
+  async listServices() {
+    return (await this.db.service.findMany()).map((row) => serviceSchema.parse(row));
   }
 }

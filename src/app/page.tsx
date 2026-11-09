@@ -1,4 +1,4 @@
-import { connection } from "next/server";
+import type { Metadata } from "next";
 import { publicPortfolioService } from "@/modules/composition";
 import { SiteLayout } from "./_components/layout/SiteLayout";
 import { siteConfig } from "./_config/site-metadata";
@@ -11,8 +11,11 @@ import { Services } from "./_portfolio/components/Services";
 import { Testimonials } from "./_portfolio/components/Testimonials";
 import "./_portfolio/homepage.css";
 
+export const dynamic = "error";
+
+export const metadata: Metadata = { alternates: { canonical: "/" } };
+
 export default async function HomePage() {
-  await connection();
   const { profile, featured, experience, services } = await publicPortfolioService.getHomepage();
 
   const person = {
