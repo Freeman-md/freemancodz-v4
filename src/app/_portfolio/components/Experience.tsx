@@ -1,9 +1,10 @@
+import type { ExperienceStop } from "@/contracts/public-portfolio.contract";
 import { Info } from "lucide-react";
 import { SectionHeading } from "./SectionHeading";
 import { ExperienceTimeline } from "./ExperienceTimeline";
 import "./experience.css";
 
-export function Experience() {
+export function Experience({ stops }: { stops: readonly ExperienceStop[] }) {
   return (
     <section className="home-section home-experience" aria-labelledby="experience">
       <SectionHeading
@@ -16,7 +17,7 @@ export function Experience() {
         <Info aria-hidden="true" size={17} />
         Select a stop to learn more.
       </p>
-      <ExperienceTimeline />
+      <ExperienceTimeline experienceStops={stops} />
     </section>
   );
 }

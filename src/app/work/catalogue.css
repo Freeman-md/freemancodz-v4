@@ -1,0 +1,115 @@
+.work-catalogue {
+  padding-block: 112px 88px;
+}
+.catalogue-heading {
+  position: relative;
+  display: grid;
+  min-height: 110px;
+  place-items: center;
+  font-family: var(--font-display), sans-serif;
+  text-align: center;
+}
+.catalogue-heading span {
+  position: absolute;
+  inset-block-start: -2px;
+  color: color-mix(in srgb, var(--page-text) 8%, transparent);
+  font-size: clamp(62px, 10vw, 137px);
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.075em;
+}
+.catalogue-heading h1 {
+  position: relative;
+  font-size: 48px;
+  font-weight: 500;
+  line-height: 60px;
+  letter-spacing: -0.035em;
+}
+.catalogue-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-block: 18px 30px;
+}
+.catalogue-filters button {
+  min-height: 44px;
+  padding-inline: 17px;
+  border: 1px solid transparent;
+  border-radius: 24px;
+  font-size: 13px;
+  color: var(--page-muted);
+}
+.catalogue-filters button:is(:hover, [aria-pressed="true"]) {
+  border-color: var(--home-accent);
+  background: var(--home-chip);
+  color: var(--page-text);
+}
+.catalogue-grid .home-project {
+  min-height: 100%;
+  border: 1px solid var(--page-line);
+}
+.catalogue-grid .home-project-art {
+  aspect-ratio: 406 / 302;
+}
+.catalogue-grid .home-project-copy {
+  gap: 17px;
+  padding: 23px 24px;
+}
+.catalogue-grid .home-project-art::after {
+  background: none;
+}
+.catalogue-card-kind {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  padding: 3px 10px;
+  border: 1px solid #91b5aa45;
+  border-radius: 999px;
+  background: rgb(5 14 20 / 90%);
+  color: #edf2ef;
+  font-size: 12px;
+  line-height: 17px;
+}
+.catalogue-card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+.catalogue-card-tags li {
+  padding: 3px 8px;
+  border: 1px solid var(--page-line);
+  border-radius: 12px;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .catalogue-result {
+    animation: home-fade 300ms ease-out both;
+  }
+}
+@media (max-width: 700px) {
+  .work-catalogue {
+    padding-block: 100px 80px;
+  }
+  .catalogue-heading {
+    min-height: 80px;
+  }
+  .catalogue-heading span {
+    font-size: clamp(34px, 11.54vw, 45px);
+    letter-spacing: 0.04em;
+  }
+  .catalogue-heading h1 {
+    font-size: 28px;
+    line-height: 36px;
+  }
+  .catalogue-filters {
+    margin-block: 20px 30px;
+  }
+  .catalogue-filters button {
+    padding-inline: 10px;
+  }
+  .catalogue-grid .home-project-art {
+    aspect-ratio: 340 / 262;
+  }
+  .catalogue-grid .home-project-copy {
+    padding: 18px;
+  }
+}

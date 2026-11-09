@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" font-family="system-ui, sans-serif">
+  <rect width="800" height="600" fill="#0b1a2c"/>
+  <rect x="145" y="64" width="510" height="472" rx="24" fill="#101f32" stroke="#42605f" stroke-width="2"/>
+  <path d="M145 144h510" stroke="#42605f"/>
+  <circle cx="188" cy="104" r="12" fill="#64ffda"/>
+  <text x="216" y="111" fill="#e6f1ff" font-size="24" font-weight="600">Portfolio Assistant</text>
+  <rect x="283" y="178" width="325" height="52" rx="16" fill="#284449"/>
+  <text x="306" y="210" fill="#e6f1ff" font-size="18">What did you build for JPScents?</text>
+  <text x="192" y="271" fill="#e6f1ff" font-size="18">A storefront for browsing fragrances</text>
+  <text x="192" y="298" fill="#e6f1ff" font-size="18">and handing selections to WhatsApp.</text>
+  <text x="192" y="342" fill="#64ffda" font-size="16">SOURCE  ·  JPScents case study ↗</text>
+  <path d="M192 374h416" stroke="#42605f"/>
+  <text x="192" y="415" fill="#a8b7ca" font-size="16">Review your request before sending.</text>
+  <rect x="192" y="440" width="178" height="44" rx="22" fill="#64ffda"/>
+  <text x="213" y="468" fill="#020c1b" font-size="16" font-weight="600">Confirm request</text>
+  <text x="400" y="568" text-anchor="middle" fill="#a8b7ca" font-size="16">Illustration · sample conversation</text>
+</svg>

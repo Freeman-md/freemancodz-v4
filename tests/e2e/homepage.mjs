@@ -141,21 +141,14 @@ async function journey(browser, phone) {
         .getAttribute("href"),
       "https://withradius.com/",
     );
-    assert.equal(await page.getByRole("button", { name: /case study unavailable/ }).count(), 3);
-    const unavailable = page.getByRole("button", { name: /website unavailable|View rest of work/ });
-
-    assert.equal(await unavailable.count(), 2);
-    assert.deepEqual(
-      await unavailable.evaluateAll((elements) =>
-        elements.map((element) => [
-          element.getAttribute("aria-disabled"),
-          element.getAttribute("href"),
-        ]),
-      ),
-      [
-        ["true", null],
-        ["true", null],
-      ],
+    assert.equal(await page.getByRole("link", { name: /Read .* case study/ }).count(), 3);
+    assert.equal(
+      await page.getByRole("link", { name: "View rest of work" }).getAttribute("href"),
+      "/work",
+    );
+    assert.equal(
+      await page.getByRole("link", { name: "Visit Debby Art & Prints website" }).count(),
+      0,
     );
 
     if (phone) {

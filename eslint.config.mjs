@@ -108,6 +108,8 @@ const config = [
       "src/app/_components/**/*.{ts,tsx}",
       "src/app/_assistant/**/*.{ts,tsx}",
       "src/app/_portfolio/components/**/*.{ts,tsx}",
+      "src/app/work/_components/ProjectFilters.tsx",
+      "src/app/work/*/_components/ProjectClip.tsx",
       "src/app/admin/_components/**/*.{ts,tsx}",
       "src/app/**/error.tsx",
     ],

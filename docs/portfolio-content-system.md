@@ -63,17 +63,17 @@ The approved sources define no colour token palette, so the admin preserves the 
 
 `SearchIndexJob` is one internal singleton row keyed by `portfolio`. It records only current operational state: `pending`, `processing`, `completed`, or `failed`, whether a rerun arrived during processing, attempts and safe timestamps/error summary. It is protected with Row Level Security and revoked from public, anonymous and authenticated roles. `SiteChunk` remains the assistant knowledge store and is replaced only by one short transaction after every new embedding has been prepared and validated.
 
-## 6. Homepage and assistant sources
+## 6. Public portfolio and assistant sources
 
-The Server Component at `/` composes the approved homepage from presentation records and assets in the route. Rendering it does not require a database connection. Changes in the admin still update the managed portfolio and enqueue a search index rebuild; they do not change the homepage copy, order, images or testimonials.
+The homepage, Work catalogue and case studies read validated records through `publicPortfolioService`. The server-only repository loads `src/modules/portfolio/data/projects.json` and `experience-stops.json`. Public routes render without a database connection. The checked-in catalogue is the source for project URLs, sitemap entries, features, technology labels and artwork provenance.
 
-The sitemap points to `/`. The proxy still redirects retired routes such as `/work`, `/about` and `/audit` to `/`. At the assistant's presentation boundary, sources for retained projects link to their cards, the old journey anchor links to Experience, and retired sources without equivalent public sections are hidden. The index worker continues to read the existing database snapshot. Indexed material can still appear in replies until refreshed separately.
+The proxy serves `/work` and its case-study routes. Retired `/about` and `/audit` routes redirect to the homepage. The assistant index continues to use the managed portfolio in PostgreSQL. Admin writes update those records and enqueue indexing. Homepage citations remain anchored to the homepage, including when the assistant is open from Work.
 
 Approved artwork originates in [Paper's assembled Landing Page](https://app.paper.design/file/01M5VJC7VWD8F9QYARYR43X33M/p-8-0). The new files under `public/images/homepage` come from its Hero, Selected Work and Contact fills. WithRadius reuses the checked-in V4 cover. Strength, Endurance and Good company reuse the checked-in photographs, which match the Paper assets byte for byte and preserve their existing privacy edits. The two approved testimonials retain the wording and attributions from [Paper's testimonial storyboard](https://app.paper.design/file/01M5VJC7VWD8F9QYARYR43X33M/p-6-0).
 
 ## 7. Cache Tags / Revalidation
 
-Admin write and invalidation behavior is unchanged. Database triggers enqueue indexing on committed mutations independently of cache invalidation. The homepage does not consume the managed read caches.
+Admin write and invalidation behavior is unchanged. Database triggers enqueue indexing on committed mutations independently of cache invalidation. The public portfolio does not consume the managed read caches.
 
 ## 8. Admin
 

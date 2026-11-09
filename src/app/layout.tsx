@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter, JetBrains_Mono, Manrope } from "next/font/google";
 import "./globals.css";
 import "./_assistant/assistant.css";
-import { Analytics } from "@vercel/analytics/next";
+import { SiteAnalytics } from "./_components/SiteAnalytics";
 import { siteConfig } from "./_config/site-metadata";
 import { THEME_INIT_SCRIPT } from "./_config/theme";
 
@@ -92,7 +92,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="font-sans antialiased">
         {children}
-        <Analytics />
+        <SiteAnalytics />
       </body>
     </html>
   );

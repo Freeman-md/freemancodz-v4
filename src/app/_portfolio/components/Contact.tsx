@@ -12,19 +12,31 @@ export const profiles = {
   github: "https://github.com/Freeman-md",
 };
 
-export function Contact() {
+export function Contact({
+  offer,
+}: {
+  offer?: { title: string; description: string; action: string };
+}) {
   return (
     <section className="home-section home-contact" aria-labelledby="contact">
       <SectionReveal className="home-contact-reveal" together>
         <p className="home-available">Available for new projects</p>
         <h2 id="contact" tabIndex={-1}>
-          HAVE A PROJECT IN MIND?
+          {offer?.title ?? "HAVE A PROJECT IN MIND?"}
         </h2>
         <p className="home-contact-copy">
-          Let’s build intuitive interfaces and reliable workflows that make your business easier to
-          run.
+          {offer?.description ??
+            "Let’s build intuitive interfaces and reliable workflows that make your business easier to run."}
         </p>
-        <HomeAction href="mailto:freemanmadudili@gmail.com">Contact Me</HomeAction>
+        {offer ? (
+          <button type="button" className="home-action" disabled aria-disabled="true">
+            {offer.action}
+            <ArrowUpRight aria-hidden="true" size={16} />
+            <span className="sr-only">Unavailable</span>
+          </button>
+        ) : (
+          <HomeAction href="mailto:freemanmadudili@gmail.com">Contact Me</HomeAction>
+        )}
         <ul className="home-profiles" aria-label="Profiles">
           <li>
             <a href={profiles.contra}>

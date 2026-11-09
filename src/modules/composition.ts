@@ -38,6 +38,8 @@ import { ExperienceRepository } from "./portfolio/repositories/experience.reposi
 import { IconBlockRepository } from "./portfolio/repositories/icon-block.repository";
 import { MediaBlockRepository } from "./portfolio/repositories/media-block.repository";
 import { ProfileRepository } from "./portfolio/repositories/profile.repository";
+import { JsonPublicPortfolioRepository } from "./portfolio/repositories/public-portfolio.repository";
+import { PublicPortfolioService } from "./portfolio/services/public-portfolio.service";
 import { ProjectRepository } from "./portfolio/repositories/project.repository";
 import { SupabaseStorageProvider } from "@/infrastructure/supabase/storage";
 import { PortfolioAdministrationService } from "./portfolio/services/administration.service";
@@ -99,6 +101,10 @@ export const meetingService = new MeetingService(
 );
 
 // Portfolio
+export const publicPortfolioService = new PublicPortfolioService(
+  new JsonPublicPortfolioRepository(),
+);
+
 const contentBlockRepository = new ContentBlockRepository(prisma);
 
 const experienceRepository = new ExperienceRepository(prisma);
