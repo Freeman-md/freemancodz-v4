@@ -29,8 +29,13 @@ export const PORTFOLIO_SEARCH_TOOL: OpenAIResponseTool = {
         description:
           "A short standalone search query. Use null only if the turn needs no portfolio facts.",
       },
+      workflowRequested: {
+        type: "boolean",
+        description:
+          "True only when the visitor is also explicitly asking to start or continue Contact or Meeting.",
+      },
     },
-    required: ["query"],
+    required: ["query", "workflowRequested"],
     additionalProperties: false,
   },
 };

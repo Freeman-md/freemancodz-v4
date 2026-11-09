@@ -19,13 +19,16 @@ import type { IWorkflowService } from "@/modules/workflow/interfaces";
 import type { WorkflowAssistantContext, WorkflowPublicInstance } from "@/modules/workflow/types";
 import type { AssistantChoice } from "@/contracts/assistant-choice.contract";
 
-const searchArguments = z.strictObject({ query: z.string().trim().min(1).max(240).nullable() });
+const searchArguments = z.strictObject({
+  query: z.string().trim().min(1).max(240).nullable(),
+  workflowRequested: z.boolean(),
+});
 
 const searchUnavailable = "I couldn’t search the portfolio just now. Please try again shortly.";
 
 const searchEmpty = "I couldn’t find enough information in the portfolio to answer that.";
 
-const noEvidence = "[[NO_PORTFOLIO_EVIDENCE]]";
+const groundedPrefix = "[[GROUNDED]]";
 
 export class AssistantService {
   constructor(
@@ -82,11 +85,22 @@ export class AssistantService {
               workflowInstanceId: state.activeWorkflowInstanceId,
             });
 
-            if (state.workflowInstance) {
-              write({ type: "workflow_instance", instance: state.workflowInstance });
-            }
+            if (
+              (state.search === "empty" || state.search === "unavailable") &&
+              state.didStreamText
+            ) {
+              // An error event replaces the whole answer in the client. Keep the search limitation visible.
+              state.choice = null;
+              state.responseId = request.previousResponseId;
+              write({ type: "delta", delta: "I couldn’t continue the request. Please try again." });
+              this.writeFinalEvents(state, write);
+            } else {
+              if (state.workflowInstance) {
+                write({ type: "workflow_instance", instance: state.workflowInstance });
+              }
 
-            write({ type: "error", error: "The assistant could not respond. Please try again." });
+              write({ type: "error", error: "The assistant could not respond. Please try again." });
+            }
           }
         } finally {
           controller.close();
@@ -257,7 +271,10 @@ export class AssistantService {
 
       const searched = toolCalls.some(({ name }) => name === PORTFOLIO_SEARCH_TOOL.name);
 
-      if (request.requireTool && toolCalls.length === 0) {
+      if (
+        request.requireTool &&
+        (!searched || toolCalls.some(({ name }) => name !== PORTFOLIO_SEARCH_TOOL.name))
+      ) {
         // A direct completion bypassed the routing step and may contain unsupported facts.
         state.didStreamText = false;
         state.responseId = previousCheckpoint;
@@ -273,7 +290,7 @@ export class AssistantService {
         }
       }
 
-      evidenceWriter?.finish();
+      evidenceWriter?.finish(toolCalls.length === 0);
 
       if (toolCalls.length === 0) {
         break;
@@ -290,14 +307,20 @@ export class AssistantService {
       }
 
       if (
-        (state.search === "empty" || state.search === "unavailable") &&
-        !state.workflowRequested &&
-        !state.choice
+        beforeSearch &&
+        searched &&
+        (state.search === "empty" || state.search === "unavailable")
       ) {
-        // Finish with the known limitation; do not resume an unanswered provider tool call.
-        state.responseId = previousCheckpoint;
+        const limitation = state.search === "unavailable" ? searchUnavailable : searchEmpty;
 
-        return;
+        write({ type: "delta", delta: state.workflowRequested ? `${limitation}\n\n` : limitation });
+        state.didStreamText = true;
+        if (!state.workflowRequested && !state.choice) {
+          // Keep the last usable checkpoint rather than resuming an unanswered provider tool call.
+          state.responseId = previousCheckpoint;
+
+          return;
+        }
       }
 
       if (state.choice) {
@@ -341,7 +364,7 @@ export class AssistantService {
       CHAT_SYSTEM_PROMPT,
       workflowInstructions,
       state.search === "found"
-        ? `If the returned excerpts do not support the requested portfolio fact, reply with exactly ${noEvidence} so the application can show the limitation without displaying unrelated sources.`
+        ? `Start the answer with the exact prefix ${groundedPrefix} followed by the answer only if the excerpts directly support the requested fact. The prefix is required for every supported answer. If the excerpts do not support the main question, reply with UNSUPPORTED alone. Mention of Pay4Me does not support an unstated team size. Mention of unrelated employers does not support work at Microsoft. Do not emit ${groundedPrefix} when saying you could not find the requested fact.`
         : "",
       state.search === "empty" || state.search === "unavailable"
         ? "The application displays the portfolio search limitation. Continue the visitor workflow without making portfolio claims."
@@ -350,19 +373,23 @@ export class AssistantService {
       .filter(Boolean)
       .join("\n\n");
 
-    const tools = state.workflowConflict
-      ? GLOBAL_ASSISTANT_TOOLS.filter(({ name }) => name === "ask_user_choice")
-      : [
-          ...GLOBAL_ASSISTANT_TOOLS,
-          ...workflowTools,
-          ...(this.portfolioSearch && state.search === null ? [PORTFOLIO_SEARCH_TOOL] : []),
-        ];
+    const routeFirst = iteration === 0 && Boolean(this.portfolioSearch) && !state.workflowConflict;
+
+    const tools = routeFirst
+      ? [PORTFOLIO_SEARCH_TOOL]
+      : state.workflowConflict
+        ? GLOBAL_ASSISTANT_TOOLS.filter(({ name }) => name === "ask_user_choice")
+        : [
+            ...GLOBAL_ASSISTANT_TOOLS,
+            ...workflowTools,
+            ...(this.portfolioSearch && state.search === null ? [PORTFOLIO_SEARCH_TOOL] : []),
+          ];
 
     return {
       input: state.input,
       instructions,
       tools,
-      requireTool: iteration === 0 && tools.some(({ name }) => name === PORTFOLIO_SEARCH_TOOL.name),
+      requireTool: routeFirst,
       previousResponseId: state.responseId,
       signal: state.signal,
     };
@@ -371,16 +398,34 @@ export class AssistantService {
   private groundAnswer(state: ResponseState, write: WriteEvent) {
     let pending = "";
 
-    let verdict: "stream" | "insufficient" | null = null;
+    let accepted = false;
+
+    let rejected = false;
+
+    let answered = false;
+
+    function refuse() {
+      rejected = true;
+      state.sources = [];
+      state.didStreamText = true;
+      write({ type: "delta", delta: searchEmpty });
+    }
+
+    function answer(delta: string) {
+      if (delta) {
+        answered ||= Boolean(delta.trim());
+        write({ type: "delta", delta });
+      }
+    }
 
     return {
       write: (event: AssistantStreamEvent) => {
-        if (verdict === "insufficient") {
+        if (event.type !== "delta" || rejected) {
           return;
         }
 
-        if (event.type !== "delta" || verdict === "stream") {
-          write(event);
+        if (accepted) {
+          answer(event.delta);
 
           return;
         }
@@ -388,23 +433,16 @@ export class AssistantService {
         pending += event.delta;
         const prefix = pending.trimStart();
 
-        if (prefix.startsWith(noEvidence)) {
-          verdict = "insufficient";
-          state.sources = [];
-          write({ type: "delta", delta: searchEmpty });
-
-          return;
-        }
-
-        if (!noEvidence.startsWith(prefix)) {
-          verdict = "stream";
-          write({ type: "delta", delta: pending });
+        if (prefix.startsWith(groundedPrefix)) {
+          accepted = true;
+          answer(prefix.slice(groundedPrefix.length).trimStart());
+        } else if (!groundedPrefix.startsWith(prefix)) {
+          refuse();
         }
       },
-      finish: () => {
-        if (verdict === null && pending.trim()) {
-          state.sources = [];
-          write({ type: "delta", delta: searchEmpty });
+      finish: (finalResponse: boolean) => {
+        if (!answered && !rejected && (finalResponse || pending.trim())) {
+          refuse();
         }
       },
     };
@@ -572,7 +610,9 @@ export class AssistantService {
     try {
       const args: unknown = JSON.parse(rawArguments);
 
-      const { query } = searchArguments.parse(args);
+      const { query, workflowRequested } = searchArguments.parse(args);
+
+      state.workflowRequested ||= workflowRequested;
 
       if (query === null) {
         state.search = "not_needed";
@@ -634,14 +674,6 @@ export class AssistantService {
   }
 
   private writeFinalEvents(state: ResponseState, write: WriteEvent) {
-    const failedSearch = state.search === "empty" || state.search === "unavailable";
-
-    const limitation = state.search === "unavailable" ? searchUnavailable : searchEmpty;
-
-    if (failedSearch && (state.didStreamText || state.choice)) {
-      write({ type: "delta", delta: `\n\n${limitation}` });
-    }
-
     write({
       type: "sources",
       sources: state.completed && state.didStreamText && !state.choice ? state.sources : [],

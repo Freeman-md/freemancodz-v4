@@ -664,14 +664,14 @@ test("a restored workflow supplies known progress to the model and public stream
   assert.doesNotMatch(output, /preparedInteractionId/);
 });
 
-function portfolioCall(query: string | null, id = "call_search") {
+function portfolioCall(query: string | null, id = "call_search", workflowRequested = false) {
   return {
     type: "response.output_item.done",
     item: {
       type: "function_call",
       call_id: id,
       name: "search_portfolio",
-      arguments: JSON.stringify({ query }),
+      arguments: JSON.stringify({ query, workflowRequested }),
     },
   };
 }
@@ -705,6 +705,8 @@ for (const [message, query, title, url] of [
           assert.ok(request.tools.every(({ name }) => name !== "search_portfolio"));
 
           return events(
+            { type: "response.output_text.delta", delta: "[[GROUND" },
+            { type: "response.output_text.delta", delta: "ED]]" },
             { type: "response.output_text.delta", delta: excerpt },
             { type: "response.completed", response: { id: "resp_answer" } },
           );
@@ -833,6 +835,11 @@ test("ordinary conversation can continue without calling the embedding provider"
     },
     response: async (request) => {
       if (request.requireTool) {
+        assert.deepEqual(
+          request.tools.map(({ name }) => name),
+          ["search_portfolio"],
+        );
+
         return events(portfolioCall(null), {
           type: "response.completed",
           response: { id: "resp_route" },
@@ -855,7 +862,7 @@ test("ordinary conversation can continue without calling the embedding provider"
   assert.match(output, /"sources":\[\]/);
 });
 
-test("an unsupported answer drops unrelated matches and never leaks the streamed verdict", async () => {
+test("an ungrounded answer drops unrelated matches even if the model writes a limitation", async () => {
   const { post } = createAssistant({
     portfolioSearch: {
       search: async () => [
@@ -873,12 +880,11 @@ test("an unsupported answer drops unrelated matches and never leaks the streamed
         });
       }
 
-      assert.match(request.instructions, /NO_PORTFOLIO_EVIDENCE/);
+      assert.match(request.instructions, /GROUNDED/);
 
       return events(
-        { type: "response.output_text.delta", delta: " [[" },
-        { type: "response.output_text.delta", delta: "NO_PORTFOLIO_" },
-        { type: "response.output_text.delta", delta: "EVIDENCE]]" },
+        { type: "response.output_text.delta", delta: "I couldn’t find Microsoft in the snippets." },
+        { type: "response.output_text.delta", delta: " The Experience page is worth a look." },
         { type: "response.completed", response: { id: "resp_unsupported" } },
       );
     },
@@ -890,7 +896,46 @@ test("an unsupported answer drops unrelated matches and never leaks the streamed
 
   assert.match(output, /couldn’t find enough/);
   assert.match(output, /"sources":\[\]/);
-  assert.doesNotMatch(output, /NO_PORTFOLIO_EVIDENCE|\/#experience/);
+  assert.doesNotMatch(output, /Microsoft in the snippets|worth a look|\/#experience/);
+});
+
+test("a mixed Contact turn keeps the search limitation if the workflow continuation fails", async () => {
+  const { post } = createAssistant({
+    portfolioSearch: {
+      search: async () => {
+        throw new Error("provider offline");
+      },
+    },
+    response: async (request) => {
+      if (request.requireTool) {
+        return events(portfolioCall("JPScents", "call_search", true), {
+          type: "response.completed",
+          response: { id: "resp_search" },
+        });
+      }
+
+      throw new Error("continuation offline");
+    },
+  });
+
+  const output = await readChatResponse(
+    await post(
+      chatRequest({
+        message: "I want to leave a message. Also, what did Freeman build for JPScents?",
+        workflowStart: {
+          workflowId: "contact",
+          originPage: "/",
+          originEntry: "assistant-starter-contact",
+        },
+      }),
+    ),
+  );
+
+  assert.equal(output.match(/couldn’t search the portfolio/g)?.length, 1);
+  assert.match(output, /"workflowId":"contact"/);
+  assert.match(output, /couldn’t continue the request/);
+  assert.match(output, /"type":"done"/);
+  assert.doesNotMatch(output, /"type":"error"|provider offline|continuation offline/);
 });
 
 test("starting a workflow changes instructions and tools on the next iteration in one request", async () => {

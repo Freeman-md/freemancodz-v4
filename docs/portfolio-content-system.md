@@ -45,3 +45,5 @@ Apply the additive search migration before the first refresh: `npm run prisma:mi
 4. Ask the assistant about the changed content and open its source link.
 
 If hosted Preview shares the production database, keep seed experiments, failure injection and reset rehearsals on disposable PostgreSQL. Refresh the shared index only from the published portfolio.
+
+Hosted Preview chat also needs its own `RATE_LIMIT_HMAC_SECRET` and access to `OPENAI_API_KEY`. Scope the rate-limit secret to the intended Preview environment or branch, then redeploy so the new deployment receives it.
