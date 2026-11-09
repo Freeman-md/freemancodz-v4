@@ -155,6 +155,44 @@ test("a seed verifies the configured environment and effective endpoint before o
   );
 });
 
+test("the seed target refuses URLs that PostgreSQL drivers could interpret differently", () => {
+  const configuration = {
+    PORTFOLIO_SEED_ENVIRONMENT: "development",
+    PORTFOLIO_SEED_DATABASE: "127.0.0.1:5432/m24-review",
+    PORTFOLIO_SEED_USER: "fixture",
+  };
+
+  const canonical = "postgresql://fixture:fake%20password@127.0.0.1:5432/m24-review";
+
+  assert.equal(
+    verifyPortfolioTarget("development", { ...configuration, DATABASE_URL: canonical }, {})
+      .connection,
+    canonical,
+  );
+
+  for (const url of [
+    "postgresql://fixture:fake password@127.0.0.1:5432/m24%2Dreview",
+    "postgresql://fixture:fake%ZZ@127.0.0.1:5432/m24%2Dreview",
+    "postgresql://fixture@127%2E0.0.1:5432/m24-review",
+    "postgresql://fixture@127.0.0.1,other.example:5432/m24-review",
+    canonical.replace("m24-review", "m24%2Dreview"),
+  ]) {
+    assert.throws(
+      () => verifyPortfolioTarget("development", { ...configuration, DATABASE_URL: url }, {}),
+      /Missing or ambiguous portfolio DATABASE_URL/,
+    );
+    assert.throws(
+      () =>
+        verifyPortfolioTarget(
+          "development",
+          { ...configuration, DATABASE_URL: canonical },
+          { DATABASE_URL: url },
+        ),
+      /Missing or ambiguous portfolio DATABASE_URL/,
+    );
+  }
+});
+
 test("missing required homepage data and repository failures use a safe configuration error", async () => {
   const service = new PublicPortfolioService({
     getProfile: async () => null,
