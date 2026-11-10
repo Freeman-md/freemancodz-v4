@@ -7,7 +7,7 @@ import { assistantChoiceSchema } from "@/contracts/assistant-choice.contract";
 test("booking actions cannot carry messages or editable details", () => {
   const action = {
     action: "confirm_booking",
-    workflowInstanceId: "11111111-1111-4111-8111-111111111111",
+    workflowInstanceId: "11111111-1111-4111-8111-111111111111.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
     expectedRevision: 3,
   };
 
@@ -68,13 +68,13 @@ test("assistant request accepts the public payload and normalizes whitespace", (
   const result = assistantRequestSchema.parse({
     message: "  What has Freeman built?  ",
     previousResponseId: null,
-    workflowInstanceId: "11111111-1111-4111-8111-111111111111",
+    workflowInstanceId: "11111111-1111-4111-8111-111111111111.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
   });
 
   assert.ok("message" in result);
   assert.equal(result.message, "What has Freeman built?");
   assert.equal(result.previousResponseId, null);
-  assert.equal(result.workflowInstanceId, "11111111-1111-4111-8111-111111111111");
+  assert.equal(result.workflowInstanceId, "11111111-1111-4111-8111-111111111111.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
 });
 
 test("assistant request recovers from malformed previous response IDs", () => {
@@ -120,7 +120,7 @@ test("assistant stream contract accepts known events and rejects malformed event
     {
       type: "workflow_instance",
       instance: {
-        id: "11111111-1111-4111-8111-111111111111",
+        id: "11111111-1111-4111-8111-111111111111.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
         workflowId: "meeting-booking",
         workflowVersion: 1,
         revision: 0,
@@ -146,7 +146,7 @@ test("assistant stream contract accepts known events and rejects malformed event
     assistantStreamEventSchema.safeParse({
       type: "workflow_instance",
       instance: {
-        id: "11111111-1111-4111-8111-111111111111",
+        id: "11111111-1111-4111-8111-111111111111.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
         workflowId: "meeting-booking",
         workflowVersion: 1,
         revision: 0,
@@ -161,7 +161,7 @@ test("assistant stream contract accepts known events and rejects malformed event
     assistantStreamEventSchema.safeParse({
       type: "workflow_instance",
       instance: {
-        id: "11111111-1111-4111-8111-111111111111",
+        id: "11111111-1111-4111-8111-111111111111.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
         workflowId: "meeting-booking",
         workflowVersion: 1,
         revision: 0,
@@ -178,7 +178,7 @@ test("retired audit actions are rejected", () => {
   assert.equal(
     assistantRequestSchema.safeParse({
       action: "confirm_audit",
-      workflowInstanceId: "11111111-1111-4111-8111-111111111111",
+      workflowInstanceId: "11111111-1111-4111-8111-111111111111.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
       expectedRevision: 0,
     }).success,
     false,

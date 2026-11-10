@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import test from "node:test";
+import { NextRequest } from "next/server";
 
 import { createChatPostHandler } from "@/app/api/chat/route";
+import { createWorkflowAccess } from "@/app/api/chat/workflow-access";
 import type { Logger } from "@/infrastructure/logging/logger";
 import type { OpenAITransport } from "@/infrastructure/openai/types";
 import type { OpenAIResponseRequest } from "@/infrastructure/openai/types";
@@ -25,6 +27,12 @@ import { CalendarAvailabilityError } from "@/infrastructure/google-calendar/type
 import type { CalendarClient, CreatedCalendarEvent } from "@/infrastructure/google-calendar/types";
 import { MeetingService } from "@/modules/meeting/service";
 import type { MeetingServiceClient, MeetingRecord } from "@/modules/meeting/types";
+
+const testSecret = "workflow-access-test-secret";
+
+const testSession = "A".repeat(43);
+
+const testAccess = createWorkflowAccess(testSession, testSecret);
 
 const meetingSlot = {
   start: "2099-09-15T11:00:00.000Z",
@@ -66,11 +74,13 @@ function createAssistant({
   rateLimit,
   meeting,
   portfolioSearch,
+  onVercel = false,
 }: {
   response?: (request: OpenAIResponseRequest) => ReturnType<OpenAITransport["streamResponse"]>;
   rateLimit?: Pick<RateLimitService, "consume">;
   meeting?: MeetingServiceClient;
   portfolioSearch?: ConstructorParameters<typeof AssistantService>[3];
+  onVercel?: boolean;
 } = {}) {
   const inputs: OpenAIResponseRequest[] = [];
 
@@ -126,7 +136,13 @@ function createAssistant({
     errors,
     inputs,
     meetingService,
-    post: createChatPostHandler({ assistantService, rateLimitService, logger }),
+    post: createChatPostHandler({
+      assistantService,
+      rateLimitService,
+      logger,
+      getAccessSecret: () => testSecret,
+      onVercel,
+    }),
     rateLimitInputs,
     workflowRepository,
     workflowService,
@@ -134,10 +150,16 @@ function createAssistant({
 }
 
 function chatRequest(body: unknown, signal?: AbortSignal) {
-  return new Request("http://localhost/api/chat", {
+  const payload =
+    typeof body === "object" && body && "workflowInstanceId" in body &&
+    typeof body.workflowInstanceId === "string"
+      ? { ...body, workflowInstanceId: testAccess.encode(body.workflowInstanceId) }
+      : body;
+
+  return new NextRequest("http://localhost/api/chat", {
     method: "POST",
-    headers: { "Content-Type": "application/json", "x-forwarded-for": "test-client" },
-    body: JSON.stringify(body),
+    headers: { "Content-Type": "application/json", Cookie: `portfolio-chat=${testSession}` },
+    body: JSON.stringify(payload),
     signal,
   });
 }
@@ -167,7 +189,7 @@ test("allowed chat requests consume the configured rules and stream without mand
   assert.deepEqual(rateLimitInputs, [
     {
       scope: "chat",
-      identifier: "test-client",
+      identifier: "anonymous",
       rules: [
         { id: "short", limit: 10, windowMs: 10 * 60 * 1000 },
         { id: "daily", limit: 30, windowMs: 24 * 60 * 60 * 1000 },
@@ -330,7 +352,7 @@ test(
       for (const event of streamed) {
         if (event.type === "workflow_instance") {
           assert.ok(event.instance);
-          assert.equal(event.instance.id, instances[index].id);
+          assert.equal(event.instance.id, testAccess.encode(instances[index].id));
         }
 
         if (event.type === "sources") {
@@ -402,7 +424,7 @@ test("a saved update or cancellation is streamed before a provider continuation 
       }
 
       assert.ok(event.instance);
-      assert.equal(event.instance.id, instance.id);
+      assert.equal(event.instance.id, testAccess.encode(instance.id));
       assert.equal(event.instance.status, cancelled ? "cancelled" : "active");
       if (!cancelled) {
         assert.equal(
@@ -878,6 +900,106 @@ test("starting a workflow changes instructions and tools on the next iteration i
   assert.doesNotMatch(output, /availableSlots|pendingBooking|visitor@example\.com/);
 });
 
+test("chat on Vercel uses only the platform IP header and falls back to anonymous", async () => {
+  const { post, rateLimitInputs } = createAssistant({ onVercel: true });
+
+  const headers = {
+    "x-forwarded-for": "192.0.2.20",
+    "x-real-ip": "192.0.2.21",
+    "cf-connecting-ip": "192.0.2.22",
+  };
+
+  for (const ip of ["2001:db8::4", "invalid", undefined]) {
+    const response = await post(
+      new NextRequest("https://portfolio.example/api/chat", {
+        method: "POST",
+        body: JSON.stringify({ message: "Hello" }),
+        headers: ip ? { ...headers, "x-vercel-forwarded-for": ip } : headers,
+      }),
+    );
+
+    assert.equal(response.status, 200);
+  }
+
+  assert.deepEqual(
+    rateLimitInputs.map(({ identifier }) => identifier),
+    ["2001:db8::4", "anonymous", "anonymous"],
+  );
+});
+
+test("a workflow reference resumes only in the browser session that received it", async () => {
+  const { post, inputs, workflowRepository } = createAssistant({
+    onVercel: true,
+    response: async (request) =>
+      request.tools.some(({ name }) => name === "start_workflow")
+        ? toolResponse("resp_start", {
+            name: "start_workflow",
+            arguments: '{"workflowId":"meeting-booking"}',
+          })
+        : textResponse("resp_ready"),
+  });
+
+  const send = (body: unknown, cookie?: string) =>
+    post(
+      new NextRequest("https://portfolio.example/api/chat", {
+        method: "POST",
+        body: JSON.stringify(body),
+        headers: cookie ? { cookie } : {},
+      }),
+    );
+
+  const first = await send({ message: "Book a meeting" });
+
+  const setCookie = first.headers.get("set-cookie") ?? "";
+
+  assert.ok(/^__Host-portfolio-chat=[A-Za-z0-9_-]{43};/.test(setCookie));
+  assert.ok(/; Path=\/(?:;|$)/i.test(setCookie));
+  assert.ok(/; HttpOnly/i.test(setCookie));
+  assert.ok(/; Secure/i.test(setCookie));
+  assert.ok(/; SameSite=Strict/i.test(setCookie));
+  const cookie = setCookie.split(";", 1)[0];
+
+  const started = (await readChatResponse(first))
+    .trim()
+    .split("\n")
+    .map((line) => assistantStreamEventSchema.parse(JSON.parse(line)))
+    .find((event) => event.type === "workflow_instance");
+
+  assert.ok(started?.instance);
+  const reference = started.instance.id;
+
+  const resumed = await readChatResponse(
+    await send({ message: "Continue my booking", workflowInstanceId: reference }, cookie),
+  );
+
+  assert.ok(resumed.includes(reference));
+  const other = await send({ message: "Hello" });
+
+  const otherCookie = other.headers.get("set-cookie")?.split(";", 1)[0];
+
+  await readChatResponse(other);
+  assert.ok(otherCookie);
+  const modelCalls = inputs.length;
+
+  for (const body of [
+    { message: "Continue my booking", workflowInstanceId: reference },
+    { action: "confirm_booking", workflowInstanceId: reference, expectedRevision: 0 },
+    { action: "retry_booking", workflowInstanceId: reference },
+  ]) {
+    const denied = await send(body, otherCookie);
+
+    assert.equal(denied.status, 403);
+    assert.deepEqual(await denied.json(), {
+      error: "This workflow is unavailable in this browser session.",
+      code: "workflow_access_denied",
+    });
+  }
+
+  assert.equal((await send({ message: "Continue", workflowInstanceId: reference })).status, 403);
+  assert.equal(inputs.length, modelCalls);
+  assert.equal(workflowRepository.instances.size, 2);
+});
+
 test("retired contact actions and explicit workflow starts return 400 before invoking the model", async () => {
   const { inputs, post, workflowRepository } = createAssistant();
 
@@ -1183,7 +1305,7 @@ test("provider failure after a durable start still streams the safe active insta
   );
 
   assert.match(output, /"type":"workflow_instance"/);
-  assert.match(output, /"id":"00000000-0000-4000-8000-000000000001"/);
+  assert.match(output, /"id":"00000000-0000-4000-8000-000000000001\.[A-Za-z0-9_-]{43}"/);
   assert.match(output, /"status":"active"/);
   assert.match(output, /The assistant could not respond\. Please try again\./);
   assert.doesNotMatch(output, /availableSlots|pendingBooking|visitor@example\.com/);
@@ -1283,7 +1405,7 @@ test("a later workflow-call failure in one model batch does not orphan a persist
   );
 
   assert.match(output, /"type":"workflow_instance"/);
-  assert.match(output, /"id":"00000000-0000-4000-8000-000000000001"/);
+  assert.match(output, /"id":"00000000-0000-4000-8000-000000000001\.[A-Za-z0-9_-]{43}"/);
   assert.match(output, /"status":"active"/);
   assert.match(output, /The assistant could not respond\. Please try again\./);
   assert.deepEqual(errors, [
@@ -1641,13 +1763,9 @@ test("oversized chunked UTF-8 bodies return 413 before the limiter or assistant 
     },
   });
 
-  const request = new Request("http://localhost/api/chat", {
-    method: "POST",
-    body,
-    duplex: "half",
-  } as RequestInit & { duplex: "half" });
+  const init = { method: "POST", body, duplex: "half" } as const;
 
-  const response = await post(request);
+  const response = await post(new NextRequest("http://localhost/api/chat", init));
 
   assert.equal(response.status, 413);
   assert.deepEqual(await response.json(), { error: "Request body is too large." });
@@ -1662,7 +1780,7 @@ test("the body limit accepts valid JSON at 8 KiB and preserves the malformed JSO
   const body = JSON.stringify({ message: "Hello" }).padEnd(8 * 1024);
 
   const makeRequest = (body: string) =>
-    new Request("http://localhost/api/chat", { method: "POST", body });
+    new NextRequest("http://localhost/api/chat", { method: "POST", body });
 
   const output = await readChatResponse(await post(makeRequest(body)));
 

@@ -1,10 +1,14 @@
-import { NextResponse } from "next/server";
+import { isIP } from "node:net";
+import { type NextRequest, NextResponse } from "next/server";
 
-import { assistantRequestSchema } from "@/contracts/assistant.contract";
+import { assistantRequestSchema, WORKFLOW_ACCESS_DENIED } from "@/contracts/assistant.contract";
+import { getRateLimitHmacSecret } from "@/infrastructure/config/env";
 import type { Logger } from "@/infrastructure/logging/logger";
 import type { AssistantService } from "@/modules/assistant/service";
 import type { RateLimitRule } from "@/modules/rate-limit/rate-limit.types";
 import type { RateLimitService } from "@/modules/rate-limit/service";
+
+import { createVisitorSession, createWorkflowAccess, isVisitorSession } from "./workflow-access";
 
 const MAX_CHAT_BODY_BYTES = 8 * 1024;
 
@@ -23,13 +27,10 @@ const CHAT_RATE_LIMIT_RULES = [
   },
 ] as const satisfies readonly RateLimitRule[];
 
-function getVisitorIdentifier(request: Request) {
-  return (
-    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-    request.headers.get("x-real-ip")?.trim() ||
-    request.headers.get("cf-connecting-ip")?.trim() ||
-    "anonymous"
-  );
+function getVisitorIdentifier(request: Request, onVercel: boolean) {
+  const ip = onVercel ? request.headers.get("x-vercel-forwarded-for")?.trim() : undefined;
+
+  return ip && isIP(ip) ? ip : "anonymous";
 }
 
 function rateLimitError(limit: number) {
@@ -75,12 +76,16 @@ export function createChatPostHandler({
   assistantService,
   rateLimitService,
   logger,
+  getAccessSecret,
+  onVercel = process.env.VERCEL === "1",
 }: {
   assistantService: Pick<AssistantService, "createResponse">;
   rateLimitService: Pick<RateLimitService, "consume">;
   logger: Logger;
+  getAccessSecret: () => string;
+  onVercel?: boolean;
 }) {
-  return async function POST(request: Request) {
+  return async function POST(request: NextRequest) {
     let payload: unknown;
 
     try {
@@ -109,7 +114,7 @@ export function createChatPostHandler({
     try {
       rateLimit = await rateLimitService.consume({
         scope: CHAT_RATE_LIMIT_SCOPE,
-        identifier: getVisitorIdentifier(request),
+        identifier: getVisitorIdentifier(request, onVercel),
         rules: CHAT_RATE_LIMIT_RULES,
       });
     } catch {
@@ -139,17 +144,43 @@ export function createChatPostHandler({
       );
     }
 
-    return new Response(
-      assistantService.createResponse({
-        ...("action" in parsed.data
-          ? parsed.data
-          : {
-              message: parsed.data.message,
-              previousResponseId: parsed.data.previousResponseId ?? null,
-              workflowInstanceId: parsed.data.workflowInstanceId ?? null,
-            }),
-        signal: request.signal,
-      }),
+    const secure = onVercel || request.nextUrl.protocol === "https:";
+
+    const cookieName = secure ? "__Host-portfolio-chat" : "portfolio-chat";
+
+    const cookie = request.cookies.get(cookieName)?.value;
+
+    const existingSession = isVisitorSession(cookie) ? cookie : null;
+
+    const session = existingSession ?? createVisitorSession();
+
+    const access = createWorkflowAccess(session, getAccessSecret());
+
+    const reference = parsed.data.workflowInstanceId;
+
+    const workflowInstanceId = reference && existingSession ? access.decode(reference) : null;
+
+    if (reference && !workflowInstanceId) {
+      return NextResponse.json(
+        { error: "This workflow is unavailable in this browser session.", code: WORKFLOW_ACCESS_DENIED },
+        { status: 403 },
+      );
+    }
+
+    const response = new NextResponse(
+      assistantService.createResponse(
+        {
+          ...("action" in parsed.data
+            ? { ...parsed.data, workflowInstanceId: workflowInstanceId! }
+            : {
+                message: parsed.data.message,
+                previousResponseId: parsed.data.previousResponseId ?? null,
+                workflowInstanceId,
+              }),
+          signal: request.signal,
+        },
+        access.encode,
+      ),
       {
         headers: {
           "Cache-Control": "no-cache, no-transform",
@@ -158,11 +189,27 @@ export function createChatPostHandler({
         },
       },
     );
+
+    if (!existingSession) {
+      response.cookies.set(cookieName, session, {
+        httpOnly: true,
+        sameSite: "strict",
+        secure,
+        path: "/",
+      });
+    }
+
+    return response;
   };
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   const { assistantService, logger, rateLimitService } = await import("@/modules/composition");
 
-  return createChatPostHandler({ assistantService, rateLimitService, logger })(request);
+  return createChatPostHandler({
+    assistantService,
+    rateLimitService,
+    logger,
+    getAccessSecret: getRateLimitHmacSecret,
+  })(request);
 }

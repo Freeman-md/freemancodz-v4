@@ -29,11 +29,11 @@ An ordinary browser request carries:
 {
   "message": "...",
   "previousResponseId": "resp_... or null",
-  "workflowInstanceId": "UUID or null"
+  "workflowInstanceId": "session-bound reference or null"
 }
 ```
 
-The stream returns safe instance metadata (including its saved revision) and read-only progress: collected public values, missing required fields, and phase. Private workflow state stays on the server. Only the active opaque ID persists in sessionStorage; after refresh, the next assistant request reloads the saved workflow. Completion, cancellation or retirement of the saved workflow clears that ID. There is no public workflow-instance read or write endpoint.
+The stream returns safe instance metadata (including its saved revision) and read-only progress: collected public values, missing required fields, and phase. Private workflow state stays on the server. The active workflow reference persists in sessionStorage. The chat route verifies its signature against the anonymous HttpOnly session cookie before looking up an instance. The next assistant request after refresh can resume the same workflow. Completion, cancellation, retirement or a rejected reference clears it. Saved references from before this binding was introduced require a new browser conversation. There is no separate public workflow-instance endpoint.
 
 Meeting confirmation uses the same rate-limited `/api/chat` route with `{ action: "confirm_booking", workflowInstanceId, expectedRevision }`; recovery uses `{ action: "retry_booking", workflowInstanceId }`. These strict alternatives cannot include a message or editable booking details. Action responses use the same stream without a model call. The next ordinary message reloads workflow state without the previous model checkpoint.
 

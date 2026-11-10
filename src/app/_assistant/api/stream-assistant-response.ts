@@ -1,21 +1,26 @@
 import {
   assistantStreamEventSchema,
+  WORKFLOW_ACCESS_DENIED,
   type AssistantRequest,
   type AssistantStreamEvent,
 } from "@/contracts/assistant.contract";
 
-async function getErrorMessage(response: Response) {
+export class WorkflowAccessError extends Error {}
+
+async function getResponseError(response: Response) {
   try {
     const body: unknown = await response.json();
 
     if (typeof body === "object" && body && "error" in body && typeof body.error === "string") {
-      return body.error;
+      return response.status === 403 && "code" in body && body.code === WORKFLOW_ACCESS_DENIED
+        ? new WorkflowAccessError(body.error)
+        : new Error(body.error);
     }
   } catch {
     // A non-JSON response is deliberately represented by the safe fallback below.
   }
 
-  return "The assistant request failed.";
+  return new Error("The assistant request failed.");
 }
 
 function parseEvent(line: string) {
@@ -46,7 +51,7 @@ export async function* streamAssistant(
   });
 
   if (!response.ok) {
-    throw new Error(await getErrorMessage(response));
+    throw await getResponseError(response);
   }
 
   if (!response.body) {

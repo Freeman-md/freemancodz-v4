@@ -1,12 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { streamAssistant } from "../api/stream-assistant-response";
+import { streamAssistant, WorkflowAccessError } from "../api/stream-assistant-response";
 import { ACTIVE_WORKFLOW_INSTANCE_STORAGE_KEY } from "../constants";
 import type { ChatMessage } from "../types";
 import {
   MAX_MESSAGE_LENGTH,
-  workflowInstanceIdSchema,
+  workflowReferenceSchema,
   type WorkflowPublicInstance,
   type AssistantWorkflowAction,
   type AssistantRequest,
@@ -33,7 +33,7 @@ export function useAssistant() {
   useEffect(() => {
     const storedId = window.sessionStorage.getItem(ACTIVE_WORKFLOW_INSTANCE_STORAGE_KEY);
 
-    const parsedId = workflowInstanceIdSchema.safeParse(storedId);
+    const parsedId = workflowReferenceSchema.safeParse(storedId);
 
     if (parsedId.success) {
       workflowInstanceId.current = parsedId.data;
@@ -118,6 +118,13 @@ export function useAssistant() {
         }
       }
     } catch (error) {
+      if (error instanceof WorkflowAccessError) {
+        workflowInstanceId.current = null;
+        previousResponseId.current = null;
+        window.sessionStorage.removeItem(ACTIVE_WORKFLOW_INSTANCE_STORAGE_KEY);
+        setWorkflowInstance(null);
+      }
+
       setChoice(null);
       const messageText =
         error instanceof Error ? error.message : "Something went wrong while fetching a response.";

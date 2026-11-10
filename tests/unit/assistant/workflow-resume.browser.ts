@@ -5,9 +5,9 @@ import { act, createElement } from "react";
 import { ACTIVE_WORKFLOW_INSTANCE_STORAGE_KEY } from "@/app/_assistant/constants";
 import { useAssistant } from "@/app/_assistant/hooks/useAssistant";
 
-const FIRST_WORKFLOW_ID = "00000000-0000-4000-8000-000000000001";
+const FIRST_WORKFLOW_ID = "00000000-0000-4000-8000-000000000001.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 
-const SECOND_WORKFLOW_ID = "00000000-0000-4000-8000-000000000002";
+const SECOND_WORKFLOW_ID = "00000000-0000-4000-8000-000000000002.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 
 function streamResponse(events: unknown[]) {
   return new Response(`${events.map((event) => JSON.stringify(event)).join("\n")}\n`);
@@ -201,6 +201,19 @@ test("active workflow IDs survive remounts and clear when finished or retired", 
     await act(async () => currentAssistant().submitMessage("Resume saved workflow"));
     assert.equal(requests.at(-1)?.workflowInstanceId, FIRST_WORKFLOW_ID);
     assert.equal(requests.at(-1)?.previousResponseId, "resp_retired");
+    assert.equal(currentAssistant().workflowInstance, null);
+    assert.equal(dom.window.sessionStorage.getItem(ACTIVE_WORKFLOW_INSTANCE_STORAGE_KEY), null);
+
+    responses.push(streamResponse([workflowEvent(FIRST_WORKFLOW_ID, "active"), { type: "done" }]));
+    await act(async () => currentAssistant().submitMessage("Start a workflow"));
+    responses.push(
+      Response.json(
+        { error: "This workflow is unavailable in this browser session.", code: "workflow_access_denied" },
+        { status: 403 },
+      ),
+    );
+    await act(async () => currentAssistant().submitMessage("Resume after losing the session"));
+    assert.equal(requests.at(-1)?.workflowInstanceId, FIRST_WORKFLOW_ID);
     assert.equal(currentAssistant().workflowInstance, null);
     assert.equal(dom.window.sessionStorage.getItem(ACTIVE_WORKFLOW_INSTANCE_STORAGE_KEY), null);
 

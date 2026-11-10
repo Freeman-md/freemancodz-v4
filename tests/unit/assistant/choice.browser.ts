@@ -11,7 +11,7 @@ const choice = {
   options: ["Continue my message", "Cancel my message and start an audit"],
 };
 
-const workflowId = "11111111-1111-4111-8111-111111111111";
+const workflowId = "11111111-1111-4111-8111-111111111111.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 
 const workflowEvent = {
   type: "workflow_instance",

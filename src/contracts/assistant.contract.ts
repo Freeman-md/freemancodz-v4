@@ -6,7 +6,20 @@ export const MAX_MESSAGE_LENGTH = 500;
 
 export const assistantTriggerEvent = "portfolio-chat:open";
 
-export const workflowInstanceIdSchema = z.string().uuid();
+export const WORKFLOW_ACCESS_DENIED = "workflow_access_denied";
+
+const workflowIdSchema = z.uuid();
+
+export const workflowReferenceSchema = z.string().refine((reference) => {
+  const [id, signature, extra] = reference.split(".");
+
+  return (
+    extra === undefined &&
+    workflowIdSchema.safeParse(id).success &&
+    signature !== undefined &&
+    /^[A-Za-z0-9_-]{43}$/.test(signature)
+  );
+}, "Invalid workflow reference.");
 
 const sourceSchema = z
   .object({
@@ -18,7 +31,7 @@ const sourceSchema = z
 
 const workflowInstanceSchema = z
   .object({
-    id: workflowInstanceIdSchema,
+    id: workflowReferenceSchema,
     workflowId: z.string().min(1),
     workflowVersion: z.number().int().positive(),
     revision: z.number().int().nonnegative(),
@@ -32,7 +45,7 @@ const assistantMessageSchema = z
   .object({
     message: z.string().trim().min(1, "Message is required.").max(MAX_MESSAGE_LENGTH),
     previousResponseId: z.string().nullable().optional().transform(normalizePreviousResponseId),
-    workflowInstanceId: workflowInstanceIdSchema.nullable().optional(),
+    workflowInstanceId: workflowReferenceSchema.nullable().optional(),
   })
   .strict();
 
@@ -40,12 +53,12 @@ export const assistantWorkflowActionSchema = z.union([
   z
     .object({
       action: z.literal("confirm_booking"),
-      workflowInstanceId: workflowInstanceIdSchema,
+      workflowInstanceId: workflowReferenceSchema,
       expectedRevision: z.number().int().nonnegative(),
     })
     .strict(),
   z
-    .object({ action: z.literal("retry_booking"), workflowInstanceId: workflowInstanceIdSchema })
+    .object({ action: z.literal("retry_booking"), workflowInstanceId: workflowReferenceSchema })
     .strict(),
 ]);
 

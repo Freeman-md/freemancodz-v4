@@ -5,7 +5,7 @@ import { streamAssistant } from "@/app/_assistant/api/stream-assistant-response"
 import type { AssistantRequest, AssistantStreamEvent } from "@/contracts/assistant.contract";
 
 const workflowInstance = {
-  id: "11111111-1111-4111-8111-111111111111",
+  id: "11111111-1111-4111-8111-111111111111.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
   workflowId: "meeting-booking",
   workflowVersion: 1,
   revision: 0,
@@ -141,7 +141,7 @@ test("assistant client reports non-2xx and provider errors safely", async () => 
         }
       }
     }, /could not respond/);
-    assert.equal(recoveredWorkflowInstanceId, "11111111-1111-4111-8111-111111111111");
+    assert.equal(recoveredWorkflowInstanceId, "11111111-1111-4111-8111-111111111111.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
   } finally {
     globalThis.fetch = originalFetch;
   }

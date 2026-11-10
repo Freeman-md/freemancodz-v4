@@ -38,12 +38,10 @@ export class AssistantService {
     private readonly portfolioSearch?: Pick<PortfolioSearchService, "search">,
   ) {}
 
-  createResponse(request: AssistantResponseInput) {
+  createResponse(request: AssistantResponseInput, encodeWorkflowId: (id: string) => string) {
     if ("action" in request) {
-      return this.createWorkflowActionResponse(request);
+      return this.createWorkflowActionResponse(request, encodeWorkflowId);
     }
-
-    const encoder = new TextEncoder();
 
     // Each stream owns its state, including transitions saved before a later failure.
     const state: ResponseState = {
@@ -69,7 +67,7 @@ export class AssistantService {
     return new ReadableStream<Uint8Array>({
       start: async (controller) => {
         const write: WriteEvent = (event) =>
-          controller.enqueue(encoder.encode(`${JSON.stringify(event)}\n`));
+          controller.enqueue(encodeEvent(event, encodeWorkflowId));
 
         let previousCheckpoint = state.responseId;
 
@@ -128,9 +126,8 @@ export class AssistantService {
 
   private createWorkflowActionResponse(
     request: Extract<AssistantResponseInput, { action: string }>,
+    encodeWorkflowId: (id: string) => string,
   ) {
-    const encoder = new TextEncoder();
-
     let connected = true;
 
     return new ReadableStream<Uint8Array>({
@@ -141,7 +138,7 @@ export class AssistantService {
           }
 
           try {
-            controller.enqueue(encoder.encode(`${JSON.stringify(event)}\n`));
+            controller.enqueue(encodeEvent(event, encodeWorkflowId));
           } catch {
             connected = false;
           }
@@ -697,6 +694,17 @@ export class AssistantService {
 
     return `${context.instructions}\nIf the visitor explicitly chooses to switch workflows, call switch_workflow with the requested workflow. Use the active workflow ID with switch_workflow when the visitor explicitly chooses to continue it instead. Neither decision confirms a final submission. Never switch without that explicit choice and never create a duplicate of the active workflow.`;
   }
+}
+
+const encoder = new TextEncoder();
+
+function encodeEvent(event: AssistantStreamEvent, encodeWorkflowId: (id: string) => string) {
+  const output =
+    event.type === "workflow_instance" && event.instance
+      ? { ...event, instance: { ...event.instance, id: encodeWorkflowId(event.instance.id) } }
+      : event;
+
+  return encoder.encode(`${JSON.stringify(output)}\n`);
 }
 
 type WriteEvent = (event: AssistantStreamEvent) => void;
