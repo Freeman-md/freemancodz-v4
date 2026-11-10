@@ -1,76 +1,20 @@
-import { isIP } from "node:net";
 import { type NextRequest, NextResponse } from "next/server";
 
 import { assistantRequestSchema, WORKFLOW_ACCESS_DENIED } from "@/contracts/assistant.contract";
 import { getRateLimitHmacSecret } from "@/infrastructure/config/env";
 import type { Logger } from "@/infrastructure/logging/logger";
 import type { AssistantService } from "@/modules/assistant/service";
-import type { RateLimitRule } from "@/modules/rate-limit/rate-limit.types";
 import type { RateLimitService } from "@/modules/rate-limit/service";
 
-import { createVisitorSession, createWorkflowAccess, isVisitorSession } from "./workflow-access";
-
-const MAX_CHAT_BODY_BYTES = 8 * 1024;
-
-const CHAT_RATE_LIMIT_SCOPE = "chat";
-
-const CHAT_RATE_LIMIT_RULES = [
-  {
-    id: "short",
-    limit: 10,
-    windowMs: 10 * 60 * 1000,
-  },
-  {
-    id: "daily",
-    limit: 30,
-    windowMs: 24 * 60 * 60 * 1000,
-  },
-] as const satisfies readonly RateLimitRule[];
-
-function getVisitorIdentifier(request: Request, onVercel: boolean) {
-  const ip = onVercel ? request.headers.get("x-vercel-forwarded-for")?.trim() : undefined;
-
-  return ip && isIP(ip) ? ip : "anonymous";
-}
-
-function rateLimitError(limit: number) {
-  return limit === CHAT_RATE_LIMIT_RULES[0].limit
-    ? "Too many messages. Please try again in a few minutes."
-    : "Daily message limit reached. Please try again later.";
-}
-
-async function readChatBody(request: Request): Promise<string | null> {
-  if (!request.body) {
-    return "";
-  }
-
-  const reader = request.body.getReader();
-
-  const body = new Uint8Array(MAX_CHAT_BODY_BYTES);
-
-  let size = 0;
-
-  try {
-    for (;;) {
-      const { done, value } = await reader.read();
-
-      if (done) {
-        return new TextDecoder().decode(body.subarray(0, size));
-      }
-
-      if (size + value.byteLength > MAX_CHAT_BODY_BYTES) {
-        void reader.cancel().catch(() => undefined);
-
-        return null;
-      }
-
-      body.set(value, size);
-      size += value.byteLength;
-    }
-  } finally {
-    reader.releaseLock();
-  }
-}
+import { CHAT_RATE_LIMIT_RULES, CHAT_RATE_LIMIT_SCOPE } from "./constants";
+import {
+  createVisitorSession,
+  createWorkflowAccess,
+  getVisitorIdentifier,
+  isVisitorSession,
+  rateLimitError,
+  readChatBody,
+} from "./helpers";
 
 export function createChatPostHandler({
   assistantService,

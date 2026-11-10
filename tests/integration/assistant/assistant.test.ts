@@ -4,7 +4,7 @@ import test from "node:test";
 import { NextRequest } from "next/server";
 
 import { createChatPostHandler } from "@/app/api/chat/route";
-import { createWorkflowAccess } from "@/app/api/chat/workflow-access";
+import { createWorkflowAccess } from "@/app/api/chat/helpers";
 import type { Logger } from "@/infrastructure/logging/logger";
 import type { OpenAITransport } from "@/infrastructure/openai/types";
 import type { OpenAIResponseRequest } from "@/infrastructure/openai/types";
