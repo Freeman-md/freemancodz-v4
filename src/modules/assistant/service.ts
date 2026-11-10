@@ -47,7 +47,6 @@ export class AssistantService {
     const state: ResponseState = {
       signal: request.signal,
       interactionId: randomUUID(),
-      allowConfirmation: true,
       message: request.message,
       input: [],
       responseId: request.previousResponseId,
@@ -419,7 +418,6 @@ export class AssistantService {
     request: OpenAIResponseRequest,
     state: ResponseState,
     write: WriteEvent,
-    requireCompleted = false,
   ) {
     const toolCalls: ToolCall[] = [];
 
@@ -432,9 +430,13 @@ export class AssistantService {
         break;
       }
 
-      if (event.type === "response.created" || event.type === "response.completed") {
+      if (event.type === "response.completed") {
         state.responseId = event.response.id;
-        state.completed = event.type === "response.completed";
+        state.completed = true;
+      }
+
+      if (event.type === "response.incomplete") {
+        throw new Error("The model response did not complete.");
       }
 
       if (event.type === "response.output_text.delta" && event.delta) {
@@ -459,7 +461,7 @@ export class AssistantService {
       }
     }
 
-    if (requireCompleted && !state.signal.aborted && !state.completed) {
+    if (!state.signal.aborted && !state.completed) {
       throw new Error("The model response did not complete.");
     }
 
@@ -535,17 +537,11 @@ export class AssistantService {
       name: toolCall.name,
       rawArguments: toolCall.arguments,
       interactionId: state.interactionId,
-      allowConfirmation: state.allowConfirmation,
       startContext:
         !state.activeWorkflowInstanceId || toolCall.name === SWITCH_WORKFLOW_TOOL_NAME
           ? { originChannel: "web", originPage: null, originEntry: null }
           : undefined,
     });
-
-    if (toolCall.name === SWITCH_WORKFLOW_TOOL_NAME) {
-      // Continuing or switching is not confirmation to send or book.
-      state.allowConfirmation = false;
-    }
 
     state.workflowInstance = result.instance;
     state.activeWorkflowInstanceId =
@@ -624,7 +620,6 @@ export class AssistantService {
           write(event);
         }
       },
-      true,
     );
 
     if (calls.length > 0) {
@@ -714,7 +709,6 @@ type ToolCall = { callId: string; name: string; arguments: string };
 type ResponseState = {
   signal: AbortSignal;
   interactionId: string;
-  allowConfirmation: boolean;
   message: string;
   input: OpenAIResponseInputItem[];
   responseId: string | null;

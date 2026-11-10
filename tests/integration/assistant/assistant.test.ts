@@ -290,6 +290,7 @@ test(
               }),
             },
           },
+          { type: "response.completed", response: { id: `resp_${label}_tools` } },
         );
       },
     });
@@ -383,7 +384,7 @@ test("a saved update or cancellation is streamed before a provider continuation 
         }
 
         return events(
-          { type: "response.created", response: { id: "resp_incomplete" } },
+          { type: "response.created", response: { id: "resp_transition" } },
           {
             type: "response.output_item.done",
             item: {
@@ -395,6 +396,7 @@ test("a saved update or cancellation is streamed before a provider continuation 
                 : JSON.stringify({ updates: [{ field: "email", value: "saved@example.test" }] }),
             },
           },
+          { type: "response.completed", response: { id: "resp_transition" } },
         );
       },
     });
@@ -434,7 +436,7 @@ test("a saved update or cancellation is streamed before a provider continuation 
       }
     }
 
-    assert.doesNotMatch(output, /private|provider details|resp_incomplete/);
+    assert.doesNotMatch(output, /private|provider details|resp_transition/);
     assert.deepEqual(errors, [
       {
         message: "assistant.response_failed",
@@ -451,15 +453,7 @@ test("a saved update or cancellation is streamed before a provider continuation 
 test("the bounded model loop stops before executing a fourth tool batch", async () => {
   const { inputs, post } = createAssistant({
     response: async () =>
-      events({
-        type: "response.output_item.done",
-        item: {
-          type: "function_call",
-          call_id: "again",
-          name: "unknown_tool",
-          arguments: "{}",
-        },
-      }),
+      toolResponse("resp_again", { name: "unknown_tool", arguments: "{}" }),
   });
 
   const output = await readChatResponse(await post(chatRequest({ message: "Find relevant work" })));
@@ -1328,20 +1322,15 @@ test("Calendar availability failure produces a useful reply without inventing sl
         assert.match(request.input[0].output, /meeting_availability_unavailable/);
         assert.doesNotMatch(request.input[0].output, /OAuth|private|refresh|unauthorized_client/);
 
-        return events({
-          type: "response.output_text.delta",
-          delta: "Meeting availability is temporarily unavailable. Please try again later.",
-        });
+        return textResponse(
+          "resp_availability_unavailable",
+          "Meeting availability is temporarily unavailable. Please try again later.",
+        );
       }
 
-      return events({
-        type: "response.output_item.done",
-        item: {
-          type: "function_call",
-          call_id: "find-slots",
-          name: "find_meeting_slots",
-          arguments: '{"startDate":"2099-09-15","endDate":"2099-09-15"}',
-        },
+      return toolResponse("resp_find_slots", {
+        name: "find_meeting_slots",
+        arguments: '{"startDate":"2099-09-15","endDate":"2099-09-15"}',
       });
     },
   });
@@ -1688,6 +1677,41 @@ test("workflow persistence failure is safely distinguished from a provider failu
       },
     },
   ]);
+});
+
+test("unfinished model turns cannot execute tools or publish a checkpoint", async () => {
+  for (const completion of ["eof", "incomplete"]) {
+    const providerEvents = [
+      { type: "response.created", response: { id: "resp_unfinished" } },
+      { type: "response.output_text.delta", delta: "I’ll check availability." },
+      {
+        type: "response.output_item.done",
+        item: {
+          type: "function_call",
+          call_id: "start-before-completion",
+          name: "start_workflow",
+          arguments: '{"workflowId":"meeting-booking"}',
+        },
+      },
+    ];
+
+    if (completion === "incomplete") {
+      providerEvents.push({ type: "response.incomplete", response: { id: "resp_unfinished" } });
+    }
+
+    const { post, inputs, workflowRepository } = createAssistant({
+      response: async () => events(...providerEvents),
+    });
+
+    const output = await readChatResponse(
+      await post(chatRequest({ message: "Book a meeting", previousResponseId: "resp_prior" })),
+    );
+
+    assert.match(output, /"type":"error"/);
+    assert.doesNotMatch(output, /"type":"response_id"|"type":"workflow_instance"|"type":"done"/);
+    assert.equal(inputs.length, 1);
+    assert.equal(workflowRepository.instances.size, 0);
+  }
 });
 
 test("aborted request stops without emitting a response", async () => {
