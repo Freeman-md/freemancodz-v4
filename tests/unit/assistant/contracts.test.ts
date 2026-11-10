@@ -94,43 +94,6 @@ test("assistant request recovers from malformed previous response IDs", () => {
   assert.equal(result.previousResponseId, "resp_123");
 });
 
-test("assistant starter workflow starts accept only approved workflow and origin pairs", () => {
-  assert.equal(
-    assistantRequestSchema.safeParse({
-      message: "Start",
-      workflowStart: {
-        workflowId: "meeting-booking",
-        originPage: "/",
-        originEntry: "assistant-starter-meeting",
-      },
-    }).success,
-    true,
-  );
-
-  for (const workflowStart of [
-    {
-      workflowId: "contact",
-      originPage: "/",
-      originEntry: "assistant-starter-contact",
-    },
-    {
-      workflowId: "meeting-booking",
-      originPage: "/work",
-      originEntry: "assistant-starter-meeting",
-    },
-    {
-      workflowId: "anything",
-      originPage: "/",
-      originEntry: "assistant-starter-anything",
-    },
-  ]) {
-    assert.equal(
-      assistantRequestSchema.safeParse({ message: "Start", workflowStart }).success,
-      false,
-    );
-  }
-});
-
 test("assistant request rejects missing and oversized messages", () => {
   assert.equal(assistantRequestSchema.safeParse({}).success, false);
   assert.equal(assistantRequestSchema.safeParse({ message: " ".repeat(501) }).success, false);
@@ -211,18 +174,7 @@ test("assistant stream contract accepts known events and rejects malformed event
   );
 });
 
-test("retired audit starts and actions are rejected", () => {
-  assert.equal(
-    assistantRequestSchema.safeParse({
-      message: "Start",
-      workflowStart: {
-        workflowId: "audit",
-        originPage: "/",
-        originEntry: "home-audit-cta",
-      },
-    }).success,
-    false,
-  );
+test("retired audit actions are rejected", () => {
   assert.equal(
     assistantRequestSchema.safeParse({
       action: "confirm_audit",

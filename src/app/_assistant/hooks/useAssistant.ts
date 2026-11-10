@@ -6,7 +6,6 @@ import { ACTIVE_WORKFLOW_INSTANCE_STORAGE_KEY, MAX_MESSAGE_LENGTH } from "../con
 import type { ChatMessage } from "../types";
 import {
   workflowInstanceIdSchema,
-  type AssistantWorkflowStart,
   type WorkflowPublicInstance,
   type AssistantWorkflowAction,
   type AssistantRequest,
@@ -134,11 +133,10 @@ export function useAssistant() {
   }, []);
 
   const submitMessage = useCallback(
-    (rawMessage: string, workflowStart: AssistantWorkflowStart | null = null) =>
+    (rawMessage: string) =>
       submitRequest(
         {
           message: rawMessage.trim(),
-          ...(workflowStart ? { workflowStart } : {}),
           previousResponseId: previousResponseId.current,
           workflowInstanceId: workflowInstanceId.current,
         },

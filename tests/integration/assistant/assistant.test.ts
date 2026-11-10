@@ -737,6 +737,13 @@ test("a mixed Meeting turn keeps the search limitation if the workflow continuat
         });
       }
 
+      if (request.tools.some(({ name }) => name === "start_workflow")) {
+        return toolResponse("resp_start_meeting", {
+          name: "start_workflow",
+          arguments: '{"workflowId":"meeting-booking"}',
+        });
+      }
+
       throw new Error("continuation offline");
     },
   });
@@ -745,11 +752,6 @@ test("a mixed Meeting turn keeps the search limitation if the workflow continuat
     await post(
       chatRequest({
         message: "I want to book a meeting. Also, what did Freeman build for JPScents?",
-        workflowStart: {
-          workflowId: "meeting-booking",
-          originPage: "/",
-          originEntry: "assistant-starter-meeting",
-        },
       }),
     ),
   );
@@ -777,6 +779,13 @@ test("a portfolio limitation remains after a Meeting choice clears earlier text"
         });
       }
 
+      if (request.tools.some(({ name }) => name === "start_workflow")) {
+        return toolResponse("resp_start_meeting", {
+          name: "start_workflow",
+          arguments: '{"workflowId":"meeting-booking"}',
+        });
+      }
+
       if (request.tools.length) {
         return toolResponse("resp_options", {
           name: "ask_user_choice",
@@ -792,11 +801,6 @@ test("a portfolio limitation remains after a Meeting choice clears earlier text"
     await post(
       chatRequest({
         message: "Did Freeman pilot Apollo 11? I also want to book a meeting.",
-        workflowStart: {
-          workflowId: "meeting-booking",
-          originPage: "/",
-          originEntry: "assistant-starter-meeting",
-        },
       }),
     ),
   );
@@ -874,7 +878,7 @@ test("starting a workflow changes instructions and tools on the next iteration i
   assert.doesNotMatch(output, /availableSlots|pendingBooking|visitor@example\.com/);
 });
 
-test("retired contact actions and starts are rejected before invoking the model", async () => {
+test("retired contact actions and explicit workflow starts return 400 before invoking the model", async () => {
   const { inputs, post, workflowRepository } = createAssistant();
 
   const workflowInstanceId = "11111111-1111-4111-8111-111111111111";
@@ -882,6 +886,15 @@ test("retired contact actions and starts are rejected before invoking the model"
   for (const payload of [
     { action: "confirm_contact", workflowInstanceId, expectedRevision: 1 },
     { action: "retry_contact", workflowInstanceId },
+    {
+      message: "Book a meeting",
+      workflowStart: {
+        workflowId: "meeting-booking",
+        originPage: "/",
+        originEntry: "assistant-starter-meeting",
+      },
+    },
+    { message: "Book a meeting", workflowStart: null },
     {
       message: "Leave a message",
       workflowStart: {
@@ -899,7 +912,20 @@ test("retired contact actions and starts are rejected before invoking the model"
 });
 
 test("a saved contact workflow is cleared without exposing or changing its stored state", async () => {
-  const { inputs, post, workflowRepository } = createAssistant();
+  const { inputs, post, workflowRepository } = createAssistant({
+    response: async (request) => {
+      const input = request.input[0];
+
+      if (input?.type === "user_message" && input.content === "Book a meeting") {
+        return toolResponse("resp_start_meeting", {
+          name: "start_workflow",
+          arguments: '{"workflowId":"meeting-booking"}',
+        });
+      }
+
+      return textResponse("resp_current");
+    },
+  });
 
   const retired = await workflowRepository.create({
     workflowId: "contact",
@@ -933,11 +959,6 @@ test("a saved contact workflow is cleared without exposing or changing its store
         message: "Book a meeting",
         workflowInstanceId: retired.id,
         previousResponseId: "resp_retired",
-        workflowStart: {
-          workflowId: "meeting-booking",
-          originPage: "/",
-          originEntry: "assistant-starter-meeting",
-        },
       }),
     ),
   );
@@ -947,41 +968,8 @@ test("a saved contact workflow is cleared without exposing or changing its store
   assert.deepEqual(await workflowRepository.findById(retired.id), retired);
 });
 
-test("an explicit start replaces a restored terminal workflow instance", async () => {
-  const { post, workflowRepository, workflowService } = createAssistant();
-
-  const finished = await workflowService.start("meeting-booking", {
-    originChannel: "web",
-    originPage: "/",
-    originEntry: "assistant-starter-meeting",
-  });
-
-  await workflowService.cancel(finished.id);
-
-  const output = await readChatResponse(
-    await post(
-      chatRequest({
-        message: "I would like to book a meeting.",
-        workflowInstanceId: finished.id,
-        workflowStart: {
-          workflowId: "meeting-booking",
-          originPage: "/",
-          originEntry: "assistant-starter-meeting",
-        },
-      }),
-    ),
-  );
-
-  const started = await workflowRepository.findById("00000000-0000-4000-8000-000000000002");
-
-  assert.equal(started?.workflowId, "meeting-booking");
-  assert.equal(started?.status, "active");
-  assert.match(output, /"id":"00000000-0000-4000-8000-000000000002"/);
-  assert.match(output, /"status":"active"/);
-});
-
-test("a repeated deterministic start reuses the active workflow instance", async () => {
-  const { post, workflowRepository, workflowService } = createAssistant();
+test("a booking message with an active Meeting continues that instance", async () => {
+  const { inputs, post, workflowRepository, workflowService } = createAssistant();
 
   const active = await workflowService.start("meeting-booking", {
     originChannel: "web",
@@ -994,16 +982,12 @@ test("a repeated deterministic start reuses the active workflow instance", async
       chatRequest({
         message: "I'd like to book a meeting with Freeman.",
         workflowInstanceId: active.id,
-        workflowStart: {
-          workflowId: "meeting-booking",
-          originPage: "/",
-          originEntry: "assistant-starter-meeting",
-        },
       }),
     ),
   );
 
-  assert.equal(await workflowRepository.findById("00000000-0000-4000-8000-000000000002"), null);
+  assert.equal(workflowRepository.instances.size, 1);
+  assert.equal(inputs[0]?.tools.some(({ name }) => name === "start_workflow"), false);
   assert.match(output, new RegExp(active.id));
   assert.match(output, /"workflowId":"meeting-booking"/);
 });
@@ -1554,7 +1538,12 @@ test("OpenAI streaming failure returns the existing safe stream error", async ()
 });
 
 test("workflow persistence failure is safely distinguished from a provider failure", async () => {
-  const { errors, inputs, post, workflowRepository } = createAssistant();
+  const { errors, inputs, post, workflowRepository } = createAssistant({
+    response: async () => toolResponse("resp_start_meeting", {
+      name: "start_workflow",
+      arguments: '{"workflowId":"meeting-booking"}',
+    }),
+  });
 
   workflowRepository.create = async () => {
     throw new WorkflowInstanceStoreError("unavailable", "private database failure", {
@@ -1562,20 +1551,9 @@ test("workflow persistence failure is safely distinguished from a provider failu
     });
   };
 
-  const output = await readChatResponse(
-    await post(
-      chatRequest({
-        message: "Book a meeting",
-        workflowStart: {
-          workflowId: "meeting-booking",
-          originPage: "/",
-          originEntry: "assistant-starter-meeting",
-        },
-      }),
-    ),
-  );
+  const output = await readChatResponse(await post(chatRequest({ message: "Book a meeting" })));
 
-  assert.equal(inputs.length, 0);
+  assert.equal(inputs.length, 1);
   assert.match(output, /The assistant could not respond\. Please try again\./);
   assert.doesNotMatch(output, /private database/);
   assert.deepEqual(errors, [
@@ -1583,7 +1561,7 @@ test("workflow persistence failure is safely distinguished from a provider failu
       message: "assistant.response_failed",
       context: {
         category: "assistant_request_failed",
-        operation: "workflow_start",
+        operation: "tool_execution",
         workflowInstanceId: null,
       },
     },

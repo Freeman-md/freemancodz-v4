@@ -28,20 +28,11 @@ const workflowInstanceSchema = z
   })
   .strict();
 
-const workflowStartSchema = z
-  .object({
-    workflowId: z.literal("meeting-booking"),
-    originPage: z.literal("/"),
-    originEntry: z.literal("assistant-starter-meeting"),
-  })
-  .strict();
-
 const assistantMessageSchema = z
   .object({
     message: z.string().trim().min(1, "Message is required.").max(MAX_MESSAGE_LENGTH),
     previousResponseId: z.string().nullable().optional().transform(normalizePreviousResponseId),
     workflowInstanceId: workflowInstanceIdSchema.nullable().optional(),
-    workflowStart: workflowStartSchema.nullable().optional(),
   })
   .strict();
 
@@ -94,5 +85,4 @@ export type AssistantRequest = z.infer<typeof assistantRequestSchema>;
 export type AssistantWorkflowAction = z.infer<typeof assistantWorkflowActionSchema>;
 export type AssistantStreamEvent = z.infer<typeof assistantStreamEventSchema>;
 export type AssistantSource = z.infer<typeof sourceSchema>;
-export type AssistantWorkflowStart = z.infer<typeof workflowStartSchema>;
 export type WorkflowPublicInstance = z.infer<typeof workflowInstanceSchema>;

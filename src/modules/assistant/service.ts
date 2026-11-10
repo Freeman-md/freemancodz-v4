@@ -55,13 +55,12 @@ export class AssistantService {
       responseId: request.previousResponseId,
       activeWorkflowInstanceId: request.workflowInstanceId,
       workflowInstance: null,
-      workflowConflict: null,
       workflowEndedThisInteraction: false,
       didStreamText: false,
       choice: null,
       search: null,
       searchNotice: null,
-      workflowRequested: Boolean(request.workflowStart),
+      workflowRequested: false,
       sources: [],
       completed: false,
       operation: "workflow_context",
@@ -75,7 +74,7 @@ export class AssistantService {
         let previousCheckpoint = state.responseId;
 
         try {
-          const initialContext = await this.prepareRequest(request, state, write);
+          const initialContext = await this.prepareRequest(state, write);
 
           previousCheckpoint = state.responseId;
           await this.runResponseLoop(state, write, previousCheckpoint, initialContext);
@@ -111,14 +110,8 @@ export class AssistantService {
     });
   }
 
-  private async prepareRequest(
-    request: Exclude<AssistantResponseInput, { action: string }>,
-    state: ResponseState,
-    write: WriteEvent,
-  ) {
-    const { workflowStart } = request;
-
-    let existingContext = state.activeWorkflowInstanceId
+  private async prepareRequest(state: ResponseState, write: WriteEvent) {
+    const existingContext = state.activeWorkflowInstanceId
       ? await this.workflow.getAssistantContext(state.activeWorkflowInstanceId)
       : null;
 
@@ -126,31 +119,6 @@ export class AssistantService {
       state.activeWorkflowInstanceId = null;
       state.responseId = null;
       write({ type: "workflow_instance", instance: null });
-    }
-
-    if (workflowStart) {
-      state.operation = "workflow_start";
-      const activeInstance =
-        existingContext?.instance?.status === "active" ? existingContext.instance : null;
-
-      if (activeInstance && activeInstance.workflowId !== workflowStart.workflowId) {
-        state.workflowConflict = {
-          activeWorkflowId: activeInstance.workflowId,
-          requestedWorkflowId: workflowStart.workflowId,
-        };
-      }
-
-      if (!activeInstance) {
-        const started = await this.workflow.start(workflowStart.workflowId, {
-          originChannel: "web",
-          originPage: workflowStart.originPage,
-          originEntry: workflowStart.originEntry,
-        });
-
-        state.activeWorkflowInstanceId = started.id;
-        state.workflowInstance = started;
-        existingContext = null;
-      }
     }
 
     state.input = [{ type: "user_message", content: state.message }];
@@ -349,7 +317,6 @@ export class AssistantService {
           ? state.message
           : "Continue the current request using the updated workflow data.",
         workflowContext.instance,
-        state.workflowConflict,
       );
 
       state.input =
@@ -358,10 +325,7 @@ export class AssistantService {
           : [...state.input, { type: "user_message", content: message }];
     }
 
-    const workflowInstructions = this.createWorkflowInstructions(
-      workflowContext,
-      state.workflowConflict,
-    );
+    const workflowInstructions = this.createWorkflowInstructions(workflowContext);
 
     const workflowTools = state.workflowEndedThisInteraction
       ? workflowContext.tools.filter(({ name }) => name !== START_WORKFLOW_TOOL_NAME)
@@ -380,17 +344,15 @@ export class AssistantService {
       .filter(Boolean)
       .join("\n\n");
 
-    const routeFirst = iteration === 0 && Boolean(this.portfolioSearch) && !state.workflowConflict;
+    const routeFirst = iteration === 0 && Boolean(this.portfolioSearch);
 
     const tools = routeFirst
       ? [PORTFOLIO_SEARCH_TOOL]
-      : state.workflowConflict
-        ? GLOBAL_ASSISTANT_TOOLS.filter(({ name }) => name === "ask_user_choice")
-        : [
-            ...GLOBAL_ASSISTANT_TOOLS,
-            ...workflowTools,
-            ...(this.portfolioSearch && state.search === null ? [PORTFOLIO_SEARCH_TOOL] : []),
-          ];
+      : [
+          ...GLOBAL_ASSISTANT_TOOLS,
+          ...workflowTools,
+          ...(this.portfolioSearch && state.search === null ? [PORTFOLIO_SEARCH_TOOL] : []),
+        ];
 
     return {
       input: state.input,
@@ -550,7 +512,7 @@ export class AssistantService {
     workflowContext: WorkflowAssistantContext,
     write: WriteEvent,
   ): Promise<Record<string, unknown>> {
-    if (toolCall.name === PORTFOLIO_SEARCH_TOOL.name && !state.workflowConflict) {
+    if (toolCall.name === PORTFOLIO_SEARCH_TOOL.name) {
       return this.searchPortfolio(toolCall.arguments, state);
     }
 
@@ -571,13 +533,6 @@ export class AssistantService {
       };
     }
 
-    if (state.workflowConflict) {
-      return {
-        error: "choice_required",
-        message: "Wait for the visitor to choose whether to continue or switch.",
-      };
-    }
-
     state.workflowRequested = true;
     const result = await this.workflow.executeTool(state.activeWorkflowInstanceId, {
       name: toolCall.name,
@@ -595,7 +550,6 @@ export class AssistantService {
       state.allowConfirmation = false;
     }
 
-    state.workflowConflict = null;
     state.workflowInstance = result.instance;
     state.activeWorkflowInstanceId =
       result.instance.status === "active" ? result.instance.id : null;
@@ -719,7 +673,6 @@ export class AssistantService {
   private createWorkflowAwareMessage(
     message: string,
     instance: WorkflowPublicInstance,
-    conflict: WorkflowConflict | null,
   ) {
     const progress = JSON.stringify({
       workflowId: instance.workflowId,
@@ -734,24 +687,10 @@ export class AssistantService {
       progress,
     ];
 
-    if (conflict) {
-      content.push("", "Application-provided workflow choice:", JSON.stringify(conflict));
-    }
-
     return [...content, "", "Current visitor message:", message].join("\n");
   }
 
-  private createWorkflowInstructions(
-    context: WorkflowAssistantContext,
-    conflict: WorkflowConflict | null,
-  ) {
-    if (conflict) {
-      return [
-        `The visitor tried to start ${conflict.requestedWorkflowId} while ${conflict.activeWorkflowId} is active.`,
-        "Explain that continuing retains the current request, while switching cancels it and starts the requested one. Neither confirms a final submission. Use ask_user_choice with self-contained options naming the current and requested workflows. Wait for the visitor's ordinary reply before taking any action.",
-      ].join("\n");
-    }
-
+  private createWorkflowInstructions(context: WorkflowAssistantContext) {
     if (!context.tools.some(({ name }) => name === SWITCH_WORKFLOW_TOOL_NAME)) {
       return context.instructions;
     }
@@ -764,8 +703,6 @@ type WriteEvent = (event: AssistantStreamEvent) => void;
 
 type ToolCall = { callId: string; name: string; arguments: string };
 
-type WorkflowConflict = { activeWorkflowId: string; requestedWorkflowId: string };
-
 type ResponseState = {
   signal: AbortSignal;
   interactionId: string;
@@ -775,7 +712,6 @@ type ResponseState = {
   responseId: string | null;
   activeWorkflowInstanceId: string | null;
   workflowInstance: WorkflowPublicInstance | null;
-  workflowConflict: WorkflowConflict | null;
   workflowEndedThisInteraction: boolean;
   didStreamText: boolean;
   choice: AssistantChoice | null;
