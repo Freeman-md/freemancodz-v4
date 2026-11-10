@@ -31,8 +31,6 @@ export type SaveWorkflowInstanceInput = {
 export type WorkflowExecutionContext = {
   workflowInstanceId: string;
   interactionId: string;
-  allowConfirmation?: boolean;
-  expectedRevision?: number;
 };
 
 export type WorkflowExecutionResult<State extends Prisma.JsonObject> = {
@@ -51,12 +49,11 @@ export type WorkflowToolCall = {
   name: string;
   rawArguments: string;
   interactionId: string;
-  allowConfirmation?: boolean;
-  expectedRevision?: number;
   startContext?: WorkflowStartContext;
 };
 
 export type WorkflowToolExecutionResult = {
+  executionId?: string;
   output: Prisma.JsonObject;
   instance: WorkflowPublicInstance;
 };

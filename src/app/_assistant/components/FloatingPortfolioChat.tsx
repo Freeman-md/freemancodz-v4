@@ -25,6 +25,8 @@ export function FloatingPortfolioChat() {
     dismissChoice,
     workflowInstance,
     submitWorkflowAction,
+    refreshWorkflowStatus,
+    workflowStatusError,
   } = useAssistant();
 
   const {
@@ -46,6 +48,26 @@ export function FloatingPortfolioChat() {
   const previousChoice = useRef(choice);
 
   const pendingSource = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      void refreshWorkflowStatus();
+    }
+  }, [isOpen, refreshWorkflowStatus]);
+
+  const pendingBooking =
+    workflowInstance?.outcome?.booking === "pending" ||
+    workflowInstance?.outcome?.ownerNotice === "pending";
+
+  useEffect(() => {
+    if (!isOpen || !pendingBooking) {
+      return;
+    }
+
+    const interval = window.setInterval(() => void refreshWorkflowStatus(), 5000);
+
+    return () => window.clearInterval(interval);
+  }, [isOpen, pendingBooking, refreshWorkflowStatus]);
 
   useEffect(() => {
     if (isOpen && previousChoice.current && !choice) {
@@ -112,6 +134,11 @@ export function FloatingPortfolioChat() {
           <X size={19} aria-hidden="true" />
         </Dialog.Close>
       </header>
+      {workflowStatusError && (
+        <p role="status" className="px-4 py-2 text-sm text-muted">
+          {workflowStatusError}
+        </p>
+      )}
       {workflowInstance && (
         <AssistantWorkflowProgress key={workflowInstance.id} instance={workflowInstance} />
       )}
@@ -128,6 +155,10 @@ export function FloatingPortfolioChat() {
             instance={workflowInstance}
             isLoading={isLoading}
             onSubmit={submitWorkflowAction}
+            onRequestChanges={() => {
+              dismissChoice();
+              textareaRef.current?.focus({ preventScroll: true });
+            }}
           />
         )}
       </AssistantMessages>

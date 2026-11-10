@@ -8,7 +8,11 @@ import type {
   WorkflowExecutionResult,
   WorkflowStartContext,
 } from "../../types";
-import { executeMeetingBookingTool } from "./meeting-booking.tool-handlers";
+import {
+  bookLegacyMeeting,
+  confirmLegacyMeeting,
+  executeMeetingBookingTool,
+} from "./meeting-booking.tool-handlers";
 import { meetingBookingStateSchema, type MeetingBookingState } from "./meeting-booking.schema";
 import {
   FIND_MEETING_SLOTS_TOOL,
@@ -18,10 +22,10 @@ import {
 
 export const MEETING_BOOKING_WORKFLOW_ID = "meeting-booking";
 
+export const MEETING_BOOKING_ACTION = "book-meeting";
+
 export class MeetingBookingWorkflowDefinition implements IWorkflowDefinition<MeetingBookingState> {
   readonly id = MEETING_BOOKING_WORKFLOW_ID;
-
-  readonly version = 1;
 
   readonly description = "Book a 30-minute meeting with Freeman.";
 
@@ -30,6 +34,7 @@ export class MeetingBookingWorkflowDefinition implements IWorkflowDefinition<Mee
   constructor(
     private readonly meetingService: MeetingServiceClient,
     private readonly progress: IWorkflowProgressProjector<MeetingBookingState>,
+    readonly version = 1,
   ) {}
 
   createInitialState(_context: WorkflowStartContext): MeetingBookingState {
@@ -49,6 +54,55 @@ export class MeetingBookingWorkflowDefinition implements IWorkflowDefinition<Mee
 
   getProgress(state: MeetingBookingState, status: "active" | "completed" | "cancelled") {
     return this.progress.getProgress(state, status);
+  }
+
+  getReview(state: MeetingBookingState) {
+    if (
+      state.step !== "awaiting_confirmation" ||
+      !state.preparedInteractionId ||
+      this.progress.getMissingRequiredFields(state).length
+    ) {
+      return undefined;
+    }
+
+    const labels: Record<string, string> = {
+      name: "Name",
+      email: "Email",
+      reason: "Topic",
+      selectedSlot: "Time",
+    };
+
+    return {
+      actionKey: MEETING_BOOKING_ACTION,
+      title: "Review your meeting",
+      fields: this.progress
+        .getProgress(state, "active")
+        .fields.map((field) => ({ ...field, label: labels[field.key] ?? field.key })),
+    };
+  }
+
+  prepareApproval(state: MeetingBookingState, id: string, revision: number) {
+    if (!this.getReview(state)) {
+      return null;
+    }
+
+    return approvedMeeting(
+      { ...state, step: "confirmed", bookingOperation: { id, preparedRevision: revision } },
+      id,
+      false,
+    );
+  }
+
+  adoptApproval(state: MeetingBookingState, id: string) {
+    if (
+      state.step !== "confirmed" ||
+      (!state.bookingOperation && !state.pendingBooking) ||
+      (state.bookingOperation && state.bookingOperation.id !== id)
+    ) {
+      return null;
+    }
+
+    return approvedMeeting(state, id, true);
   }
 
   getInstructions(state: MeetingBookingState): string {
@@ -81,6 +135,14 @@ export class MeetingBookingWorkflowDefinition implements IWorkflowDefinition<Mee
       : [FIND_MEETING_SLOTS_TOOL, UPDATE_MEETING_CONTEXT_TOOL];
   }
 
+  confirmLegacy(state: MeetingBookingState, interactionId: string, expectedRevision: number) {
+    return confirmLegacyMeeting(this.meetingService, state, { interactionId, expectedRevision });
+  }
+
+  bookLegacy(state: MeetingBookingState) {
+    return bookLegacyMeeting(this.meetingService, state);
+  }
+
   executeTool(
     name: string,
     rawArguments: string,
@@ -95,6 +157,79 @@ export class MeetingBookingWorkflowDefinition implements IWorkflowDefinition<Mee
       context,
     });
   }
+}
+
+function approvedMeeting(state: MeetingBookingState, id: string, adopt: boolean) {
+  const { name, email, reason, selectedSlot: slot, pendingBooking } = state;
+
+  if (
+    !name ||
+    !email ||
+    !reason ||
+    !slot ||
+    !(Date.parse(slot.start) < Date.parse(slot.end)) ||
+    slot.timezone !== "Europe/London" ||
+    (pendingBooking &&
+      (pendingBooking.name !== name ||
+        pendingBooking.email.toLowerCase() !== email.toLowerCase() ||
+        pendingBooking.reason !== reason ||
+        pendingBooking.selectedSlot.start !== slot.start ||
+        pendingBooking.selectedSlot.end !== slot.end ||
+        pendingBooking.selectedSlot.timezone !== slot.timezone))
+  ) {
+    return null;
+  }
+
+  const stableEventId = `b${id.replaceAll("-", "").toLowerCase()}`;
+
+  if (state.bookingOperation && pendingBooking && pendingBooking.googleEventId !== stableEventId) {
+    return null;
+  }
+
+  const eventId = pendingBooking?.googleEventId ?? stableEventId;
+
+  if (!/^[a-zA-Z0-9_-]{5,1024}$/.test(eventId)) {
+    return null;
+  }
+
+  const releaseState = {
+    ...state,
+    step: "collecting",
+    availableSlots: [],
+    availabilityCheckedAt: null,
+    selectedSlot: null,
+    preparedInteractionId: null,
+    bookingOperation: null,
+    pendingBooking: null,
+  };
+
+  return {
+    actionKey: MEETING_BOOKING_ACTION,
+    approvedInput: {
+      name,
+      email,
+      reason,
+      slot,
+      eventId,
+      lookupOnly: Boolean(pendingBooking),
+      possiblyDispatched: adopt,
+    },
+    acceptedState: state,
+    checkpoint: { releaseState },
+    adopt,
+    reservation: {
+      googleEventId: eventId,
+      name,
+      email,
+      reason,
+      timezone: slot.timezone,
+      startsAt: new Date(slot.start),
+      endsAt: new Date(slot.end),
+      status: "pending",
+      rawProviderPayload: {},
+      googleEventUrl: null,
+    },
+  };
 }
 
 const MEETING_INSTRUCTIONS = `You are coordinating Freeman's meeting-booking workflow.

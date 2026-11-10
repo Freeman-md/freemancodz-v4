@@ -13,7 +13,13 @@ import type { Logger } from "@/infrastructure/logging/logger";
 import type { AssistantResponseInput } from "@/modules/assistant/types";
 import type { RateLimitService } from "@/modules/rate-limit/service";
 
-import { CHAT_RATE_LIMIT_RULES, CHAT_RATE_LIMIT_SCOPE, MAX_CHAT_BODY_BYTES } from "./constants";
+import {
+  CHAT_RATE_LIMIT_RULES,
+  CHAT_RATE_LIMIT_SCOPE,
+  MAX_CHAT_BODY_BYTES,
+  WORKFLOW_STATUS_RATE_LIMIT_RULES,
+  WORKFLOW_STATUS_RATE_LIMIT_SCOPE,
+} from "./constants";
 
 // Request parsing
 export async function parseChatRequest(request: Request): Promise<AssistantRequest | NextResponse> {
@@ -79,24 +85,32 @@ async function readChatBody(request: Request): Promise<string | null> {
 // Rate limiting
 export async function checkChatRateLimit(
   request: Request,
-  { rateLimitService, logger, onVercel }: {
+  {
+    rateLimitService,
+    logger,
+    onVercel,
+    statusOnly,
+  }: {
     rateLimitService: Pick<RateLimitService, "consume">;
     logger: Logger;
     onVercel: boolean;
+    statusOnly: boolean;
   },
 ): Promise<NextResponse | null> {
+  const scope = statusOnly ? WORKFLOW_STATUS_RATE_LIMIT_SCOPE : CHAT_RATE_LIMIT_SCOPE;
+
   let rateLimit;
 
   try {
     rateLimit = await rateLimitService.consume({
-      scope: CHAT_RATE_LIMIT_SCOPE,
+      scope,
       identifier: getVisitorIdentifier(request, onVercel),
-      rules: CHAT_RATE_LIMIT_RULES,
+      rules: statusOnly ? WORKFLOW_STATUS_RATE_LIMIT_RULES : CHAT_RATE_LIMIT_RULES,
     });
   } catch {
     logger.error("chat.rate_limit_failed", {
       category: "rate_limit_failure",
-      scope: CHAT_RATE_LIMIT_SCOPE,
+      scope,
     });
 
     return NextResponse.json(
@@ -107,7 +121,11 @@ export async function checkChatRateLimit(
 
   if (!rateLimit.allowed) {
     return NextResponse.json(
-      { error: rateLimitError(rateLimit.limit) },
+      {
+        error: statusOnly
+          ? "Too many status checks. Please try again shortly."
+          : rateLimitError(rateLimit.limit),
+      },
       {
         status: 429,
         headers: {
@@ -158,13 +176,17 @@ export function resolveWorkflowSession(
 
   const workflowInstanceId = reference && existingSession ? access.decode(reference) : null;
 
-  const verifiedRequest = "action" in parsed
-    ? workflowInstanceId && { ...parsed, workflowInstanceId }
-    : { ...parsed, workflowInstanceId };
+  const verifiedRequest =
+    "action" in parsed
+      ? workflowInstanceId && { ...parsed, workflowInstanceId }
+      : { ...parsed, workflowInstanceId };
 
   if (!verifiedRequest || (reference && !workflowInstanceId)) {
     return NextResponse.json(
-      { error: "This workflow is unavailable in this browser session.", code: WORKFLOW_ACCESS_DENIED },
+      {
+        error: "This workflow is unavailable in this browser session.",
+        code: WORKFLOW_ACCESS_DENIED,
+      },
       { status: 403 },
     );
   }

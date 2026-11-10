@@ -1,6 +1,6 @@
-import { type NextRequest, NextResponse } from "next/server";
+import { after, type NextRequest, NextResponse } from "next/server";
 
-import { getRateLimitHmacSecret } from "@/infrastructure/config/env";
+import { getRateLimitHmacSecret, isWorkflowPreviewConfigured } from "@/infrastructure/config/env";
 import type { Logger } from "@/infrastructure/logging/logger";
 import type { AssistantService } from "@/modules/assistant/service";
 import type { RateLimitService } from "@/modules/rate-limit/service";
@@ -12,12 +12,14 @@ export function createChatPostHandler({
   rateLimitService,
   logger,
   getAccessSecret,
+  scheduleExecution,
   onVercel = process.env.VERCEL === "1",
 }: {
   assistantService: Pick<AssistantService, "createResponse">;
   rateLimitService: Pick<RateLimitService, "consume">;
   logger: Logger;
   getAccessSecret: () => string;
+  scheduleExecution?: (executionId: Promise<string | undefined>) => void;
   onVercel?: boolean;
 }) {
   return async function POST(request: NextRequest) {
@@ -27,7 +29,14 @@ export function createChatPostHandler({
       return parsed;
     }
 
-    const rateLimitResponse = await checkChatRateLimit(request, { rateLimitService, logger, onVercel });
+    const statusOnly = "action" in parsed && parsed.action === "workflow_status";
+
+    const rateLimitResponse = await checkChatRateLimit(request, {
+      rateLimitService,
+      logger,
+      onVercel,
+      statusOnly,
+    });
 
     if (rateLimitResponse) {
       return rateLimitResponse;
@@ -39,8 +48,17 @@ export function createChatPostHandler({
       return session;
     }
 
+    const pending =
+      scheduleExecution && "action" in session.input && session.input.action !== "workflow_status"
+        ? Promise.withResolvers<string | undefined>()
+        : null;
+
+    if (pending) {
+      scheduleExecution?.(pending.promise);
+    }
+
     const response = new NextResponse(
-      assistantService.createResponse(session.input, session.encodeWorkflowId),
+      assistantService.createResponse(session.input, session.encodeWorkflowId, pending?.resolve),
       {
         headers: {
           "Cache-Control": "no-cache, no-transform",
@@ -64,12 +82,28 @@ export function createChatPostHandler({
 }
 
 export async function POST(request: NextRequest) {
-  const { assistantService, logger, rateLimitService } = await import("@/modules/composition");
+  if (!isWorkflowPreviewConfigured()) {
+    return NextResponse.json(
+      { error: "The isolated Preview workflow is not configured." },
+      { status: 503 },
+    );
+  }
+
+  const { assistantService, logger, rateLimitService, workflowExecutionService } =
+    await import("@/modules/composition");
 
   return createChatPostHandler({
     assistantService,
     rateLimitService,
     logger,
     getAccessSecret: getRateLimitHmacSecret,
+    scheduleExecution: (executionId) =>
+      after(async () => {
+        const id = await executionId;
+
+        if (id) {
+          await workflowExecutionService.runDue(id);
+        }
+      }),
   })(request);
 }

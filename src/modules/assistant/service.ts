@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { FALLBACK_ANSWER, MAX_TOOL_CALL_ITERATIONS } from "./constants";
 import { CHAT_SYSTEM_PROMPT } from "./prompt";
 import type { AssistantResponseInput } from "./types";
-import { GLOBAL_ASSISTANT_TOOLS, PORTFOLIO_SEARCH_TOOL } from "./tools/definitions";
+import { GLOBAL_ASSISTANT_TOOLS, TURN_PURPOSE_TOOL } from "./tools/definitions";
 import { executeGlobalAssistantTool } from "./tools/execute";
 import type {
   OpenAITransport,
@@ -14,15 +14,23 @@ import type { Logger } from "@/infrastructure/logging/logger";
 import { z } from "zod";
 import type { PortfolioSearchService } from "@/modules/portfolio/services/portfolio-search.service";
 import type { AssistantSource, AssistantStreamEvent } from "@/contracts/assistant.contract";
-import { START_WORKFLOW_TOOL_NAME, SWITCH_WORKFLOW_TOOL_NAME } from "@/modules/workflow/constants";
+import {
+  CANCEL_WORKFLOW_TOOL_NAME,
+  START_WORKFLOW_TOOL_NAME,
+  SWITCH_WORKFLOW_TOOL_NAME,
+} from "@/modules/workflow/constants";
 import type { IWorkflowService } from "@/modules/workflow/interfaces";
 import type { WorkflowAssistantContext, WorkflowPublicInstance } from "@/modules/workflow/types";
 import type { AssistantChoice } from "@/contracts/assistant-choice.contract";
 
-const searchArguments = z.strictObject({
-  query: z.string().trim().min(1).max(240).nullable(),
-  workflowRequested: z.boolean(),
-});
+const turnPurposeArguments = z
+  .strictObject({
+    purpose: z.enum(["workflow", "portfolio", "clarify", "conversation"]),
+    query: z.string().trim().min(1).max(240).nullable(),
+  })
+  .refine(({ purpose, query }) => (purpose === "portfolio") === (query !== null));
+
+type TurnPurpose = z.infer<typeof turnPurposeArguments>["purpose"];
 
 const searchUnavailable = "I couldn’t search the portfolio just now. Please try again shortly.";
 
@@ -38,9 +46,13 @@ export class AssistantService {
     private readonly portfolioSearch?: Pick<PortfolioSearchService, "search">,
   ) {}
 
-  createResponse(request: AssistantResponseInput, encodeWorkflowId: (id: string) => string) {
+  createResponse(
+    request: AssistantResponseInput,
+    encodeWorkflowId: (id: string) => string,
+    executionReady?: (id?: string) => void,
+  ) {
     if ("action" in request) {
-      return this.createWorkflowActionResponse(request, encodeWorkflowId);
+      return this.createWorkflowActionResponse(request, encodeWorkflowId, executionReady);
     }
 
     // Each stream owns its state, including transitions saved before a later failure.
@@ -57,7 +69,8 @@ export class AssistantService {
       choice: null,
       search: null,
       searchNotice: null,
-      workflowRequested: false,
+      purpose: null,
+      reviewReady: false,
       sources: [],
       completed: false,
       operation: "workflow_context",
@@ -91,7 +104,7 @@ export class AssistantService {
               state.choice = null;
               state.responseId = previousCheckpoint;
               write({ type: "delta", delta: "I couldn’t continue the request. Please try again." });
-              this.writeFinalEvents(state, write);
+              this.writeFinalEvents(state, write, false);
             } else {
               if (state.workflowInstance) {
                 write({ type: "workflow_instance", instance: state.workflowInstance });
@@ -126,6 +139,7 @@ export class AssistantService {
   private createWorkflowActionResponse(
     request: Extract<AssistantResponseInput, { action: string }>,
     encodeWorkflowId: (id: string) => string,
+    executionReady?: (id?: string) => void,
   ) {
     let connected = true;
 
@@ -143,10 +157,21 @@ export class AssistantService {
           }
         };
 
+        let executionId: string | undefined;
+
         try {
+          if (request.action === "workflow_status") {
+            const current = await this.workflow.getAssistantContext(request.workflowInstanceId);
+
+            write({ type: "workflow_instance", instance: current.instance });
+
+            return;
+          }
+
           // Acceptance and provider work must survive loss of the response stream.
           const result = await this.executeWorkflowAction(request);
 
+          executionId = result.executionId;
           write({ type: "workflow_instance", instance: result.instance });
           write({
             type: "delta",
@@ -156,6 +181,15 @@ export class AssistantService {
                 : "Please review the current request details.",
           });
         } catch {
+          if (request.action === "workflow_status") {
+            this.logger.error("assistant.workflow_status_failed", {
+              category: "workflow_status_unavailable",
+            });
+            write({ type: "error", error: "The saved workflow status could not be loaded." });
+
+            return;
+          }
+
           this.logger.error("assistant.workflow_action_failed", {
             action: request.action,
             workflowInstanceId: request.workflowInstanceId,
@@ -177,6 +211,7 @@ export class AssistantService {
               "We could not finish checking this request. Review its status and retry the same request.",
           });
         } finally {
+          executionReady?.(executionId);
           write({ type: "done" });
           if (connected) {
             try {
@@ -193,15 +228,18 @@ export class AssistantService {
     });
   }
 
-  private executeWorkflowAction(request: Extract<AssistantResponseInput, { action: string }>) {
+  private executeWorkflowAction(
+    request: Extract<AssistantResponseInput, { action: "confirm_workflow" | "retry_workflow" }>,
+  ) {
     switch (request.action) {
-      case "confirm_booking":
-        return this.workflow.confirmMeetingBooking(
+      case "confirm_workflow":
+        return this.workflow.confirmWorkflow(
           request.workflowInstanceId,
+          request.actionKey,
           request.expectedRevision,
         );
-      case "retry_booking":
-        return this.workflow.retryMeetingBooking(request.workflowInstanceId);
+      case "retry_workflow":
+        return this.workflow.retryWorkflow(request.workflowInstanceId);
     }
   }
 
@@ -221,48 +259,40 @@ export class AssistantService {
       const request = this.createModelRequest(state, workflowContext, iteration);
 
       state.operation = "provider_response";
-      const beforeSearch = request.tools.some(({ name }) => name === PORTFOLIO_SEARCH_TOOL.name);
+      const bufferText =
+        request.requireTool || state.purpose === "workflow" || state.purpose === "clarify";
 
       const buffered: AssistantStreamEvent[] = [];
 
-      const checkEvidence = state.search === "found";
-
-      const evidenceWriter = checkEvidence ? this.groundAnswer(state, write) : null;
+      const evidenceWriter = state.search === "found" ? this.groundAnswer(state, write) : null;
 
       const toolCalls = await this.streamModelResponse(
         request,
         state,
-        beforeSearch ? (event) => buffered.push(event) : (evidenceWriter?.write ?? write),
+        bufferText ? (event) => buffered.push(event) : (evidenceWriter?.write ?? write),
       );
 
       if (state.signal.aborted) {
         return;
       }
 
-      const searched = toolCalls.some(({ name }) => name === PORTFOLIO_SEARCH_TOOL.name);
-
       if (
         request.requireTool &&
-        (!searched || toolCalls.some(({ name }) => name !== PORTFOLIO_SEARCH_TOOL.name))
+        (toolCalls.length !== 1 || toolCalls[0].name !== TURN_PURPOSE_TOOL.name)
       ) {
-        // A direct completion bypassed the routing step and may contain unsupported facts.
         state.didStreamText = false;
         state.responseId = previousCheckpoint;
 
         return;
       }
 
-      if (searched && beforeSearch) {
-        state.didStreamText = false;
-      } else {
+      if (toolCalls.length === 0) {
         for (const event of buffered) {
           write(event);
         }
-      }
 
-      evidenceWriter?.finish(toolCalls.length === 0);
+        evidenceWriter?.finish(true);
 
-      if (toolCalls.length === 0) {
         break;
       }
 
@@ -271,34 +301,48 @@ export class AssistantService {
       }
 
       state.operation = "tool_execution";
-      state.input = await this.executeToolBatch(toolCalls, state, workflowContext, write);
+      state.input = await this.executeToolBatch(
+        toolCalls,
+        state,
+        workflowContext,
+        request.tools.map(({ name }) => name),
+        write,
+      );
       if (state.signal.aborted) {
         return;
       }
 
-      if (
-        beforeSearch &&
-        searched &&
-        (state.search === "empty" || state.search === "unavailable")
-      ) {
-        const limitation = state.search === "unavailable" ? searchUnavailable : searchEmpty;
-
-        state.searchNotice = limitation;
-        write({ type: "delta", delta: state.workflowRequested ? `${limitation}\n\n` : limitation });
-        state.didStreamText = true;
-        if (!state.workflowRequested && !state.choice) {
-          // Keep the last usable checkpoint rather than resuming an unanswered provider tool call.
+      if (request.requireTool) {
+        state.didStreamText = false;
+        if (!state.purpose || state.search === "empty" || state.search === "unavailable") {
           state.responseId = previousCheckpoint;
 
           return;
         }
+
+        continue;
       }
 
-      if (state.choice) {
-        await this.finishChoiceResponse(state, write);
+      const review = state.workflowInstance;
+
+      const previousReview = workflowContext.instance;
+
+      state.reviewReady =
+        state.purpose === "workflow" &&
+        review?.confirmationAction === "confirm" &&
+        (review.id !== previousReview?.id || review.revision !== previousReview.revision);
+
+      if (state.choice || state.reviewReady) {
+        await this.finishAuthoritativeResponse(state, write);
 
         return;
       }
+
+      for (const event of buffered) {
+        write(event);
+      }
+
+      evidenceWriter?.finish(false);
     }
   }
 
@@ -329,7 +373,13 @@ export class AssistantService {
 
     const instructions = [
       CHAT_SYSTEM_PROMPT,
-      workflowInstructions,
+      state.purpose === "portfolio" || state.purpose === "conversation" ? "" : workflowInstructions,
+      state.purpose === "clarify"
+        ? "Ask the visitor which request to handle first. Do not answer or change their saved booking."
+        : "",
+      state.purpose === "workflow"
+        ? "Continue only the visitor’s booking request. Show no review fields in prose because the application displays the saved review."
+        : "",
       state.search === "found"
         ? `Start the answer with the exact prefix ${groundedPrefix} followed by the answer only if the excerpts directly support the requested fact. The prefix is required for every supported answer. If the excerpts do not support the main question, reply with UNSUPPORTED alone. Mention of Pay4Me does not support an unstated team size. Mention of unrelated employers does not support work at Microsoft. Do not emit ${groundedPrefix} when saying you could not find the requested fact.`
         : "",
@@ -343,12 +393,12 @@ export class AssistantService {
     const routeFirst = iteration === 0 && Boolean(this.portfolioSearch);
 
     const tools = routeFirst
-      ? [PORTFOLIO_SEARCH_TOOL]
-      : [
-          ...GLOBAL_ASSISTANT_TOOLS,
-          ...workflowTools,
-          ...(this.portfolioSearch && state.search === null ? [PORTFOLIO_SEARCH_TOOL] : []),
-        ];
+      ? [TURN_PURPOSE_TOOL]
+      : state.purpose === "portfolio" || state.purpose === "conversation"
+        ? []
+        : state.purpose === "clarify"
+          ? GLOBAL_ASSISTANT_TOOLS
+          : [...GLOBAL_ASSISTANT_TOOLS, ...workflowTools];
 
     return {
       input: state.input,
@@ -472,6 +522,7 @@ export class AssistantService {
     toolCalls: ToolCall[],
     state: ResponseState,
     workflowContext: WorkflowAssistantContext,
+    offeredTools: string[],
     write: WriteEvent,
   ) {
     const outputs: OpenAIResponseInputItem[] = [];
@@ -490,7 +541,9 @@ export class AssistantService {
               error: "skipped",
               message: "Use the current context and wait for the visitor before further actions.",
             }
-          : await this.executeToolCall(toolCall, state, workflowContext, write);
+          : offeredTools.includes(toolCall.name)
+            ? await this.executeToolCall(toolCall, state, workflowContext, write)
+            : { error: "unknown_tool", message: "This tool was not offered for this turn." };
 
       outputs.push({
         type: "function_call_output",
@@ -511,8 +564,8 @@ export class AssistantService {
     workflowContext: WorkflowAssistantContext,
     write: WriteEvent,
   ): Promise<Record<string, unknown>> {
-    if (toolCall.name === PORTFOLIO_SEARCH_TOOL.name) {
-      return this.searchPortfolio(toolCall.arguments, state);
+    if (toolCall.name === TURN_PURPOSE_TOOL.name) {
+      return this.decideTurnPurpose(toolCall.arguments, state);
     }
 
     if (GLOBAL_ASSISTANT_TOOLS.some(({ name }) => name === toolCall.name)) {
@@ -532,7 +585,27 @@ export class AssistantService {
       };
     }
 
-    state.workflowRequested = true;
+    const message = state.message
+      .trim()
+      .toLowerCase()
+      .replace(/[.!?]+$/, "");
+
+    if (
+      (toolCall.name === CANCEL_WORKFLOW_TOOL_NAME &&
+        !/^(?:(?:yes[, ]+|please )?cancel (?:my |the |this |that )?(?:meeting|booking|request|workflow))(?: please)?$/.test(
+          message,
+        )) ||
+      (toolCall.name === SWITCH_WORKFLOW_TOOL_NAME &&
+        !/^(?:yes[, ]+|please )?(?:switch to |continue (?:with )?(?:my |the |this )?)[a-z]/.test(
+          message,
+        ))
+    ) {
+      return {
+        error: "explicit_choice_required",
+        message: "Ask the visitor to explicitly choose whether to cancel or switch.",
+      };
+    }
+
     const result = await this.workflow.executeTool(state.activeWorkflowInstanceId, {
       name: toolCall.name,
       rawArguments: toolCall.arguments,
@@ -552,28 +625,27 @@ export class AssistantService {
     return result.output;
   }
 
-  private async searchPortfolio(rawArguments: string, state: ResponseState) {
-    if (!this.portfolioSearch || state.search !== null) {
-      return {
-        error: "search_limit",
-        message: "Use the portfolio result already provided for this turn.",
-      };
+  private async decideTurnPurpose(rawArguments: string, state: ResponseState) {
+    if (state.purpose || !this.portfolioSearch) {
+      return { error: "invalid_turn_purpose" };
+    }
+
+    let args: z.infer<typeof turnPurposeArguments>;
+
+    try {
+      args = turnPurposeArguments.parse(JSON.parse(rawArguments));
+    } catch {
+      return { error: "invalid_turn_purpose" };
+    }
+
+    state.purpose = args.purpose;
+    if (args.query === null) {
+      return { purpose: args.purpose };
     }
 
     state.search = "unavailable";
-
     try {
-      const args: unknown = JSON.parse(rawArguments);
-
-      const { query, workflowRequested } = searchArguments.parse(args);
-
-      state.workflowRequested ||= workflowRequested;
-
-      if (query === null) {
-        state.search = "not_needed";
-
-        return { status: "no_portfolio_facts_needed" };
-      }
+      const { query } = args;
 
       const matches = await this.portfolioSearch.search(query, state.signal);
 
@@ -600,17 +672,17 @@ export class AssistantService {
     }
   }
 
-  private async finishChoiceResponse(state: ResponseState, write: WriteEvent) {
-    state.operation = "choice_continuation";
+  private async finishAuthoritativeResponse(state: ResponseState, write: WriteEvent) {
+    state.operation = state.choice ? "choice_continuation" : "review_continuation";
     const context = await this.workflow.getAssistantContext(state.activeWorkflowInstanceId);
 
     const request = this.createModelRequest(state, context, 1);
 
-    // Resolve all tool outputs before exposing the choice and its reusable checkpoint.
+    // Resolve the tool output before publishing its reusable checkpoint.
     const calls = await this.streamModelResponse(
       {
         ...request,
-        instructions: `${request.instructions}\nThe application will display the question and options in its choice panel. Acknowledge the tool result without repeating the question or options. Wait for the visitor; do not answer it or perform further actions.`,
+        instructions: `${request.instructions}\nThe application will display the saved review or choice. Acknowledge the tool result without repeating it. Wait for the visitor and perform no further action.`,
         tools: [],
       },
       state,
@@ -623,16 +695,16 @@ export class AssistantService {
     );
 
     if (calls.length > 0) {
-      throw new Error("Unexpected tool call during choice continuation.");
+      throw new Error("Unexpected tool call during review or choice continuation.");
     }
   }
 
-  private writeFinalEvents(state: ResponseState, write: WriteEvent) {
+  private writeFinalEvents(state: ResponseState, write: WriteEvent, publishCheckpoint = true) {
     write({
       type: "sources",
       sources: state.completed && state.didStreamText && !state.choice ? state.sources : [],
     });
-    if (!state.didStreamText && !state.choice) {
+    if (!state.didStreamText && !state.choice && !state.reviewReady) {
       const delta =
         state.search === "empty"
           ? searchEmpty
@@ -643,16 +715,12 @@ export class AssistantService {
       write({ type: "delta", delta });
     }
 
-    if (state.responseId) {
+    if (publishCheckpoint && state.responseId) {
       write({ type: "response_id", responseId: state.responseId });
     }
 
     if (state.choice) {
       write({ type: "choice", choice: state.choice });
-      if (state.searchNotice) {
-        // The choice clears earlier transcript text. Preserve the portfolio notice beside the options.
-        write({ type: "delta", delta: state.searchNotice });
-      }
     }
 
     if (state.workflowInstance) {
@@ -662,10 +730,7 @@ export class AssistantService {
     write({ type: "done" });
   }
 
-  private createWorkflowAwareMessage(
-    message: string,
-    instance: WorkflowPublicInstance,
-  ) {
+  private createWorkflowAwareMessage(message: string, instance: WorkflowPublicInstance) {
     const progress = JSON.stringify({
       workflowId: instance.workflowId,
       status: instance.status,
@@ -717,8 +782,9 @@ type ResponseState = {
   workflowEndedThisInteraction: boolean;
   didStreamText: boolean;
   choice: AssistantChoice | null;
-  workflowRequested: boolean;
-  search: "found" | "empty" | "unavailable" | "not_needed" | null;
+  purpose: TurnPurpose | null;
+  reviewReady: boolean;
+  search: "found" | "empty" | "unavailable" | null;
   searchNotice: string | null;
   sources: AssistantSource[];
   completed: boolean;

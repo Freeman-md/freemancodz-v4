@@ -35,8 +35,7 @@ export function AssistantChoice({ choice, isLoading, onSend, onWriteReply }: Pro
         void onSend(selected);
       }}
     >
-      <fieldset disabled={isLoading}>
-        <legend>{choice.question}</legend>
+      <fieldset aria-label="Reply options" disabled={isLoading}>
         {choice.options.map((option, index) => (
           <label key={option} className="assistant-choice-option">
             <input

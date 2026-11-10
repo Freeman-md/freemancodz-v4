@@ -64,8 +64,6 @@ export const prepareMeetingSchema = z
   })
   .strict();
 
-export const noArgumentsSchema = z.object({}).strict();
-
 export const updateMeetingContextSchema = z
   .object({
     updates: z

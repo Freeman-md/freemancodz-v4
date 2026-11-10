@@ -151,7 +151,9 @@ function createAssistant({
 
 function chatRequest(body: unknown, signal?: AbortSignal) {
   const payload =
-    typeof body === "object" && body && "workflowInstanceId" in body &&
+    typeof body === "object" &&
+    body &&
+    "workflowInstanceId" in body &&
     typeof body.workflowInstanceId === "string"
       ? { ...body, workflowInstanceId: testAccess.encode(body.workflowInstanceId) }
       : body;
@@ -171,6 +173,61 @@ async function readChatResponse(response: Response) {
 
   return read(response.body);
 }
+
+test("workflow status is read-only, session bound, and separately rate limited", async () => {
+  const { inputs, post, workflowRepository, workflowService, rateLimitInputs } = createAssistant();
+
+  const instance = await workflowService.start("meeting-booking", {
+    originChannel: "test",
+    originPage: null,
+    originEntry: null,
+  });
+
+  const before = await workflowRepository.findById(instance.id);
+
+  const output = await readChatResponse(
+    await post(
+      chatRequest({
+        action: "workflow_status",
+        workflowInstanceId: instance.id,
+      }),
+    ),
+  );
+
+  const streamed = output
+    .trim()
+    .split("\n")
+    .map((line) => assistantStreamEventSchema.parse(JSON.parse(line)));
+
+  assert.deepEqual(
+    streamed.map(({ type }) => type),
+    ["workflow_instance", "done"],
+  );
+  assert.match(output, /"workflowId":"meeting-booking"/);
+  assert.equal(inputs.length, 0);
+  assert.deepEqual(await workflowRepository.findById(instance.id), before);
+  assert.deepEqual(rateLimitInputs, [
+    {
+      scope: "workflow-status",
+      identifier: "anonymous",
+      rules: [{ id: "minute", limit: 24, windowMs: 60_000 }],
+    },
+  ]);
+
+  const rejected = await post(
+    new NextRequest("http://localhost/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Cookie: `portfolio-chat=${"B".repeat(43)}` },
+      body: JSON.stringify({
+        action: "workflow_status",
+        workflowInstanceId: testAccess.encode(instance.id),
+      }),
+    }),
+  );
+
+  assert.equal(rejected.status, 403);
+  assert.equal(inputs.length, 0);
+});
 
 test("allowed chat requests consume the configured rules and stream without mandatory retrieval", async () => {
   const { inputs, post, rateLimitInputs } = createAssistant();
@@ -408,7 +465,12 @@ test("a saved update or cancellation is streamed before a provider continuation 
     });
 
     const output = await readChatResponse(
-      await post(chatRequest({ message: "Update this request", workflowInstanceId: instance.id })),
+      await post(
+        chatRequest({
+          message: cancelled ? "Cancel this booking" : "Update this request",
+          workflowInstanceId: instance.id,
+        }),
+      ),
     );
 
     const streamed = output
@@ -452,8 +514,7 @@ test("a saved update or cancellation is streamed before a provider continuation 
 
 test("the bounded model loop stops before executing a fourth tool batch", async () => {
   const { inputs, post } = createAssistant({
-    response: async () =>
-      toolResponse("resp_again", { name: "unknown_tool", arguments: "{}" }),
+    response: async () => toolResponse("resp_again", { name: "unknown_tool", arguments: "{}" }),
   });
 
   const output = await readChatResponse(await post(chatRequest({ message: "Find relevant work" })));
@@ -503,14 +564,18 @@ test("partial meeting details return after refresh without a model checkpoint", 
   assert.equal(context.instance?.progress.fields[1].value, "visitor@example.com");
 });
 
-function portfolioCall(query: string | null, id = "call_search", workflowRequested = false) {
+function purposeCall(
+  purpose: "portfolio" | "workflow" | "clarify" | "conversation",
+  query: string | null = null,
+  id = "call_purpose",
+) {
   return {
     type: "response.output_item.done",
     item: {
       type: "function_call",
       call_id: id,
-      name: "search_portfolio",
-      arguments: JSON.stringify({ query, workflowRequested }),
+      name: "decide_turn_purpose",
+      arguments: JSON.stringify({ purpose, query }),
     },
   };
 }
@@ -541,7 +606,7 @@ for (const [message, query, title, url] of [
       response: async (request) => {
         if (request.input[0]?.type === "function_call_output") {
           assert.ok(JSON.stringify(request.input).includes(excerpt));
-          assert.ok(request.tools.every(({ name }) => name !== "search_portfolio"));
+          assert.ok(request.tools.every(({ name }) => name !== "decide_turn_purpose"));
 
           return events(
             { type: "response.output_text.delta", delta: "[[GROUND" },
@@ -553,12 +618,11 @@ for (const [message, query, title, url] of [
 
         assert.equal(request.requireTool, true);
         assert.equal(request.previousResponseId, "resp_prior");
-        assert.ok(request.tools.some(({ name }) => name === "search_portfolio"));
+        assert.ok(request.tools.some(({ name }) => name === "decide_turn_purpose"));
 
         return events(
           { type: "response.output_text.delta", delta: "Discard this preamble" },
-          portfolioCall(query),
-          portfolioCall(query, "duplicate"),
+          purposeCall("portfolio", query),
           { type: "response.completed", response: { id: "resp_search" } },
         );
       },
@@ -595,7 +659,7 @@ for (const unavailable of [false, true]) {
           "No provider continuation is needed for a search failure",
         );
 
-        return events(portfolioCall("Freeman astronaut missions"), {
+        return events(purposeCall("portfolio", "Freeman astronaut missions"), {
           type: "response.completed",
           response: { id: "resp_unanswered_call" },
         });
@@ -676,16 +740,19 @@ test("ordinary conversation can continue without calling the embedding provider"
       if (request.requireTool) {
         assert.deepEqual(
           request.tools.map(({ name }) => name),
-          ["search_portfolio"],
+          ["decide_turn_purpose"],
         );
 
-        return events(portfolioCall(null), {
+        return events(purposeCall("conversation"), {
           type: "response.completed",
           response: { id: "resp_route" },
         });
       }
 
-      assert.match(JSON.stringify(request.input), /no_portfolio_facts_needed/);
+      const route = request.input[0];
+
+      assert.equal(route?.type, "function_call_output");
+      assert.deepEqual(JSON.parse(route.output), { purpose: "conversation" });
 
       return events(
         { type: "response.output_text.delta", delta: "Hello! How can I help?" },
@@ -713,7 +780,7 @@ test("an ungrounded answer drops unrelated matches even if the model writes a li
     },
     response: async (request) => {
       if (request.requireTool) {
-        return events(portfolioCall("Microsoft employment history"), {
+        return events(purposeCall("portfolio", "Microsoft employment history"), {
           type: "response.completed",
           response: { id: "resp_search" },
         });
@@ -738,29 +805,50 @@ test("an ungrounded answer drops unrelated matches even if the model writes a li
   assert.doesNotMatch(output, /Microsoft in the snippets|worth a look|\/#experience/);
 });
 
-test("a mixed Meeting turn keeps the search limitation if the workflow continuation fails", async () => {
-  const { post } = createAssistant({
+test("competing Meeting and portfolio requests only ask which to handle", async () => {
+  const choice = {
+    question: "Which should we handle first?",
+    options: ["Book a meeting first", "Answer the JPScents question first"],
+  };
+
+  let searches = 0;
+
+  const { post, workflowRepository } = createAssistant({
     portfolioSearch: {
       search: async () => {
-        throw new Error("provider offline");
+        searches += 1;
+
+        return [];
       },
     },
     response: async (request) => {
       if (request.requireTool) {
-        return events(portfolioCall("JPScents", "call_search", true), {
+        return events(purposeCall("clarify"), {
           type: "response.completed",
-          response: { id: "resp_search" },
+          response: { id: "resp_purpose" },
         });
       }
 
-      if (request.tools.some(({ name }) => name === "start_workflow")) {
-        return toolResponse("resp_start_meeting", {
-          name: "start_workflow",
-          arguments: '{"workflowId":"meeting-booking"}',
-        });
+      if (request.tools.length) {
+        assert.deepEqual(
+          request.tools.map(({ name }) => name),
+          ["ask_user_choice"],
+        );
+
+        return toolResponse(
+          "resp_options",
+          {
+            name: "start_workflow",
+            arguments: '{"workflowId":"meeting-booking"}',
+          },
+          {
+            name: "ask_user_choice",
+            arguments: JSON.stringify(choice),
+          },
+        );
       }
 
-      throw new Error("continuation offline");
+      return textResponse("resp_choice_ready", "Duplicate question that should stay hidden");
     },
   });
 
@@ -772,70 +860,187 @@ test("a mixed Meeting turn keeps the search limitation if the workflow continuat
     ),
   );
 
-  assert.equal(output.match(/couldn’t search the portfolio/g)?.length, 1);
-  assert.match(output, /"workflowId":"meeting-booking"/);
-  assert.match(output, /couldn’t continue the request/);
-  assert.match(output, /"type":"done"/);
-  assert.doesNotMatch(output, /"type":"error"|provider offline|continuation offline/);
-});
-
-test("a portfolio limitation remains after a Meeting choice clears earlier text", async () => {
-  const choice = {
-    question: "What is the meeting about?",
-    options: ["Software consulting", "Collaboration"],
-  };
-
-  const { post } = createAssistant({
-    portfolioSearch: { search: async () => [] },
-    response: async (request) => {
-      if (request.requireTool) {
-        return events(portfolioCall("Apollo 11 lunar module pilot", "call_search", true), {
-          type: "response.completed",
-          response: { id: "resp_search" },
-        });
-      }
-
-      if (request.tools.some(({ name }) => name === "start_workflow")) {
-        return toolResponse("resp_start_meeting", {
-          name: "start_workflow",
-          arguments: '{"workflowId":"meeting-booking"}',
-        });
-      }
-
-      if (request.tools.length) {
-        return toolResponse("resp_options", {
-          name: "ask_user_choice",
-          arguments: JSON.stringify(choice),
-        });
-      }
-
-      return textResponse("resp_choice_ready", "Duplicate workflow copy that should stay hidden");
-    },
-  });
-
-  const output = await readChatResponse(
-    await post(
-      chatRequest({
-        message: "Did Freeman pilot Apollo 11? I also want to book a meeting.",
-      }),
-    ),
-  );
-
   const parsed = output
     .trim()
     .split("\n")
     .map((line) => assistantStreamEventSchema.parse(JSON.parse(line)));
 
-  const choiceIndex = parsed.findIndex((event) => event.type === "choice");
+  assert.equal(searches, 0);
+  assert.equal(workflowRepository.instances.size, 0);
+  assert.deepEqual(
+    parsed.filter(({ type }) => type === "choice"),
+    [{ type: "choice", choice }],
+  );
+  assert.doesNotMatch(output, /Duplicate question/);
+});
 
-  assert.ok(choiceIndex >= 0);
-  assert.deepEqual(parsed[choiceIndex], { type: "choice", choice });
-  assert.deepEqual(parsed[choiceIndex + 1], {
-    type: "delta",
-    delta: "I couldn’t find enough information in the portfolio to answer that.",
+test("a portfolio detour keeps the saved booking and later details never retrieve", async () => {
+  const source = { id: "jpscents", title: "JPScents", url: "/work/jpscents" };
+
+  const queries: string[] = [];
+
+  let purpose: "portfolio" | "workflow" = "workflow";
+
+  let update: { field: string; value: string | { start: string; end: string } } | null = null;
+
+  const { post, workflowService, workflowRepository } = createAssistant({
+    portfolioSearch: {
+      search: async (query) => {
+        queries.push(query);
+
+        return [{ excerpt: "Freeman built a fragrance storefront for JPScents.", source }];
+      },
+    },
+    response: async (request) => {
+      if (request.requireTool) {
+        return events(
+          purposeCall(purpose, purpose === "portfolio" ? "JPScents storefront" : null),
+          {
+            type: "response.completed",
+            response: { id: "resp_purpose" },
+          },
+        );
+      }
+
+      if (purpose === "portfolio") {
+        assert.deepEqual(request.tools, []);
+        assert.match(JSON.stringify(request.input), /fragrance storefront/);
+
+        return textResponse("resp_portfolio", "[[GROUNDED]] A fragrance storefront.");
+      }
+
+      const first = request.input[0];
+
+      if (update && first?.type === "function_call_output" && first.callId === "call_purpose") {
+        return toolResponse("resp_update", {
+          name: "update_meeting_context",
+          arguments: JSON.stringify({ updates: [update] }),
+        });
+      }
+
+      return textResponse("resp_workflow", "Got it.");
+    },
   });
-  assert.match(output, /"sources":\[\]/);
-  assert.doesNotMatch(output, /Duplicate workflow copy/);
+
+  const instance = await workflowService.start("meeting-booking", {
+    originChannel: "web",
+    originPage: null,
+    originEntry: null,
+  });
+
+  await workflowService.executeTool(instance.id, {
+    name: "find_meeting_slots",
+    rawArguments: JSON.stringify({ startDate: "2099-09-15", endDate: "2099-09-15" }),
+    interactionId: randomUUID(),
+  });
+
+  const send = async (message: string, previousResponseId?: string) =>
+    readChatResponse(
+      await post(chatRequest({ message, previousResponseId, workflowInstanceId: instance.id })),
+    );
+
+  update = { field: "name", value: "Visitor Example" };
+  assert.match(await send("My name is Visitor Example"), /Visitor Example/);
+  assert.deepEqual(queries, []);
+
+  const beforeDetour = await workflowRepository.findById(instance.id);
+
+  purpose = "portfolio";
+  const detour = await send("What did Freeman build for JPScents?", "resp_workflow");
+
+  assert.match(detour, /fragrance storefront|\/work\/jpscents/);
+  assert.match(detour, /"url":"\/work\/jpscents"/);
+  assert.deepEqual(await workflowRepository.findById(instance.id), beforeDetour);
+
+  purpose = "workflow";
+  for (const [message, field, value] of [
+    ["visitor@example.test", "email", "visitor@example.test"],
+    ["To discuss the project", "reason", "To discuss the project"],
+    ["The 11am slot", "selectedSlot", { start: meetingSlot.start, end: meetingSlot.end }],
+    ["Actually, call me Revised Visitor", "name", "Revised Visitor"],
+  ] as const) {
+    update = { field, value };
+    assert.match(await send(message, "resp_portfolio"), /"sources":\[\]/);
+  }
+
+  const saved = await workflowService.getAssistantContext(instance.id);
+
+  assert.equal(
+    saved.instance?.progress.fields.find(({ key }) => key === "name")?.value,
+    "Revised Visitor",
+  );
+  assert.equal(
+    saved.instance?.progress.fields.find(({ key }) => key === "email")?.value,
+    "visitor@example.test",
+  );
+  assert.deepEqual(queries, ["JPScents storefront"]);
+});
+
+test("a prepared booking uses saved review fields without repeating provisional model copy", async () => {
+  const { post, workflowService } = createAssistant({
+    portfolioSearch: {
+      search: async () => {
+        throw new Error("A booking review must not retrieve");
+      },
+    },
+    response: async (request) => {
+      if (request.requireTool) {
+        return events(purposeCall("workflow"), {
+          type: "response.completed",
+          response: { id: "resp_booking_route" },
+        });
+      }
+
+      if (request.tools.length === 0) {
+        return textResponse("resp_review_ready", "Repeated review fields");
+      }
+
+      return events(
+        { type: "response.output_text.delta", delta: "Provisional review fields" },
+        {
+          type: "response.output_item.done",
+          item: {
+            type: "function_call",
+            call_id: "prepare_review",
+            name: "prepare_meeting",
+            arguments: JSON.stringify({
+              name: "Visitor",
+              email: "visitor@example.test",
+              reason: "Discuss the project",
+              selectedSlot: { start: meetingSlot.start, end: meetingSlot.end },
+            }),
+          },
+        },
+        { type: "response.completed", response: { id: "resp_prepare_review" } },
+      );
+    },
+  });
+
+  const instance = await workflowService.start("meeting-booking", {
+    originChannel: "test",
+    originPage: null,
+    originEntry: null,
+  });
+
+  await workflowService.executeTool(instance.id, {
+    name: "find_meeting_slots",
+    rawArguments: '{"startDate":"2099-09-15","endDate":"2099-09-15"}',
+    interactionId: randomUUID(),
+  });
+
+  const output = await readChatResponse(
+    await post(
+      chatRequest({
+        message: "Book the 11am slot for Visitor at visitor@example.test to discuss the project",
+        workflowInstanceId: instance.id,
+      }),
+    ),
+  );
+
+  assert.match(output, /"confirmationAction":"confirm"/);
+  assert.match(output, /visitor@example.test/);
+  assert.match(output, /resp_review_ready/);
+  assert.doesNotMatch(output, /Provisional review fields|Repeated review fields/);
 });
 
 test("starting a workflow changes instructions and tools on the next iteration in one request", async () => {
@@ -877,12 +1082,7 @@ test("starting a workflow changes instructions and tools on the next iteration i
   );
   assert.deepEqual(
     inputs[1]?.tools.map(({ name }) => name),
-    [
-      "ask_user_choice",
-      "cancel_workflow",
-      "find_meeting_slots",
-      "update_meeting_context",
-    ],
+    ["ask_user_choice", "cancel_workflow", "find_meeting_slots", "update_meeting_context"],
   );
   assert.doesNotMatch(inputs[0]?.instructions ?? "", /meeting-booking workflow/i);
   assert.match(inputs[1]?.instructions ?? "", /meeting-booking workflow/i);
@@ -977,8 +1177,13 @@ test("a workflow reference resumes only in the browser session that received it"
 
   for (const body of [
     { message: "Continue my booking", workflowInstanceId: reference },
-    { action: "confirm_booking", workflowInstanceId: reference, expectedRevision: 0 },
-    { action: "retry_booking", workflowInstanceId: reference },
+    {
+      action: "confirm_workflow",
+      actionKey: "book-meeting",
+      workflowInstanceId: reference,
+      expectedRevision: 0,
+    },
+    { action: "retry_workflow", workflowInstanceId: reference },
   ]) {
     const denied = await send(body, otherCookie);
 
@@ -1103,7 +1308,10 @@ test("a booking message with an active Meeting continues that instance", async (
   );
 
   assert.equal(workflowRepository.instances.size, 1);
-  assert.equal(inputs[0]?.tools.some(({ name }) => name === "start_workflow"), false);
+  assert.equal(
+    inputs[0]?.tools.some(({ name }) => name === "start_workflow"),
+    false,
+  );
   assert.match(output, new RegExp(active.id));
   assert.match(output, /"workflowId":"meeting-booking"/);
 });
@@ -1524,20 +1732,22 @@ for (const failure of ["lost_calendar_response", "meeting_save", "response_disco
     const stale = await readChatResponse(
       await post(
         chatRequest({
-          action: "confirm_booking",
+          action: "confirm_workflow",
+          actionKey: "book-meeting",
           workflowInstanceId: instance.id,
           expectedRevision: prepared.revision - 1,
         }),
       ),
     );
 
-    assert.match(stale, /Review the updated summary/);
+    assert.match(stale, /Check the saved details before confirming/);
     assert.equal(inserts, 0);
     await readChatResponse(
       await post(
         chatRequest(
           {
-            action: "confirm_booking",
+            action: "confirm_workflow",
+            actionKey: "book-meeting",
             workflowInstanceId: instance.id,
             expectedRevision: prepared.revision,
           },
@@ -1552,7 +1762,7 @@ for (const failure of ["lost_calendar_response", "meeting_save", "response_disco
       );
       failSave = false;
       const recovered = await readChatResponse(
-        await post(chatRequest({ action: "retry_booking", workflowInstanceId: instance.id })),
+        await post(chatRequest({ action: "retry_workflow", workflowInstanceId: instance.id })),
       );
 
       assert.match(recovered, /"status":"completed"/);
@@ -1602,7 +1812,8 @@ test("terminal workflow metadata clears the active surface without streaming pri
   const output = await readChatResponse(
     await post(
       chatRequest({
-        action: "confirm_booking",
+        action: "confirm_workflow",
+        actionKey: "book-meeting",
         expectedRevision: (await workflowService.getAssistantContext(instance.id)).instance!
           .revision,
         workflowInstanceId: instance.id,
@@ -1650,10 +1861,11 @@ test("OpenAI streaming failure returns the existing safe stream error", async ()
 
 test("workflow persistence failure is safely distinguished from a provider failure", async () => {
   const { errors, inputs, post, workflowRepository } = createAssistant({
-    response: async () => toolResponse("resp_start_meeting", {
-      name: "start_workflow",
-      arguments: '{"workflowId":"meeting-booking"}',
-    }),
+    response: async () =>
+      toolResponse("resp_start_meeting", {
+        name: "start_workflow",
+        arguments: '{"workflowId":"meeting-booking"}',
+      }),
   });
 
   workflowRepository.create = async () => {

@@ -40,8 +40,31 @@ model WorkflowInstance {
   completedAt        DateTime?       @map("completed_at") @db.Timestamptz(6)
   updatedAt          DateTime        @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
   contactRequest     ContactRequest?
+  executions         WorkflowExecution[]
 
   @@map("workflow_instances")
+}
+
+model WorkflowExecution {
+  id                 String           @id @db.Uuid
+  workflowInstanceId String           @map("workflow_instance_id") @db.Uuid
+  workflowInstance   WorkflowInstance @relation(fields: [workflowInstanceId], references: [id], onDelete: Restrict)
+  reviewedRevision   Int              @map("reviewed_revision")
+  actionKey          String           @map("action_key")
+  approvedInput      Json             @map("approved_input") @db.JsonB
+  step               String
+  checkpoint         Json             @default("{}") @db.JsonB
+  attempt            Int              @default(0)
+  nextAttemptAt      DateTime         @default(now()) @map("next_attempt_at") @db.Timestamptz(6)
+  leaseToken         String?          @map("lease_token") @db.Uuid
+  leaseExpiresAt     DateTime?        @map("lease_expires_at") @db.Timestamptz(6)
+  stepStartedAt      DateTime?        @map("step_started_at") @db.Timestamptz(6)
+  category           String?
+  createdAt          DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@unique([workflowInstanceId, reviewedRevision])
+  @@index([step, nextAttemptAt])
+  @@map("workflow_executions")
 }
 
 model ContactRequest {

@@ -49,3 +49,15 @@ export function getGoogleCalendarConfig() {
     calendarId: requireEnv("GOOGLE_CALENDAR_ID", { trim: true }),
   };
 }
+
+export function getWorkflowRecoveryConfig() {
+  const secret = process.env.WORKFLOW_RECOVERY_SECRET;
+
+  return secret && secret.length >= 32
+    ? { secret, adoptLegacy: process.env.WORKFLOW_LEGACY_PICKUP === "1" }
+    : null;
+}
+
+export function isWorkflowPreviewConfigured() {
+  return process.env.VERCEL_ENV !== "preview" || getWorkflowRecoveryConfig() !== null;
+}

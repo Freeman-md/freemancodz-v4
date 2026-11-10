@@ -88,6 +88,84 @@ export class MeetingService {
     );
   }
 
+  async resolveApprovedCalendar(
+    input: BookMeetingInput,
+    eventId: string,
+    lookupOnly: boolean,
+    markDispatch: () => Promise<boolean>,
+  ): Promise<MeetingRecordInput> {
+    const lookup = async () => {
+      try {
+        return await this.calendar.findEvent(eventId);
+      } catch (error) {
+        throw new MeetingBookingError("unavailable", error);
+      }
+    };
+
+    let event = await lookup();
+
+    if (!event) {
+      if (lookupOnly) {
+        throw new MeetingBookingError("conflict");
+      }
+
+      let available: boolean;
+
+      try {
+        available = await this.isSlotAvailable(input.slot);
+      } catch (error) {
+        throw new MeetingBookingError("unavailable", error);
+      }
+
+      if (!available) {
+        throw new MeetingBookingError("slot_unavailable");
+      }
+
+      if (!(await markDispatch())) {
+        throw new MeetingBookingError("uncertain");
+      }
+
+      try {
+        event = await this.calendar.createEvent({
+          eventId,
+          bookingOperationId: input.bookingOperationId,
+          summary: `Meeting with ${input.name}`,
+          description: input.reason,
+          attendeeEmail: input.email,
+          start: new Date(input.slot.start),
+          end: new Date(input.slot.end),
+          timezone: input.slot.timezone,
+        });
+      } catch (error) {
+        event = await lookup();
+        if (!event) {
+          throw new MeetingBookingError("uncertain", error);
+        }
+      }
+    }
+
+    assertMatchingCalendarEvent(
+      event,
+      lookupOnly
+        ? { name: input.name, email: input.email, reason: input.reason, slot: input.slot }
+        : input,
+      eventId,
+    );
+
+    return {
+      googleEventId: event.id,
+      googleEventUrl: event.htmlLink,
+      rawProviderPayload: event.payload,
+      name: input.name,
+      email: input.email,
+      reason: input.reason,
+      timezone: input.slot.timezone,
+      startsAt: new Date(input.slot.start),
+      endsAt: new Date(input.slot.end),
+      status: "confirmed",
+    };
+  }
+
   async bookMeeting(input: BookMeetingInput) {
     let stage = "meeting_lookup";
 

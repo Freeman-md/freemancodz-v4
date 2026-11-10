@@ -29,6 +29,17 @@ const sourceSchema = z
   })
   .strict();
 
+export const workflowReviewSchema = z.strictObject({
+  actionKey: z.string().min(1).max(100),
+  title: z.string().min(1).max(100),
+  fields: workflowProgressSchema.shape.fields.element
+    .extend({ label: z.string().min(1).max(100) })
+    .array()
+    .max(20),
+});
+
+export type WorkflowReview = z.infer<typeof workflowReviewSchema>;
+
 const workflowInstanceSchema = z
   .object({
     id: workflowReferenceSchema,
@@ -36,6 +47,14 @@ const workflowInstanceSchema = z
     workflowVersion: z.number().int().positive(),
     revision: z.number().int().nonnegative(),
     confirmationAction: z.enum(["confirm", "retry", "blocked"]).optional(),
+    review: workflowReviewSchema.optional(),
+    outcome: z
+      .strictObject({
+        booking: z.enum(["pending", "confirmed", "needs_review", "not_booked"]),
+        ownerNotice: z.enum(["not_started", "pending", "accepted", "needs_review"]),
+        retryAt: z.string().datetime().optional(),
+      })
+      .optional(),
     status: z.enum(["active", "completed", "cancelled"]),
     progress: workflowProgressSchema,
   })
@@ -52,19 +71,28 @@ const assistantMessageSchema = z
 export const assistantWorkflowActionSchema = z.union([
   z
     .object({
-      action: z.literal("confirm_booking"),
+      action: z.literal("confirm_workflow"),
       workflowInstanceId: workflowReferenceSchema,
+      actionKey: z.string().min(1).max(100),
       expectedRevision: z.number().int().nonnegative(),
     })
     .strict(),
   z
-    .object({ action: z.literal("retry_booking"), workflowInstanceId: workflowReferenceSchema })
+    .object({ action: z.literal("retry_workflow"), workflowInstanceId: workflowReferenceSchema })
     .strict(),
 ]);
+
+const assistantWorkflowStatusSchema = z
+  .object({
+    action: z.literal("workflow_status"),
+    workflowInstanceId: workflowReferenceSchema,
+  })
+  .strict();
 
 export const assistantRequestSchema = z.union([
   assistantMessageSchema,
   assistantWorkflowActionSchema,
+  assistantWorkflowStatusSchema,
 ]);
 
 function normalizePreviousResponseId(value: string | null | undefined) {
@@ -96,6 +124,7 @@ export const assistantStreamEventSchema = z.discriminatedUnion("type", [
 
 export type AssistantRequest = z.infer<typeof assistantRequestSchema>;
 export type AssistantWorkflowAction = z.infer<typeof assistantWorkflowActionSchema>;
+export type AssistantWorkflowStatusAction = z.infer<typeof assistantWorkflowStatusSchema>;
 export type AssistantStreamEvent = z.infer<typeof assistantStreamEventSchema>;
 export type AssistantSource = z.infer<typeof sourceSchema>;
 export type WorkflowPublicInstance = z.infer<typeof workflowInstanceSchema>;

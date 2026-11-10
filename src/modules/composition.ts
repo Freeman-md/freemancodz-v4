@@ -13,7 +13,7 @@ import { ResendClient } from "@/infrastructure/resend/client";
 import { OpenAIClient, createOpenAIClient, getResponseModel } from "@/infrastructure/openai/client";
 import { OpenAIEmbeddings } from "@/infrastructure/openai/embeddings";
 import { AssistantService } from "./assistant/service";
-import { GLOBAL_ASSISTANT_TOOLS, PORTFOLIO_SEARCH_TOOL } from "./assistant/tools/definitions";
+import { GLOBAL_ASSISTANT_TOOLS, TURN_PURPOSE_TOOL } from "./assistant/tools/definitions";
 import { ContactRequestRepository } from "./contact/repository";
 import { ContactService } from "./contact/service";
 import { MeetingRepository } from "./meeting/repository";
@@ -35,6 +35,9 @@ import { MeetingBookingWorkflowProgressProjector } from "./workflow/definitions/
 import { WorkflowInstanceRepository } from "./workflow/repository";
 import { WorkflowService } from "./workflow/service";
 import { WorkflowDefinitionRegistry } from "./workflow/registry";
+
+import { WorkflowExecutionRepository } from "./workflow/execution.repository";
+import { WorkflowExecutionService } from "./workflow/execution.service";
 
 // Shared infrastructure
 const openAIProvider = new OpenAIClient(createOpenAIClient, getResponseModel);
@@ -97,12 +100,24 @@ const meetingBookingWorkflowProgress = new MeetingBookingWorkflowProgressProject
 
 const workflowRegistry = new WorkflowDefinitionRegistry([
   new MeetingBookingWorkflowDefinition(meetingService, meetingBookingWorkflowProgress),
+  new MeetingBookingWorkflowDefinition(meetingService, meetingBookingWorkflowProgress, 2),
 ]);
 
-const workflowService = new WorkflowService(
+const workflowExecutionRepository = new WorkflowExecutionRepository(prisma);
+
+export const workflowService = new WorkflowService(
   workflowRegistry,
   new WorkflowInstanceRepository(prisma),
-  [...GLOBAL_ASSISTANT_TOOLS, PORTFOLIO_SEARCH_TOOL].map(({ name }) => name),
+  [...GLOBAL_ASSISTANT_TOOLS, TURN_PURPOSE_TOOL].map(({ name }) => name),
+  logger,
+  () => new Date(),
+  workflowExecutionRepository,
+);
+
+export const workflowExecutionService = new WorkflowExecutionService(
+  workflowExecutionRepository,
+  meetingService,
+  notificationService,
   logger,
 );
 

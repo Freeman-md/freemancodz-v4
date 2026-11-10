@@ -5,9 +5,11 @@ import { act, createElement } from "react";
 import { ACTIVE_WORKFLOW_INSTANCE_STORAGE_KEY } from "@/app/_assistant/constants";
 import { useAssistant } from "@/app/_assistant/hooks/useAssistant";
 
-const FIRST_WORKFLOW_ID = "00000000-0000-4000-8000-000000000001.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+const FIRST_WORKFLOW_ID =
+  "00000000-0000-4000-8000-000000000001.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 
-const SECOND_WORKFLOW_ID = "00000000-0000-4000-8000-000000000002.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+const SECOND_WORKFLOW_ID =
+  "00000000-0000-4000-8000-000000000002.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 
 function streamResponse(events: unknown[]) {
   return new Response(`${events.map((event) => JSON.stringify(event)).join("\n")}\n`);
@@ -114,17 +116,40 @@ test("active workflow IDs survive remounts and clear when finished or retired", 
     assert.deepEqual(currentAssistant().messages, []);
     assert.equal(currentAssistant().workflowInstance, null);
 
+    responses.push(streamResponse([workflowEvent(FIRST_WORKFLOW_ID, "active"), { type: "done" }]));
+    await act(async () => currentAssistant().refreshWorkflowStatus());
+    assert.deepEqual(requests.at(-1), {
+      action: "workflow_status",
+      workflowInstanceId: FIRST_WORKFLOW_ID,
+    });
+    assert.equal(currentAssistant().workflowInstance?.id, FIRST_WORKFLOW_ID);
+    assert.deepEqual(currentAssistant().messages, []);
+
     responses.push(
       streamResponse([workflowEvent(FIRST_WORKFLOW_ID, "completed"), { type: "done" }]),
     );
     await act(async () => currentAssistant().submitMessage("Continue the workflow"));
-    assert.equal(requests[1]?.workflowInstanceId, FIRST_WORKFLOW_ID);
-    assert.equal(requests[1]?.previousResponseId, null);
-    assert.equal(dom.window.sessionStorage.getItem(ACTIVE_WORKFLOW_INSTANCE_STORAGE_KEY), null);
+    assert.equal(requests.at(-1)?.workflowInstanceId, FIRST_WORKFLOW_ID);
+    assert.equal(requests.at(-1)?.previousResponseId, null);
+    assert.equal(
+      dom.window.sessionStorage.getItem(ACTIVE_WORKFLOW_INSTANCE_STORAGE_KEY),
+      FIRST_WORKFLOW_ID,
+    );
+    assert.equal(currentAssistant().workflowInstance?.status, "completed");
+
+    responses.push(
+      streamResponse([workflowEvent(FIRST_WORKFLOW_ID, "completed"), { type: "done" }]),
+    );
+    await act(async () => currentAssistant().refreshWorkflowStatus());
+    assert.deepEqual(requests.at(-1), {
+      action: "workflow_status",
+      workflowInstanceId: FIRST_WORKFLOW_ID,
+    });
     assert.equal(currentAssistant().workflowInstance?.status, "completed");
 
     responses.push(streamResponse([workflowEvent(SECOND_WORKFLOW_ID, "active"), { type: "done" }]));
     await act(async () => currentAssistant().submitMessage("Start another workflow"));
+    assert.equal(requests.at(-1)?.workflowInstanceId, null);
     assert.equal(
       dom.window.sessionStorage.getItem(ACTIVE_WORKFLOW_INSTANCE_STORAGE_KEY),
       SECOND_WORKFLOW_ID,
@@ -145,7 +170,8 @@ test("active workflow IDs survive remounts and clear when finished or retired", 
     };
 
     const action = {
-      action: "confirm_booking" as const,
+      action: "confirm_workflow" as const,
+      actionKey: "book-meeting",
       workflowInstanceId: SECOND_WORKFLOW_ID,
       expectedRevision: 4,
     };
@@ -160,7 +186,7 @@ test("active workflow IDs survive remounts and clear when finished or retired", 
       await currentAssistant().submitWorkflowAction(action);
     });
     assert.deepEqual(requests.at(-1), action);
-    assert.equal(requests.filter((request) => request.action === "confirm_booking").length, 1);
+    assert.equal(requests.filter((request) => request.action === "confirm_workflow").length, 1);
     assert.equal(currentAssistant().isLoading, true);
     assert.equal(currentAssistant().input, draft);
     await act(async () => {
@@ -172,7 +198,7 @@ test("active workflow IDs survive remounts and clear when finished or retired", 
     globalThis.fetch = responseFetch;
     assert.equal(currentAssistant().input, draft);
 
-    const retry = { action: "retry_booking" as const, workflowInstanceId: SECOND_WORKFLOW_ID };
+    const retry = { action: "retry_workflow" as const, workflowInstanceId: SECOND_WORKFLOW_ID };
 
     responses.push(streamResponse([workflowEvent(SECOND_WORKFLOW_ID, "active"), { type: "done" }]));
     await act(async () => currentAssistant().submitWorkflowAction(retry));
@@ -186,7 +212,10 @@ test("active workflow IDs survive remounts and clear when finished or retired", 
     assert.equal(requests.at(-1)?.message, draft);
     assert.equal(requests.at(-1)?.previousResponseId, null);
     assert.equal(currentAssistant().input, "");
-    assert.equal(dom.window.sessionStorage.getItem(ACTIVE_WORKFLOW_INSTANCE_STORAGE_KEY), null);
+    assert.equal(
+      dom.window.sessionStorage.getItem(ACTIVE_WORKFLOW_INSTANCE_STORAGE_KEY),
+      SECOND_WORKFLOW_ID,
+    );
     assert.equal(currentAssistant().workflowInstance?.status, "cancelled");
 
     responses.push(
@@ -197,9 +226,25 @@ test("active workflow IDs survive remounts and clear when finished or retired", 
       ]),
     );
     await act(async () => currentAssistant().submitMessage("Load saved workflow"));
-    responses.push(streamResponse([{ type: "workflow_instance", instance: null }, { type: "done" }]));
+    responses.push(
+      streamResponse([
+        workflowEvent(SECOND_WORKFLOW_ID, "active"),
+        { type: "response_id", responseId: "resp_interrupted" },
+      ]),
+    );
+    await act(async () => currentAssistant().submitMessage("A reply interrupted mid-stream"));
+    assert.equal(currentAssistant().workflowInstance?.id, SECOND_WORKFLOW_ID);
+    assert.match(currentAssistant().messages.at(-1)?.content ?? "", /interrupted/);
+    assert.equal(
+      dom.window.sessionStorage.getItem(ACTIVE_WORKFLOW_INSTANCE_STORAGE_KEY),
+      SECOND_WORKFLOW_ID,
+    );
+
+    responses.push(
+      streamResponse([{ type: "workflow_instance", instance: null }, { type: "done" }]),
+    );
     await act(async () => currentAssistant().submitMessage("Resume saved workflow"));
-    assert.equal(requests.at(-1)?.workflowInstanceId, FIRST_WORKFLOW_ID);
+    assert.equal(requests.at(-1)?.workflowInstanceId, SECOND_WORKFLOW_ID);
     assert.equal(requests.at(-1)?.previousResponseId, "resp_retired");
     assert.equal(currentAssistant().workflowInstance, null);
     assert.equal(dom.window.sessionStorage.getItem(ACTIVE_WORKFLOW_INSTANCE_STORAGE_KEY), null);
@@ -208,7 +253,10 @@ test("active workflow IDs survive remounts and clear when finished or retired", 
     await act(async () => currentAssistant().submitMessage("Start a workflow"));
     responses.push(
       Response.json(
-        { error: "This workflow is unavailable in this browser session.", code: "workflow_access_denied" },
+        {
+          error: "This workflow is unavailable in this browser session.",
+          code: "workflow_access_denied",
+        },
         { status: 403 },
       ),
     );

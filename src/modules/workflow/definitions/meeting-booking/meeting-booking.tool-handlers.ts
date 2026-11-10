@@ -12,7 +12,6 @@ import type { WorkflowExecutionContext, WorkflowExecutionResult } from "../../ty
 import { formatMeetingSlot } from "./meeting-slot.mapper";
 import {
   findMeetingSlotsSchema,
-  noArgumentsSchema,
   prepareMeetingSchema,
   updateMeetingContextSchema,
   type MeetingContextUpdate,
@@ -64,18 +63,6 @@ export async function executeMeetingBookingTool({
 
     return parsed.success
       ? prepareMeeting(parsed.data, state, context)
-      : active(state, invalidArguments());
-  }
-
-  if (name === "confirm_meeting") {
-    return noArgumentsSchema.safeParse(args).success
-      ? confirmMeeting(meetingService, state, context)
-      : active(state, invalidArguments());
-  }
-
-  if (name === "book_meeting") {
-    return noArgumentsSchema.safeParse(args).success
-      ? bookMeeting(meetingService, state)
       : active(state, invalidArguments());
   }
 
@@ -163,7 +150,9 @@ function prepareMeeting(
     { field: "selectedSlot", value: input.selectedSlot },
   ]);
 
-  if ("error" in updated.output) {return updated;}
+  if ("error" in updated.output) {
+    return updated;
+  }
 
   const nextState: MeetingBookingState = {
     ...updated.state,
@@ -189,8 +178,9 @@ function updateMeetingContext(
   state: MeetingBookingState,
   updates: MeetingContextUpdate[],
 ): WorkflowExecutionResult<MeetingBookingState> {
-  if (state.pendingBooking || state.bookingOperation || state.step === "confirmed")
-    {return active(state, bookingRecoveryOutput());}
+  if (state.pendingBooking || state.bookingOperation || state.step === "confirmed") {
+    return active(state, bookingRecoveryOutput());
+  }
 
   const next = { ...state };
 
@@ -198,21 +188,26 @@ function updateMeetingContext(
 
   for (const update of updates) {
     if (update.field === "selectedSlot") {
-      if (typeof update.value === "string") {return active(state, invalidArguments());}
+      if (typeof update.value === "string") {
+        return active(state, invalidArguments());
+      }
 
       const slot = state.availableSlots.find((slot) => slotsMatch(slot, update.value));
 
-      if (!slot)
-        {return active(state, {
+      if (!slot) {
+        return active(state, {
           error: "invalid_slot",
           message:
             "The selected slot is not in the latest availability result. Find availability again.",
-        });}
+        });
+      }
 
       changed ||= !state.selectedSlot || !slotsMatch(state.selectedSlot, slot);
       next.selectedSlot = withLondonTimezone(slot);
     } else {
-      if (typeof update.value !== "string") {return active(state, invalidArguments());}
+      if (typeof update.value !== "string") {
+        return active(state, invalidArguments());
+      }
 
       changed ||= state[update.field] !== update.value;
       next[update.field] = update.value;
@@ -231,17 +226,12 @@ function updateMeetingContext(
   });
 }
 
-async function confirmMeeting(
+export async function confirmLegacyMeeting(
   meetingService: MeetingServiceClient,
   state: MeetingBookingState,
-  context: WorkflowExecutionContext,
+  context: { interactionId: string; expectedRevision: number },
 ): Promise<WorkflowExecutionResult<MeetingBookingState>> {
-  if (
-    context.allowConfirmation !== true ||
-    !Number.isInteger(context.expectedRevision) ||
-    context.expectedRevision === undefined ||
-    context.expectedRevision < 0
-  ) {
+  if (!Number.isInteger(context.expectedRevision) || context.expectedRevision < 0) {
     return active(state, {
       error: "separate_confirmation_required",
       message: "Continuing or switching cannot confirm booking. Wait for a separate confirmation.",
@@ -315,7 +305,7 @@ async function confirmMeeting(
   );
 }
 
-async function bookMeeting(
+export async function bookLegacyMeeting(
   meetingService: MeetingServiceClient,
   state: MeetingBookingState,
 ): Promise<WorkflowExecutionResult<MeetingBookingState>> {

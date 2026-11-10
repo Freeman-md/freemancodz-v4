@@ -7,6 +7,8 @@ import {
 
 export class WorkflowAccessError extends Error {}
 
+export class AssistantStreamInterruptedError extends Error {}
+
 async function getResponseError(response: Response) {
   try {
     const body: unknown = await response.json();
@@ -102,7 +104,15 @@ export async function* streamAssistant(
       }
 
       yield event;
+
+      if (event.type === "done") {
+        return;
+      }
     }
+
+    throw new AssistantStreamInterruptedError(
+      "The assistant response was interrupted. Please try again.",
+    );
   } finally {
     await reader.cancel();
     reader.releaseLock();

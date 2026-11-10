@@ -15,27 +15,28 @@ export const GLOBAL_ASSISTANT_TOOLS: OpenAIResponseTool[] = [
   },
 ];
 
-export const PORTFOLIO_SEARCH_TOOL: OpenAIResponseTool = {
+export const TURN_PURPOSE_TOOL: OpenAIResponseTool = {
   type: "function",
-  name: "search_portfolio",
+  name: "decide_turn_purpose",
   description:
-    "Retrieve factual excerpts from the published portfolio. Use a standalone query resolving any references from prior turns. Call before answering a portfolio question.",
+    "Choose exactly one purpose for this visitor turn. This decision does not update any workflow.",
   strict: true,
   parameters: {
     type: "object",
     properties: {
+      purpose: {
+        type: "string",
+        enum: ["workflow", "portfolio", "clarify", "conversation"],
+        description:
+          "Workflow for booking and replies to its questions, portfolio for factual questions about Freeman's work, clarify for competing requests, conversation otherwise.",
+      },
       query: {
         type: ["string", "null"],
         description:
-          "A short standalone search query. Use null only if the turn needs no portfolio facts.",
-      },
-      workflowRequested: {
-        type: "boolean",
-        description:
-          "True only when the visitor is also explicitly asking to start or continue Meeting.",
+          "A short standalone search query for a portfolio turn. Use null for every other purpose.",
       },
     },
-    required: ["query", "workflowRequested"],
+    required: ["purpose", "query"],
     additionalProperties: false,
   },
 };

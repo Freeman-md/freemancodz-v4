@@ -20,6 +20,8 @@ type NotificationConfig = {
   fromEmail: string;
 };
 
+export type PreparedOwnerNotice = Parameters<EmailSender["send"]>[0];
+
 export class NotificationService {
   constructor(
     private readonly sender: EmailSender,
@@ -28,7 +30,27 @@ export class NotificationService {
   ) {}
 
   notifyMeetingBooked(meeting: MeetingRecord): Promise<void> {
-    return this.send("meeting-booked", meeting.id, meeting.email, {
+    return this.send("meeting-booked", meeting.id, meeting.email, this.meetingContent(meeting));
+  }
+
+  prepareMeetingNotice(meeting: MeetingRecord): PreparedOwnerNotice {
+    const config = this.getConfig();
+
+    return {
+      from: config.fromEmail,
+      to: config.adminEmail,
+      replyTo: meeting.email,
+      ...this.meetingContent(meeting),
+      idempotencyKey: `meeting-booked/${meeting.id}`,
+    };
+  }
+
+  sendPreparedNotice(notice: PreparedOwnerNotice): Promise<void> {
+    return this.sender.send(notice);
+  }
+
+  private meetingContent(meeting: MeetingRecord) {
+    return {
       subject: `New meeting booked with ${meeting.name}`,
       text: lines([
         `Name: ${meeting.name}`,
@@ -39,7 +61,7 @@ export class NotificationService {
         `Timezone: ${meeting.timezone}`,
         meeting.googleEventUrl ? `Calendar event: ${meeting.googleEventUrl}` : null,
       ]),
-    });
+    };
   }
 
   notifyContactSubmitted(request: ContactRequest): Promise<void> {

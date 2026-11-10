@@ -11,7 +11,8 @@ const choice = {
   options: ["Continue my message", "Cancel my message and start an audit"],
 };
 
-const workflowId = "11111111-1111-4111-8111-111111111111.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+const workflowId =
+  "11111111-1111-4111-8111-111111111111.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 
 const workflowEvent = {
   type: "workflow_instance",
@@ -118,12 +119,16 @@ test("choices replace text entry, send exact ordinary replies once, and disappea
     assert.ok(radios().every((radio) => !radio.checked));
     assert.equal(send().disabled, true);
     assert.equal(dom.window.document.activeElement, radios()[0]);
-    assert.equal(dom.window.document.querySelector("legend")?.textContent, choice.question);
+    assert.equal(
+      dom.window.document.querySelector("fieldset")?.getAttribute("aria-label"),
+      "Reply options",
+    );
+    assert.equal(dom.window.document.querySelector("legend"), null);
     assert.deepEqual(
       current()
         .messages.filter((message) => message.role === "assistant")
         .map((message) => message.content),
-      [""],
+      [choice.question],
     );
     await act(async () => radios()[1]!.click());
     assert.equal(send().disabled, false);

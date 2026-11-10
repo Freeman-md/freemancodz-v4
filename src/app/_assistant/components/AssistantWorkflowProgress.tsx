@@ -34,6 +34,19 @@ export function AssistantWorkflowProgress({ instance }: AssistantWorkflowProgres
 
   const collectedRequiredFields = requiredFields.filter((field) => hasValue(field.value)).length;
 
+  const outcome = instance.outcome;
+
+  const phase =
+    outcome?.booking === "confirmed"
+      ? "Booked"
+      : outcome?.booking === "needs_review"
+        ? "Needs review"
+        : outcome?.booking === "not_booked"
+          ? "Booking unsuccessful"
+          : outcome?.booking === "pending"
+            ? "Checking Calendar"
+            : PHASE_LABELS[instance.progress.phase];
+
   return (
     <Collapsible.Root className="assistant-progress shrink-0 border-b border-emerald-950/8 bg-emerald-50/70">
       <Collapsible.Trigger className="group flex min-h-[3.75rem] w-full items-center justify-between gap-3 px-4 py-2.5 text-left outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-700/30 sm:min-h-[4.5rem] sm:px-6 sm:py-3">
@@ -42,7 +55,7 @@ export function AssistantWorkflowProgress({ instance }: AssistantWorkflowProgres
             {WORKFLOW_TITLES[instance.workflowId] ?? formatFieldLabel(instance.workflowId)}
           </span>
           <span aria-live="polite" className="block font-sans text-sm/5 text-muted">
-            {PHASE_LABELS[instance.progress.phase]} ·{" "}
+            {phase} ·{" "}
             <span className="tabular-nums">
               {collectedRequiredFields} of {requiredFields.length} details
             </span>
@@ -54,6 +67,19 @@ export function AssistantWorkflowProgress({ instance }: AssistantWorkflowProgres
         />
       </Collapsible.Trigger>
 
+      {outcome?.booking === "confirmed" && (
+        <p role="status" className="px-4 pb-2 text-sm text-muted">
+          Calendar and booking record verified. Attendee invitation requested.
+          {outcome.ownerNotice === "accepted" && " Owner email accepted."}
+          {outcome.ownerNotice === "pending" && " Owner email pending."}
+          {outcome.ownerNotice === "needs_review" && " Owner email needs review."}
+        </p>
+      )}
+      {outcome?.retryAt && (
+        <p role="status" className="px-4 pb-2 text-sm text-muted">
+          Retry eligible from {new Date(outcome.retryAt).toLocaleTimeString()}.
+        </p>
+      )}
       <Collapsible.Panel className="h-(--collapsible-panel-height) overflow-hidden transition-[height] duration-150 ease-out data-ending-style:h-0 data-starting-style:h-0 motion-reduce:transition-none [&[hidden]:not([hidden='until-found'])]:hidden">
         <ul role="list" className="max-h-[min(35dvh,20rem)] overflow-y-auto px-4 sm:px-6">
           {instance.progress.fields.map((field) => {

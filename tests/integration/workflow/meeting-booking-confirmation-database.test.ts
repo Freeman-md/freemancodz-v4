@@ -16,6 +16,7 @@ import { MeetingService } from "@/modules/meeting/service";
 import { MeetingBookingError } from "@/modules/meeting/types";
 import { MeetingRepository } from "@/modules/meeting/repository";
 import type { MeetingServiceClient } from "@/modules/meeting/types";
+import { NotificationService } from "@/modules/notification/service";
 import { WorkflowInstanceStoreError } from "@/modules/workflow/errors";
 import type {
   IWorkflowDefinition,
@@ -215,7 +216,7 @@ test(
       };
 
       await context.test(
-        "different workflows racing one slot admit one Calendar event and Meeting row",
+        "different workflows racing one slot admit one Calendar event, Meeting row, and owner notice",
         async () => {
           const otherDatabase = new PrismaClient({
             adapter: new PrismaPg({ connectionString: databaseUrl.toString() }),
@@ -260,11 +261,23 @@ test(
             },
           };
 
+          const notices: Array<{ to: string; key: string }> = [];
+
+          const notifications = new NotificationService(
+            {
+              send: async ({ to, idempotencyKey }) => {
+                notices.push({ to, key: idempotencyKey });
+              },
+            },
+            () => ({ adminEmail: "owner@example.test", fromEmail: "portfolio@example.test" }),
+            { info() {}, error() {} },
+          );
+
           const meeting = new MeetingService(
             calendar,
             new MeetingRepository(prisma!),
             { info() {}, error() {} },
-            { notifyMeetingBooked: async () => {} },
+            notifications,
           );
 
           const provider: MeetingServiceClient = {
@@ -322,7 +335,13 @@ test(
               1,
             );
             assert.equal(events.size, 1);
-            assert.equal(await prisma!.meeting.count(), 1);
+            const meetings = await prisma!.meeting.findMany();
+
+            assert.equal(meetings.length, 1);
+            assert.equal(meetings[0].status, "confirmed");
+            assert.deepEqual(notices, [
+              { to: "owner@example.test", key: `meeting-booked/${meetings[0].id}` },
+            ]);
             const logs = [...left.logs, ...right.logs];
 
             assert.ok(logs.some((log) => log.event === "workflow.booking_slot_conflict"));

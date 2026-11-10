@@ -1,7 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { streamAssistant, WorkflowAccessError } from "../api/stream-assistant-response";
+import {
+  AssistantStreamInterruptedError,
+  streamAssistant,
+  WorkflowAccessError,
+} from "../api/stream-assistant-response";
 import { ACTIVE_WORKFLOW_INSTANCE_STORAGE_KEY } from "../constants";
 import type { ChatMessage } from "../types";
 import {
@@ -22,6 +26,8 @@ export function useAssistant() {
 
   const [workflowInstance, setWorkflowInstance] = useState<WorkflowPublicInstance | null>(null);
 
+  const [workflowStatusError, setWorkflowStatusError] = useState<string | null>(null);
+
   const [choice, setChoice] = useState<AssistantChoice | null>(null);
 
   const previousResponseId = useRef<string | null>(null);
@@ -29,6 +35,10 @@ export function useAssistant() {
   const workflowInstanceId = useRef<string | null>(null);
 
   const submissionInProgress = useRef(false);
+
+  const workflowGeneration = useRef(0);
+
+  const statusInProgress = useRef(false);
 
   useEffect(() => {
     const storedId = window.sessionStorage.getItem(ACTIVE_WORKFLOW_INSTANCE_STORAGE_KEY);
@@ -46,100 +56,164 @@ export function useAssistant() {
     }
   }, []);
 
-  const submitRequest = useCallback(async (request: AssistantRequest, message: string) => {
-    if (!message || message.length > MAX_MESSAGE_LENGTH || submissionInProgress.current) {
+  const saveWorkflow = useCallback((instance: WorkflowPublicInstance | null) => {
+    setWorkflowInstance(instance);
+    workflowInstanceId.current = instance?.id ?? null;
+
+    if (instance) {
+      window.sessionStorage.setItem(ACTIVE_WORKFLOW_INSTANCE_STORAGE_KEY, instance.id);
+    } else {
+      previousResponseId.current = null;
+      window.sessionStorage.removeItem(ACTIVE_WORKFLOW_INSTANCE_STORAGE_KEY);
+    }
+  }, []);
+
+  const refreshWorkflowStatus = useCallback(async () => {
+    const id = workflowInstanceId.current;
+
+    if (!id || submissionInProgress.current || statusInProgress.current) {
       return;
     }
 
-    submissionInProgress.current = true;
-    if ("action" in request) {
-      // Booking actions have no model checkpoint; the next message reloads saved state.
-      previousResponseId.current = null;
-    } else {
-      setInput("");
-    }
+    statusInProgress.current = true;
+    const generation = workflowGeneration.current;
 
-    setIsLoading(true);
-    setChoice(null);
-
-    const timestamp = Date.now();
-
-    const assistantMessageId = `assistant-${timestamp}`;
-
-    setMessages((current) => [
-      ...current,
-      { id: `user-${timestamp}`, role: "user", content: message },
-      { id: assistantMessageId, role: "assistant", content: "", sources: [] },
-    ]);
-
-    const updateAssistantMessage = (update: (message: ChatMessage) => ChatMessage) => {
-      setMessages((current) =>
-        current.map((item) => (item.id === assistantMessageId ? update(item) : item)),
-      );
-    };
+    const current = () =>
+      generation === workflowGeneration.current && id === workflowInstanceId.current;
 
     try {
-      for await (const event of streamAssistant(request)) {
-        if (event.type === "choice") {
-          setChoice(event.choice);
-          // The reply panel owns this turn's question; don't repeat it in the transcript.
-          updateAssistantMessage((current) => ({ ...current, content: "" }));
-        }
+      let instance: WorkflowPublicInstance | null | undefined;
 
-        if (event.type === "delta") {
-          updateAssistantMessage((current) => ({
-            ...current,
-            content: current.content + event.delta,
-          }));
-        }
-
-        if (event.type === "sources") {
-          updateAssistantMessage((current) => ({ ...current, sources: event.sources }));
-        }
-
-        if (event.type === "response_id") {
-          previousResponseId.current = event.responseId;
-        }
-
+      for await (const event of streamAssistant({
+        action: "workflow_status",
+        workflowInstanceId: id,
+      })) {
         if (event.type === "workflow_instance") {
-          setWorkflowInstance(event.instance);
-
-          if (!event.instance) {
-            previousResponseId.current = null;
-          }
-
-          if (event.instance?.status === "active") {
-            workflowInstanceId.current = event.instance.id;
-            window.sessionStorage.setItem(ACTIVE_WORKFLOW_INSTANCE_STORAGE_KEY, event.instance.id);
-          } else {
-            workflowInstanceId.current = null;
-            window.sessionStorage.removeItem(ACTIVE_WORKFLOW_INSTANCE_STORAGE_KEY);
-          }
+          instance = event.instance;
         }
+      }
+
+      if (instance === undefined) {
+        throw new Error("The status response was missing its workflow state.");
+      }
+
+      if (current()) {
+        saveWorkflow(instance);
+        setWorkflowStatusError(null);
       }
     } catch (error) {
-      if (error instanceof WorkflowAccessError) {
-        workflowInstanceId.current = null;
-        previousResponseId.current = null;
-        window.sessionStorage.removeItem(ACTIVE_WORKFLOW_INSTANCE_STORAGE_KEY);
-        setWorkflowInstance(null);
+      if (current()) {
+        if (error instanceof WorkflowAccessError) {
+          saveWorkflow(null);
+          setWorkflowStatusError("This saved booking is unavailable in this browser session.");
+        } else {
+          setWorkflowStatusError(
+            "Couldn’t load the saved booking. Reopen the assistant to try again.",
+          );
+        }
+      }
+    } finally {
+      statusInProgress.current = false;
+    }
+  }, [saveWorkflow]);
+
+  const submitRequest = useCallback(
+    async (request: AssistantRequest, message: string) => {
+      if (!message || message.length > MAX_MESSAGE_LENGTH || submissionInProgress.current) {
+        return;
       }
 
-      setChoice(null);
-      const messageText =
-        error instanceof Error ? error.message : "Something went wrong while fetching a response.";
+      submissionInProgress.current = true;
+      workflowGeneration.current += 1;
+      setWorkflowStatusError(null);
+      if ("action" in request) {
+        // Booking actions have no model checkpoint; the next message reloads saved state.
+        previousResponseId.current = null;
+      } else {
+        setInput("");
+      }
 
-      updateAssistantMessage((current) => ({
+      setIsLoading(true);
+      setChoice(null);
+
+      const timestamp = Date.now();
+
+      const assistantMessageId = `assistant-${timestamp}`;
+
+      setMessages((current) => [
         ...current,
-        content: messageText,
-        sources: [],
-        error: true,
-      }));
-    } finally {
-      submissionInProgress.current = false;
-      setIsLoading(false);
-    }
-  }, []);
+        { id: `user-${timestamp}`, role: "user", content: message },
+        { id: assistantMessageId, role: "assistant", content: "", sources: [] },
+      ]);
+
+      const updateAssistantMessage = (update: (message: ChatMessage) => ChatMessage) => {
+        setMessages((current) =>
+          current.map((item) => (item.id === assistantMessageId ? update(item) : item)),
+        );
+      };
+
+      let nextCheckpoint = previousResponseId.current;
+
+      try {
+        for await (const event of streamAssistant(request)) {
+          if (event.type === "choice") {
+            setChoice(event.choice);
+            // The structured choice owns the question, replacing any provisional model text.
+            updateAssistantMessage((current) => ({ ...current, content: event.choice.question }));
+          }
+
+          if (event.type === "delta") {
+            updateAssistantMessage((current) => ({
+              ...current,
+              content: current.content + event.delta,
+            }));
+          }
+
+          if (event.type === "sources") {
+            updateAssistantMessage((current) => ({ ...current, sources: event.sources }));
+          }
+
+          if (event.type === "response_id") {
+            nextCheckpoint = event.responseId;
+          }
+
+          if (event.type === "workflow_instance") {
+            saveWorkflow(event.instance);
+            if (!event.instance) {
+              nextCheckpoint = null;
+            }
+          }
+
+          if (event.type === "done") {
+            previousResponseId.current = nextCheckpoint;
+          }
+        }
+      } catch (error) {
+        if (error instanceof WorkflowAccessError) {
+          saveWorkflow(null);
+        }
+
+        setChoice(null);
+        const messageText =
+          "action" in request && error instanceof AssistantStreamInterruptedError
+            ? "The booking response was interrupted. Check the saved status before confirming again."
+            : error instanceof Error
+              ? error.message
+              : "Something went wrong while fetching a response.";
+
+        updateAssistantMessage((current) => ({
+          ...current,
+          content: messageText,
+          sources: [],
+          error: true,
+        }));
+      } finally {
+        submissionInProgress.current = false;
+        setIsLoading(false);
+      }
+    },
+    [saveWorkflow],
+  );
 
   const submitMessage = useCallback(
     (rawMessage: string) =>
@@ -147,11 +221,14 @@ export function useAssistant() {
         {
           message: rawMessage.trim(),
           previousResponseId: previousResponseId.current,
-          workflowInstanceId: workflowInstanceId.current,
+          workflowInstanceId:
+            workflowInstance?.status === "completed" || workflowInstance?.status === "cancelled"
+              ? null
+              : workflowInstanceId.current,
         },
         rawMessage.trim(),
       ),
-    [submitRequest],
+    [submitRequest, workflowInstance?.status],
   );
 
   const submitWorkflowAction = useCallback(
@@ -159,8 +236,8 @@ export function useAssistant() {
       return submitRequest(
         request,
         {
-          confirm_booking: "Confirm booking",
-          retry_booking: "Retry booking",
+          confirm_workflow: "Confirm",
+          retry_workflow: "Check retry",
         }[request.action],
       );
     },
@@ -180,5 +257,7 @@ export function useAssistant() {
     choice,
     dismissChoice: () => setChoice(null),
     workflowInstance,
+    refreshWorkflowStatus,
+    workflowStatusError,
   };
 }

@@ -141,7 +141,38 @@ test("assistant client reports non-2xx and provider errors safely", async () => 
         }
       }
     }, /could not respond/);
-    assert.equal(recoveredWorkflowInstanceId, "11111111-1111-4111-8111-111111111111.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+    assert.equal(
+      recoveredWorkflowInstanceId,
+      "11111111-1111-4111-8111-111111111111.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("assistant client rejects EOF without done after yielding saved workflow state", async () => {
+  const originalFetch = globalThis.fetch;
+
+  const events: AssistantStreamEvent[] = [];
+
+  globalThis.fetch = async () =>
+    streamResponse([
+      '{"type":"response_id","responseId":"resp_interrupted"}\n',
+      JSON.stringify({ type: "workflow_instance", instance: workflowInstance }),
+    ]);
+  try {
+    await assert.rejects(async () => {
+      for await (const event of streamAssistant({
+        message: "Book a meeting",
+        previousResponseId: null,
+      })) {
+        events.push(event);
+      }
+    }, /response was interrupted/);
+    const saved = events.find((event) => event.type === "workflow_instance");
+
+    assert.equal(saved?.instance?.id, workflowInstance.id);
+    assert.ok(!events.some(({ type }) => type === "done"));
   } finally {
     globalThis.fetch = originalFetch;
   }

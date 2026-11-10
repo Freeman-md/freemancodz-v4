@@ -16,6 +16,7 @@ test("booking review submits the displayed revision and replaces obsolete contro
       workflowId: "meeting-booking",
       revision: 7,
       confirmationAction: "confirm",
+
       progress: {
         phase: "awaiting_confirmation",
         missingRequiredFields: [],
@@ -34,6 +35,12 @@ test("booking review submits the displayed revision and replaces obsolete contro
           },
         ],
       },
+    };
+
+    instance.review = {
+      actionKey: "book-meeting",
+      title: "Review your meeting",
+      fields: instance.progress.fields.map((field) => ({ ...field, label: field.key })),
     };
 
     const actions: AssistantWorkflowAction[] = [];
@@ -59,19 +66,27 @@ test("booking review submits the displayed revision and replaces obsolete contro
     assert.equal(container.querySelector("input,textarea,select"), null);
     await act(async () => container.querySelector("button")!.click());
     assert.deepEqual(actions, [
-      { action: "confirm_booking", workflowInstanceId: instance.id, expectedRevision: 7 },
+      {
+        action: "confirm_workflow",
+        actionKey: "book-meeting",
+        workflowInstanceId: instance.id,
+        expectedRevision: 7,
+      },
     ]);
     await render({ ...instance, revision: 8 });
     await act(async () => container.querySelector("button")!.click());
     assert.equal("expectedRevision" in actions[1] && actions[1].expectedRevision, 8);
-    await render({ ...instance, revision: 9, confirmationAction: "retry" }, true);
+    await render(
+      { ...instance, revision: 9, review: undefined, confirmationAction: "retry" },
+      true,
+    );
     assert.equal(container.querySelector("button")!.disabled, true);
     await act(async () => container.querySelector("button")!.click());
     assert.equal(actions.length, 2);
-    await render({ ...instance, revision: 9, confirmationAction: "retry" });
-    assert.match(container.textContent ?? "", /Retry booking/);
+    await render({ ...instance, revision: 9, review: undefined, confirmationAction: "retry" });
+    assert.match(container.textContent ?? "", /Check retry/);
     await act(async () => container.querySelector("button")!.click());
-    assert.deepEqual(actions[2], { action: "retry_booking", workflowInstanceId: instance.id });
+    assert.deepEqual(actions[2], { action: "retry_workflow", workflowInstanceId: instance.id });
     await render({ ...instance, status: "completed", confirmationAction: undefined });
     assert.equal(container.querySelector("button"), null);
   });
@@ -233,7 +248,9 @@ function workflowInstance(id: string, email: string | null): WorkflowPublicInsta
         { key: "reason", required: true, value: null },
         { key: "selectedSlot", required: true, value: null },
       ],
-      missingRequiredFields: email ? ["reason", "selectedSlot"] : ["email", "reason", "selectedSlot"],
+      missingRequiredFields: email
+        ? ["reason", "selectedSlot"]
+        : ["email", "reason", "selectedSlot"],
     },
   };
 }

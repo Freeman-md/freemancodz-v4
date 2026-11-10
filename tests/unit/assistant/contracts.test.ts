@@ -6,15 +6,17 @@ import { assistantChoiceSchema } from "@/contracts/assistant-choice.contract";
 
 test("booking actions cannot carry messages or editable details", () => {
   const action = {
-    action: "confirm_booking",
-    workflowInstanceId: "11111111-1111-4111-8111-111111111111.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    action: "confirm_workflow",
+    actionKey: "book-meeting",
+    workflowInstanceId:
+      "11111111-1111-4111-8111-111111111111.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
     expectedRevision: 3,
   };
 
   assert.deepEqual(assistantRequestSchema.parse(action), action);
   assert.equal(
     assistantRequestSchema.safeParse({
-      action: "retry_booking",
+      action: "retry_workflow",
       workflowInstanceId: action.workflowInstanceId,
     }).success,
     true,
@@ -28,7 +30,7 @@ test("booking actions cannot carry messages or editable details", () => {
     { ...action, workflowStart: {} },
     { ...action, workflowInstanceId: "invalid" },
     {
-      action: "retry_booking",
+      action: "retry_workflow",
       workflowInstanceId: action.workflowInstanceId,
       expectedRevision: 3,
     },
@@ -68,13 +70,17 @@ test("assistant request accepts the public payload and normalizes whitespace", (
   const result = assistantRequestSchema.parse({
     message: "  What has Freeman built?  ",
     previousResponseId: null,
-    workflowInstanceId: "11111111-1111-4111-8111-111111111111.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    workflowInstanceId:
+      "11111111-1111-4111-8111-111111111111.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
   });
 
   assert.ok("message" in result);
   assert.equal(result.message, "What has Freeman built?");
   assert.equal(result.previousResponseId, null);
-  assert.equal(result.workflowInstanceId, "11111111-1111-4111-8111-111111111111.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+  assert.equal(
+    result.workflowInstanceId,
+    "11111111-1111-4111-8111-111111111111.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  );
 });
 
 test("assistant request recovers from malformed previous response IDs", () => {
@@ -178,7 +184,8 @@ test("retired audit actions are rejected", () => {
   assert.equal(
     assistantRequestSchema.safeParse({
       action: "confirm_audit",
-      workflowInstanceId: "11111111-1111-4111-8111-111111111111.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      workflowInstanceId:
+        "11111111-1111-4111-8111-111111111111.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
       expectedRevision: 0,
     }).success,
     false,

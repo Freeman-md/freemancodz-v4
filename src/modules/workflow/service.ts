@@ -1,7 +1,7 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
 import type { Logger } from "@/infrastructure/logging/logger";
-import type { Prisma, WorkflowInstance } from "@/generated/prisma/client";
+import type { Prisma, WorkflowExecution, WorkflowInstance } from "@/generated/prisma/client";
 import type { OpenAIResponseTool } from "@/infrastructure/openai/types";
 import {
   workflowProgressSchema,
@@ -35,11 +35,18 @@ import {
   START_WORKFLOW_TOOL_NAME,
   SWITCH_WORKFLOW_TOOL_NAME,
 } from "./constants";
-import { MEETING_BOOKING_WORKFLOW_ID } from "./definitions/meeting-booking/meeting-booking.definition";
+import {
+  MEETING_BOOKING_WORKFLOW_ID,
+  MeetingBookingWorkflowDefinition,
+} from "./definitions/meeting-booking/meeting-booking.definition";
 import {
   meetingBookingStateSchema,
   type MeetingBookingState,
 } from "./definitions/meeting-booking/meeting-booking.schema";
+
+import { workflowReviewSchema } from "@/contracts/assistant.contract";
+import { MAX_EXECUTION_ATTEMPTS, type WorkflowExecutionRepository } from "./execution.repository";
+import { MEETING_BOOKING_ACTION } from "./definitions/meeting-booking/meeting-booking.definition";
 
 const INSTANCE_ID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -53,6 +60,7 @@ export class WorkflowService implements IWorkflowService {
     globalToolNames: readonly string[],
     private readonly logger: Logger,
     private readonly clock: () => Date = () => new Date(),
+    private readonly executions?: WorkflowExecutionRepository,
   ) {
     this.globalToolNames = new Set(globalToolNames);
 
@@ -88,7 +96,7 @@ export class WorkflowService implements IWorkflowService {
 
     this.getDefinitionInstructions(definition, initialState);
     this.getDefinitionTools(definition, initialState);
-    const progress = this.getDefinitionProgress(definition, initialState, "active");
+    this.getDefinitionProgress(definition, initialState, "active");
 
     const instance = await this.runRepositoryOperation(() =>
       this.repository.create({
@@ -99,7 +107,7 @@ export class WorkflowService implements IWorkflowService {
       }),
     );
 
-    return toWorkflowPublicInstance(instance, progress);
+    return this.present(instance, definition, initialState, "active");
   }
 
   async getAssistantContext(instanceId: string | null): Promise<WorkflowAssistantContext> {
@@ -120,12 +128,15 @@ export class WorkflowService implements IWorkflowService {
 
     const status = parseWorkflowInstanceStatus(instance.status);
 
-    const publicInstance = toWorkflowPublicInstance(
-      instance,
-      this.getDefinitionProgress(definition, state, status),
-    );
+    const execution = await this.executions?.latest(instance.id);
 
-    if (instance.status !== "active" || isWorkflowExecutionFrozen(instance, state)) {
+    const publicInstance = this.present(instance, definition, state, status, execution);
+
+    if (
+      instance.status !== "active" ||
+      isWorkflowExecutionFrozen(instance, state) ||
+      (execution && execution.step !== "failed")
+    ) {
       return {
         instructions:
           instance.status === "active" ? this.getDefinitionInstructions(definition, state) : "",
@@ -175,7 +186,12 @@ export class WorkflowService implements IWorkflowService {
 
     const state = this.validateState(definition, instance.state);
 
-    if (isWorkflowExecutionFrozen(instance, state)) {
+    const executionRow = await this.executions?.latest(instance.id);
+
+    if (
+      isWorkflowExecutionFrozen(instance, state) ||
+      (executionRow && executionRow.step !== "failed")
+    ) {
       throw new WorkflowServiceError(
         "invalid_transition",
         "Details cannot change after confirmation has been accepted.",
@@ -213,6 +229,218 @@ export class WorkflowService implements IWorkflowService {
     return this.persistExecution(instance, definition, execution);
   }
 
+  async confirmWorkflow(
+    instanceId: string,
+    actionKey: string,
+    expectedRevision: number,
+  ): Promise<WorkflowToolExecutionResult> {
+    const instance = await this.loadInstance(instanceId);
+
+    const definition = this.resolveDefinition(instance);
+
+    const state = this.validateState(definition, instance.state);
+
+    const review = definition.getReview?.(state);
+
+    if (
+      instance.status !== "active" ||
+      instance.revision !== expectedRevision ||
+      review?.actionKey !== actionKey
+    ) {
+      return this.approvalResult(
+        instanceId,
+        "The review changed. Check the saved details before confirming.",
+      );
+    }
+
+    if (!this.executions) {
+      if (actionKey !== MEETING_BOOKING_ACTION) {
+        throw new WorkflowServiceError("configuration_error", "Workflow execution is unavailable.");
+      }
+
+      return this.confirmMeetingBooking(instanceId, expectedRevision);
+    }
+
+    const id = randomUUID();
+
+    const approved = definition.prepareApproval?.(state, id, expectedRevision);
+
+    if (!approved || approved.actionKey !== actionKey) {
+      return this.approvalResult(instanceId, "Review the complete details before confirming.");
+    }
+
+    const result = await this.executions.approve({
+      ...approved,
+      id,
+      instanceId,
+      revision: expectedRevision,
+    });
+
+    if (result.status === "occupied") {
+      return this.rejectUnavailableMeetingSlot(instance, definition, state);
+    }
+
+    if (result.status === "stale") {
+      return this.approvalResult(instanceId, "The review changed. Check the current status.");
+    }
+
+    return {
+      ...(await this.approvalResult(
+        instanceId,
+        "Your approval was saved. The request is pending.",
+      )),
+      executionId: result.executionId,
+    };
+  }
+
+  async retryWorkflow(instanceId: string): Promise<WorkflowToolExecutionResult> {
+    if (!this.executions) {
+      return this.retryMeetingBooking(instanceId);
+    }
+
+    const execution = await this.executions.latest(instanceId);
+
+    const result = await this.approvalResult(instanceId, "Check the saved booking status.");
+
+    if (
+      execution &&
+      ["calendar", "owner_notice"].includes(execution.step) &&
+      execution.attempt < MAX_EXECUTION_ATTEMPTS &&
+      execution.nextAttemptAt <= this.clock() &&
+      (!execution.leaseExpiresAt || execution.leaseExpiresAt <= this.clock())
+    ) {
+      result.executionId = execution.id;
+    }
+
+    return result;
+  }
+
+  async adoptLegacyApprovals() {
+    if (!this.executions) {
+      return;
+    }
+
+    for (const instance of await this.executions.legacyCandidates()) {
+      const definition = this.resolveDefinition(instance);
+
+      const parsed = meetingBookingStateSchema.safeParse(instance.state);
+
+      const id = parsed.success ? (parsed.data.bookingOperation?.id ?? randomUUID()) : randomUUID();
+
+      const operation = parsed.success ? parsed.data.bookingOperation : null;
+
+      const approved =
+        parsed.success && (!operation || operation.preparedRevision < instance.revision)
+          ? definition.adoptApproval?.(parsed.data, id)
+          : null;
+
+      const base = { id, instanceId: instance.id, revision: instance.revision };
+
+      if (approved) {
+        try {
+          const result = await this.executions.approve({ ...base, ...approved });
+
+          if (result.status !== "occupied") {
+            continue;
+          }
+        } catch {
+          this.logger.error("workflow.legacy_approval_conflict", {
+            workflowInstanceId: instance.id,
+            category: "legacy_identity_unverified",
+          });
+        }
+      }
+
+      await this.executions.approve({
+        ...base,
+        id: randomUUID(),
+        actionKey: MEETING_BOOKING_ACTION,
+        approvedInput: {},
+        acceptedState: instance.state as Prisma.InputJsonObject,
+        checkpoint: {},
+        needsReview: true,
+      });
+    }
+  }
+
+  private async approvalResult(
+    instanceId: string,
+    message: string,
+  ): Promise<WorkflowToolExecutionResult> {
+    const context = await this.getAssistantContext(instanceId);
+
+    if (!context.instance) {
+      throw new WorkflowServiceError("not_found", "The workflow instance was not found.");
+    }
+
+    return { instance: context.instance, output: { message } };
+  }
+
+  private present(
+    instance: WorkflowInstance,
+    definition: IWorkflowDefinition,
+    state: Prisma.JsonObject,
+    status: WorkflowInstanceStatus,
+    execution?: WorkflowExecution | null,
+  ): WorkflowPublicInstance {
+    const progress = this.getDefinitionProgress(definition, state, status);
+
+    const base = toWorkflowPublicInstance(instance, progress);
+
+    const review = workflowReviewSchema.safeParse(definition.getReview?.(state));
+
+    if (!this.executions) {
+      return status === "active" && review.success ? { ...base, review: review.data } : base;
+    }
+
+    const { confirmationAction: _legacyAction, ...current } = base;
+
+    if (execution && execution.step !== "failed") {
+      const booked = status === "completed";
+
+      return {
+        ...current,
+        confirmationAction:
+          status === "active" && execution.step === "needs_review" ? "blocked" : undefined,
+        outcome: {
+          booking: booked
+            ? "confirmed"
+            : execution.step === "needs_review"
+              ? "needs_review"
+              : "pending",
+          ownerNotice:
+            execution.step === "done"
+              ? "accepted"
+              : booked
+                ? execution.step === "needs_review"
+                  ? "needs_review"
+                  : "pending"
+                : "not_started",
+          retryAt:
+            execution.category && ["calendar", "owner_notice"].includes(execution.step)
+              ? execution.nextAttemptAt.toISOString()
+              : undefined,
+        },
+      };
+    }
+
+    if (status === "active" && review.success) {
+      return { ...current, review: review.data, confirmationAction: "confirm" };
+    }
+
+    if (status === "active" && isWorkflowExecutionFrozen(instance, state)) {
+      return {
+        ...current,
+        confirmationAction: "blocked",
+        outcome: { booking: "needs_review", ownerNotice: "not_started" },
+      };
+    }
+
+    return execution
+      ? { ...current, outcome: { booking: "not_booked", ownerNotice: "not_started" } }
+      : current;
+  }
+
   async confirmMeetingBooking(
     instanceId: string,
     expectedRevision: number,
@@ -238,17 +466,17 @@ export class WorkflowService implements IWorkflowService {
       });
     }
 
-    const execution = await this.executeDefinitionTool(
-      definition,
-      {
-        name: "confirm_meeting",
-        rawArguments: "{}",
-        interactionId: randomUUID(),
-        allowConfirmation: true,
-        expectedRevision,
-      },
-      state,
-      instance.id,
+    if (!(definition instanceof MeetingBookingWorkflowDefinition)) {
+      throw new WorkflowServiceError(
+        "configuration_error",
+        "The booking definition is unavailable.",
+      );
+    }
+
+    const execution = await definition.confirmLegacy(
+      meetingBookingStateSchema.parse(state),
+      randomUUID(),
+      expectedRevision,
     );
 
     if (execution.state === state) {
@@ -361,12 +589,14 @@ export class WorkflowService implements IWorkflowService {
       });
     }
 
-    const execution = await this.executeDefinitionTool(
-      definition,
-      { name: "book_meeting", rawArguments: "{}", interactionId: randomUUID() },
-      state,
-      instance.id,
-    );
+    if (!(definition instanceof MeetingBookingWorkflowDefinition)) {
+      throw new WorkflowServiceError(
+        "configuration_error",
+        "The booking definition is unavailable.",
+      );
+    }
+
+    const execution = await definition.bookLegacy(parsed);
 
     try {
       const result = await this.persistExecution(instance, definition, execution);
@@ -422,7 +652,7 @@ export class WorkflowService implements IWorkflowService {
       this.getDefinitionTools(definition, nextState);
     }
 
-    const progress = this.getDefinitionProgress(definition, nextState, status);
+    this.getDefinitionProgress(definition, nextState, status);
 
     const completedAt = status === "completed" ? this.clock() : null;
 
@@ -438,7 +668,7 @@ export class WorkflowService implements IWorkflowService {
       claimMeetingSlot ? this.repository.claimMeetingBooking(input) : this.repository.save(input),
     );
 
-    return { output, instance: toWorkflowPublicInstance(saved, progress) };
+    return { output, instance: this.present(saved, definition, nextState, status) };
   }
 
   async cancel(instanceId: string): Promise<WorkflowPublicInstance> {
@@ -792,8 +1022,6 @@ export class WorkflowService implements IWorkflowService {
       return await definition.executeTool(toolCall.name, toolCall.rawArguments, state, {
         workflowInstanceId,
         interactionId: toolCall.interactionId,
-        allowConfirmation: toolCall.allowConfirmation,
-        expectedRevision: toolCall.expectedRevision,
       });
     } catch (error) {
       throw new WorkflowServiceError(

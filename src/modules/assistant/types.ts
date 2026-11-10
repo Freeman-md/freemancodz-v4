@@ -1,4 +1,7 @@
-import type { AssistantWorkflowAction } from "@/contracts/assistant.contract";
+import type {
+  AssistantWorkflowAction,
+  AssistantWorkflowStatusAction,
+} from "@/contracts/assistant.contract";
 
 export type AssistantResponseInput = (
   | {
@@ -7,4 +10,5 @@ export type AssistantResponseInput = (
       workflowInstanceId: string | null;
     }
   | AssistantWorkflowAction
+  | AssistantWorkflowStatusAction
 ) & { signal: AbortSignal };

@@ -35,7 +35,6 @@ const PREPARATION_INTERACTION = {
 const CONFIRMATION_INTERACTION = {
   workflowInstanceId: "11111111-1111-4111-8111-111111111111",
   interactionId: "44444444-4444-4444-8444-444444444444",
-  allowConfirmation: true,
   expectedRevision: 2,
 };
 
@@ -164,39 +163,32 @@ test("preparation requires a later explicit confirmation transition before booki
   ]);
   assert.equal(preparedTools.includes("book_meeting"), false);
 
-  const earlyBooking = await definition.executeTool("book_meeting", "{}", prepared.state, {
-    ...PREPARATION_INTERACTION,
-    allowConfirmation: true,
-    expectedRevision: 2,
-  });
+  for (const tool of ["book_meeting", "confirm_meeting"]) {
+    const result = await definition.executeTool(
+      tool,
+      "{}",
+      prepared.state,
+      PREPARATION_INTERACTION,
+    );
 
-  assert.equal(earlyBooking.output.error, "confirmation_required");
-  assert.equal(bookingCalls, 0);
+    assert.equal(result.output.error, "unknown_tool");
+    assert.equal(result.state.step, "awaiting_confirmation");
+  }
 
-  const sameInteractionConfirmation = await definition.executeTool(
-    "confirm_meeting",
-    "{}",
+  const sameInteractionConfirmation = await definition.confirmLegacy(
     prepared.state,
-    { ...PREPARATION_INTERACTION, allowConfirmation: true, expectedRevision: 2 },
+    PREPARATION_INTERACTION.interactionId,
+    2,
   );
 
   assert.equal(sameInteractionConfirmation.output.error, "confirmation_requires_new_input");
   assert.equal(sameInteractionConfirmation.state.step, "awaiting_confirmation");
-
-  const unconfirmedRequest = await definition.executeTool("confirm_meeting", "{}", prepared.state, {
-    ...CONFIRMATION_INTERACTION,
-    allowConfirmation: false,
-  });
-
-  assert.equal(unconfirmedRequest.output.error, "separate_confirmation_required");
-  assert.equal(unconfirmedRequest.state.step, "awaiting_confirmation");
   assert.equal(bookingCalls, 0);
 
-  const confirmed = await definition.executeTool(
-    "confirm_meeting",
-    "{}",
+  const confirmed = await definition.confirmLegacy(
     prepared.state,
-    CONFIRMATION_INTERACTION,
+    CONFIRMATION_INTERACTION.interactionId,
+    CONFIRMATION_INTERACTION.expectedRevision,
   );
 
   assert.deepEqual(
@@ -204,12 +196,7 @@ test("preparation requires a later explicit confirmation transition before booki
     [],
   );
 
-  const booked = await definition.executeTool(
-    "book_meeting",
-    "{}",
-    confirmed.state,
-    CONFIRMATION_INTERACTION,
-  );
+  const booked = await definition.bookLegacy(confirmed.state);
 
   assert.equal(booked.status, "completed");
   assert.equal(booked.output.status, "confirmed");
@@ -312,19 +299,13 @@ test("a persistence retry reconciles one created event without exposing provider
 
   const prepared = await prepareDefinition(definition);
 
-  const confirmed = await definition.executeTool(
-    "confirm_meeting",
-    "{}",
+  const confirmed = await definition.confirmLegacy(
     prepared.state,
-    CONFIRMATION_INTERACTION,
+    CONFIRMATION_INTERACTION.interactionId,
+    CONFIRMATION_INTERACTION.expectedRevision,
   );
 
-  const first = await definition.executeTool(
-    "book_meeting",
-    "{}",
-    confirmed.state,
-    CONFIRMATION_INTERACTION,
-  );
+  const first = await definition.bookLegacy(confirmed.state);
 
   assert.equal(first.status, "active");
   assert.equal(first.output.error, "booking_recovery_required");
@@ -333,12 +314,7 @@ test("a persistence retry reconciles one created event without exposing provider
   assert.equal(first.state.pendingBooking, null);
   assert.deepEqual(first.state.bookingOperation, confirmed.state.bookingOperation);
 
-  const second = await definition.executeTool(
-    "book_meeting",
-    "{}",
-    first.state,
-    CONFIRMATION_INTERACTION,
-  );
+  const second = await definition.bookLegacy(first.state);
 
   assert.equal(second.status, "completed");
   assert.equal(createEventCalls, 1);
@@ -370,11 +346,10 @@ test("an unavailable slot is rejected before accepting confirmation", async () =
 
   const prepared = await prepareDefinition(definition);
 
-  const confirmed = await definition.executeTool(
-    "confirm_meeting",
-    "{}",
+  const confirmed = await definition.confirmLegacy(
     prepared.state,
-    CONFIRMATION_INTERACTION,
+    CONFIRMATION_INTERACTION.interactionId,
+    CONFIRMATION_INTERACTION.expectedRevision,
   );
 
   const result = confirmed;
@@ -430,11 +405,10 @@ test("availability failure does not accept confirmation or discard the saved sum
 
   const prepared = await prepareDefinition(definition);
 
-  const result = await definition.executeTool(
-    "confirm_meeting",
-    "{}",
+  const result = await definition.confirmLegacy(
     prepared.state,
-    CONFIRMATION_INTERACTION,
+    CONFIRMATION_INTERACTION.interactionId,
+    CONFIRMATION_INTERACTION.expectedRevision,
   );
 
   assert.equal(result.output.error, "meeting_availability_unavailable");
@@ -465,26 +439,15 @@ test("accepted operations keep their identity and details after all safe provide
 
     const prepared = await prepareDefinition(definition);
 
-    const confirmed = await definition.executeTool(
-      "confirm_meeting",
-      "{}",
+    const confirmed = await definition.confirmLegacy(
       prepared.state,
-      CONFIRMATION_INTERACTION,
+      CONFIRMATION_INTERACTION.interactionId,
+      CONFIRMATION_INTERACTION.expectedRevision,
     );
 
-    const first = await definition.executeTool(
-      "book_meeting",
-      "{}",
-      confirmed.state,
-      CONFIRMATION_INTERACTION,
-    );
+    const first = await definition.bookLegacy(confirmed.state);
 
-    const second = await definition.executeTool(
-      "book_meeting",
-      "{}",
-      first.state,
-      CONFIRMATION_INTERACTION,
-    );
+    const second = await definition.bookLegacy(first.state);
 
     assert.equal(first.output.error, "booking_recovery_required");
     assert.deepEqual(first.state, confirmed.state);
@@ -515,12 +478,7 @@ test("legacy confirmed state without a known operation never creates a new event
 
   const legacy = { ...prepared.state, step: "confirmed" as const, bookingOperation: null };
 
-  const result = await definition.executeTool(
-    "book_meeting",
-    "{}",
-    legacy,
-    CONFIRMATION_INTERACTION,
-  );
+  const result = await definition.bookLegacy(legacy);
 
   assert.equal(result.output.error, "booking_recovery_blocked");
   assert.equal(bookingCalls, 0);
@@ -565,41 +523,26 @@ test("pending recovery refuses details or event identity that differ from the co
     { ...legacy.pendingBooking, selectedSlot: { ...slot, end: "2099-09-15T12:30:00.000Z" } },
     { ...legacy.pendingBooking, selectedSlot: { ...slot, timezone: "UTC" } },
   ]) {
-    const result = await definition.executeTool(
-      "book_meeting",
-      "{}",
-      { ...legacy, pendingBooking },
-      CONFIRMATION_INTERACTION,
-    );
+    const result = await definition.bookLegacy({ ...legacy, pendingBooking });
 
     assert.equal(result.status, "active");
     assert.equal(result.output.error, "booking_recovery_blocked");
     assert.deepEqual(result.state.pendingBooking, pendingBooking);
   }
 
-  const wrongOperation = await definition.executeTool(
-    "book_meeting",
-    "{}",
-    {
-      ...legacy,
-      bookingOperation: { id: "55555555-5555-4555-8555-555555555555", preparedRevision: 2 },
-    },
-    CONFIRMATION_INTERACTION,
-  );
+  const wrongOperation = await definition.bookLegacy({
+    ...legacy,
+    bookingOperation: { id: "55555555-5555-4555-8555-555555555555", preparedRevision: 2 },
+  });
 
   assert.equal(wrongOperation.output.error, "booking_recovery_blocked");
   assert.equal(wrongOperation.status, "active");
   assert.equal(reconciliationCalls, 0);
 
-  const normalizedEmail = await definition.executeTool(
-    "book_meeting",
-    "{}",
-    {
-      ...legacy,
-      pendingBooking: { ...legacy.pendingBooking, email: " VISITOR@EXAMPLE.COM " },
-    },
-    CONFIRMATION_INTERACTION,
-  );
+  const normalizedEmail = await definition.bookLegacy({
+    ...legacy,
+    pendingBooking: { ...legacy.pendingBooking, email: " VISITOR@EXAMPLE.COM " },
+  });
 
   assert.equal(normalizedEmail.status, "completed");
   assert.equal(reconciliationCalls, 1);

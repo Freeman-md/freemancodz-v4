@@ -42,22 +42,20 @@ const response =
     .map((event) => JSON.stringify(event))
     .join("\n") + "\n";
 
-const mixedQuestion = "Did Freeman pilot Apollo 11? I also want to leave a message.";
+const mixedQuestion = "What did Freeman build for JPScents? I also want to book a meeting.";
 
-const portfolioNotice = "I couldn’t find enough information in the portfolio to answer that.";
+const clarification = "Which should we handle first?";
 
 const mixedResponse =
   [
-    { type: "delta", delta: `${portfolioNotice}\n\n` },
     { type: "sources", sources: [] },
     {
       type: "choice",
       choice: {
-        question: "What kind of message is this?",
-        options: ["Software consulting", "Collaboration"],
+        question: clarification,
+        options: ["Book a meeting first", "Answer the portfolio question first"],
       },
     },
-    { type: "delta", delta: portfolioNotice },
     { type: "done" },
   ]
     .map((event) => JSON.stringify(event))
@@ -407,12 +405,11 @@ async function journey(browser, phone) {
     await click(launcher);
     await message.fill(mixedQuestion);
     await click(page.getByRole("button", { name: "Send message" }));
-    await page.getByText("What kind of message is this?", { exact: true }).waitFor();
-    await page.getByText("Software consulting", { exact: true }).waitFor();
-    const notice = page.getByText(portfolioNotice, { exact: true });
+    const question = page.getByText(clarification, { exact: true });
 
-    await notice.waitFor();
-    assert.equal(await notice.count(), 1);
+    await question.waitFor();
+    await page.getByRole("radio", { name: "Book a meeting first" }).waitFor();
+    assert.equal(await question.count(), 1);
     assert.deepEqual(errors, []);
     console.log(
       `${browser.browserType().name()} ${phone ? "390px touch" : "1440px keyboard/pointer"}: passed`,

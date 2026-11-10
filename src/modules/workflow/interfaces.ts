@@ -2,6 +2,8 @@ import type { Prisma, WorkflowInstance } from "@/generated/prisma/client";
 import type { OpenAIResponseTool } from "@/infrastructure/openai/types";
 import type { WorkflowProgress } from "@/contracts/workflow-progress.contract";
 import type { z } from "zod";
+import type { WorkflowReview } from "@/contracts/assistant.contract";
+import type { ApprovedExecution } from "./execution.repository";
 import type {
   CreateWorkflowInstanceInput,
   SaveWorkflowInstanceInput,
@@ -23,6 +25,16 @@ export interface IWorkflowDefinition<State extends Prisma.JsonObject = Prisma.Js
   getProgress(state: State, status: WorkflowPublicInstance["status"]): WorkflowProgress;
   getInstructions(state: State): string;
   getTools(state: State): OpenAIResponseTool[];
+  getReview?(state: State): WorkflowReview | undefined;
+  prepareApproval?(
+    state: State,
+    executionId: string,
+    revision: number,
+  ): Omit<ApprovedExecution, "id" | "instanceId" | "revision"> | null;
+  adoptApproval?(
+    state: State,
+    executionId: string,
+  ): Omit<ApprovedExecution, "id" | "instanceId" | "revision"> | null;
   executeTool(
     name: string,
     rawArguments: string,
@@ -51,6 +63,12 @@ export interface IWorkflowService {
     toolCall: WorkflowToolCall,
   ): Promise<WorkflowToolExecutionResult>;
   cancel(instanceId: string): Promise<WorkflowPublicInstance>;
+  confirmWorkflow(
+    instanceId: string,
+    actionKey: string,
+    expectedRevision: number,
+  ): Promise<WorkflowToolExecutionResult>;
+  retryWorkflow(instanceId: string): Promise<WorkflowToolExecutionResult>;
   confirmMeetingBooking(
     instanceId: string,
     expectedRevision: number,
