@@ -1,16 +1,14 @@
 import "server-only";
 import { verifyPortfolioTarget } from "./portfolio-database";
 
-type RequiredEnvName = "DATABASE_URL" | "OPENAI_API_KEY" | "RATE_LIMIT_HMAC_SECRET";
-
-function requireEnv(name: RequiredEnvName) {
+function requireEnv(name: string, { trim = false } = {}) {
   const value = process.env[name];
 
-  if (!value) {
+  if (!value?.trim()) {
     throw new Error(`Missing required environment variable: ${name}`);
   }
 
-  return value;
+  return trim ? value.trim() : value;
 }
 
 export function getDatabaseUrl() {
@@ -38,26 +36,16 @@ export function getNotificationOwnerEmail() {
 
 export function getResendConfig() {
   return {
-    apiKey: requireEnvValue("RESEND_API_KEY"),
-    fromEmail: requireEnvValue("RESEND_FROM_EMAIL"),
+    apiKey: requireEnv("RESEND_API_KEY", { trim: true }),
+    fromEmail: requireEnv("RESEND_FROM_EMAIL", { trim: true }),
   };
 }
 
 export function getGoogleCalendarConfig() {
   return {
-    clientId: requireEnvValue("GOOGLE_CLIENT_ID"),
-    clientSecret: requireEnvValue("GOOGLE_CLIENT_SECRET"),
-    refreshToken: requireEnvValue("GOOGLE_REFRESH_TOKEN"),
-    calendarId: requireEnvValue("GOOGLE_CALENDAR_ID"),
+    clientId: requireEnv("GOOGLE_CLIENT_ID", { trim: true }),
+    clientSecret: requireEnv("GOOGLE_CLIENT_SECRET", { trim: true }),
+    refreshToken: requireEnv("GOOGLE_REFRESH_TOKEN", { trim: true }),
+    calendarId: requireEnv("GOOGLE_CALENDAR_ID", { trim: true }),
   };
-}
-
-function requireEnvValue(name: string) {
-  const value = process.env[name];
-
-  if (!value) {
-    throw new Error(`Missing required environment variable: ${name}`);
-  }
-
-  return value!.trim();
 }

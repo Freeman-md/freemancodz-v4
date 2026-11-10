@@ -57,7 +57,7 @@ export const contactService = new ContactService(
   new ContactRequestRepository(prisma),
   notificationService,
 );
-export const meetingService = new MeetingService(
+const meetingService = new MeetingService(
   new GoogleCalendarClient(getGoogleCalendarConfig),
   new MeetingRepository(prisma),
   logger,
@@ -99,7 +99,7 @@ const workflowRegistry = new WorkflowDefinitionRegistry([
   new MeetingBookingWorkflowDefinition(meetingService, meetingBookingWorkflowProgress),
 ]);
 
-export const workflowService = new WorkflowService(
+const workflowService = new WorkflowService(
   workflowRegistry,
   new WorkflowInstanceRepository(prisma),
   [...GLOBAL_ASSISTANT_TOOLS, PORTFOLIO_SEARCH_TOOL].map(({ name }) => name),
