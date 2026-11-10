@@ -32,7 +32,7 @@ export const PORTFOLIO_SEARCH_TOOL: OpenAIResponseTool = {
       workflowRequested: {
         type: "boolean",
         description:
-          "True only when the visitor is also explicitly asking to start or continue Contact or Meeting.",
+          "True only when the visitor is also explicitly asking to start or continue Meeting.",
       },
     },
     required: ["query", "workflowRequested"],

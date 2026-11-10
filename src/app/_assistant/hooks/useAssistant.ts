@@ -103,7 +103,11 @@ export function useAssistant() {
         if (event.type === "workflow_instance") {
           setWorkflowInstance(event.instance);
 
-          if (event.instance.status === "active") {
+          if (!event.instance) {
+            previousResponseId.current = null;
+          }
+
+          if (event.instance?.status === "active") {
             workflowInstanceId.current = event.instance.id;
             window.sessionStorage.setItem(ACTIVE_WORKFLOW_INSTANCE_STORAGE_KEY, event.instance.id);
           } else {
@@ -150,8 +154,6 @@ export function useAssistant() {
         {
           confirm_booking: "Confirm booking",
           retry_booking: "Retry booking",
-          confirm_contact: "Send message",
-          retry_contact: "Retry message",
         }[request.action],
       );
     },

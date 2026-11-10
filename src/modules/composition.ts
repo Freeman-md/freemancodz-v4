@@ -30,8 +30,6 @@ import { PrismaPortfolioSeedRepository } from "./portfolio/repositories/portfoli
 import { PortfolioSeedService } from "./portfolio/seed.service";
 import { RateLimitRepository } from "./rate-limit/repository";
 import { RateLimitService } from "./rate-limit/service";
-import { ContactWorkflowDefinition } from "./workflow/definitions/contact/contact.definition";
-import { ContactWorkflowProgressProjector } from "./workflow/definitions/contact/contact.progress";
 import { MeetingBookingWorkflowDefinition } from "./workflow/definitions/meeting-booking/meeting-booking.definition";
 import { MeetingBookingWorkflowProgressProjector } from "./workflow/definitions/meeting-booking/meeting-booking.progress";
 import { WorkflowInstanceRepository } from "./workflow/repository";
@@ -94,12 +92,10 @@ export function createPortfolioIndexSession(connection: string) {
 }
 
 // Workflows
-const contactWorkflowProgress = new ContactWorkflowProgressProjector();
 
 const meetingBookingWorkflowProgress = new MeetingBookingWorkflowProgressProjector();
 
 const workflowRegistry = new WorkflowDefinitionRegistry([
-  new ContactWorkflowDefinition(contactService, contactWorkflowProgress),
   new MeetingBookingWorkflowDefinition(meetingService, meetingBookingWorkflowProgress),
 ]);
 

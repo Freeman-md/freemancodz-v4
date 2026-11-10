@@ -4,13 +4,12 @@ import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import test from "node:test";
 import { Client } from "pg";
+import { z } from "zod";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@/generated/prisma/client";
 import { WorkflowInstanceRepository } from "@/modules/workflow/repository";
 import { WorkflowService } from "@/modules/workflow/service";
 import { WorkflowDefinitionRegistry } from "@/modules/workflow/registry";
-import { ContactWorkflowDefinition } from "@/modules/workflow/definitions/contact/contact.definition";
-import { ContactWorkflowProgressProjector } from "@/modules/workflow/definitions/contact/contact.progress";
 
 const adminConnectionUrl = process.env.PORTFOLIO_TEST_DATABASE_URL;
 
@@ -92,30 +91,22 @@ test(
       });
       const repository = new WorkflowInstanceRepository(prisma);
 
-      const contact = new ContactWorkflowDefinition(
-        {
-          submit: async () => {
-            throw new Error("No final submission was authorized");
-          },
-        },
-        new ContactWorkflowProgressProjector(),
-      );
-
-      const other = {
-        ...contact,
-        id: "other",
+      const definition = {
+        id: "first",
         version: 1,
-        description: "Other",
-        stateSchema: contact.stateSchema,
-        createInitialState: contact.createInitialState.bind(contact),
-        getInstructions: contact.getInstructions.bind(contact),
-        getTools: contact.getTools.bind(contact),
-        getProgress: contact.getProgress.bind(contact),
-        executeTool: contact.executeTool.bind(contact),
+        description: "Test workflow",
+        stateSchema: z.strictObject({ name: z.string().optional() }),
+        createInitialState: () => ({}),
+        getInstructions: () => "",
+        getTools: () => [],
+        getProgress: () => ({ phase: "collecting" as const, fields: [], missingRequiredFields: [] }),
+        executeTool: async () => {
+          throw new Error("Unexpected definition tool");
+        },
       };
 
       const service = new WorkflowService(
-        new WorkflowDefinitionRegistry([contact, other]),
+        new WorkflowDefinitionRegistry([definition, { ...definition, id: "other" }]),
         repository,
         ["ask_user_choice"],
         { info() {}, error() {} },
@@ -123,7 +114,7 @@ test(
 
       const origin = { originChannel: "web", originPage: null, originEntry: null };
 
-      const instance = await service.start("contact", origin);
+      const instance = await service.start("first", origin);
 
       const saved = await repository.findById(instance.id);
 
@@ -133,7 +124,7 @@ test(
           repository.save({
             id: instance.id,
             expectedRevision: saved.revision,
-            state: { ...contact.createInitialState(origin), name: "Visitor" },
+            state: { name: "Visitor" },
             status: "active",
             completedAt: null,
           }),
@@ -147,7 +138,7 @@ test(
       assert.equal(updated?.revision, saved.revision + 1);
       const continued = await service.executeTool(instance.id, {
         name: "switch_workflow",
-        rawArguments: '{"workflowId":"contact"}',
+        rawArguments: '{"workflowId":"first"}',
         interactionId: randomUUID(),
         startContext: origin,
       });
@@ -170,9 +161,9 @@ test(
       assert.equal((await repository.findById(instance.id))?.status, "cancelled");
       const rollback = await repository.create({
         ...origin,
-        workflowId: "contact",
+        workflowId: "first",
         workflowVersion: 1,
-        state: contact.createInitialState(origin),
+        state: {},
       });
 
       await assert.rejects(

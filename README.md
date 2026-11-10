@@ -55,13 +55,13 @@ Ask “What did you build for JPScents?” The assistant retrieves excerpts from
 
 A full index refresh is simple for this small catalogue. Publishing changes includes an explicit refresh after the site is rebuilt and verified. Source links let readers inspect the case study or section behind the answer. When the records cannot support an answer, the assistant says so.
 
-Follow the [indexing command](src/entrypoints/maintenance/index-portfolio.ts), [search service](src/modules/portfolio/services/portfolio-search.service.ts), and [assistant answer and source handling](src/modules/assistant/service.ts) in the code. The assistant also supports Contact and Meeting workflows. See the [workflow guide](docs/workflow-foundation.md).
+Follow the [indexing command](src/entrypoints/maintenance/index-portfolio.ts), [search service](src/modules/portfolio/services/portfolio-search.service.ts), and [assistant answer and source handling](src/modules/assistant/service.ts) in the code. The assistant also supports booking a meeting. See the [workflow guide](docs/workflow-foundation.md).
 
 <a name="local-development"></a>
 
 ## Run it locally
 
-Use Node.js 22.13 or newer in the 22.x series, npm, Docker, and the Supabase CLI. Create `.env` from [`.env.example`](.env.example) for the local database at `127.0.0.1:54332`. Set `OPENAI_API_KEY` for indexing and chat, and set `RATE_LIMIT_HMAC_SECRET` for chat. The example lists the provider settings for Contact email and Meeting.
+Use Node.js 22.13 or newer in the 22.x series, npm, Docker, and the Supabase CLI. Create `.env` from [`.env.example`](.env.example) for the local database at `127.0.0.1:54332`. Set `OPENAI_API_KEY` for indexing and chat, and set `RATE_LIMIT_HMAC_SECRET` for chat. The example lists the provider settings for Meeting and the standalone Contact service.
 
 ```sh
 npm ci

@@ -109,6 +109,11 @@ export class WorkflowService implements IWorkflowService {
 
     const instance = await this.loadInstance(instanceId);
 
+    // A retired workflow can leave a saved ID in the browser.
+    if (!this.registry.getLatest(instance.workflowId)) {
+      return this.createStartContext();
+    }
+
     const definition = this.resolveDefinition(instance);
 
     const state = this.validateState(definition, instance.state);
@@ -399,193 +404,6 @@ export class WorkflowService implements IWorkflowService {
       }
 
       return this.currentBookingResult(current, definition);
-    }
-  }
-
-  confirmContactMessage(instanceId: string, expectedRevision: number) {
-    return this.confirmSubmission(instanceId, "contact", expectedRevision);
-  }
-
-  retryContactMessage(instanceId: string) {
-    return this.retrySubmission(instanceId, "contact");
-  }
-
-  private async loadSubmission(instanceId: string, workflowId: "contact") {
-    const instance = await this.loadInstance(instanceId);
-
-    if (instance.workflowId !== workflowId) {
-      throw new WorkflowServiceError(
-        "invalid_request",
-        "The submission action does not match this workflow.",
-      );
-    }
-
-    const definition = this.resolveDefinition(instance);
-
-    const state = this.validateState(definition, instance.state);
-
-    return { instance, definition, state };
-  }
-
-  private submissionResult(
-    instance: WorkflowInstance,
-    definition: IWorkflowDefinition,
-    message?: string,
-  ): WorkflowToolExecutionResult {
-    const status = parseWorkflowInstanceStatus(instance.status);
-
-    const state = this.validateState(definition, instance.state);
-
-    const statusMessages = {
-      completed: "Your request was submitted to Freeman.",
-      cancelled: "This request was cancelled.",
-      active: "Review the saved details, then use the confirmation or retry button.",
-    };
-
-    return {
-      instance: toWorkflowPublicInstance(
-        instance,
-        this.getDefinitionProgress(definition, state, status),
-      ),
-      output: {
-        message: message ?? statusMessages[status],
-      },
-    };
-  }
-
-  private async confirmSubmission(
-    instanceId: string,
-    workflowId: "contact",
-    expectedRevision: number,
-  ): Promise<WorkflowToolExecutionResult> {
-    if (!Number.isInteger(expectedRevision) || expectedRevision < 0) {
-      throw new WorkflowServiceError("invalid_request", "The summary revision is invalid.");
-    }
-
-    const { instance, definition, state } = await this.loadSubmission(instanceId, workflowId);
-
-    if (instance.status !== "active" || state.confirmedRevision != null) {
-      return this.submissionResult(instance, definition);
-    }
-
-    if (instance.revision !== expectedRevision) {
-      return this.submissionResult(
-        instance,
-        definition,
-        "The details changed. Review the updated summary and confirm again.",
-      );
-    }
-
-    if (
-      !state.preparedInteractionId ||
-      this.getDefinitionProgress(definition, state, "active").missingRequiredFields.length
-    ) {
-      return this.submissionResult(
-        instance,
-        definition,
-        "Prepare a complete summary before confirming.",
-      );
-    }
-
-    try {
-      // Save acceptance first so a competing correction cannot change what is submitted.
-      await this.persistExecution(instance, definition, {
-        state: { ...state, confirmedRevision: expectedRevision },
-        status: "active",
-        output: {},
-      });
-    } catch (error) {
-      if (!isBookingPersistenceFailure(error)) {
-        throw error;
-      }
-
-      const current = await this.loadSubmission(instanceId, workflowId);
-
-      return this.submissionResult(
-        current.instance,
-        current.definition,
-        "The request changed while confirming. Review its current status.",
-      );
-    }
-
-    this.logger.info("workflow.submission_accepted", {
-      workflowInstanceId: instanceId,
-      revision: expectedRevision,
-    });
-
-    return this.retrySubmission(instanceId, workflowId);
-  }
-
-  private async retrySubmission(
-    instanceId: string,
-    workflowId: "contact",
-  ): Promise<WorkflowToolExecutionResult> {
-    const { instance, definition, state } = await this.loadSubmission(instanceId, workflowId);
-
-    if (instance.status !== "active") {
-      return this.submissionResult(instance, definition);
-    }
-
-    if (state.confirmedRevision == null) {
-      return this.submissionResult(
-        instance,
-        definition,
-        "Confirm the saved summary before submission.",
-      );
-    }
-
-    let stage = "submission";
-
-    try {
-      const execution = await this.executeDefinitionTool(
-        definition,
-        {
-          name: `submit_${workflowId}`,
-          rawArguments: "{}",
-          interactionId: randomUUID(),
-          allowConfirmation: true,
-        },
-        state,
-        instanceId,
-      );
-
-      stage = "completion_save";
-      const result = await this.persistExecution(instance, definition, execution);
-
-      this.logger.info("workflow.submission_completed", {
-        workflowInstanceId: instanceId,
-        revision: result.instance.revision,
-      });
-
-      return result;
-    } catch (error) {
-      const current = await this.loadSubmission(instanceId, workflowId);
-
-      const reconciled =
-        current.instance.status === "completed" &&
-        current.state.confirmedRevision === state.confirmedRevision;
-
-      this.logger.error("workflow.submission_recovery_required", {
-        workflowInstanceId: instanceId,
-        revision: instance.revision,
-        stage,
-        category: error instanceof WorkflowServiceError ? error.code : "submission_failed",
-        reconciled,
-      });
-      if (current.state.confirmedRevision !== state.confirmedRevision) {
-        throw new WorkflowServiceError(
-          "invalid_transition",
-          "The accepted submission changed. Contact Freeman to check its status.",
-        );
-      }
-
-      return this.submissionResult(
-        current.instance,
-        current.definition,
-        reconciled
-          ? undefined
-          : "We could not finish checking this submission. Use Retry to check the same request safely.",
-      );
     }
   }
 
@@ -1088,10 +906,6 @@ function toWorkflowPublicInstance(
 }
 
 function isWorkflowExecutionFrozen(instance: WorkflowInstance, state: Prisma.JsonObject) {
-  if (instance.workflowId === "contact") {
-    return state.confirmedRevision != null;
-  }
-
   return (
     instance.workflowId === MEETING_BOOKING_WORKFLOW_ID &&
     Boolean(state.bookingOperation || state.pendingBooking || state.step === "confirmed")
@@ -1122,16 +936,6 @@ function getConfirmationAction(
 ): Pick<WorkflowPublicInstance, "confirmationAction"> {
   if (instance.status !== "active") {
     return {};
-  }
-
-  if (instance.workflowId === "contact") {
-    if (progress.phase === "processing") {
-      return { confirmationAction: "retry" };
-    }
-
-    return progress.phase === "awaiting_confirmation" && progress.missingRequiredFields.length === 0
-      ? { confirmationAction: "confirm" }
-      : {};
   }
 
   if (instance.workflowId !== MEETING_BOOKING_WORKFLOW_ID) {

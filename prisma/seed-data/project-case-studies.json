@@ -79,13 +79,13 @@
     "projectSlug": "portfolio-assistant",
     "role": "Software Engineer · Personal Project",
     "problem": "Visitors with specific questions had to piece together answers across the portfolio and then find a separate way to get in touch or arrange a meeting.",
-    "contribution": "I built the chat interface, streamed answers using the OpenAI Responses API, and indexed my portfolio content for semantic search in PostgreSQL with pgvector. The assistant can cite the portfolio sections it retrieved. I built guided workflows with progress saved on the server, so visitors can resume after a refresh. The assistant helps collect details and show a summary, and the visitor explicitly confirms before a request is submitted or a meeting is booked through Google Calendar.",
-    "outcome": "Visitors can ask a specific question, open the relevant source, and move from an answer to a contact request or confirmed meeting in the same conversation.",
+    "contribution": "I built the chat interface, streamed answers using the OpenAI Responses API, and indexed my portfolio content for semantic search in PostgreSQL with pgvector. The assistant can cite the portfolio sections it retrieved. I built a guided booking workflow with progress saved on the server, so visitors can resume after a refresh. The assistant collects meeting details and shows a summary for explicit confirmation before booking through Google Calendar.",
+    "outcome": "Visitors can ask a specific question, open the relevant source, and move from an answer to a confirmed meeting in the same conversation.",
     "capabilities": [
       "Streamed portfolio answers with source links",
       "Semantic search over portfolio content",
       "Guided choices and saved workflow progress",
-      "Contact and meeting booking with explicit confirmation"
+      "Meeting booking with explicit confirmation"
     ],
     "technologyKeys": [
       "nextjs",

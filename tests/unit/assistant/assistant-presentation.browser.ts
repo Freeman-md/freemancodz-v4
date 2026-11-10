@@ -77,59 +77,6 @@ test("booking review submits the displayed revision and replaces obsolete contro
   });
 });
 
-test("contact reviews submit the displayed snapshot and expose explicit retry", async () => {
-  for (const workflowId of ["contact"] as const) {
-    await withBrowser(async ({ container, root }) => {
-      const actions: AssistantWorkflowAction[] = [];
-
-      const instance: WorkflowPublicInstance = {
-        ...workflowInstance("00000000-0000-4000-8000-000000000001", "visitor@example.com"),
-        workflowId,
-        revision: 4,
-        confirmationAction: "confirm",
-      };
-
-      const render = async (snapshot: WorkflowPublicInstance, isLoading = false) => {
-        await act(async () =>
-          root.render(
-            createElement(AssistantWorkflowConfirmation, {
-              instance: snapshot,
-              isLoading,
-              onSubmit: async (action) => {
-                actions.push(action);
-              },
-            }),
-          ),
-        );
-      };
-
-      await render(instance);
-      assert.equal(container.querySelector("input,textarea,select"), null);
-      assert.match(container.querySelector("button")!.textContent!, /Send message/);
-      await act(async () => container.querySelector("button")!.click());
-      assert.deepEqual(actions[0], {
-        action: `confirm_${workflowId}`,
-        workflowInstanceId: instance.id,
-        expectedRevision: 4,
-      });
-      await render({ ...instance, revision: 5 });
-      await act(async () => container.querySelector("button")!.click());
-      assert.equal("expectedRevision" in actions[1] && actions[1].expectedRevision, 5);
-      await render({ ...instance, confirmationAction: "retry" }, true);
-      await act(async () => container.querySelector("button")!.click());
-      assert.equal(actions.length, 2);
-      await render({ ...instance, confirmationAction: "retry" });
-      await act(async () => container.querySelector("button")!.click());
-      assert.deepEqual(actions[2], {
-        action: `retry_${workflowId}`,
-        workflowInstanceId: instance.id,
-      });
-      await render({ ...instance, status: "completed", confirmationAction: undefined });
-      assert.equal(container.querySelector("button"), null);
-    });
-  }
-});
-
 test("sources belong to their answer and disappear when no evidence is returned", async () => {
   await withBrowser(async ({ container, root }) => {
     const messagesEndRef = createRef<HTMLDivElement>();
@@ -240,8 +187,8 @@ test("workflow progress is read-only, starts collapsed, and only resets for a ne
 
     assert.ok(trigger);
     assert.equal(trigger.getAttribute("aria-expanded"), "false");
-    assert.match(container.textContent ?? "", /Leave a message/);
-    assert.match(container.textContent ?? "", /1 of 3 details/);
+    assert.match(container.textContent ?? "", /Book a meeting/);
+    assert.match(container.textContent ?? "", /1 of 4 details/);
     assert.equal(container.querySelector("input, textarea, select"), null);
 
     await act(async () => trigger.click());
@@ -257,7 +204,7 @@ test("workflow progress is read-only, starts collapsed, and only resets for a ne
       );
     });
     assert.equal(container.querySelector("button")?.getAttribute("aria-expanded"), "true");
-    assert.match(container.textContent ?? "", /2 of 3 details/);
+    assert.match(container.textContent ?? "", /2 of 4 details/);
 
     await act(async () => {
       root.render(
@@ -274,7 +221,7 @@ test("workflow progress is read-only, starts collapsed, and only resets for a ne
 function workflowInstance(id: string, email: string | null): WorkflowPublicInstance {
   return {
     id,
-    workflowId: "contact",
+    workflowId: "meeting-booking",
     workflowVersion: 1,
     revision: 0,
     status: "active",
@@ -283,10 +230,10 @@ function workflowInstance(id: string, email: string | null): WorkflowPublicInsta
       fields: [
         { key: "name", required: true, value: "James" },
         { key: "email", required: true, value: email },
-        { key: "message", required: true, value: null },
-        { key: "businessName", required: false, value: null },
+        { key: "reason", required: true, value: null },
+        { key: "selectedSlot", required: true, value: null },
       ],
-      missingRequiredFields: email ? ["message"] : ["email", "message"],
+      missingRequiredFields: email ? ["reason", "selectedSlot"] : ["email", "reason", "selectedSlot"],
     },
   };
 }

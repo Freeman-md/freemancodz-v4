@@ -16,28 +16,16 @@ export function AssistantWorkflowConfirmation({
   isLoading: boolean;
   onSubmit: (action: AssistantWorkflowAction) => Promise<void>;
 }) {
-  if (!instance.confirmationAction || instance.status !== "active") {
+  if (
+    instance.workflowId !== "meeting-booking" ||
+    !instance.confirmationAction ||
+    instance.status !== "active"
+  ) {
     return null;
   }
-
-  const kind = instance.workflowId === "meeting-booking" ? "booking" : instance.workflowId;
-
-  if (kind !== "contact" && kind !== "booking") {
-    return null;
-  }
-
-  const confirmLabels = {
-    contact: "Send message",
-    booking: "Confirm booking",
-  };
-
-  const retryLabels = {
-    contact: "Retry message",
-    booking: "Retry booking",
-  };
 
   let buttonLabel =
-    instance.confirmationAction === "confirm" ? confirmLabels[kind] : retryLabels[kind];
+    instance.confirmationAction === "confirm" ? "Confirm booking" : "Retry booking";
 
   if (isLoading) {
     buttonLabel = "Checking request…";
@@ -45,12 +33,10 @@ export function AssistantWorkflowConfirmation({
 
   return (
     <section
-      aria-label={kind === "booking" ? "Review meeting booking" : "Review your request"}
+      aria-label="Review meeting booking"
       className="assistant-workflow-review shrink-0 border-t border-black/10 bg-white px-4 py-3 sm:px-6"
     >
-      <h3 className="text-sm font-medium text-ink">
-        {kind === "booking" ? "Review your meeting" : "Review your request"}
-      </h3>
+      <h3 className="text-sm font-medium text-ink">Review your meeting</h3>
       <dl className="my-2 text-sm">
         {instance.progress.fields.map(
           (field) =>
@@ -77,12 +63,12 @@ export function AssistantWorkflowConfirmation({
             void onSubmit(
               instance.confirmationAction === "confirm"
                 ? {
-                    action: kind === "contact" ? "confirm_contact" : "confirm_booking",
+                    action: "confirm_booking",
                     workflowInstanceId: instance.id,
                     expectedRevision: instance.revision,
                   }
                 : {
-                    action: kind === "contact" ? "retry_contact" : "retry_booking",
+                    action: "retry_booking",
                     workflowInstanceId: instance.id,
                   },
             )

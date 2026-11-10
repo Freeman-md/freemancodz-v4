@@ -21,7 +21,7 @@ Instances begin as `active`. Completion and cancellation are terminal and their 
 
 ## Assistant and browser boundary
 
-Every normal OpenAI iteration combines the portfolio assistant's global instructions and the `ask_user_choice` tool with the current workflow context. With no active instance, that context can expose `start_workflow`. With an active instance, it exposes `cancel_workflow`, `switch_workflow` and only the definition tools available at the current state. A start tool result is therefore followed immediately by another model iteration using the selected workflow's surface.
+Every normal OpenAI iteration combines the portfolio assistant's global instructions and the `ask_user_choice` tool with the current workflow context. With no active instance, that context can expose `start_workflow`. With an active instance, it exposes `cancel_workflow` and the definition tools available at the current state. It exposes `switch_workflow` only when another workflow is available. A start tool result is therefore followed immediately by another model iteration using the selected workflow's surface.
 
 An ordinary browser request carries:
 
@@ -33,7 +33,7 @@ An ordinary browser request carries:
 }
 ```
 
-The stream returns safe instance metadata (including its saved revision) and read-only progress: collected public values, missing required fields, and phase. Private workflow state stays on the server. Only the active opaque ID persists in sessionStorage; after refresh, the next assistant request reloads the saved workflow. Completion or cancellation clears that ID. There is no public workflow-instance read or write endpoint.
+The stream returns safe instance metadata (including its saved revision) and read-only progress: collected public values, missing required fields, and phase. Private workflow state stays on the server. Only the active opaque ID persists in sessionStorage; after refresh, the next assistant request reloads the saved workflow. Completion, cancellation or retirement of the saved workflow clears that ID. There is no public workflow-instance read or write endpoint.
 
 Meeting confirmation uses the same rate-limited `/api/chat` route with `{ action: "confirm_booking", workflowInstanceId, expectedRevision }`; recovery uses `{ action: "retry_booking", workflowInstanceId }`. These strict alternatives cannot include a message or editable booking details. Action responses use the same stream without a model call. The next ordinary message reloads workflow state without the previous model checkpoint.
 
@@ -42,14 +42,6 @@ Meeting confirmation uses the same rate-limited `/api/chat` route with `{ action
 The global `ask_user_choice` tool accepts a model-written question and two to six distinct reply strings. It has no workflow dependency. Once requested, remaining tool calls receive skipped acknowledgements. A single tools-disabled model continuation completes before the browser receives the choice and its response checkpoint.
 
 The picker temporarily replaces the composer. Selecting and sending an option submits its exact text through the ordinary chat request; “Write my own reply” restores text entry without sending anything. Choices are memory-only, never stored on a workflow, and disappear on refresh. The normal workflow tools still validate details and switch atomically. Neither a choice nor typed confirmation can authorise meeting booking; the saved summary's Confirm booking button is required. Read-only progress is unchanged.
-
-## Contact confirmation
-
-Contact uses an explicit confirmation boundary: `confirm_contact` submits only the saved workflow ID and displayed revision. `retry_contact` recovers that same accepted request. Typed approval and model tools cannot submit the request. The application displays the saved progress fields in a read-only confirmation summary.
-
-Before submission, the workflow saves `confirmedRevision` in its existing JSON state through a revision-checked write. Accepted fields are frozen against corrections, cancellation and switching. Existing states without this optional marker remain readable. Recovery uses the existing unique workflow-instance key, checks that the saved request matches the accepted fields before notification, and reconciles completion-save failures without overwriting newer state. Notifications retain their current best-effort handling and stable idempotency keys; completion does not guarantee email delivery.
-
-Submission diagnostics reuse the logger: `workflow.submission_accepted`, `workflow.submission_completed` and `workflow.submission_recovery_required`. Recovery records the submission/completion-save stage, workflow ID, revision and safe category, never submitted personal fields or raw exceptions. No tables or migrations are added.
 
 ## Meeting booking version 1
 

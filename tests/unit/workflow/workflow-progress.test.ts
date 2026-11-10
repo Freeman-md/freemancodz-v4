@@ -1,53 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { ContactWorkflowProgressProjector } from "@/modules/workflow/definitions/contact/contact.progress";
 import { MeetingBookingWorkflowProgressProjector } from "@/modules/workflow/definitions/meeting-booking/meeting-booking.progress";
 
 const interactionId = "11111111-1111-4111-8111-111111111111";
 
-const contactWorkflowProgress = new ContactWorkflowProgressProjector();
-
 const meetingBookingWorkflowProgress = new MeetingBookingWorkflowProgressProjector();
-
-test("contact progress exposes ordered public fields and accurate missing requirements", () => {
-  const collecting = contactWorkflowProgress.getProgress(
-    {
-      name: "Jonathan",
-      email: null,
-      message: null,
-      businessName: null,
-      preparedInteractionId: null,
-    },
-    "active",
-  );
-
-  assert.deepEqual(collecting, {
-    phase: "collecting",
-    fields: [
-      { key: "name", required: true, value: "Jonathan" },
-      { key: "email", required: true, value: null },
-      { key: "message", required: true, value: null },
-      { key: "businessName", required: false, value: null },
-    ],
-    missingRequiredFields: ["email", "message"],
-  });
-
-  const prepared = contactWorkflowProgress.getProgress(
-    {
-      name: "Jonathan",
-      email: "jonathan@example.com",
-      message: "Audit",
-      businessName: null,
-      preparedInteractionId: interactionId,
-    },
-    "active",
-  );
-
-  assert.equal(prepared.phase, "awaiting_confirmation");
-  assert.deepEqual(prepared.missingRequiredFields, []);
-  assert.equal(JSON.stringify(prepared).includes("preparedInteractionId"), false);
-});
 
 test("meeting progress exposes the selected slot without provider recovery state", () => {
   const selectedSlot = {

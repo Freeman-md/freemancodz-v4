@@ -13,9 +13,6 @@ import type { IWorkflowInstanceRepository } from "@/modules/workflow/interfaces"
 import type { WorkflowInstance } from "@/generated/prisma/client";
 import { MeetingBookingWorkflowDefinition } from "@/modules/workflow/definitions/meeting-booking/meeting-booking.definition";
 import { MeetingBookingWorkflowProgressProjector } from "@/modules/workflow/definitions/meeting-booking/meeting-booking.progress";
-import { ContactWorkflowDefinition } from "@/modules/workflow/definitions/contact/contact.definition";
-import { contactStateSchema } from "@/modules/workflow/definitions/contact/contact.schema";
-import { ContactWorkflowProgressProjector } from "@/modules/workflow/definitions/contact/contact.progress";
 import { WorkflowDefinitionRegistry } from "@/modules/workflow/registry";
 import type {
   CreateWorkflowInstanceInput,
@@ -105,16 +102,6 @@ function createAssistant({
 
   const workflowService = new WorkflowService(
     new WorkflowDefinitionRegistry([
-      new ContactWorkflowDefinition(
-        {
-          submit: async (input) => ({
-            id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
-            ...input,
-            createdAt: new Date("2026-08-20T10:00:00.000Z"),
-          }),
-        },
-        new ContactWorkflowProgressProjector(),
-      ),
       new MeetingBookingWorkflowDefinition(
         meetingService,
         new MeetingBookingWorkflowProgressProjector(),
@@ -154,118 +141,6 @@ function chatRequest(body: unknown, signal?: AbortSignal) {
     signal,
   });
 }
-
-test("contact actions confirm saved summaries without invoking the model", async () => {
-  for (const kind of ["contact"] as const) {
-    const { post, inputs, workflowService } = createAssistant();
-
-    const instance = await workflowService.start(kind, {
-      originChannel: "test",
-      originPage: null,
-      originEntry: null,
-    });
-
-    const fields = { name: "Visitor", email: "visitor@example.test", message: "Discuss a project" };
-
-    await workflowService.executeTool(instance.id, {
-      name: `update_${kind}_context`,
-      rawArguments: JSON.stringify({
-        updates: Object.entries(fields).map(([field, value]) => ({ field, value })),
-      }),
-      interactionId: randomUUID(),
-    });
-    const prepared = await workflowService.executeTool(instance.id, {
-      name: `prepare_${kind}_submission`,
-      rawArguments: "{}",
-      interactionId: randomUUID(),
-    });
-
-    const invalid = await post(
-      chatRequest({
-        action: `confirm_${kind}`,
-        workflowInstanceId: instance.id,
-        expectedRevision: prepared.instance.revision,
-        message: "changed",
-      }),
-    );
-
-    assert.equal(invalid.status, 400);
-    const stale = await readChatResponse(
-      await post(
-        chatRequest({
-          action: `confirm_${kind}`,
-          workflowInstanceId: instance.id,
-          expectedRevision: 0,
-        }),
-      ),
-    );
-
-    assert.match(stale, /details changed/);
-    const output = await readChatResponse(
-      await post(
-        chatRequest({
-          action: `confirm_${kind}`,
-          workflowInstanceId: instance.id,
-          expectedRevision: prepared.instance.revision,
-        }),
-      ),
-    );
-
-    assert.match(output, /"status":"completed"/);
-    assert.equal(inputs.length, 0);
-    const repeated = await readChatResponse(
-      await post(
-        chatRequest({
-          action: `confirm_${kind}`,
-          workflowInstanceId: instance.id,
-          expectedRevision: prepared.instance.revision,
-        }),
-      ),
-    );
-
-    assert.match(repeated, /"status":"completed"/);
-
-    const next = await workflowService.start(kind, {
-      originChannel: "test",
-      originPage: null,
-      originEntry: null,
-    });
-
-    await workflowService.executeTool(next.id, {
-      name: `update_${kind}_context`,
-      rawArguments: JSON.stringify({
-        updates: Object.entries(fields).map(([field, value]) => ({ field, value })),
-      }),
-      interactionId: randomUUID(),
-    });
-    const ready = await workflowService.executeTool(next.id, {
-      name: `prepare_${kind}_submission`,
-      rawArguments: "{}",
-      interactionId: randomUUID(),
-    });
-
-    const controller = new AbortController();
-
-    controller.abort();
-    await readChatResponse(
-      await post(
-        chatRequest(
-          {
-            action: `confirm_${kind}`,
-            workflowInstanceId: next.id,
-            expectedRevision: ready.instance.revision,
-          },
-          controller.signal,
-        ),
-      ),
-    );
-    assert.equal(
-      (await workflowService.getAssistantContext(next.id)).instance?.status,
-      "completed",
-    );
-    assert.equal(inputs.length, 0);
-  }
-});
 
 async function readChatResponse(response: Response) {
   assert.equal(response.status, 200);
@@ -350,7 +225,7 @@ test(
         if (request.input[0]?.type === "function_call_output") {
           const label = request.previousResponseId === "resp_Alpha_tools" ? "Alpha" : "Beta";
 
-          assert.match(JSON.stringify(request.input), new RegExp(`${label} company`));
+          assert.match(JSON.stringify(request.input), new RegExp(`${label} topic`));
           assert.doesNotMatch(
             JSON.stringify(request.input),
             new RegExp(label === "Alpha" ? "Beta" : "Alpha"),
@@ -387,9 +262,9 @@ test(
             item: {
               type: "function_call",
               call_id: `${label}-update`,
-              name: "update_contact_context",
+              name: "update_meeting_context",
               arguments: JSON.stringify({
-                updates: [{ field: "businessName", value: `${label} company` }],
+                updates: [{ field: "reason", value: `${label} topic` }],
               }),
             },
           },
@@ -400,14 +275,14 @@ test(
     const instances = [];
 
     for (const label of ["Alpha", "Beta"]) {
-      const instance = await workflowService.start("contact", {
+      const instance = await workflowService.start("meeting-booking", {
         originChannel: "test",
         originPage: null,
         originEntry: null,
       });
 
       await workflowService.executeTool(instance.id, {
-        name: "update_contact_context",
+        name: "update_meeting_context",
         rawArguments: JSON.stringify({ updates: [{ field: "name", value: `${label} Visitor` }] }),
         interactionId: "33333333-3333-4333-8333-333333333333",
       });
@@ -454,6 +329,7 @@ test(
       );
       for (const event of streamed) {
         if (event.type === "workflow_instance") {
+          assert.ok(event.instance);
           assert.equal(event.instance.id, instances[index].id);
         }
 
@@ -465,7 +341,7 @@ test(
       const saved = await workflowRepository.findById(instances[index].id);
 
       assert.ok(saved?.state && typeof saved.state === "object" && !Array.isArray(saved.state));
-      assert.equal(saved.state.businessName, `${label} company`);
+      assert.equal(saved.state.reason, `${label} topic`);
     }
 
     assert.deepEqual(errors, []);
@@ -491,7 +367,7 @@ test("a saved update or cancellation is streamed before a provider continuation 
             item: {
               type: "function_call",
               call_id: "transition",
-              name: cancelled ? "cancel_workflow" : "update_contact_context",
+              name: cancelled ? "cancel_workflow" : "update_meeting_context",
               arguments: cancelled
                 ? "{}"
                 : JSON.stringify({ updates: [{ field: "email", value: "saved@example.test" }] }),
@@ -501,7 +377,7 @@ test("a saved update or cancellation is streamed before a provider continuation 
       },
     });
 
-    const instance = await workflowService.start("contact", {
+    const instance = await workflowService.start("meeting-booking", {
       originChannel: "test",
       originPage: null,
       originEntry: null,
@@ -525,6 +401,7 @@ test("a saved update or cancellation is streamed before a provider continuation 
         continue;
       }
 
+      assert.ok(event.instance);
       assert.equal(event.instance.id, instance.id);
       assert.equal(event.instance.status, cancelled ? "cancelled" : "active");
       if (!cancelled) {
@@ -608,60 +485,6 @@ test("partial meeting details return after refresh without a model checkpoint", 
 
   assert.equal(context.instance?.progress.fields[0].value, "Visitor");
   assert.equal(context.instance?.progress.fields[1].value, "visitor@example.com");
-});
-
-test("a restored workflow supplies known progress to the model and public stream", async () => {
-  const { inputs, post, workflowService } = createAssistant();
-
-  const instance = await workflowService.start("contact", {
-    originChannel: "web",
-    originPage: "/",
-    originEntry: "assistant-starter-contact",
-  });
-
-  await workflowService.executeTool(instance.id, {
-    name: "update_contact_context",
-    rawArguments: JSON.stringify({
-      updates: [
-        { field: "name", value: "Jonathan" },
-        { field: "email", value: "jonathan@example.com" },
-        { field: "message", value: "Audit" },
-      ],
-    }),
-    interactionId: "33333333-3333-4333-8333-333333333333",
-  });
-  await workflowService.executeTool(instance.id, {
-    name: "prepare_contact_submission",
-    rawArguments: "{}",
-    interactionId: "44444444-4444-4444-8444-444444444444",
-  });
-
-  const output = await readChatResponse(
-    await post(
-      chatRequest({
-        message: "What details do you already have?",
-        workflowInstanceId: instance.id,
-      }),
-    ),
-  );
-
-  const modelInput = inputs[0]?.input[0];
-
-  assert.equal(modelInput?.type, "user_message");
-  assert.match(modelInput?.type === "user_message" ? modelInput.content : "", /Jonathan/);
-  assert.match(
-    modelInput?.type === "user_message" ? modelInput.content : "",
-    /jonathan@example\.com/,
-  );
-  assert.match(modelInput?.type === "user_message" ? modelInput.content : "", /Audit/);
-  assert.match(
-    modelInput?.type === "user_message" ? modelInput.content : "",
-    /visitor-provided data/,
-  );
-  assert.match(output, /"missingRequiredFields":\[\]/);
-  assert.match(output, /"phase":"awaiting_confirmation"/);
-  assert.match(output, /jonathan@example\.com/);
-  assert.doesNotMatch(output, /preparedInteractionId/);
 });
 
 function portfolioCall(query: string | null, id = "call_search", workflowRequested = false) {
@@ -764,7 +587,7 @@ for (const unavailable of [false, true]) {
     });
 
     const active = unavailable
-      ? await workflowService.start("contact", {
+      ? await workflowService.start("meeting-booking", {
           originChannel: "web",
           originPage: null,
           originEntry: null,
@@ -899,7 +722,7 @@ test("an ungrounded answer drops unrelated matches even if the model writes a li
   assert.doesNotMatch(output, /Microsoft in the snippets|worth a look|\/#experience/);
 });
 
-test("a mixed Contact turn keeps the search limitation if the workflow continuation fails", async () => {
+test("a mixed Meeting turn keeps the search limitation if the workflow continuation fails", async () => {
   const { post } = createAssistant({
     portfolioSearch: {
       search: async () => {
@@ -921,26 +744,26 @@ test("a mixed Contact turn keeps the search limitation if the workflow continuat
   const output = await readChatResponse(
     await post(
       chatRequest({
-        message: "I want to leave a message. Also, what did Freeman build for JPScents?",
+        message: "I want to book a meeting. Also, what did Freeman build for JPScents?",
         workflowStart: {
-          workflowId: "contact",
+          workflowId: "meeting-booking",
           originPage: "/",
-          originEntry: "assistant-starter-contact",
+          originEntry: "assistant-starter-meeting",
         },
       }),
     ),
   );
 
   assert.equal(output.match(/couldn’t search the portfolio/g)?.length, 1);
-  assert.match(output, /"workflowId":"contact"/);
+  assert.match(output, /"workflowId":"meeting-booking"/);
   assert.match(output, /couldn’t continue the request/);
   assert.match(output, /"type":"done"/);
   assert.doesNotMatch(output, /"type":"error"|provider offline|continuation offline/);
 });
 
-test("a portfolio limitation remains after a Contact choice clears earlier text", async () => {
+test("a portfolio limitation remains after a Meeting choice clears earlier text", async () => {
   const choice = {
-    question: "What kind of message is this?",
+    question: "What is the meeting about?",
     options: ["Software consulting", "Collaboration"],
   };
 
@@ -968,11 +791,11 @@ test("a portfolio limitation remains after a Contact choice clears earlier text"
   const output = await readChatResponse(
     await post(
       chatRequest({
-        message: "Did Freeman pilot Apollo 11? I also want to leave a message.",
+        message: "Did Freeman pilot Apollo 11? I also want to book a meeting.",
         workflowStart: {
-          workflowId: "contact",
+          workflowId: "meeting-booking",
           originPage: "/",
-          originEntry: "assistant-starter-contact",
+          originEntry: "assistant-starter-meeting",
         },
       }),
     ),
@@ -1030,14 +853,13 @@ test("starting a workflow changes instructions and tools on the next iteration i
   assert.doesNotMatch(inputs[0]?.instructions ?? "", /audit: Request a free review/);
   assert.match(
     JSON.stringify(inputs[0]?.tools.find(({ name }) => name === "start_workflow")?.parameters),
-    /"contact"/,
+    /"enum":\["meeting-booking"\]/,
   );
   assert.deepEqual(
     inputs[1]?.tools.map(({ name }) => name),
     [
       "ask_user_choice",
       "cancel_workflow",
-      "switch_workflow",
       "find_meeting_slots",
       "update_meeting_context",
     ],
@@ -1050,6 +872,79 @@ test("starting a workflow changes instructions and tools on the next iteration i
   assert.match(output, /"status":"active"/);
   assert.match(output, /"phase":"collecting"/);
   assert.doesNotMatch(output, /availableSlots|pendingBooking|visitor@example\.com/);
+});
+
+test("retired contact actions and starts are rejected before invoking the model", async () => {
+  const { inputs, post, workflowRepository } = createAssistant();
+
+  const workflowInstanceId = "11111111-1111-4111-8111-111111111111";
+
+  for (const payload of [
+    { action: "confirm_contact", workflowInstanceId, expectedRevision: 1 },
+    { action: "retry_contact", workflowInstanceId },
+    {
+      message: "Leave a message",
+      workflowStart: {
+        workflowId: "contact",
+        originPage: "/",
+        originEntry: "assistant-starter-contact",
+      },
+    },
+  ]) {
+    assert.equal((await post(chatRequest(payload))).status, 400);
+  }
+
+  assert.equal(inputs.length, 0);
+  assert.equal(workflowRepository.instances.size, 0);
+});
+
+test("a saved contact workflow is cleared without exposing or changing its stored state", async () => {
+  const { inputs, post, workflowRepository } = createAssistant();
+
+  const retired = await workflowRepository.create({
+    workflowId: "contact",
+    workflowVersion: 1,
+    state: { message: "Private saved enquiry" },
+    originChannel: "web",
+    originPage: "/",
+    originEntry: null,
+  });
+
+  const output = await readChatResponse(
+    await post(
+      chatRequest({
+        message: "Hello",
+        workflowInstanceId: retired.id,
+        previousResponseId: "resp_retired",
+      }),
+    ),
+  );
+
+  assert.match(output, /"type":"workflow_instance","instance":null/);
+  assert.match(output, /"type":"done"/);
+  assert.doesNotMatch(output, /Private saved enquiry|resp_retired|"type":"error"/);
+  assert.equal(inputs[0]?.previousResponseId, null);
+  assert.deepEqual(inputs[0]?.input, [{ type: "user_message", content: "Hello" }]);
+  assert.deepEqual(await workflowRepository.findById(retired.id), retired);
+
+  const booking = await readChatResponse(
+    await post(
+      chatRequest({
+        message: "Book a meeting",
+        workflowInstanceId: retired.id,
+        previousResponseId: "resp_retired",
+        workflowStart: {
+          workflowId: "meeting-booking",
+          originPage: "/",
+          originEntry: "assistant-starter-meeting",
+        },
+      }),
+    ),
+  );
+
+  assert.equal(inputs[1]?.previousResponseId, null);
+  assert.match(booking, /"workflowId":"meeting-booking"/);
+  assert.deepEqual(await workflowRepository.findById(retired.id), retired);
 });
 
 test("an explicit start replaces a restored terminal workflow instance", async () => {
@@ -1066,12 +961,12 @@ test("an explicit start replaces a restored terminal workflow instance", async (
   const output = await readChatResponse(
     await post(
       chatRequest({
-        message: "I would like to send a message.",
+        message: "I would like to book a meeting.",
         workflowInstanceId: finished.id,
         workflowStart: {
-          workflowId: "contact",
+          workflowId: "meeting-booking",
           originPage: "/",
-          originEntry: "assistant-starter-contact",
+          originEntry: "assistant-starter-meeting",
         },
       }),
     ),
@@ -1079,7 +974,7 @@ test("an explicit start replaces a restored terminal workflow instance", async (
 
   const started = await workflowRepository.findById("00000000-0000-4000-8000-000000000002");
 
-  assert.equal(started?.workflowId, "contact");
+  assert.equal(started?.workflowId, "meeting-booking");
   assert.equal(started?.status, "active");
   assert.match(output, /"id":"00000000-0000-4000-8000-000000000002"/);
   assert.match(output, /"status":"active"/);
@@ -1088,21 +983,21 @@ test("an explicit start replaces a restored terminal workflow instance", async (
 test("a repeated deterministic start reuses the active workflow instance", async () => {
   const { post, workflowRepository, workflowService } = createAssistant();
 
-  const active = await workflowService.start("contact", {
+  const active = await workflowService.start("meeting-booking", {
     originChannel: "web",
     originPage: "/",
-    originEntry: "assistant-starter-contact",
+    originEntry: "assistant-starter-meeting",
   });
 
   const output = await readChatResponse(
     await post(
       chatRequest({
-        message: "I'd like to leave Freeman a message.",
+        message: "I'd like to book a meeting with Freeman.",
         workflowInstanceId: active.id,
         workflowStart: {
-          workflowId: "contact",
+          workflowId: "meeting-booking",
           originPage: "/",
-          originEntry: "assistant-starter-contact",
+          originEntry: "assistant-starter-meeting",
         },
       }),
     ),
@@ -1110,12 +1005,12 @@ test("a repeated deterministic start reuses the active workflow instance", async
 
   assert.equal(await workflowRepository.findById("00000000-0000-4000-8000-000000000002"), null);
   assert.match(output, new RegExp(active.id));
-  assert.match(output, /"workflowId":"contact"/);
+  assert.match(output, /"workflowId":"meeting-booking"/);
 });
 
 const choice = {
-  question: "Keep your message, or cancel it and start an audit?",
-  options: ["Continue my message", "Cancel my message and start an audit"],
+  question: "Keep booking this meeting or cancel it?",
+  options: ["Continue booking", "Cancel the meeting request"],
 };
 
 function toolResponse(id: string, ...calls: Array<{ name: string; arguments: string }>) {
@@ -1148,7 +1043,7 @@ test("choice resolves every tool call before publishing a completed checkpoint; 
           outputs.map((item) => item.callId),
           ["call_0", "call_1", "call_2"],
         );
-        assert.match(outputs[0]!.output, /Continue my message/);
+        assert.match(outputs[0]!.output, /Continue booking/);
         assert.match(outputs[1]!.output, /skipped/);
         assert.match(outputs[2]!.output, /skipped/);
 
@@ -1156,9 +1051,9 @@ test("choice resolves every tool call before publishing a completed checkpoint; 
       }
 
       if (request.previousResponseId === "resp_choice_ready") {
-        assert.match(JSON.stringify(request.input), /Continue my message/);
+        assert.match(JSON.stringify(request.input), /Continue booking/);
 
-        return textResponse("resp_followup", "Let's continue your message.");
+        return textResponse("resp_followup", "Let's continue booking.");
       }
 
       return toolResponse(
@@ -1170,7 +1065,7 @@ test("choice resolves every tool call before publishing a completed checkpoint; 
     },
   });
 
-  const instance = await workflowService.start("contact", {
+  const instance = await workflowService.start("meeting-booking", {
     originChannel: "web",
     originPage: null,
     originEntry: null,
@@ -1211,138 +1106,6 @@ test("choice resolves every tool call before publishing a completed checkpoint; 
   );
   assert.equal(inputs.at(-1)?.previousResponseId, "resp_choice_ready");
   assert.equal((await workflowRepository.findById(instance.id))?.status, "active");
-});
-
-test("initial workflow conflict cannot mutate; an ordinary switch reply creates one replacement", async () => {
-  let turn = 0;
-
-  const { post, inputs, workflowService, workflowRepository } = createAssistant({
-    response: async () => {
-      turn++;
-      if (turn === 1) {
-        return toolResponse(
-          "resp_conflict",
-          { name: "switch_workflow", arguments: '{"workflowId":"meeting-booking"}' },
-          { name: "ask_user_choice", arguments: JSON.stringify(choice) },
-        );
-      }
-
-      if (turn === 2) {
-        return textResponse("resp_conflict_ready");
-      }
-
-      if (turn === 3) {
-        return toolResponse(
-          "resp_switch",
-          { name: "switch_workflow", arguments: '{"workflowId":"meeting-booking"}' },
-          { name: "submit_contact", arguments: "{}" },
-        );
-      }
-
-      return textResponse("resp_switched", "When would you like to meet?");
-    },
-  });
-
-  const current = await workflowService.start("contact", {
-    originChannel: "web",
-    originPage: null,
-    originEntry: null,
-  });
-
-  const output = await readChatResponse(
-    await post(
-      chatRequest({
-        message: "I'd like a meeting",
-        workflowInstanceId: current.id,
-        workflowStart: {
-          workflowId: "meeting-booking",
-          originPage: "/",
-          originEntry: "assistant-starter-meeting",
-        },
-      }),
-    ),
-  );
-
-  assert.deepEqual(
-    inputs[0]?.tools.map(({ name }) => name),
-    ["ask_user_choice"],
-  );
-  assert.match(JSON.stringify(inputs[1]?.input), /choice_required/);
-  assert.match(output, /"type":"choice"/);
-  assert.equal(workflowRepository.instances.size, 1);
-  assert.equal((await workflowRepository.findById(current.id))?.status, "active");
-  const switched = await readChatResponse(
-    await post(
-      chatRequest({
-        message: choice.options[1],
-        previousResponseId: "resp_conflict_ready",
-        workflowInstanceId: current.id,
-      }),
-    ),
-  );
-
-  assert.match(JSON.stringify(inputs[3]?.input), /skipped/);
-  assert.equal(workflowRepository.instances.size, 2);
-  assert.equal((await workflowRepository.findById(current.id))?.status, "cancelled");
-  const replacement = [...workflowRepository.instances.values()].find(
-    (instance) => instance.id !== current.id,
-  );
-
-  assert.equal(replacement?.workflowId, "meeting-booking");
-  assert.equal(replacement?.status, "active");
-  assert.match(switched, /"phase":"collecting"/);
-});
-
-test("continuing reuses the prepared workflow and cannot confirm a submission in the same turn", async () => {
-  let turn = 0;
-
-  const { post, workflowService, workflowRepository } = createAssistant({
-    response: async () => {
-      turn++;
-      if (turn === 1) {
-        return toolResponse("resp_continue", {
-          name: "switch_workflow",
-          arguments: '{"workflowId":"contact"}',
-        });
-      }
-
-      if (turn === 2) {
-        return toolResponse("resp_unwanted_submit", { name: "submit_contact", arguments: "{}" });
-      }
-
-      return textResponse("resp_wait", "Please confirm the prepared message when ready.");
-    },
-  });
-
-  const instance = await workflowService.start("contact", {
-    originChannel: "web",
-    originPage: null,
-    originEntry: null,
-  });
-
-  await workflowService.executeTool(instance.id, {
-    name: "update_contact_context",
-    interactionId: "11111111-1111-4111-8111-111111111111",
-    rawArguments: JSON.stringify({
-      updates: [
-        { field: "name", value: "James" },
-        { field: "email", value: "james@example.test" },
-        { field: "message", value: "Hello Freeman" },
-      ],
-    }),
-  });
-  await workflowService.executeTool(instance.id, {
-    name: "prepare_contact_submission",
-    rawArguments: "{}",
-    interactionId: "22222222-2222-4222-8222-222222222222",
-  });
-  const output = await readChatResponse(
-    await post(chatRequest({ message: "Continue my message", workflowInstanceId: instance.id })),
-  );
-
-  assert.equal(workflowRepository.instances.size, 1);
-  assert.equal((await workflowRepository.findById(instance.id))?.status, "active");
-  assert.doesNotMatch(output, /"status":"completed"/);
 });
 
 test("invalid choice arguments are recoverable; a choice works with no workflow", async () => {
@@ -1802,11 +1565,11 @@ test("workflow persistence failure is safely distinguished from a provider failu
   const output = await readChatResponse(
     await post(
       chatRequest({
-        message: "Leave a message",
+        message: "Book a meeting",
         workflowStart: {
-          workflowId: "contact",
+          workflowId: "meeting-booking",
           originPage: "/",
-          originEntry: "assistant-starter-contact",
+          originEntry: "assistant-starter-meeting",
         },
       }),
     ),

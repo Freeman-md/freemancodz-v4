@@ -136,7 +136,7 @@ test("assistant client reports non-2xx and provider errors safely", async () => 
         previousResponseId: null,
         workflowInstanceId: null,
       })) {
-        if (event.type === "workflow_instance") {
+        if (event.type === "workflow_instance" && event.instance) {
           recoveredWorkflowInstanceId = event.instance.id;
         }
       }

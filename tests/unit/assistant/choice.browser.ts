@@ -17,7 +17,7 @@ const workflowEvent = {
   type: "workflow_instance",
   instance: {
     id: workflowId,
-    workflowId: "contact",
+    workflowId: "meeting-booking",
     workflowVersion: 1,
     revision: 0,
     status: "active",

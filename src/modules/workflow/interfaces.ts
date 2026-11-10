@@ -56,9 +56,4 @@ export interface IWorkflowService {
     expectedRevision: number,
   ): Promise<WorkflowToolExecutionResult>;
   retryMeetingBooking(instanceId: string): Promise<WorkflowToolExecutionResult>;
-  confirmContactMessage(
-    instanceId: string,
-    expectedRevision: number,
-  ): Promise<WorkflowToolExecutionResult>;
-  retryContactMessage(instanceId: string): Promise<WorkflowToolExecutionResult>;
 }

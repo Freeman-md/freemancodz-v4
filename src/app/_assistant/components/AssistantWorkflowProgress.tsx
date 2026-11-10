@@ -12,7 +12,6 @@ type AssistantWorkflowProgressProps = {
 
 const WORKFLOW_TITLES: Record<string, string> = {
   "meeting-booking": "Book a meeting",
-  contact: "Leave a message",
 };
 
 const PHASE_LABELS: Record<WorkflowProgress["phase"], string> = {
@@ -24,9 +23,7 @@ const PHASE_LABELS: Record<WorkflowProgress["phase"], string> = {
 };
 
 const FIELD_LABELS: Record<string, string> = {
-  businessName: "Business or organisation",
   email: "Email",
-  message: "Message",
   name: "Name",
   reason: "Topic",
   selectedSlot: "Time",

@@ -18,7 +18,7 @@ function workflowEvent(id: string, status: "active" | "completed" | "cancelled")
     type: "workflow_instance",
     instance: {
       id,
-      workflowId: "contact",
+      workflowId: "meeting-booking",
       workflowVersion: 1,
       revision: 0,
       status,
@@ -31,7 +31,7 @@ function workflowEvent(id: string, status: "active" | "completed" | "cancelled")
   };
 }
 
-test("active workflow IDs survive remounts until the workflow finishes", async () => {
+test("active workflow IDs survive remounts and clear when finished or retired", async () => {
   const dom = new JSDOM("<!doctype html><html><body><main></main></body></html>", {
     url: "http://localhost:3000",
   });
@@ -174,6 +174,26 @@ test("active workflow IDs survive remounts until the workflow finishes", async (
     assert.equal(requests.at(-1)?.previousResponseId, null);
     assert.equal(dom.window.sessionStorage.getItem(ACTIVE_WORKFLOW_INSTANCE_STORAGE_KEY), null);
     assert.equal(currentAssistant().workflowInstance?.status, "cancelled");
+
+    responses.push(
+      streamResponse([
+        workflowEvent(FIRST_WORKFLOW_ID, "active"),
+        { type: "response_id", responseId: "resp_retired" },
+        { type: "done" },
+      ]),
+    );
+    await act(async () => currentAssistant().submitMessage("Load saved workflow"));
+    responses.push(streamResponse([{ type: "workflow_instance", instance: null }, { type: "done" }]));
+    await act(async () => currentAssistant().submitMessage("Resume saved workflow"));
+    assert.equal(requests.at(-1)?.workflowInstanceId, FIRST_WORKFLOW_ID);
+    assert.equal(requests.at(-1)?.previousResponseId, "resp_retired");
+    assert.equal(currentAssistant().workflowInstance, null);
+    assert.equal(dom.window.sessionStorage.getItem(ACTIVE_WORKFLOW_INSTANCE_STORAGE_KEY), null);
+
+    responses.push(streamResponse([{ type: "done" }]));
+    await act(async () => currentAssistant().submitMessage("Continue chatting"));
+    assert.equal(requests.at(-1)?.workflowInstanceId, null);
+    assert.equal(requests.at(-1)?.previousResponseId, null);
   } finally {
     await act(async () => root.unmount());
     globalThis.fetch = originalFetch;

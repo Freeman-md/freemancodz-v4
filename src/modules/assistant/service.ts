@@ -72,9 +72,13 @@ export class AssistantService {
         const write: WriteEvent = (event) =>
           controller.enqueue(encoder.encode(`${JSON.stringify(event)}\n`));
 
+        let previousCheckpoint = state.responseId;
+
         try {
-          await this.prepareRequest(request, state);
-          await this.runResponseLoop(state, write, request.previousResponseId);
+          const initialContext = await this.prepareRequest(request, state, write);
+
+          previousCheckpoint = state.responseId;
+          await this.runResponseLoop(state, write, previousCheckpoint, initialContext);
           if (!state.signal.aborted) {
             this.writeFinalEvents(state, write);
           }
@@ -89,7 +93,7 @@ export class AssistantService {
             if (state.searchNotice) {
               // An error event replaces the whole answer in the client. Keep the search limitation visible.
               state.choice = null;
-              state.responseId = request.previousResponseId;
+              state.responseId = previousCheckpoint;
               write({ type: "delta", delta: "I couldn’t continue the request. Please try again." });
               this.writeFinalEvents(state, write);
             } else {
@@ -110,15 +114,22 @@ export class AssistantService {
   private async prepareRequest(
     request: Exclude<AssistantResponseInput, { action: string }>,
     state: ResponseState,
+    write: WriteEvent,
   ) {
     const { workflowStart } = request;
 
+    let existingContext = state.activeWorkflowInstanceId
+      ? await this.workflow.getAssistantContext(state.activeWorkflowInstanceId)
+      : null;
+
+    if (existingContext && !existingContext.instance) {
+      state.activeWorkflowInstanceId = null;
+      state.responseId = null;
+      write({ type: "workflow_instance", instance: null });
+    }
+
     if (workflowStart) {
       state.operation = "workflow_start";
-      const existingContext = state.activeWorkflowInstanceId
-        ? await this.workflow.getAssistantContext(state.activeWorkflowInstanceId)
-        : null;
-
       const activeInstance =
         existingContext?.instance?.status === "active" ? existingContext.instance : null;
 
@@ -138,10 +149,13 @@ export class AssistantService {
 
         state.activeWorkflowInstanceId = started.id;
         state.workflowInstance = started;
+        existingContext = null;
       }
     }
 
     state.input = [{ type: "user_message", content: state.message }];
+
+    return existingContext;
   }
 
   private createWorkflowActionResponse(
@@ -217,13 +231,6 @@ export class AssistantService {
 
   private executeWorkflowAction(request: Extract<AssistantResponseInput, { action: string }>) {
     switch (request.action) {
-      case "confirm_contact":
-        return this.workflow.confirmContactMessage(
-          request.workflowInstanceId,
-          request.expectedRevision,
-        );
-      case "retry_contact":
-        return this.workflow.retryContactMessage(request.workflowInstanceId);
       case "confirm_booking":
         return this.workflow.confirmMeetingBooking(
           request.workflowInstanceId,
@@ -238,12 +245,13 @@ export class AssistantService {
     state: ResponseState,
     write: WriteEvent,
     previousCheckpoint: string | null,
+    initialContext: WorkflowAssistantContext | null,
   ) {
     for (let iteration = 0; iteration < MAX_TOOL_CALL_ITERATIONS; iteration += 1) {
       state.operation = "workflow_context";
-      const workflowContext = await this.workflow.getAssistantContext(
-        state.activeWorkflowInstanceId,
-      );
+      const workflowContext =
+        (iteration === 0 ? initialContext : null) ??
+        (await this.workflow.getAssistantContext(state.activeWorkflowInstanceId));
 
       state.workflowInstance = workflowContext.instance ?? state.workflowInstance;
       const request = this.createModelRequest(state, workflowContext, iteration);
@@ -744,7 +752,7 @@ export class AssistantService {
       ].join("\n");
     }
 
-    if (context.instance?.status !== "active") {
+    if (!context.tools.some(({ name }) => name === SWITCH_WORKFLOW_TOOL_NAME)) {
       return context.instructions;
     }
 

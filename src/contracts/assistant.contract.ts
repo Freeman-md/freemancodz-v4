@@ -28,22 +28,13 @@ const workflowInstanceSchema = z
   })
   .strict();
 
-const workflowStartSchema = z.discriminatedUnion("originEntry", [
-  z
-    .object({
-      workflowId: z.literal("meeting-booking"),
-      originPage: z.literal("/"),
-      originEntry: z.literal("assistant-starter-meeting"),
-    })
-    .strict(),
-  z
-    .object({
-      workflowId: z.literal("contact"),
-      originPage: z.literal("/"),
-      originEntry: z.literal("assistant-starter-contact"),
-    })
-    .strict(),
-]);
+const workflowStartSchema = z
+  .object({
+    workflowId: z.literal("meeting-booking"),
+    originPage: z.literal("/"),
+    originEntry: z.literal("assistant-starter-meeting"),
+  })
+  .strict();
 
 const assistantMessageSchema = z
   .object({
@@ -55,18 +46,6 @@ const assistantMessageSchema = z
   .strict();
 
 export const assistantWorkflowActionSchema = z.union([
-  ...(["confirm_contact"] as const).map((action) =>
-    z
-      .object({
-        action: z.literal(action),
-        workflowInstanceId: workflowInstanceIdSchema,
-        expectedRevision: z.number().int().nonnegative(),
-      })
-      .strict(),
-  ),
-  ...(["retry_contact"] as const).map((action) =>
-    z.object({ action: z.literal(action), workflowInstanceId: workflowInstanceIdSchema }).strict(),
-  ),
   z
     .object({
       action: z.literal("confirm_booking"),
@@ -104,7 +83,7 @@ export const assistantStreamEventSchema = z.discriminatedUnion("type", [
   z
     .object({
       type: z.literal("workflow_instance"),
-      instance: workflowInstanceSchema,
+      instance: workflowInstanceSchema.nullable(),
     })
     .strict(),
   z.object({ type: z.literal("done") }).strict(),
