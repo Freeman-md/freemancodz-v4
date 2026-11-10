@@ -10,6 +10,10 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { Client } from "pg";
 import { PrismaClient } from "@/generated/prisma/client";
 import { z } from "zod";
+import { NextRequest } from "next/server";
+import { createChatPostHandler } from "@/app/api/chat/route";
+import { createWorkflowAccess } from "@/app/api/chat/helpers";
+import { AssistantService } from "@/modules/assistant/service";
 import { createWorkflowRecoveryPost } from "@/app/api/internal/workflow-recovery/route";
 import { WorkflowExecutionRepository } from "@/modules/workflow/execution.repository";
 import { MeetingBookingWorkflowDefinition } from "@/modules/workflow/definitions/meeting-booking/meeting-booking.definition";
@@ -377,8 +381,13 @@ test(
           assert.ok(accepted.executionId);
           assert.equal((await executionRepository.latest(instance.id))?.actionKey, "test-approval");
           assert.equal(
-            (await workflow.confirmWorkflow(instance.id, "test-approval", instance.revision))
-              .executionId,
+            (
+              await workflow.confirmWorkflow(
+                instance.id,
+                "test-approval",
+                accepted.instance.revision,
+              )
+            ).executionId,
             undefined,
           );
         },
@@ -455,6 +464,208 @@ test(
           assert.equal(Object.keys((await effects()).notices).length, 4);
         },
       );
+      await t.test(
+        "a confirmed legacy Meeting keeps its appointment and holds an uncertain owner notice for review",
+        async () => {
+          const state = reviewed(26);
+
+          const eventId = "legacy_confirmed_meeting";
+
+          const event = {
+            id: eventId,
+            htmlLink: null,
+            payload: {
+              id: eventId,
+              status: "confirmed",
+              summary: "Meeting with Visitor",
+              description: state.reason,
+              attendees: [{ email: state.email }],
+              start: { dateTime: state.selectedSlot.start, timeZone: state.selectedSlot.timezone },
+              end: { dateTime: state.selectedSlot.end, timeZone: state.selectedSlot.timezone },
+            },
+          };
+
+          const fixture = await effects();
+
+          fixture.events[eventId] = event;
+          await writeFile(provider, JSON.stringify(fixture));
+          const saved = await db.workflowInstance.create({
+            data: {
+              workflowId: "meeting-booking",
+              workflowVersion: 1,
+              originChannel: "test",
+              revision: 8,
+              state: {
+                ...state,
+                step: "confirmed",
+                pendingBooking: {
+                  googleEventId: eventId,
+                  googleEventUrl: null,
+                  rawProviderPayload: event.payload,
+                  name: state.name,
+                  email: state.email,
+                  reason: state.reason,
+                  selectedSlot: state.selectedSlot,
+                },
+              },
+            },
+          });
+
+          await db.meeting.create({
+            data: {
+              googleEventId: eventId,
+              name: state.name,
+              email: state.email,
+              reason: state.reason,
+              status: "confirmed",
+              timezone: state.selectedSlot.timezone,
+              startsAt: new Date(state.selectedSlot.start),
+              endsAt: new Date(state.selectedSlot.end),
+              rawProviderPayload: event.payload,
+            },
+          });
+          await workflow.adoptLegacyApprovals();
+          const run = await executionRepository.latest(saved.id);
+
+          assert.ok(run);
+          await worker(run.id, "normal", 79_000);
+          assert.equal((await effects()).noticeAttempts, fixture.noticeAttempts);
+          assert.deepEqual((await workflow.getAssistantContext(saved.id)).instance?.outcome, {
+            booking: "confirmed",
+            ownerNotice: "needs_review",
+            retryAt: undefined,
+          });
+        },
+      );
+
+      await t.test(
+        "the chat action schedules only the committed approval and status stays read-only",
+        async () => {
+          const instance = await add(21);
+
+          const secret = "synthetic-workflow-access-test-only";
+
+          const session = "A".repeat(43);
+
+          const reference = createWorkflowAccess(session, secret).encode(instance.id);
+
+          const scheduled: Promise<string | undefined>[] = [];
+
+          const assistantService = new AssistantService(
+            {
+              streamResponse: async () => {
+                throw new Error("Approval must not call the model");
+              },
+            },
+            logger,
+            workflow,
+          );
+
+          const post = createChatPostHandler({
+            assistantService,
+            logger,
+            getAccessSecret: () => secret,
+            scheduleExecution: (id) => scheduled.push(id),
+            rateLimitService: { consume: async () => ({ allowed: true }) },
+            onVercel: false,
+          });
+
+          const request = (action: string, fields = {}, cookie = session) =>
+            new NextRequest("http://localhost/api/chat", {
+              method: "POST",
+              headers: { "Content-Type": "application/json", Cookie: `portfolio-chat=${cookie}` },
+              body: JSON.stringify({ action, workflowInstanceId: reference, ...fields }),
+            });
+
+          const unauthorized = await post(request("workflow_status", {}, "B".repeat(43)));
+
+          assert.equal(unauthorized.status, 403);
+          const priorEventCount = Object.keys((await effects()).events).length;
+
+          const response = await post(
+            request("confirm_workflow", {
+              actionKey: "book-meeting",
+              expectedRevision: instance.revision,
+            }),
+          );
+
+          assert.match(await response.text(), /"booking":"pending"/);
+          const [id] = await Promise.all(scheduled);
+
+          assert.ok(id);
+          assert.equal((await executionRepository.latest(instance.id))?.id, id);
+          assert.equal(Object.keys((await effects()).events).length, priorEventCount);
+          assert.match(
+            await (await post(request("workflow_status"))).text(),
+            /"booking":"pending"/,
+          );
+          assert.equal(scheduled.length, 1);
+          await worker(id, "normal", 80_000);
+          assert.match(
+            await (await post(request("workflow_status"))).text(),
+            /"booking":"confirmed"/,
+          );
+        },
+      );
+
+      await t.test(
+        "Calendar and email rejections terminate while a timed-out provider retries",
+        async () => {
+          const calendar = await accept(22);
+
+          await worker(calendar.id, "rejected-calendar", 81_000);
+          assert.equal((await executionRepository.latest(calendar.instance.id))?.step, "failed");
+          assert.equal(
+            (await workflow.getAssistantContext(calendar.instance.id)).instance?.outcome?.booking,
+            "not_booked",
+          );
+
+          const email = await accept(23);
+
+          await worker(email.id, "rejected-notice", 82_000);
+          const emailResult = await executionRepository.latest(email.instance.id);
+
+          assert.equal(emailResult?.step, "needs_review");
+          assert.equal(emailResult?.attempt, 1);
+          assert.equal(
+            (await workflow.getAssistantContext(email.instance.id)).instance?.outcome?.booking,
+            "confirmed",
+          );
+
+          const delayed = await accept(24);
+
+          await worker(delayed.id, "slow-calendar", 83_000);
+          const calendarResult = await executionRepository.latest(delayed.instance.id);
+
+          assert.equal(calendarResult?.step, "calendar");
+          assert.equal(calendarResult?.category, "unavailable");
+          assert.equal(calendarResult?.stepStartedAt, null);
+          assert.equal(calendarResult?.attempt, 1);
+          await worker(delayed.id, "normal", 86_000);
+          assert.equal((await executionRepository.latest(delayed.instance.id))?.step, "done");
+        },
+      );
+
+      await t.test("final lease expiry releases a fresh hold before any dispatch", async () => {
+        const approval = await accept(25);
+
+        for (const offset of [87_000, 133_000, 179_000]) {
+          await assert.rejects(worker(approval.id, "before-dispatch", offset), {
+            signal: "SIGKILL",
+          });
+        }
+
+        assert.equal((await executionRepository.latest(approval.instance.id))?.attempt, 3);
+        await worker(approval.id, "normal", 225_000);
+        assert.equal(
+          (await executionRepository.latest(approval.instance.id))?.category,
+          "lease_expired_before_dispatch",
+        );
+        assert.equal(
+          (await workflow.getAssistantContext(approval.instance.id)).instance?.outcome?.booking,
+          "not_booked",
+        );
+      });
     } finally {
       await db.$disconnect();
       await sql.end();

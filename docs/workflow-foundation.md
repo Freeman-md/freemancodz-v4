@@ -33,9 +33,9 @@ An ordinary browser request carries:
 }
 ```
 
-The stream returns safe instance metadata (including its saved revision) and read-only progress: collected public values, missing required fields, and phase. Private workflow state stays on the server. The active workflow reference persists in sessionStorage. The chat route verifies its signature against the anonymous HttpOnly session cookie before looking up an instance. The next assistant request after refresh can resume the same workflow. Completion, cancellation, retirement or a rejected reference clears it. Saved references from before this binding was introduced require a new browser conversation. There is no separate public workflow-instance endpoint.
+The stream returns safe workflow metadata, including its revision and read-only progress. Private state stays on the server. The session-bound reference survives refresh and terminal booking outcomes. The chat route verifies it against the anonymous HttpOnly session cookie before looking up an instance.
 
-Meeting confirmation uses the same rate-limited `/api/chat` route with `{ action: "confirm_booking", workflowInstanceId, expectedRevision }`; recovery uses `{ action: "retry_booking", workflowInstanceId }`. These strict alternatives cannot include a message or editable booking details. Action responses use the same stream without a model call. The next ordinary message reloads workflow state without the previous model checkpoint.
+Use `confirm_workflow` with the reference, action key and exact reviewed revision. Use `retry_workflow` with the reference to resume an eligible execution. Use `workflow_status` with the reference to restore saved status without a model call. All three are strict actions on `POST /api/chat`.
 
 ### Conversational choices
 
@@ -43,52 +43,8 @@ The global `ask_user_choice` tool accepts a model-written question and two to si
 
 The picker temporarily replaces the composer. Selecting and sending an option submits its exact text through the ordinary chat request; “Write my own reply” restores text entry without sending anything. Choices are memory-only, never stored on a workflow, and disappear on refresh. The normal workflow tools still validate details and switch atomically. Neither a choice nor typed confirmation can authorise meeting booking; the saved summary's Confirm booking button is required. Read-only progress is unchanged.
 
-## Meeting booking version 1
+## Meeting booking
 
-`update_meeting_context` saves name, email, reason and a selection from returned availability incrementally. Validated batches are atomic and use the existing revision check. Corrections invalidate preparation without discarding other details; availability refreshes discard the slot, not personal details. The next post-refresh interaction reloads these saved values through the existing ID-only restoration.
+`update_meeting_context` saves name, email, reason and a selection from returned availability incrementally. A correction invalidates the prior review while preserving the other saved fields. Confirming freezes the reviewed input, saves a pending Meeting reservation under the slot lock, and queues a durable execution. The Calendar and owner email steps advance independently. Only a confirmed Calendar event and matching Meeting row produce a booked status.
 
-Booking diagnostics reuse the existing logger: `workflow.booking_accepted`, `meeting.calendar_event_resolved` (created/existing/recovered), `meeting.booking_recovery_required`, `workflow.booking_completed`, and `workflow.booking_completion_save_failed`. Server logs correlate operation/workflow identifiers and revisions with typed categories and failure stages. They exclude personal fields, provider payloads and raw exceptions. Retry semantics and public error messages are unchanged.
-
-The meeting definition uses the Meeting module's public service interface for London-time availability, final slot rechecking, Calendar creation, Meeting persistence, and partial-failure reconciliation. It owns all attendee fields, booking state, meeting prompts, and meeting tools.
-
-Preparation exposes a saved summary and explicit Confirm booking button, not model-accessible confirmation or booking tools. The server checks that exact revision and current availability, then saves a UUID booking operation through a revision-checked write before any Calendar insertion. The saved details are frozen: correction, cancellation and switching cannot change an accepted booking. A preflight race lost to any of those mutations creates no event.
-
-The operation UUID determines a single Calendar event ID. Recovery looks up that ID before checking availability, validates its active status, attendee, times and operation metadata, then finds or creates the matching Meeting row. An uncertain insert rechecks the same event ID; it never generates a replacement. Calendar calls have a 10-second timeout and no automatic retries. A matching Meeting row cannot conceal a missing, cancelled or conflicting provider event. Notifications retain their existing stable Meeting-based idempotency key.
-
-Initial acceptance also claims the interval through `WorkflowInstanceRepository.claimMeetingBooking`. A short READ COMMITTED transaction takes the single-calendar advisory lock `hashtext('freemancodz:meeting-booking')`, then separately reads accepted meeting states and performs the existing revision-checked write. The separate read sees claims committed by the previous lock holder. Lock waiting is bounded to two seconds; the lock is released on commit or rollback, before any Calendar call.
-
-Active and completed meeting instances with `step: "confirmed"` reserve their saved interval, including legacy confirmed/pending states. The current instance is excluded; overlapping intervals conflict while adjacent intervals do not. Malformed accepted state fails closed. A losing confirmation clears its slot, availability and preparation through a revision-checked update, preserving personal details and any newer concurrent correction. Conflicts log `workflow.booking_slot_conflict` with only workflow ID, revision and safe category.
-
-The saved operation is the durable claim, not the transient lock. Claims never expire automatically: uncertain provider or persistence outcomes retain their interval through explicit recovery. This coordinates application bookings only; it cannot atomically prevent manual Google Calendar changes. Before eventual rollout, retire older confirmation handlers that do not participate in this protocol. No new table, migration or background worker is involved.
-
-If saving completion fails, the service reloads and accepts an already-completed result only for the same operation. Otherwise the operation remains available for explicit Retry booking; no automatic browser retry occurs. Losing the response stream does not cancel accepted work. A process termination may still require that explicit retry.
-
-Existing prepared instances remain usable. Legacy pending events retain their original event ID and must match the saved summary and current Calendar event before reconciliation. Legacy confirmed instances without an operation or event reference stop for manual reconciliation rather than risking a duplicate. Provider payloads, operation and event identifiers, and Calendar URLs remain server-only. This change adds no table or migration.
-
-## Adding a real future workflow
-
-Add a definition only after its workflow is proven and required:
-
-1. define a strict Zod state schema and infer its state type;
-2. implement one positive integer version with its own instructions, tools, and semantic execution;
-3. inject only the capability behaviour that execution needs;
-4. register the new definition in `src/modules/composition.ts`, retaining executable older versions; and
-5. add focused registry, lifecycle, definition, adapter, and database regression coverage.
-
-A new workflow does not require a definition table, generic lead model, condition language, or a second workflow service.
-
-## Database and operations
-
-Prisma migrations are the only migration source of truth. `workflow_instances` uses UUID identifiers and constrained JSON-object state. Row Level Security is enabled, table privileges are revoked from `PUBLIC`, `anon`, and `authenticated`, and there are no public policies. Only the trusted server database connection can access this internal state.
-
-Run the focused suite against a disposable non-production PostgreSQL server:
-
-```bash
-PORTFOLIO_TEST_DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54332/postgres npm test
-```
-
-The suite creates and drops a random database, applies the complete historical migration chain, proves representative data survives the forward migration, verifies constraints and access controls, and exercises repository lifecycle persistence.
-
-Workflow writes use revision checks to reject stale concurrent updates. The cleanup migration `20261008120000_remove_workflow_pending_interaction` removes only the obsolete pending form column and its check constraint, preserving state, revisions and permissions. For production, deploy code that no longer reads or writes that column, retire all old instances, and only then apply the cleanup migration. Do not run a migration-first deployment for this cleanup.
-
-Conversation transcripts, choices and drafts are not persisted. Generated free-text controls, structured form submissions, editable progress and preview components are not supported.
+New workflows use version 2. Saved version 1 reviews remain available, and approved version 1 operations may be picked up after earlier writers are drained. See [Workflow recovery operations](workflow-recovery.md) for the scheduler, diagnostics and reconciliation procedure.

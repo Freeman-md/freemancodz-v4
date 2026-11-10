@@ -21,19 +21,24 @@ export class GoogleCalendarClient implements CalendarClient {
 
   constructor(private readonly getConfig: () => GoogleCalendarConfig) {}
 
-  async getBusyPeriods(input: { start: Date; end: Date }): Promise<CalendarBusyPeriod[]> {
+  async getBusyPeriods(
+    input: { start: Date; end: Date },
+    signal?: AbortSignal,
+  ): Promise<CalendarBusyPeriod[]> {
     try {
       const { calendar, calendarId } = this.getCalendar();
 
-      const response = await calendar.freebusy.query(
-        {
-          requestBody: {
-            timeMin: input.start.toISOString(),
-            timeMax: input.end.toISOString(),
-            items: [{ id: calendarId }],
+      const response = await withSignal(signal, () =>
+        calendar.freebusy.query(
+          {
+            requestBody: {
+              timeMin: input.start.toISOString(),
+              timeMax: input.end.toISOString(),
+              items: [{ id: calendarId }],
+            },
           },
-        },
-        requestOptions,
+          signal ? { ...requestOptions, signal } : requestOptions,
+        ),
       );
 
       const result = response.data.calendars?.[calendarId];
@@ -61,23 +66,20 @@ export class GoogleCalendarClient implements CalendarClient {
     }
   }
 
-  async findEvent(eventId: string): Promise<CreatedCalendarEvent | null> {
+  async findEvent(eventId: string, signal?: AbortSignal): Promise<CreatedCalendarEvent | null> {
     try {
       const { calendar, calendarId } = this.getCalendar();
 
-      const response = await calendar.events.get({ calendarId, eventId }, requestOptions);
+      const response = await withSignal(signal, () =>
+        calendar.events.get(
+          { calendarId, eventId },
+          signal ? { ...requestOptions, signal } : requestOptions,
+        ),
+      );
 
       return toCalendarEvent(response.data);
     } catch (error) {
-      if (
-        typeof error === "object" &&
-        error !== null &&
-        "response" in error &&
-        typeof error.response === "object" &&
-        error.response !== null &&
-        "status" in error.response &&
-        error.response.status === 404
-      ) {
+      if (responseStatus(error) === 404) {
         return null;
       }
 
@@ -85,39 +87,46 @@ export class GoogleCalendarClient implements CalendarClient {
     }
   }
 
-  async createEvent(input: {
-    eventId: string;
-    bookingOperationId: string;
-    summary: string;
-    description: string;
-    attendeeEmail: string;
-    start: Date;
-    end: Date;
-    timezone: string;
-  }): Promise<CreatedCalendarEvent> {
+  async createEvent(
+    input: {
+      eventId: string;
+      bookingOperationId: string;
+      summary: string;
+      description: string;
+      attendeeEmail: string;
+      start: Date;
+      end: Date;
+      timezone: string;
+    },
+    signal?: AbortSignal,
+  ): Promise<CreatedCalendarEvent> {
     try {
       const { calendar, calendarId } = this.getCalendar();
 
-      const response = await calendar.events.insert(
-        {
-          calendarId,
-          sendUpdates: "all",
-          requestBody: {
-            id: input.eventId,
-            extendedProperties: { private: { bookingOperationId: input.bookingOperationId } },
-            summary: input.summary,
-            description: input.description,
-            attendees: [{ email: input.attendeeEmail }],
-            start: { dateTime: input.start.toISOString(), timeZone: input.timezone },
-            end: { dateTime: input.end.toISOString(), timeZone: input.timezone },
+      const response = await withSignal(signal, () =>
+        calendar.events.insert(
+          {
+            calendarId,
+            sendUpdates: "all",
+            requestBody: {
+              id: input.eventId,
+              extendedProperties: { private: { bookingOperationId: input.bookingOperationId } },
+              summary: input.summary,
+              description: input.description,
+              attendees: [{ email: input.attendeeEmail }],
+              start: { dateTime: input.start.toISOString(), timeZone: input.timezone },
+              end: { dateTime: input.end.toISOString(), timeZone: input.timezone },
+            },
           },
-        },
-        requestOptions,
+          signal ? { ...requestOptions, signal } : requestOptions,
+        ),
       );
 
       return toCalendarEvent(response.data);
     } catch (error) {
-      throw new CalendarEventError(error);
+      const status = responseStatus(error);
+
+      throw new CalendarEventError(error, status === 400 || status === 401 || status === 404);
     }
   }
 
@@ -146,4 +155,35 @@ function toCalendarEvent(data: unknown): CreatedCalendarEvent {
   const htmlLink = z.string().url().nullish().parse(payload.htmlLink) ?? null;
 
   return { id, htmlLink, payload };
+}
+
+function responseStatus(error: unknown) {
+  if (typeof error !== "object" || !error || !("response" in error)) {
+    return undefined;
+  }
+
+  const response = error.response;
+
+  return typeof response === "object" && response && "status" in response
+    ? response.status
+    : undefined;
+}
+
+async function withSignal<Result>(signal: AbortSignal | undefined, request: () => Promise<Result>) {
+  if (!signal) {
+    return request();
+  }
+
+  signal.throwIfAborted();
+  const aborted = Promise.withResolvers<never>();
+
+  const abort = () => aborted.reject(signal.reason);
+
+  signal.addEventListener("abort", abort, { once: true });
+  try {
+    // OAuth refresh can precede the request's own signal-aware transport.
+    return await Promise.race([request(), aborted.promise]);
+  } finally {
+    signal.removeEventListener("abort", abort);
+  }
 }

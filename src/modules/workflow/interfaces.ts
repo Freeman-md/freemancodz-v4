@@ -52,7 +52,6 @@ export interface IWorkflowInstanceRepository {
   create(input: CreateWorkflowInstanceInput): Promise<WorkflowInstance>;
   findById(id: string): Promise<WorkflowInstance | null>;
   save(input: SaveWorkflowInstanceInput): Promise<WorkflowInstance>;
-  claimMeetingBooking(input: SaveWorkflowInstanceInput): Promise<WorkflowInstance>;
 }
 
 export interface IWorkflowService {
@@ -69,9 +68,4 @@ export interface IWorkflowService {
     expectedRevision: number,
   ): Promise<WorkflowToolExecutionResult>;
   retryWorkflow(instanceId: string): Promise<WorkflowToolExecutionResult>;
-  confirmMeetingBooking(
-    instanceId: string,
-    expectedRevision: number,
-  ): Promise<WorkflowToolExecutionResult>;
-  retryMeetingBooking(instanceId: string): Promise<WorkflowToolExecutionResult>;
 }

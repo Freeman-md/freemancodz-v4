@@ -19,6 +19,7 @@ import {
   START_WORKFLOW_TOOL_NAME,
   SWITCH_WORKFLOW_TOOL_NAME,
 } from "@/modules/workflow/constants";
+import { StartWorkflowArgumentsSchema } from "@/modules/workflow/schemas/workflow-control.schema";
 import type { IWorkflowService } from "@/modules/workflow/interfaces";
 import type { WorkflowAssistantContext, WorkflowPublicInstance } from "@/modules/workflow/types";
 import type { AssistantChoice } from "@/contracts/assistant-choice.contract";
@@ -338,8 +339,9 @@ export class AssistantService {
         return;
       }
 
-      for (const event of buffered) {
-        write(event);
+      // A later tool round can still produce the authoritative choice or review.
+      if (bufferText) {
+        state.didStreamText = false;
       }
 
       evidenceWriter?.finish(false);
@@ -596,9 +598,7 @@ export class AssistantService {
           message,
         )) ||
       (toolCall.name === SWITCH_WORKFLOW_TOOL_NAME &&
-        !/^(?:yes[, ]+|please )?(?:switch to |continue (?:with )?(?:my |the |this )?)[a-z]/.test(
-          message,
-        ))
+        !isExplicitSwitch(message, toolCall.arguments))
     ) {
       return {
         error: "explicit_choice_required",
@@ -752,7 +752,21 @@ export class AssistantService {
       return context.instructions;
     }
 
-    return `${context.instructions}\nIf the visitor explicitly chooses to switch workflows, call switch_workflow with the requested workflow. Use the active workflow ID with switch_workflow when the visitor explicitly chooses to continue it instead. Neither decision confirms a final submission. Never switch without that explicit choice and never create a duplicate of the active workflow.`;
+    return `${context.instructions}\nIf the visitor explicitly chooses to switch workflows, call switch_workflow with the requested workflow. If the visitor chooses to continue, keep the active workflow without calling switch_workflow. Offer a switch option as “Switch to” followed by the target workflow name. Neither decision confirms a final submission. Never switch without that explicit choice and never create a duplicate of the active workflow.`;
+  }
+}
+
+function isExplicitSwitch(message: string, argumentsJson: string) {
+  try {
+    const { workflowId } = StartWorkflowArgumentsSchema.parse(JSON.parse(argumentsJson));
+
+    const target = workflowId.toLowerCase().replaceAll("-", " ");
+
+    const choice = message.replace(/^(?:yes[, ]+|please )/, "").replace(/ please$/, "");
+
+    return choice === `switch to ${target}` || choice === `switch to ${workflowId}`;
+  } catch {
+    return false;
   }
 }
 

@@ -38,10 +38,16 @@ export function POST(request: Request) {
   return createWorkflowRecoveryPost(getWorkflowRecoveryConfig, async (adoptLegacy) => {
     const { workflowService, workflowExecutionService } = await import("@/modules/composition");
 
-    if (adoptLegacy) {
-      await workflowService.adoptLegacyApprovals();
+    const { WORKFLOW_PROVIDER_BUDGET_MS } = await import("@/modules/workflow/execution.service");
+
+    const deadline = AbortSignal.timeout(WORKFLOW_PROVIDER_BUDGET_MS);
+
+    const result = await workflowExecutionService.runDue(undefined, deadline);
+
+    if (adoptLegacy && !deadline.aborted) {
+      await workflowService.adoptLegacyApprovals(deadline);
     }
 
-    return workflowExecutionService.runDue();
+    return result;
   })(request);
 }

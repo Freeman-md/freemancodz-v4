@@ -1,16 +1,17 @@
+import { type MeetingStore } from "../../fixtures/v1-meeting-store";
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { MeetingBookingWorkflowDefinition } from "@/modules/workflow/definitions/meeting-booking/meeting-booking.definition";
+import type { V1MeetingClient as MeetingServiceClient } from "../../fixtures/v1-booking-definition";
+import { V1BookingDefinition as MeetingBookingWorkflowDefinition } from "../../fixtures/v1-booking-definition";
 import { MeetingBookingWorkflowProgressProjector } from "@/modules/workflow/definitions/meeting-booking/meeting-booking.progress";
 import {
   findMeetingSlotsSchema,
   prepareMeetingSchema,
 } from "@/modules/workflow/definitions/meeting-booking/meeting-booking.schema";
-import { MeetingBookingError, type MeetingServiceClient } from "@/modules/meeting/types";
+import { MeetingBookingError } from "@/modules/meeting/types";
 import type { CalendarClient, CreatedCalendarEvent } from "@/infrastructure/google-calendar/types";
-import type { MeetingStore } from "@/modules/meeting/types";
-import { MeetingService } from "@/modules/meeting/service";
+import { V1MeetingService as MeetingService } from "../../fixtures/v1-meeting-service";
 import { CalendarAvailabilityError } from "@/infrastructure/google-calendar/types";
 
 const slot = {

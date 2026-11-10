@@ -1,8 +1,12 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@/generated/prisma/client";
-import type { CalendarClient, CreatedCalendarEvent } from "@/infrastructure/google-calendar/types";
-import { MeetingRepository } from "@/modules/meeting/repository";
+import {
+  CalendarEventError,
+  type CalendarClient,
+  type CreatedCalendarEvent,
+} from "@/infrastructure/google-calendar/types";
+import { ResendClient } from "@/infrastructure/resend/client";
 import { MeetingService } from "@/modules/meeting/service";
 import { NotificationService, type PreparedOwnerNotice } from "@/modules/notification/service";
 import { WorkflowExecutionRepository } from "@/modules/workflow/execution.repository";
@@ -51,8 +55,34 @@ class TestExecutionRepository extends WorkflowExecutionRepository {
 
 const calendar: CalendarClient = {
   getBusyPeriods: async ({ start, end }) => (load().busy ? [{ start, end }] : []),
-  findEvent: async (id) => load().events[id] ?? null,
+  findEvent: async (id, signal) => {
+    if (mode === "before-dispatch") {
+      process.kill(process.pid, "SIGKILL");
+    }
+
+    if (mode === "slow-calendar") {
+      const keepAlive = setTimeout(() => undefined, 3_000);
+
+      try {
+        await new Promise<void>((_resolve, reject) => {
+          if (signal?.aborted) {
+            return reject(signal.reason);
+          }
+
+          signal?.addEventListener("abort", () => reject(signal.reason), { once: true });
+        });
+      } finally {
+        clearTimeout(keepAlive);
+      }
+    }
+
+    return load().events[id] ?? null;
+  },
   createEvent: async (input) => {
+    if (mode === "rejected-calendar") {
+      throw new CalendarEventError(undefined, true);
+    }
+
     const fixture = load();
 
     if (fixture.events[input.eventId]) {
@@ -85,29 +115,34 @@ const calendar: CalendarClient = {
 };
 
 const notifications = new NotificationService(
-  {
-    send: async (notice) => {
-      const fixture = load();
+  mode === "rejected-notice"
+    ? new ResendClient(
+        () => ({ apiKey: "fake-local-token", fromEmail: "sender@example.test" }),
+        async () => new Response(null, { status: 422 }),
+      )
+    : {
+        send: async (notice) => {
+          const fixture = load();
 
-      const previous = fixture.notices[notice.idempotencyKey];
+          const previous = fixture.notices[notice.idempotencyKey];
 
-      if (previous && JSON.stringify(previous) !== JSON.stringify(notice)) {
-        throw new Error("Fake email rejected a changed idempotent payload.");
-      }
+          if (previous && JSON.stringify(previous) !== JSON.stringify(notice)) {
+            throw new Error("Fake email rejected a changed idempotent payload.");
+          }
 
-      fixture.notices[notice.idempotencyKey] = notice;
-      fixture.noticeAttempts = (fixture.noticeAttempts ?? 0) + 1;
-      save(fixture);
-      if (mode === "uncertain-notice") {
-        throw new Error("Fake email accepted the message and lost its response.");
-      }
-    },
-  },
+          fixture.notices[notice.idempotencyKey] = notice;
+          fixture.noticeAttempts = (fixture.noticeAttempts ?? 0) + 1;
+          save(fixture);
+          if (mode === "uncertain-notice") {
+            throw new Error("Fake email accepted the message and lost its response.");
+          }
+        },
+      },
   () => ({ adminEmail: "owner@example.test", fromEmail: "sender@example.test" }),
   logger,
 );
 
-const meeting = new MeetingService(calendar, new MeetingRepository(db), logger, notifications);
+const meeting = new MeetingService(calendar, logger);
 
 const runner = new WorkflowExecutionService(
   new TestExecutionRepository(db),
@@ -115,6 +150,7 @@ const runner = new WorkflowExecutionService(
   notifications,
   logger,
   () => new Date(timestamp),
+  mode === "slow-calendar" ? 750 : undefined,
 );
 
 runner

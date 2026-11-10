@@ -8,11 +8,7 @@ import type {
   WorkflowExecutionResult,
   WorkflowStartContext,
 } from "../../types";
-import {
-  bookLegacyMeeting,
-  confirmLegacyMeeting,
-  executeMeetingBookingTool,
-} from "./meeting-booking.tool-handlers";
+import { executeMeetingBookingTool } from "./meeting-booking.tool-handlers";
 import { meetingBookingStateSchema, type MeetingBookingState } from "./meeting-booking.schema";
 import {
   FIND_MEETING_SLOTS_TOOL,
@@ -133,14 +129,6 @@ export class MeetingBookingWorkflowDefinition implements IWorkflowDefinition<Mee
     return state.availableSlots.length > 0
       ? [FIND_MEETING_SLOTS_TOOL, PREPARE_MEETING_TOOL, UPDATE_MEETING_CONTEXT_TOOL]
       : [FIND_MEETING_SLOTS_TOOL, UPDATE_MEETING_CONTEXT_TOOL];
-  }
-
-  confirmLegacy(state: MeetingBookingState, interactionId: string, expectedRevision: number) {
-    return confirmLegacyMeeting(this.meetingService, state, { interactionId, expectedRevision });
-  }
-
-  bookLegacy(state: MeetingBookingState) {
-    return bookLegacyMeeting(this.meetingService, state);
   }
 
   executeTool(

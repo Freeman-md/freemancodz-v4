@@ -121,6 +121,65 @@ test("Calendar insertion failures expose only a safe typed error", async (contex
   );
 });
 
+test("Calendar adapter preserves a rejection versus a potentially committed insert", async (context) => {
+  const { calendar, client } = setup(context);
+
+  const { signal } = new AbortController();
+
+  for (const status of [400, 401, 404, 409, 429, 503]) {
+    const insert = context.mock.method(calendar.events, "insert", async () => {
+      throw { response: { status } };
+    });
+
+    await assert.rejects(
+      client.createEvent(
+        {
+          eventId: "stable-event",
+          bookingOperationId: "operation-id",
+          summary: "Summary",
+          description: "Reason",
+          attendeeEmail: "visitor@example.com",
+          start: new Date(),
+          end: new Date(),
+          timezone: "Europe/London",
+        },
+        signal,
+      ),
+      (error: unknown) => {
+        assert.ok(error instanceof CalendarEventError);
+        assert.equal(error.rejected, status === 400 || status === 401 || status === 404);
+
+        return true;
+      },
+    );
+    assert.deepEqual(Array.from(insert.mock.calls[0].arguments)[1], {
+      timeout: 10_000,
+      retry: false,
+      signal,
+    });
+    insert.mock.restore();
+  }
+});
+
+test("Calendar deadline bounds a request that stalls before transport", async (context) => {
+  const { calendar, client } = setup(context);
+
+  const controller = new AbortController();
+
+  const ready = Promise.withResolvers<void>();
+
+  context.mock.method(calendar.events, "get", () => {
+    ready.resolve();
+
+    return new Promise(() => {});
+  });
+  const result = client.findEvent("stable-event", controller.signal);
+
+  await ready.promise;
+  controller.abort();
+  await assert.rejects(result, CalendarEventError);
+});
+
 test("Calendar availability checks also use bounded non-retrying transport", async (context) => {
   const { calendar, client } = setup(context);
 

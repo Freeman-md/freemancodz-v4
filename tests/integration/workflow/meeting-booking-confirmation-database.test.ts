@@ -1,3 +1,4 @@
+import { MeetingRepository } from "../../fixtures/v1-meeting-store";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
@@ -12,22 +13,21 @@ import {
   type CalendarClient,
   type CreatedCalendarEvent,
 } from "@/infrastructure/google-calendar/types";
-import { MeetingService } from "@/modules/meeting/service";
+import { V1MeetingService as MeetingService } from "../../fixtures/v1-meeting-service";
 import { MeetingBookingError } from "@/modules/meeting/types";
-import { MeetingRepository } from "@/modules/meeting/repository";
-import type { MeetingServiceClient } from "@/modules/meeting/types";
 import { NotificationService } from "@/modules/notification/service";
 import { WorkflowInstanceStoreError } from "@/modules/workflow/errors";
-import type {
-  IWorkflowDefinition,
-  IWorkflowInstanceRepository,
-} from "@/modules/workflow/interfaces";
-import { MeetingBookingWorkflowDefinition } from "@/modules/workflow/definitions/meeting-booking/meeting-booking.definition";
+import type { IWorkflowDefinition } from "@/modules/workflow/interfaces";
+import type { V1MeetingClient as MeetingServiceClient } from "../../fixtures/v1-booking-definition";
+import { V1BookingDefinition as MeetingBookingWorkflowDefinition } from "../../fixtures/v1-booking-definition";
 import { MeetingBookingWorkflowProgressProjector } from "@/modules/workflow/definitions/meeting-booking/meeting-booking.progress";
 import { meetingBookingStateSchema } from "@/modules/workflow/definitions/meeting-booking/meeting-booking.schema";
 import { WorkflowDefinitionRegistry } from "@/modules/workflow/registry";
-import { WorkflowInstanceRepository } from "@/modules/workflow/repository";
-import { WorkflowService } from "@/modules/workflow/service";
+import { V1BookingRepository as WorkflowInstanceRepository } from "../../fixtures/v1-booking-store";
+import {
+  V1BookingWriter as WorkflowService,
+  type V1BookingStore,
+} from "../../fixtures/v1-booking-writer";
 
 const adminConnectionUrl = process.env.PORTFOLIO_TEST_DATABASE_URL;
 
@@ -48,7 +48,7 @@ function deferred() {
 }
 
 function createService(
-  repository: IWorkflowInstanceRepository,
+  repository: V1BookingStore,
   overrides: Partial<MeetingServiceClient> = {},
   configuredMeeting?: MeetingServiceClient,
 ) {
@@ -453,7 +453,7 @@ test(
         await repository.claimMeetingBooking(await claimInput(a.id));
         let corrected = false;
 
-        const store: IWorkflowInstanceRepository = {
+        const store: V1BookingStore = {
           create: (input) => repository.create(input),
           findById: (id) => repository.findById(id),
           claimMeetingBooking: (input) => repository.claimMeetingBooking(input),
@@ -527,7 +527,7 @@ test(
         await context.test(`${failure} retains the claim through recovery`, async () => {
           let fail = true;
 
-          const store: IWorkflowInstanceRepository = {
+          const store: V1BookingStore = {
             create: (input) => repository.create(input),
             findById: (id) => repository.findById(id),
             claimMeetingBooking: (input) => repository.claimMeetingBooking(input),
@@ -776,7 +776,7 @@ test(
           async () => {
             let failCompletion = true;
 
-            const failingRepository: IWorkflowInstanceRepository = {
+            const failingRepository: V1BookingStore = {
               create: (input) => repository.create(input),
               findById: (id) => repository.findById(id),
               claimMeetingBooking: (input) => repository.claimMeetingBooking(input),

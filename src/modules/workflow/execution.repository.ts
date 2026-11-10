@@ -62,6 +62,15 @@ export class WorkflowExecutionRepository {
         return { status: "stale" } as const;
       }
 
+      const existingExecution = await tx.workflowExecution.findFirst({
+        where: { workflowInstanceId: current.id, step: { not: "failed" } },
+        select: { id: true },
+      });
+
+      if (existingExecution) {
+        return { status: "stale" } as const;
+      }
+
       if (
         input.reservation &&
         (await overlappingReservation(tx, input.instanceId, input.reservation))
@@ -147,21 +156,52 @@ export class WorkflowExecutionRepository {
   }
 
   async expireExhausted(now: Date, id?: string) {
-    return this.db.workflowExecution.updateMany({
+    const exhausted = await this.db.workflowExecution.findMany({
       where: {
         id,
         step: { in: ["calendar", "owner_notice"] },
         attempt: MAX_EXECUTION_ATTEMPTS,
         leaseExpiresAt: { lte: now },
       },
-      data: {
-        step: "needs_review",
-        category: "lease_expired_after_final_attempt",
-        leaseToken: null,
-        leaseExpiresAt: null,
-      },
-      limit: 8,
+      take: 8,
     });
+
+    for (const run of exhausted) {
+      const input = run.approvedInput;
+
+      const checkpoint = run.checkpoint;
+
+      const releaseState = meetingBookingStateSchema.safeParse(
+        checkpoint && typeof checkpoint === "object" && !Array.isArray(checkpoint)
+          ? checkpoint.releaseState
+          : null,
+      );
+
+      const eventId =
+        run.step === "calendar" &&
+        !run.stepStartedAt &&
+        input &&
+        typeof input === "object" &&
+        !Array.isArray(input) &&
+        input.possiblyDispatched === false &&
+        input.lookupOnly === false &&
+        typeof input.eventId === "string" &&
+        releaseState.success
+          ? input.eventId
+          : null;
+
+      await this.settle(
+        run,
+        now,
+        eventId
+          ? { step: "failed", category: "lease_expired_before_dispatch" }
+          : { step: "needs_review", category: "lease_expired_after_final_attempt" },
+        eventId && releaseState.success
+          ? { releaseEventId: eventId, releaseState: releaseState.data }
+          : undefined,
+        true,
+      );
+    }
   }
 
   async markStarted(run: WorkflowExecution, now: Date) {
@@ -183,10 +223,13 @@ export class WorkflowExecutionRepository {
       releaseState?: Prisma.InputJsonObject;
       complete?: boolean;
     },
+    expired = false,
   ) {
     return this.db.$transaction(async (tx) => {
       const fenced = await tx.workflowExecution.updateMany({
-        where: liveLease(run, now),
+        where: expired
+          ? { ...liveLease(run, now), leaseExpiresAt: { lte: now } }
+          : liveLease(run, now),
         data: { ...transition, leaseToken: null, leaseExpiresAt: null },
       });
 

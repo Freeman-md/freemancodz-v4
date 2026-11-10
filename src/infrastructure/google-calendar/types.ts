@@ -8,7 +8,10 @@ export class CalendarAvailabilityError extends Error {
 }
 
 export class CalendarEventError extends Error {
-  constructor(cause?: unknown) {
+  constructor(
+    cause?: unknown,
+    readonly rejected = false,
+  ) {
     super("Calendar event lookup or creation is temporarily unavailable.", { cause });
   }
 }
@@ -27,16 +30,22 @@ export type GoogleCalendarConfig = {
 };
 
 export type CalendarClient = {
-  getBusyPeriods(input: { start: Date; end: Date }): Promise<CalendarBusyPeriod[]>;
-  findEvent(eventId: string): Promise<CreatedCalendarEvent | null>;
-  createEvent(input: {
-    eventId: string;
-    bookingOperationId: string;
-    summary: string;
-    description: string;
-    attendeeEmail: string;
-    start: Date;
-    end: Date;
-    timezone: string;
-  }): Promise<CreatedCalendarEvent>;
+  getBusyPeriods(
+    input: { start: Date; end: Date },
+    signal?: AbortSignal,
+  ): Promise<CalendarBusyPeriod[]>;
+  findEvent(eventId: string, signal?: AbortSignal): Promise<CreatedCalendarEvent | null>;
+  createEvent(
+    input: {
+      eventId: string;
+      bookingOperationId: string;
+      summary: string;
+      description: string;
+      attendeeEmail: string;
+      start: Date;
+      end: Date;
+      timezone: string;
+    },
+    signal?: AbortSignal,
+  ): Promise<CreatedCalendarEvent>;
 };

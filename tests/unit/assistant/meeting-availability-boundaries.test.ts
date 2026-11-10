@@ -4,7 +4,6 @@ import { google } from "googleapis";
 import { GoogleCalendarClient } from "@/infrastructure/google-calendar/client";
 import { CalendarAvailabilityError } from "@/infrastructure/google-calendar/types";
 import type { CalendarClient } from "@/infrastructure/google-calendar/types";
-import type { MeetingStore } from "@/modules/meeting/types";
 import { MeetingService } from "@/modules/meeting/service";
 import { MeetingBookingWorkflowDefinition } from "@/modules/workflow/definitions/meeting-booking/meeting-booking.definition";
 import { MeetingBookingWorkflowProgressProjector } from "@/modules/workflow/definitions/meeting-booking/meeting-booking.progress";
@@ -76,25 +75,10 @@ test("elapsed slots skip Calendar and provider failures stay unavailable with sa
     createEvent: async () => ({ id: "event", htmlLink: null, payload: {} }),
   };
 
-  const repository: MeetingStore = {
-    createMeeting: async () => {
-      throw new Error("not used");
-    },
-    findMeetingByGoogleEventId: async () => null,
-    updateMeeting: async () => {
-      throw new Error("not used");
-    },
-  };
-
-  const service = new MeetingService(
-    calendar,
-    repository,
-    {
-      info: () => undefined,
-      error: (event, context) => errors.push({ event, context }),
-    },
-    { notifyMeetingBooked: async () => undefined },
-  );
+  const service = new MeetingService(calendar, {
+    info: () => undefined,
+    error: (event, context) => errors.push({ event, context }),
+  });
 
   assert.equal(
     await service.isSlotAvailable({

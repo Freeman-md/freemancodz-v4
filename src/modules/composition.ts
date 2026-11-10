@@ -16,7 +16,6 @@ import { AssistantService } from "./assistant/service";
 import { GLOBAL_ASSISTANT_TOOLS, TURN_PURPOSE_TOOL } from "./assistant/tools/definitions";
 import { ContactRequestRepository } from "./contact/repository";
 import { ContactService } from "./contact/service";
-import { MeetingRepository } from "./meeting/repository";
 import { MeetingService } from "./meeting/service";
 import { NotificationService } from "./notification/service";
 import { PrismaPublicPortfolioRepository } from "./portfolio/repositories/public-portfolio.repository";
@@ -62,9 +61,7 @@ export const contactService = new ContactService(
 );
 const meetingService = new MeetingService(
   new GoogleCalendarClient(getGoogleCalendarConfig),
-  new MeetingRepository(prisma),
   logger,
-  notificationService,
 );
 
 // Portfolio

@@ -35,14 +35,8 @@ import {
   START_WORKFLOW_TOOL_NAME,
   SWITCH_WORKFLOW_TOOL_NAME,
 } from "./constants";
-import {
-  MEETING_BOOKING_WORKFLOW_ID,
-  MeetingBookingWorkflowDefinition,
-} from "./definitions/meeting-booking/meeting-booking.definition";
-import {
-  meetingBookingStateSchema,
-  type MeetingBookingState,
-} from "./definitions/meeting-booking/meeting-booking.schema";
+import { MEETING_BOOKING_WORKFLOW_ID } from "./definitions/meeting-booking/meeting-booking.definition";
+import { meetingBookingStateSchema } from "./definitions/meeting-booking/meeting-booking.schema";
 
 import { workflowReviewSchema } from "@/contracts/assistant.contract";
 import { MAX_EXECUTION_ATTEMPTS, type WorkflowExecutionRepository } from "./execution.repository";
@@ -254,11 +248,7 @@ export class WorkflowService implements IWorkflowService {
     }
 
     if (!this.executions) {
-      if (actionKey !== MEETING_BOOKING_ACTION) {
-        throw new WorkflowServiceError("configuration_error", "Workflow execution is unavailable.");
-      }
-
-      return this.confirmMeetingBooking(instanceId, expectedRevision);
+      throw new WorkflowServiceError("configuration_error", "Workflow execution is unavailable.");
     }
 
     const id = randomUUID();
@@ -295,7 +285,7 @@ export class WorkflowService implements IWorkflowService {
 
   async retryWorkflow(instanceId: string): Promise<WorkflowToolExecutionResult> {
     if (!this.executions) {
-      return this.retryMeetingBooking(instanceId);
+      throw new WorkflowServiceError("configuration_error", "Workflow execution is unavailable.");
     }
 
     const execution = await this.executions.latest(instanceId);
@@ -315,12 +305,16 @@ export class WorkflowService implements IWorkflowService {
     return result;
   }
 
-  async adoptLegacyApprovals() {
+  async adoptLegacyApprovals(signal?: AbortSignal) {
     if (!this.executions) {
       return;
     }
 
     for (const instance of await this.executions.legacyCandidates()) {
+      if (signal?.aborted) {
+        break;
+      }
+
       const definition = this.resolveDefinition(instance);
 
       const parsed = meetingBookingStateSchema.safeParse(instance.state);
@@ -441,91 +435,6 @@ export class WorkflowService implements IWorkflowService {
       : current;
   }
 
-  async confirmMeetingBooking(
-    instanceId: string,
-    expectedRevision: number,
-  ): Promise<WorkflowToolExecutionResult> {
-    if (!Number.isInteger(expectedRevision) || expectedRevision < 0) {
-      throw new WorkflowServiceError("invalid_request", "The booking revision is invalid.");
-    }
-
-    const instance = await this.loadMeetingInstance(instanceId);
-
-    const definition = this.resolveDefinition(instance);
-
-    const state = this.validateState(definition, instance.state);
-
-    if (instance.status !== "active" || isWorkflowExecutionFrozen(instance, state)) {
-      return this.currentBookingResult(instance, definition);
-    }
-
-    if (instance.revision !== expectedRevision) {
-      return this.currentBookingResult(instance, definition, {
-        error: "stale_booking_summary",
-        message: "The booking details changed. Review the updated summary and confirm again.",
-      });
-    }
-
-    if (!(definition instanceof MeetingBookingWorkflowDefinition)) {
-      throw new WorkflowServiceError(
-        "configuration_error",
-        "The booking definition is unavailable.",
-      );
-    }
-
-    const execution = await definition.confirmLegacy(
-      meetingBookingStateSchema.parse(state),
-      randomUUID(),
-      expectedRevision,
-    );
-
-    if (execution.state === state) {
-      return this.currentBookingResult(instance, definition, execution.output);
-    }
-
-    let saved: WorkflowToolExecutionResult;
-
-    try {
-      saved = await this.persistExecution(
-        instance,
-        definition,
-        execution,
-        !("error" in execution.output),
-      );
-    } catch (error) {
-      if (error instanceof WorkflowServiceError && error.code === "slot_unavailable") {
-        return this.rejectUnavailableMeetingSlot(instance, definition, state);
-      }
-
-      if (!isBookingPersistenceFailure(error)) {
-        throw error;
-      }
-
-      const current = await this.loadMeetingInstance(instance.id);
-
-      return this.currentBookingResult(current, definition, {
-        error: "booking_changed",
-        message:
-          "The booking changed while confirming. Review its current status before continuing.",
-      });
-    }
-
-    if ("error" in execution.output) {
-      return saved;
-    }
-
-    const operation = meetingBookingStateSchema.parse(execution.state).bookingOperation;
-
-    this.logger.info("workflow.booking_accepted", {
-      workflowInstanceId: instance.id,
-      bookingOperationId: operation?.id,
-      revision: saved.instance.revision,
-    });
-
-    // Only the persisted operation may reach the Calendar; retries reuse that identity.
-    return this.retryMeetingBooking(instance.id);
-  }
-
   private async rejectUnavailableMeetingSlot(
     instance: WorkflowInstance,
     definition: IWorkflowDefinition,
@@ -559,81 +468,7 @@ export class WorkflowService implements IWorkflowService {
         throw error;
       }
 
-      const current = await this.loadMeetingInstance(instance.id);
-
-      return this.currentBookingResult(current, definition, {
-        error: "booking_changed",
-        message: "The booking changed. Review its current status before continuing.",
-      });
-    }
-  }
-
-  async retryMeetingBooking(instanceId: string): Promise<WorkflowToolExecutionResult> {
-    const instance = await this.loadMeetingInstance(instanceId);
-
-    const definition = this.resolveDefinition(instance);
-
-    const state = this.validateState(definition, instance.state);
-
-    if (instance.status !== "active") {
-      return this.currentBookingResult(instance, definition);
-    }
-
-    const parsed = meetingBookingStateSchema.parse(state);
-
-    if (!parsed.pendingBooking && !parsed.bookingOperation) {
-      return this.currentBookingResult(instance, definition, {
-        error: "booking_recovery_blocked",
-        message:
-          "This saved booking cannot be retried safely. Please contact Freeman to check its status.",
-      });
-    }
-
-    if (!(definition instanceof MeetingBookingWorkflowDefinition)) {
-      throw new WorkflowServiceError(
-        "configuration_error",
-        "The booking definition is unavailable.",
-      );
-    }
-
-    const execution = await definition.bookLegacy(parsed);
-
-    try {
-      const result = await this.persistExecution(instance, definition, execution);
-
-      if (result.instance.status === "completed") {
-        this.logger.info("workflow.booking_completed", {
-          workflowInstanceId: instance.id,
-          bookingOperationId: parsed.bookingOperation?.id,
-          revision: result.instance.revision,
-        });
-      }
-
-      return result;
-    } catch (error) {
-      if (!isBookingPersistenceFailure(error)) {
-        throw error;
-      }
-
-      const current = await this.loadMeetingInstance(instance.id);
-
-      const currentState = meetingBookingStateSchema.parse(current.state);
-
-      this.logger.error("workflow.booking_completion_save_failed", {
-        workflowInstanceId: instance.id,
-        bookingOperationId: parsed.bookingOperation?.id,
-        category: error instanceof WorkflowServiceError ? error.code : "unexpected",
-        reconciled: current.status === "completed" && hasSameBookingIdentity(parsed, currentState),
-      });
-
-      if (!hasSameBookingIdentity(parsed, currentState)) {
-        throw new WorkflowServiceError(
-          "invalid_transition",
-          "The saved booking operation changed. Please contact Freeman to check its status.",
-        );
-      }
-
-      return this.currentBookingResult(current, definition);
+      return this.approvalResult(instance.id, "The booking changed. Review its current status.");
     }
   }
 
@@ -641,7 +476,6 @@ export class WorkflowService implements IWorkflowService {
     instance: WorkflowInstance,
     definition: IWorkflowDefinition,
     execution: WorkflowExecutionResult<Prisma.JsonObject>,
-    claimMeetingSlot = false,
   ): Promise<WorkflowToolExecutionResult> {
     const nextState = this.validateState(definition, execution.state);
 
@@ -664,9 +498,7 @@ export class WorkflowService implements IWorkflowService {
       completedAt,
     };
 
-    const saved = await this.runRepositoryOperation(() =>
-      claimMeetingSlot ? this.repository.claimMeetingBooking(input) : this.repository.save(input),
-    );
+    const saved = await this.runRepositoryOperation(() => this.repository.save(input));
 
     return { output, instance: this.present(saved, definition, nextState, status) };
   }
@@ -685,7 +517,9 @@ export class WorkflowService implements IWorkflowService {
 
     const state = this.validateState(definition, instance.state);
 
-    if (isWorkflowExecutionFrozen(instance, state)) {
+    const execution = await this.executions?.latest(instance.id);
+
+    if (isWorkflowExecutionFrozen(instance, state) || (execution && execution.step !== "failed")) {
       throw new WorkflowServiceError(
         "invalid_transition",
         "Details cannot change after confirmation has been accepted.",
@@ -837,67 +671,6 @@ export class WorkflowService implements IWorkflowService {
     }
 
     return instance;
-  }
-
-  private async loadMeetingInstance(instanceId: string): Promise<WorkflowInstance> {
-    const instance = await this.loadInstance(instanceId);
-
-    if (instance.workflowId !== MEETING_BOOKING_WORKFLOW_ID) {
-      throw new WorkflowServiceError("invalid_request", "This request is not a meeting booking.");
-    }
-
-    return instance;
-  }
-
-  private currentBookingResult(
-    instance: WorkflowInstance,
-    definition: IWorkflowDefinition,
-    output?: Prisma.JsonObject,
-  ): WorkflowToolExecutionResult {
-    const state = this.validateState(definition, instance.state);
-
-    const status = parseWorkflowInstanceStatus(instance.status);
-
-    const progress = this.getDefinitionProgress(definition, state, status);
-
-    const publicInstance = toWorkflowPublicInstance(instance, progress);
-
-    if (instance.status === "completed") {
-      return {
-        instance: publicInstance,
-        output: {
-          kind: "meeting_booking",
-          status: "confirmed",
-          message: "Your meeting is booked. A calendar invitation will be sent to your email.",
-        },
-      };
-    }
-
-    if (instance.status === "cancelled") {
-      return {
-        instance: publicInstance,
-        output: { message: "This meeting request was cancelled. No booking action was taken." },
-      };
-    }
-
-    if (publicInstance.confirmationAction === "blocked") {
-      return {
-        instance: publicInstance,
-        output: {
-          error: "booking_recovery_blocked",
-          message:
-            "This saved booking cannot be retried safely. Please contact Freeman to check its status.",
-        },
-      };
-    }
-
-    return {
-      instance: publicInstance,
-      output: output ?? {
-        error: "booking_recovery_required",
-        message: "Your booking still needs checking. Use Retry booking to safely check it again.",
-      },
-    };
   }
 
   private resolveDefinition(instance: WorkflowInstance): IWorkflowDefinition {
@@ -1144,17 +917,6 @@ function isBookingPersistenceFailure(error: unknown) {
   return (
     error instanceof WorkflowServiceError &&
     (error.code === "persistence_failed" || error.code === "invalid_transition")
-  );
-}
-
-function hasSameBookingIdentity(expected: MeetingBookingState, current: MeetingBookingState) {
-  if (expected.bookingOperation) {
-    return expected.bookingOperation.id === current.bookingOperation?.id;
-  }
-
-  return Boolean(
-    expected.pendingBooking &&
-    expected.pendingBooking.googleEventId === current.pendingBooking?.googleEventId,
   );
 }
 

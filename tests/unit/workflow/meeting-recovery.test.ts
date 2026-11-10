@@ -1,13 +1,12 @@
+import { MeetingPersistenceError, type MeetingStore } from "../../fixtures/v1-meeting-store";
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { CalendarClient, CreatedCalendarEvent } from "@/infrastructure/google-calendar/types";
-import { MeetingService } from "@/modules/meeting/service";
+import { V1MeetingService as MeetingService } from "../../fixtures/v1-meeting-service";
 import {
   MeetingBookingError,
-  MeetingPersistenceError,
   type BookMeetingInput,
   type MeetingRecord,
-  type MeetingStore,
 } from "@/modules/meeting/types";
 
 const input: BookMeetingInput = {
@@ -144,25 +143,29 @@ test("recovery diagnostics identify stages without personal or provider data", a
   ] as const) {
     const setup = harness();
 
-    if (stage === "calendar_lookup")
-      {setup.calendar.findEvent = async () => {
+    if (stage === "calendar_lookup") {
+      setup.calendar.findEvent = async () => {
         throw new Error("PRIVATE_PROVIDER_PAYLOAD");
-      };}
+      };
+    }
 
-    if (stage === "availability")
-      {setup.calendar.getBusyPeriods = async () => {
+    if (stage === "availability") {
+      setup.calendar.getBusyPeriods = async () => {
         throw new Error("PRIVATE_PROVIDER_PAYLOAD");
-      };}
+      };
+    }
 
-    if (stage === "calendar_insert")
-      {setup.calendar.createEvent = async () => {
+    if (stage === "calendar_insert") {
+      setup.calendar.createEvent = async () => {
         throw new Error("PRIVATE_PROVIDER_PAYLOAD");
-      };}
+      };
+    }
 
-    if (stage === "meeting_persistence")
-      {setup.repository.createMeeting = async () => {
+    if (stage === "meeting_persistence") {
+      setup.repository.createMeeting = async () => {
         throw new Error("PRIVATE_PROVIDER_PAYLOAD");
-      };}
+      };
+    }
 
     await assert.rejects(setup.service.bookMeeting(input));
     const failure = setup.logs.find((log) => log.event === "meeting.booking_recovery_required");

@@ -17,13 +17,14 @@ const option = "Discuss a project";
 
 const correction = "Please use Revised Visitor";
 
-function instance(revision, name, phase) {
+function instance(revision, name, phase, outcome) {
   return {
     type: "workflow_instance",
     instance: {
       id: reference,
       workflowId: "meeting-booking",
-      workflowVersion: 1,
+      workflowVersion: 2,
+      ...(outcome ? { outcome } : {}),
       revision,
       status: phase === "completed" ? "completed" : "active",
       ...(phase === "awaiting_confirmation"
@@ -71,6 +72,8 @@ async function journey(browser, phone) {
 
   let saved = instance(1, "Visitor", "collecting");
 
+  let finishBooking = false;
+
   await page.route("**/api/chat", async (route) => {
     const request = route.request().postDataJSON();
 
@@ -79,16 +82,23 @@ async function journey(browser, phone) {
 
     if (request.action === "workflow_status") {
       assert.equal(request.workflowInstanceId, reference);
+      if (finishBooking) {
+        saved = instance(5, "Revised Visitor", "completed", {
+          booking: "confirmed",
+          ownerNotice: "accepted",
+        });
+      }
+
       events = [saved, { type: "done" }];
     } else if (request.action === "confirm_workflow") {
       assert.equal(request.expectedRevision, 3);
       assert.equal(request.actionKey, "book-meeting");
       assert.equal(request.workflowInstanceId, reference);
-      saved = instance(5, "Revised Visitor", "completed");
-      events = [
-        instance(4, "Revised Visitor", "processing"),
-        { type: "response_id", responseId: "resp_interrupted" },
-      ];
+      saved = instance(4, "Revised Visitor", "processing", {
+        booking: "pending",
+        ownerNotice: "not_started",
+      });
+      events = [saved, { type: "response_id", responseId: "resp_interrupted" }];
     } else if (request.message === "Book a meeting") {
       events = [
         saved,
@@ -153,12 +163,29 @@ async function journey(browser, phone) {
       });
     }
 
+    await composer.fill("What did Freeman build for JPScents?");
+    await send();
+    const source = dialog.getByRole("link", { name: /JPScents/ });
+
+    await source.waitFor();
+    assert.equal(requests.at(-1)?.workflowInstanceId, reference);
+    await click(source);
+    await page.waitForURL("**/work/jpscents");
+    await close.waitFor({ state: "hidden" });
+    await page.goBack();
+    await click(launcher);
+    await review.getByText("Revised Visitor", { exact: true }).waitFor();
+
     await click(review.getByRole("button", { name: "Confirm" }));
     await dialog.getByText(/response was interrupted\. Check the saved status/).waitFor();
     await click(close);
     await close.waitFor({ state: "hidden" });
     await click(launcher);
-    await dialog.getByText("Completed", { exact: false }).waitFor();
+    await dialog.getByText(/^Checking Calendar ·/).waitFor();
+    assert.equal(requests.at(-1)?.action, "workflow_status");
+    finishBooking = true;
+    await dialog.getByText(/^Booked ·/).waitFor();
+    await dialog.getByText(/invitation requested.*Owner email accepted/i).waitFor();
     assert.equal(requests.at(-1)?.action, "workflow_status");
     if (artifacts) {
       await page.screenshot({
@@ -169,15 +196,17 @@ async function journey(browser, phone) {
       });
     }
 
-    await composer.fill("What did Freeman build for JPScents?");
-    await send();
-    const source = dialog.getByRole("link", { name: /JPScents/ });
+    await page.reload();
+    await click(launcher);
+    await dialog.getByText(/^Booked ·/).waitFor();
+    assert.equal(requests.at(-1)?.action, "workflow_status");
+    const statusChecks = requests.filter(({ action }) => action === "workflow_status").length;
 
-    await source.waitFor();
-    assert.equal(requests.at(-1)?.previousResponseId, null);
-    await click(source);
-    await page.waitForURL("**/work/jpscents");
-    await close.waitFor({ state: "hidden" });
+    await page.waitForTimeout(5_200);
+    assert.equal(
+      requests.filter(({ action }) => action === "workflow_status").length,
+      statusChecks,
+    );
     console.log(
       `${browser.browserType().name()} ${phone ? "phone" : "desktop"} assistant workflow passed`,
     );

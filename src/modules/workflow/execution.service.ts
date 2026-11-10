@@ -1,6 +1,7 @@
 import "server-only";
 import { z } from "zod";
 import type { WorkflowExecution } from "@/generated/prisma/client";
+import { ResendClientError } from "@/infrastructure/resend/client";
 import type { Logger } from "@/infrastructure/logging/logger";
 import type { MeetingService } from "@/modules/meeting/service";
 import { MeetingBookingError } from "@/modules/meeting/types";
@@ -35,6 +36,8 @@ const noticeCheckpoint = z.object({
   }),
 });
 
+export const WORKFLOW_PROVIDER_BUDGET_MS = 18_000;
+
 const NOTICE_RETRY_WINDOW_MS = 24 * 60 * 60 * 1000;
 
 const BACKOFF_MS = [2000, 5000];
@@ -49,15 +52,14 @@ export class WorkflowExecutionService {
     >,
     private readonly logger: Logger,
     private readonly clock: () => Date = () => new Date(),
+    private readonly providerBudgetMs = WORKFLOW_PROVIDER_BUDGET_MS,
   ) {}
 
-  async runDue(id?: string) {
-    const beganAt = this.clock().getTime();
-
+  async runDue(id?: string, signal = AbortSignal.timeout(this.providerBudgetMs)) {
     let handled = 0;
 
     await this.repository.expireExhausted(this.clock(), id);
-    while (handled < (id ? 2 : 4) && this.clock().getTime() - beganAt < 15_000) {
+    while (handled < (id ? 2 : 4) && !signal.aborted) {
       const run = await this.repository.claim(this.clock(), id);
 
       if (!run) {
@@ -72,9 +74,9 @@ export class WorkflowExecutionService {
       });
       try {
         if (run.step === "calendar") {
-          await this.calendar(run);
+          await this.calendar(run, signal);
         } else {
-          await this.ownerNotice(run);
+          await this.ownerNotice(run, signal);
         }
       } catch {
         // A database failure leaves the claim recoverable after its lease expires.
@@ -90,7 +92,7 @@ export class WorkflowExecutionService {
     return { handled };
   }
 
-  private async calendar(run: WorkflowExecution) {
+  private async calendar(run: WorkflowExecution, signal: AbortSignal) {
     const input = bookingInput.safeParse(run.approvedInput);
 
     const checkpoint = bookingCheckpoint.safeParse(run.checkpoint);
@@ -103,7 +105,9 @@ export class WorkflowExecutionService {
 
     const { eventId, lookupOnly, possiblyDispatched, ...details } = input.data;
 
-    let couldHaveCreated = Boolean(run.stepStartedAt) || possiblyDispatched;
+    const previouslyDispatched = Boolean(run.stepStartedAt) || possiblyDispatched;
+
+    let couldHaveCreated = previouslyDispatched;
 
     let calendarMeeting;
 
@@ -119,6 +123,7 @@ export class WorkflowExecutionService {
 
           return marked;
         },
+        signal,
       );
     } catch (error) {
       const code = error instanceof MeetingBookingError ? error.code : "unavailable";
@@ -129,13 +134,17 @@ export class WorkflowExecutionService {
         return;
       }
 
-      if (code !== "slot_unavailable" && run.attempt < MAX_EXECUTION_ATTEMPTS) {
+      if (
+        code !== "rejected" &&
+        code !== "slot_unavailable" &&
+        run.attempt < MAX_EXECUTION_ATTEMPTS
+      ) {
         await this.retry(run, code);
 
         return;
       }
 
-      if (couldHaveCreated || code === "uncertain") {
+      if ((code === "rejected" ? previouslyDispatched : couldHaveCreated) || code === "uncertain") {
         await this.stop(run, "calendar_outcome_uncertain");
 
         return;
@@ -158,6 +167,17 @@ export class WorkflowExecutionService {
 
     if (!reservation) {
       await this.stop(run, "reservation_missing");
+
+      return;
+    }
+
+    if (possiblyDispatched && reservation.status === "confirmed") {
+      await this.repository.settle(
+        run,
+        this.clock(),
+        { step: "needs_review", category: "legacy_owner_notice_unverified" },
+        { meeting: calendarMeeting, complete: true },
+      );
 
       return;
     }
@@ -198,7 +218,7 @@ export class WorkflowExecutionService {
     );
   }
 
-  private async ownerNotice(run: WorkflowExecution) {
+  private async ownerNotice(run: WorkflowExecution, signal: AbortSignal) {
     const payload = noticeCheckpoint.safeParse(run.checkpoint);
 
     if (!payload.success) {
@@ -218,18 +238,24 @@ export class WorkflowExecutionService {
       return;
     }
 
+    if (signal.aborted) {
+      if (run.attempt < MAX_EXECUTION_ATTEMPTS) {
+        await this.retry(run, "owner_notice_deadline");
+      } else {
+        await this.stop(run, "owner_notice_deadline");
+      }
+
+      return;
+    }
+
     if (!(await this.repository.markStarted(run, now))) {
       return;
     }
 
     try {
-      await this.notifications.sendPreparedNotice(payload.data.notice);
+      await this.notifications.sendPreparedNotice(payload.data.notice, signal);
     } catch (error) {
-      const retryable = !(
-        error instanceof Error &&
-        "retryable" in error &&
-        error.retryable === false
-      );
+      const retryable = !(error instanceof ResendClientError) || error.retryable;
 
       if (retryable && run.attempt < MAX_EXECUTION_ATTEMPTS) {
         await this.retry(run, "owner_notice_unavailable");

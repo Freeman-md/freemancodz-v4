@@ -5,14 +5,17 @@ import type { Logger } from "@/infrastructure/logging/logger";
 import type { MeetingRecord } from "@/modules/meeting/types";
 
 type EmailSender = {
-  send(input: {
-    from: string;
-    to: string;
-    replyTo: string;
-    subject: string;
-    text: string;
-    idempotencyKey: string;
-  }): Promise<void>;
+  send(
+    input: {
+      from: string;
+      to: string;
+      replyTo: string;
+      subject: string;
+      text: string;
+      idempotencyKey: string;
+    },
+    signal?: AbortSignal,
+  ): Promise<void>;
 };
 
 type NotificationConfig = {
@@ -45,8 +48,8 @@ export class NotificationService {
     };
   }
 
-  sendPreparedNotice(notice: PreparedOwnerNotice): Promise<void> {
-    return this.sender.send(notice);
+  sendPreparedNotice(notice: PreparedOwnerNotice, signal: AbortSignal): Promise<void> {
+    return this.sender.send(notice, signal);
   }
 
   private meetingContent(meeting: MeetingRecord) {

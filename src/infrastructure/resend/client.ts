@@ -21,7 +21,7 @@ export class ResendClient {
     private readonly timeoutMs = 5_000,
   ) {}
 
-  async send(input: ResendEmailInput): Promise<void> {
+  async send(input: ResendEmailInput, signal?: AbortSignal): Promise<void> {
     let config: ResendConfig;
 
     try {
@@ -47,20 +47,31 @@ export class ResendClient {
           subject: input.subject,
           text: input.text,
         }),
-        signal: AbortSignal.timeout(this.timeoutMs),
+        signal: signal
+          ? AbortSignal.any([signal, AbortSignal.timeout(this.timeoutMs)])
+          : AbortSignal.timeout(this.timeoutMs),
       });
     } catch {
       throw new ResendClientError("network");
     }
 
     if (!response.ok) {
-      throw new ResendClientError("provider");
+      throw new ResendClientError(
+        "provider",
+        response.status === 408 ||
+          response.status === 409 ||
+          response.status === 429 ||
+          response.status >= 500,
+      );
     }
   }
 }
 
 export class ResendClientError extends Error {
-  constructor(readonly category: "configuration" | "network" | "provider") {
+  constructor(
+    readonly category: "configuration" | "network" | "provider",
+    readonly retryable = category === "network",
+  ) {
     super("Owner notification could not be sent.");
     this.name = "ResendClientError";
   }

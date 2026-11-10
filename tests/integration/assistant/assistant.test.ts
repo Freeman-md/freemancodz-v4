@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import test from "node:test";
 import { NextRequest } from "next/server";
+import { z } from "zod";
 
 import { createChatPostHandler } from "@/app/api/chat/route";
 import { createWorkflowAccess } from "@/app/api/chat/helpers";
@@ -11,22 +12,27 @@ import type { OpenAIResponseRequest } from "@/infrastructure/openai/types";
 import { AssistantService } from "@/modules/assistant/service";
 import type { ConsumeRateLimitInput, RateLimitResult } from "@/modules/rate-limit/rate-limit.types";
 import type { RateLimitService } from "@/modules/rate-limit/service";
-import type { IWorkflowInstanceRepository } from "@/modules/workflow/interfaces";
+import type {
+  IWorkflowDefinition,
+  IWorkflowInstanceRepository,
+} from "@/modules/workflow/interfaces";
 import type { WorkflowInstance } from "@/generated/prisma/client";
-import { MeetingBookingWorkflowDefinition } from "@/modules/workflow/definitions/meeting-booking/meeting-booking.definition";
+import type { V1MeetingClient as MeetingServiceClient } from "../../fixtures/v1-booking-definition";
+import { V1BookingDefinition as MeetingBookingWorkflowDefinition } from "../../fixtures/v1-booking-definition";
 import { MeetingBookingWorkflowProgressProjector } from "@/modules/workflow/definitions/meeting-booking/meeting-booking.progress";
 import { WorkflowDefinitionRegistry } from "@/modules/workflow/registry";
 import type {
   CreateWorkflowInstanceInput,
   SaveWorkflowInstanceInput,
 } from "@/modules/workflow/types";
+import { V1BookingWriter } from "../../fixtures/v1-booking-writer";
 import { WorkflowService } from "@/modules/workflow/service";
 import { WorkflowInstanceStoreError } from "@/modules/workflow/errors";
 import { assistantStreamEventSchema } from "@/contracts/assistant.contract";
 import { CalendarAvailabilityError } from "@/infrastructure/google-calendar/types";
 import type { CalendarClient, CreatedCalendarEvent } from "@/infrastructure/google-calendar/types";
-import { MeetingService } from "@/modules/meeting/service";
-import type { MeetingServiceClient, MeetingRecord } from "@/modules/meeting/types";
+import { V1MeetingService as MeetingService } from "../../fixtures/v1-meeting-service";
+import type { MeetingRecord } from "@/modules/meeting/types";
 
 const testSecret = "workflow-access-test-secret";
 
@@ -75,12 +81,16 @@ function createAssistant({
   meeting,
   portfolioSearch,
   onVercel = false,
+  definitions = [],
+  historicalBooking = false,
 }: {
   response?: (request: OpenAIResponseRequest) => ReturnType<OpenAITransport["streamResponse"]>;
   rateLimit?: Pick<RateLimitService, "consume">;
   meeting?: MeetingServiceClient;
   portfolioSearch?: ConstructorParameters<typeof AssistantService>[3];
   onVercel?: boolean;
+  definitions?: IWorkflowDefinition[];
+  historicalBooking?: boolean;
 } = {}) {
   const inputs: OpenAIResponseRequest[] = [];
 
@@ -110,12 +120,15 @@ function createAssistant({
 
   const workflowRepository = new MemoryWorkflowInstanceRepository();
 
-  const workflowService = new WorkflowService(
+  const BookingService = historicalBooking ? V1BookingWriter : WorkflowService;
+
+  const workflowService = new BookingService(
     new WorkflowDefinitionRegistry([
       new MeetingBookingWorkflowDefinition(
         meetingService,
         new MeetingBookingWorkflowProgressProjector(),
       ),
+      ...definitions,
     ]),
     workflowRepository,
     ["ask_user_choice"],
@@ -977,6 +990,8 @@ test("a portfolio detour keeps the saved booking and later details never retriev
 });
 
 test("a prepared booking uses saved review fields without repeating provisional model copy", async () => {
+  let providerRounds = 0;
+
   const { post, workflowService } = createAssistant({
     portfolioSearch: {
       search: async () => {
@@ -993,6 +1008,25 @@ test("a prepared booking uses saved review fields without repeating provisional 
 
       if (request.tools.length === 0) {
         return textResponse("resp_review_ready", "Repeated review fields");
+      }
+
+      if (providerRounds++ === 0) {
+        return events(
+          {
+            type: "response.output_text.delta",
+            delta: "Provisional name from an earlier tool round",
+          },
+          {
+            type: "response.output_item.done",
+            item: {
+              type: "function_call",
+              call_id: "update_review_name",
+              name: "update_meeting_context",
+              arguments: '{"updates":[{"field":"name","value":"Visitor"}]}',
+            },
+          },
+          { type: "response.completed", response: { id: "resp_review_update" } },
+        );
       }
 
       return events(
@@ -1040,7 +1074,70 @@ test("a prepared booking uses saved review fields without repeating provisional 
   assert.match(output, /"confirmationAction":"confirm"/);
   assert.match(output, /visitor@example.test/);
   assert.match(output, /resp_review_ready/);
-  assert.doesNotMatch(output, /Provisional review fields|Repeated review fields/);
+  assert.doesNotMatch(
+    output,
+    /Provisional review fields|Repeated review fields|Provisional name from an earlier tool round/,
+  );
+});
+
+test("switching requires an explicit reply that names the model's exact target", async () => {
+  const replacement: IWorkflowDefinition<Record<string, never>> = {
+    id: "project-intake",
+    version: 1,
+    description: "Discuss a project.",
+    stateSchema: z.strictObject({}),
+    createInitialState: () => ({}),
+    getProgress: (_state, status) => ({
+      phase: status === "active" ? "collecting" : status,
+      fields: [],
+      missingRequiredFields: [],
+    }),
+    getInstructions: () => "",
+    getTools: () => [],
+    executeTool: async (_name, _args, state) => ({ state, status: "active", output: {} }),
+  };
+
+  for (const [message, canSwitch] of [
+    ["Continue my meeting", false],
+    ["Switch to another request", false],
+    ["Switch to project intake", true],
+  ] as const) {
+    let round = 0;
+
+    const { post, workflowService, workflowRepository } = createAssistant({
+      definitions: [replacement],
+      response: async () =>
+        round++ > 0
+          ? textResponse("resp_switch_followup", "Your request is ready.")
+          : events(
+              {
+                type: "response.output_item.done",
+                item: {
+                  type: "function_call",
+                  call_id: "switch_request",
+                  name: "switch_workflow",
+                  arguments: '{"workflowId":"project-intake"}',
+                },
+              },
+              { type: "response.completed", response: { id: "resp_switch" } },
+            ),
+    });
+
+    const booking = await workflowService.start("meeting-booking", {
+      originChannel: "test",
+      originPage: null,
+      originEntry: null,
+    });
+
+    const output = await readChatResponse(
+      await post(chatRequest({ message, workflowInstanceId: booking.id })),
+    );
+
+    const saved = await workflowRepository.findById(booking.id);
+
+    assert.equal(saved?.status, canSwitch ? "cancelled" : "active");
+    assert.equal(/"workflowId":"project-intake"/.test(output), canSwitch);
+  }
 });
 
 test("starting a workflow changes instructions and tools on the next iteration in one request", async () => {
@@ -1618,7 +1715,7 @@ test("a later workflow-call failure in one model batch does not orphan a persist
 });
 
 for (const failure of ["lost_calendar_response", "meeting_save", "response_disconnect"] as const) {
-  test(`booking route with real services recovers ${failure} without another Calendar insert`, async () => {
+  test(`historical booking fixture recovers ${failure} without another Calendar insert`, async () => {
     const providerEvents = new Map<string, CreatedCalendarEvent>();
 
     const meetings = new Map<string, MeetingRecord>();
@@ -1700,6 +1797,7 @@ for (const failure of ["lost_calendar_response", "meeting_save", "response_disco
     );
 
     const { post, workflowService, inputs, rateLimitInputs } = createAssistant({
+      historicalBooking: true,
       meeting,
       response: async () => {
         throw new Error("Narration unavailable");
@@ -1740,7 +1838,7 @@ for (const failure of ["lost_calendar_response", "meeting_save", "response_disco
       ),
     );
 
-    assert.match(stale, /Check the saved details before confirming/);
+    assert.match(stale, /Review the updated summary/);
     assert.equal(inserts, 0);
     await readChatResponse(
       await post(
@@ -1780,8 +1878,9 @@ for (const failure of ["lost_calendar_response", "meeting_save", "response_disco
   });
 }
 
-test("terminal workflow metadata clears the active surface without streaming private state", async () => {
+test("historical terminal workflow metadata clears the active surface without streaming private state", async () => {
   const { inputs, post, workflowService } = createAssistant({
+    historicalBooking: true,
     response: async () => {
       throw new Error("Booking must not depend on model narration");
     },
