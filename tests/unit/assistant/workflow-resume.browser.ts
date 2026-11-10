@@ -152,6 +152,9 @@ test("active workflow IDs survive remounts and clear when finished or retired", 
 
     let pendingAction!: Promise<void>;
 
+    const draft = "Cancel the workflow";
+
+    await act(async () => currentAssistant().setInput(draft));
     await act(async () => {
       pendingAction = currentAssistant().submitWorkflowAction(action);
       await currentAssistant().submitWorkflowAction(action);
@@ -159,6 +162,7 @@ test("active workflow IDs survive remounts and clear when finished or retired", 
     assert.deepEqual(requests.at(-1), action);
     assert.equal(requests.filter((request) => request.action === "confirm_booking").length, 1);
     assert.equal(currentAssistant().isLoading, true);
+    assert.equal(currentAssistant().input, draft);
     await act(async () => {
       releaseAction(
         streamResponse([workflowEvent(SECOND_WORKFLOW_ID, "active"), { type: "done" }]),
@@ -166,12 +170,22 @@ test("active workflow IDs survive remounts and clear when finished or retired", 
       await pendingAction;
     });
     globalThis.fetch = responseFetch;
+    assert.equal(currentAssistant().input, draft);
+
+    const retry = { action: "retry_booking" as const, workflowInstanceId: SECOND_WORKFLOW_ID };
+
+    responses.push(streamResponse([workflowEvent(SECOND_WORKFLOW_ID, "active"), { type: "done" }]));
+    await act(async () => currentAssistant().submitWorkflowAction(retry));
+    assert.deepEqual(requests.at(-1), retry);
+    assert.equal(currentAssistant().input, draft);
 
     responses.push(
       streamResponse([workflowEvent(SECOND_WORKFLOW_ID, "cancelled"), { type: "done" }]),
     );
-    await act(async () => currentAssistant().submitMessage("Cancel the workflow"));
+    await act(async () => currentAssistant().submitMessage(currentAssistant().input));
+    assert.equal(requests.at(-1)?.message, draft);
     assert.equal(requests.at(-1)?.previousResponseId, null);
+    assert.equal(currentAssistant().input, "");
     assert.equal(dom.window.sessionStorage.getItem(ACTIVE_WORKFLOW_INSTANCE_STORAGE_KEY), null);
     assert.equal(currentAssistant().workflowInstance?.status, "cancelled");
 

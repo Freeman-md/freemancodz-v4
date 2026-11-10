@@ -15,8 +15,6 @@ export function AssistantChoice({ choice, isLoading, onSend, onWriteReply }: Pro
 
   const firstOption = useRef<HTMLInputElement>(null);
 
-  const submitting = useRef(false);
-
   const groupName = useId();
 
   useEffect(() => {
@@ -28,18 +26,13 @@ export function AssistantChoice({ choice, isLoading, onSend, onWriteReply }: Pro
   return (
     <form
       className="assistant-choice"
-      onSubmit={async (event) => {
+      onSubmit={(event) => {
         event.preventDefault();
-        if (!selected || isLoading || submitting.current) {
+        if (!selected || isLoading) {
           return;
         }
 
-        submitting.current = true;
-        try {
-          await onSend(selected);
-        } finally {
-          submitting.current = false;
-        }
+        void onSend(selected);
       }}
     >
       <fieldset disabled={isLoading}>

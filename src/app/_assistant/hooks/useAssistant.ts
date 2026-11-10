@@ -54,10 +54,11 @@ export function useAssistant() {
     if ("action" in request) {
       // Booking actions have no model checkpoint; the next message reloads saved state.
       previousResponseId.current = null;
+    } else {
+      setInput("");
     }
 
     setIsLoading(true);
-    setInput("");
     setChoice(null);
 
     const timestamp = Date.now();
