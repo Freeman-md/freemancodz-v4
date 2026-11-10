@@ -2,9 +2,10 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { streamAssistant } from "../api/stream-assistant-response";
-import { ACTIVE_WORKFLOW_INSTANCE_STORAGE_KEY, MAX_MESSAGE_LENGTH } from "../constants";
+import { ACTIVE_WORKFLOW_INSTANCE_STORAGE_KEY } from "../constants";
 import type { ChatMessage } from "../types";
 import {
+  MAX_MESSAGE_LENGTH,
   workflowInstanceIdSchema,
   type WorkflowPublicInstance,
   type AssistantWorkflowAction,

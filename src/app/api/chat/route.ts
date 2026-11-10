@@ -6,6 +6,8 @@ import type { AssistantService } from "@/modules/assistant/service";
 import type { RateLimitRule } from "@/modules/rate-limit/rate-limit.types";
 import type { RateLimitService } from "@/modules/rate-limit/service";
 
+const MAX_CHAT_BODY_BYTES = 8 * 1024;
+
 const CHAT_RATE_LIMIT_SCOPE = "chat";
 
 const CHAT_RATE_LIMIT_RULES = [
@@ -36,6 +38,39 @@ function rateLimitError(limit: number) {
     : "Daily message limit reached. Please try again later.";
 }
 
+async function readChatBody(request: Request): Promise<string | null> {
+  if (!request.body) {
+    return "";
+  }
+
+  const reader = request.body.getReader();
+
+  const body = new Uint8Array(MAX_CHAT_BODY_BYTES);
+
+  let size = 0;
+
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+
+      if (done) {
+        return new TextDecoder().decode(body.subarray(0, size));
+      }
+
+      if (size + value.byteLength > MAX_CHAT_BODY_BYTES) {
+        void reader.cancel().catch(() => undefined);
+
+        return null;
+      }
+
+      body.set(value, size);
+      size += value.byteLength;
+    }
+  } finally {
+    reader.releaseLock();
+  }
+}
+
 export function createChatPostHandler({
   assistantService,
   rateLimitService,
@@ -49,7 +84,13 @@ export function createChatPostHandler({
     let payload: unknown;
 
     try {
-      payload = await request.json();
+      const body = await readChatBody(request);
+
+      if (body === null) {
+        return NextResponse.json({ error: "Request body is too large." }, { status: 413 });
+      }
+
+      payload = JSON.parse(body);
     } catch {
       return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
     }

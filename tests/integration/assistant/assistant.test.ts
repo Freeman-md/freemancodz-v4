@@ -1624,6 +1624,56 @@ test("aborting after a streamed delta skips later tools and final events", async
   assert.deepEqual(errors, []);
 });
 
+test("oversized chunked UTF-8 bodies return 413 before the limiter or assistant runs", async () => {
+  const { post, inputs, rateLimitInputs } = createAssistant();
+
+  const encoder = new TextEncoder();
+
+  let cancelled = false;
+
+  const body = new ReadableStream<Uint8Array>({
+    start(controller) {
+      controller.enqueue(encoder.encode('{"message":"' + "é".repeat(4000)));
+      controller.enqueue(encoder.encode("é".repeat(100) + '"}'));
+    },
+    cancel() {
+      cancelled = true;
+    },
+  });
+
+  const request = new Request("http://localhost/api/chat", {
+    method: "POST",
+    body,
+    duplex: "half",
+  } as RequestInit & { duplex: "half" });
+
+  const response = await post(request);
+
+  assert.equal(response.status, 413);
+  assert.deepEqual(await response.json(), { error: "Request body is too large." });
+  assert.equal(cancelled, true);
+  assert.equal(rateLimitInputs.length, 0);
+  assert.equal(inputs.length, 0);
+});
+
+test("the body limit accepts valid JSON at 8 KiB and preserves the malformed JSON response", async () => {
+  const { post, rateLimitInputs } = createAssistant();
+
+  const body = JSON.stringify({ message: "Hello" }).padEnd(8 * 1024);
+
+  const makeRequest = (body: string) =>
+    new Request("http://localhost/api/chat", { method: "POST", body });
+
+  const output = await readChatResponse(await post(makeRequest(body)));
+
+  assert.match(output, /A grounded answer/);
+  const invalid = await post(makeRequest('{"message":'));
+
+  assert.equal(invalid.status, 400);
+  assert.deepEqual(await invalid.json(), { error: "Invalid JSON body." });
+  assert.equal(rateLimitInputs.length, 1);
+});
+
 test("invalid public request returns the current safe validation response", async () => {
   const { post } = createAssistant();
 

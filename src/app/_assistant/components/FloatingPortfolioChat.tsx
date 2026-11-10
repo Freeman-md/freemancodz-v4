@@ -10,7 +10,7 @@ import { AssistantMessages, type StarterAction } from "./AssistantMessages";
 import { AssistantWorkflowProgress } from "./AssistantWorkflowProgress";
 import { useAssistant } from "../hooks/useAssistant";
 import { useAssistantSurface } from "../hooks/useAssistantSurface";
-import { MAX_MESSAGE_LENGTH } from "../constants";
+import { MAX_MESSAGE_LENGTH } from "@/contracts/assistant.contract";
 import { followHomeAnchor } from "../../_components/layout/follow-home-anchor";
 
 export function FloatingPortfolioChat() {

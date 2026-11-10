@@ -2,7 +2,7 @@ import { z } from "zod";
 import { workflowProgressSchema } from "./workflow-progress.contract";
 import { assistantChoiceSchema } from "./assistant-choice.contract";
 
-const MAX_MESSAGE_LENGTH = 500;
+export const MAX_MESSAGE_LENGTH = 500;
 
 export const assistantTriggerEvent = "portfolio-chat:open";
 
