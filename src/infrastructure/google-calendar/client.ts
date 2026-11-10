@@ -12,6 +12,10 @@ import {
 
 const eventPayloadSchema = z.record(z.string(), z.json());
 
+const providerErrorSchema = z.object({
+  error: z.object({ errors: z.array(z.object({ reason: z.string() })) }),
+});
+
 const requestOptions = { timeout: 10_000, retry: false } as const;
 
 export class GoogleCalendarClient implements CalendarClient {
@@ -124,9 +128,7 @@ export class GoogleCalendarClient implements CalendarClient {
 
       return toCalendarEvent(response.data);
     } catch (error) {
-      const status = responseStatus(error);
-
-      throw new CalendarEventError(error, status === 400 || status === 401 || status === 404);
+      throw new CalendarEventError(error, insertionOutcome(error));
     }
   }
 
@@ -157,16 +159,49 @@ function toCalendarEvent(data: unknown): CreatedCalendarEvent {
   return { id, htmlLink, payload };
 }
 
-function responseStatus(error: unknown) {
+function responseDetails(error: unknown) {
   if (typeof error !== "object" || !error || !("response" in error)) {
     return undefined;
   }
 
   const response = error.response;
 
-  return typeof response === "object" && response && "status" in response
-    ? response.status
-    : undefined;
+  return typeof response === "object" && response ? response : undefined;
+}
+
+function responseStatus(error: unknown) {
+  const response = responseDetails(error);
+
+  return response && "status" in response ? response.status : undefined;
+}
+
+function insertionOutcome(error: unknown) {
+  const status = responseStatus(error);
+
+  if (status === 429) {
+    return "rate_limited";
+  }
+
+  if (status === 403) {
+    const response = responseDetails(error);
+
+    const parsed = providerErrorSchema.safeParse(
+      response && "data" in response ? response.data : null,
+    );
+
+    if (
+      parsed.success &&
+      parsed.data.error.errors.some(
+        ({ reason }) => reason === "rateLimitExceeded" || reason === "userRateLimitExceeded",
+      )
+    ) {
+      return "rate_limited";
+    }
+
+    return "rejected";
+  }
+
+  return status === 400 || status === 401 || status === 404 ? "rejected" : "uncertain";
 }
 
 async function withSignal<Result>(signal: AbortSignal | undefined, request: () => Promise<Result>) {

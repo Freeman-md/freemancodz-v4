@@ -10,7 +10,7 @@ export class CalendarAvailabilityError extends Error {
 export class CalendarEventError extends Error {
   constructor(
     cause?: unknown,
-    readonly rejected = false,
+    readonly outcome: "uncertain" | "rejected" | "rate_limited" = "uncertain",
   ) {
     super("Calendar event lookup or creation is temporarily unavailable.", { cause });
   }

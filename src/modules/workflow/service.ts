@@ -109,7 +109,15 @@ export class WorkflowService implements IWorkflowService {
       return this.createStartContext();
     }
 
-    const instance = await this.loadInstance(instanceId);
+    const executions = this.executions;
+
+    assertInstanceId(instanceId);
+
+    const [saved, execution] = executions
+      ? await this.runRepositoryOperation(() => executions.readContext(instanceId))
+      : [await this.loadInstance(instanceId), null];
+
+    const instance = requireInstance(saved);
 
     // A retired workflow can leave a saved ID in the browser.
     if (!this.registry.getLatest(instance.workflowId)) {
@@ -121,8 +129,6 @@ export class WorkflowService implements IWorkflowService {
     const state = this.validateState(definition, instance.state);
 
     const status = parseWorkflowInstanceStatus(instance.status);
-
-    const execution = await this.executions?.latest(instance.id);
 
     const publicInstance = this.present(instance, definition, state, status, execution);
 
@@ -660,17 +666,11 @@ export class WorkflowService implements IWorkflowService {
   }
 
   private async loadInstance(instanceId: string): Promise<WorkflowInstance> {
-    if (!INSTANCE_ID_PATTERN.test(instanceId)) {
-      throw new WorkflowServiceError("not_found", "The workflow instance was not found.");
-    }
+    assertInstanceId(instanceId);
 
-    const instance = await this.runRepositoryOperation(() => this.repository.findById(instanceId));
-
-    if (!instance) {
-      throw new WorkflowServiceError("not_found", "The workflow instance was not found.");
-    }
-
-    return instance;
+    return requireInstance(
+      await this.runRepositoryOperation(() => this.repository.findById(instanceId)),
+    );
   }
 
   private resolveDefinition(instance: WorkflowInstance): IWorkflowDefinition {
@@ -889,6 +889,20 @@ function createStartWorkflowTool(definitions: readonly IWorkflowDefinition[]): O
       },
     },
   };
+}
+
+function assertInstanceId(instanceId: string) {
+  if (!INSTANCE_ID_PATTERN.test(instanceId)) {
+    throw new WorkflowServiceError("not_found", "The workflow instance was not found.");
+  }
+}
+
+function requireInstance(instance: WorkflowInstance | null) {
+  if (!instance) {
+    throw new WorkflowServiceError("not_found", "The workflow instance was not found.");
+  }
+
+  return instance;
 }
 
 function toWorkflowPublicInstance(

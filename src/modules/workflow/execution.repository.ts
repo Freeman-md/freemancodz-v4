@@ -36,6 +36,14 @@ export class WorkflowExecutionRepository {
     });
   }
 
+  readContext(instanceId: string) {
+    // Approval and recovery commit the instance and execution together.
+    return this.db.$transaction(
+      [this.db.workflowInstance.findUnique({ where: { id: instanceId } }), this.latest(instanceId)],
+      { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
+    );
+  }
+
   legacyCandidates() {
     return this.db.workflowInstance.findMany({
       where: {

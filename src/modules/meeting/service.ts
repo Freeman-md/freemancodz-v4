@@ -143,8 +143,7 @@ export class MeetingService {
           signal,
         );
       } catch (error) {
-        const code =
-          error instanceof CalendarEventError && error.rejected ? "rejected" : "uncertain";
+        const code = error instanceof CalendarEventError ? error.outcome : "uncertain";
 
         throw new MeetingBookingError(code, error);
       }

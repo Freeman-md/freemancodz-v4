@@ -79,8 +79,16 @@ const calendar: CalendarClient = {
     return load().events[id] ?? null;
   },
   createEvent: async (input) => {
+    if (mode === "ambiguous-calendar") {
+      throw new CalendarEventError();
+    }
+
+    if (mode === "throttled-calendar") {
+      throw new CalendarEventError(undefined, "rate_limited");
+    }
+
     if (mode === "rejected-calendar") {
-      throw new CalendarEventError(undefined, true);
+      throw new CalendarEventError(undefined, "rejected");
     }
 
     const fixture = load();

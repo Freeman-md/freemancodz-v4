@@ -48,7 +48,8 @@ export class MeetingBookingError extends Error {
       | "conflict"
       | "slot_unavailable"
       | "invalid_operation"
-      | "rejected",
+      | "rejected"
+      | "rate_limited",
     cause?: unknown,
   ) {
     super("The booking could not be safely completed. Retry the existing booking operation.", {

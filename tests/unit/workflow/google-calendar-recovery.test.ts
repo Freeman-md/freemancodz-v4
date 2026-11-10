@@ -126,9 +126,19 @@ test("Calendar adapter preserves a rejection versus a potentially committed inse
 
   const { signal } = new AbortController();
 
-  for (const status of [400, 401, 404, 409, 429, 503]) {
+  for (const [status, reason, outcome] of [
+    [400, "timeRangeEmpty", "rejected"],
+    [401, "authError", "rejected"],
+    [403, "forbidden", "rejected"],
+    [403, "userRateLimitExceeded", "rate_limited"],
+    [403, "rateLimitExceeded", "rate_limited"],
+    [404, "notFound", "rejected"],
+    [409, "duplicate", "uncertain"],
+    [429, "rateLimitExceeded", "rate_limited"],
+    [503, "backendError", "uncertain"],
+  ] as const) {
     const insert = context.mock.method(calendar.events, "insert", async () => {
-      throw { response: { status } };
+      throw { response: { status, data: { error: { errors: [{ reason }] } } } };
     });
 
     await assert.rejects(
@@ -147,7 +157,7 @@ test("Calendar adapter preserves a rejection versus a potentially committed inse
       ),
       (error: unknown) => {
         assert.ok(error instanceof CalendarEventError);
-        assert.equal(error.rejected, status === 400 || status === 401 || status === 404);
+        assert.equal(error.outcome, outcome);
 
         return true;
       },

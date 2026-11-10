@@ -134,17 +134,22 @@ export class WorkflowExecutionService {
         return;
       }
 
+      const rejectedWithoutWrite = code === "rejected" || code === "rate_limited";
+
       if (
         code !== "rejected" &&
         code !== "slot_unavailable" &&
         run.attempt < MAX_EXECUTION_ATTEMPTS
       ) {
-        await this.retry(run, code);
+        await this.retry(run, code, rejectedWithoutWrite && !previouslyDispatched);
 
         return;
       }
 
-      if ((code === "rejected" ? previouslyDispatched : couldHaveCreated) || code === "uncertain") {
+      if (
+        (rejectedWithoutWrite ? previouslyDispatched : couldHaveCreated) ||
+        code === "uncertain"
+      ) {
         await this.stop(run, "calendar_outcome_uncertain");
 
         return;
@@ -273,11 +278,12 @@ export class WorkflowExecutionService {
     });
   }
 
-  private async retry(run: WorkflowExecution, category: string) {
+  private async retry(run: WorkflowExecution, category: string, clearDispatch = false) {
     const now = this.clock();
 
     await this.repository.settle(run, now, {
       category,
+      ...(clearDispatch ? { stepStartedAt: null } : {}),
       nextAttemptAt: new Date(now.getTime() + BACKOFF_MS[run.attempt - 1]),
     });
     this.logger.info("workflow.execution_retry_scheduled", {

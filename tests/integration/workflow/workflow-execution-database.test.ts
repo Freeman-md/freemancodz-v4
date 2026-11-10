@@ -5,6 +5,7 @@ import { mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
+import { setTimeout as delay } from "node:timers/promises";
 import { promisify } from "node:util";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { Client } from "pg";
@@ -666,6 +667,101 @@ test(
           "not_booked",
         );
       });
+      await t.test(
+        "exhausted throttling releases only an approval with no uncertain insert",
+        async () => {
+          const rejected = await accept(27);
+
+          for (const offset of [226_000, 229_000, 235_000]) {
+            await worker(rejected.id, "throttled-calendar", offset);
+          }
+
+          const release = await executionRepository.latest(rejected.instance.id);
+
+          assert.equal(release?.attempt, 3);
+          assert.equal(release?.step, "failed");
+          assert.equal(release?.category, "rate_limited");
+          assert.equal(
+            (await workflow.getAssistantContext(rejected.instance.id)).instance?.outcome?.booking,
+            "not_booked",
+          );
+
+          const uncertain = await accept(28);
+
+          await worker(uncertain.id, "ambiguous-calendar", 236_000);
+          await worker(uncertain.id, "throttled-calendar", 239_000);
+          await worker(uncertain.id, "throttled-calendar", 245_000);
+          assert.equal(
+            (await executionRepository.latest(uncertain.instance.id))?.step,
+            "needs_review",
+          );
+          assert.equal(
+            await db.meeting.count({
+              where: { googleEventId: `b${uncertain.id.replaceAll("-", "")}`, status: "pending" },
+            }),
+            1,
+          );
+        },
+      );
+
+      await t.test(
+        "a recovery commit cannot split the instance and execution in a status read",
+        async () => {
+          const { instance, id } = await accept(29);
+
+          const eventId = `b${id.replaceAll("-", "")}`;
+
+          await sql.query("BEGIN");
+          let inFlight: ReturnType<WorkflowService["getAssistantContext"]> | undefined;
+
+          try {
+            await sql.query("LOCK TABLE public.workflow_executions IN ACCESS EXCLUSIVE MODE");
+            inFlight = workflow.getAssistantContext(instance.id);
+            let waiting = false;
+
+            for (let attempt = 0; attempt < 80; attempt++) {
+              const { rows } = await admin.query(
+                `SELECT 1 FROM pg_stat_activity WHERE datname = $1 AND wait_event_type = 'Lock'
+                AND query LIKE '%workflow_executions%' AND query LIKE '%SELECT%'`,
+                [databaseName],
+              );
+
+              if (rows.length > 0) {
+                waiting = true;
+                break;
+              }
+
+              await delay(15);
+            }
+
+            assert.ok(waiting, "status reader is waiting after its instance read");
+
+            await sql.query("UPDATE workflow_executions SET step = 'failed' WHERE id = $1", [id]);
+            await sql.query("DELETE FROM meetings WHERE google_event_id = $1", [eventId]);
+            await sql.query(
+              "UPDATE workflow_instances SET state = $2, revision = revision + 1 WHERE id = $1",
+              [
+                instance.id,
+                JSON.stringify({
+                  ...reviewed(29),
+                  step: "collecting",
+                  selectedSlot: null,
+                  preparedInteractionId: null,
+                }),
+              ],
+            );
+            await sql.query("COMMIT");
+          } finally {
+            await sql.query("ROLLBACK");
+          }
+
+          assert.equal((await inFlight)?.instance?.outcome?.booking, "pending");
+          assert.equal(
+            (await workflow.getAssistantContext(instance.id)).instance?.outcome?.booking,
+            "not_booked",
+          );
+        },
+      );
     } finally {
       await db.$disconnect();
       await sql.end();
