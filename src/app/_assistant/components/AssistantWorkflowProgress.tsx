@@ -3,18 +3,9 @@
 import { Collapsible } from "@base-ui/react/collapsible";
 import { CheckIcon, ChevronDownIcon, MinusIcon } from "lucide-react";
 import { cn } from "@/app/_utils/class-names";
-import type { WorkflowPublicInstance } from "@/contracts/assistant.contract";
-import type { WorkflowProgress } from "@/contracts/workflow-progress.contract";
+import type { ActiveWorkflow } from "@/contracts/assistant.contract";
 
-type AssistantWorkflowProgressProps = {
-  instance: WorkflowPublicInstance;
-};
-
-const WORKFLOW_TITLES: Record<string, string> = {
-  "meeting-booking": "Book a meeting",
-};
-
-const PHASE_LABELS: Record<WorkflowProgress["phase"], string> = {
+const PHASE_LABELS: Record<ActiveWorkflow["phase"], string> = {
   collecting: "Collecting",
   awaiting_confirmation: "Awaiting confirmation",
   processing: "Processing",
@@ -22,29 +13,35 @@ const PHASE_LABELS: Record<WorkflowProgress["phase"], string> = {
   cancelled: "Cancelled",
 };
 
-const FIELD_LABELS: Record<string, string> = {
-  email: "Email",
-  name: "Name",
-  reason: "Topic",
-  selectedSlot: "Time",
-};
+const RUN_LABELS = {
+  queued: "Queued",
+  running: "Running",
+  retry: "Retry pending",
+  finished: "Finished",
+  attention: "Needs attention",
+} as const;
 
-export function AssistantWorkflowProgress({ instance }: AssistantWorkflowProgressProps) {
-  const requiredFields = instance.progress.fields.filter((field) => field.required);
+const STEP_LABELS = {
+  queued: "Queued",
+  running: "Running",
+  retry: "Retry pending",
+  reconciling: "Checking outcome",
+  succeeded: "Finished",
+  attention: "Needs attention",
+} as const;
 
-  const collectedRequiredFields = requiredFields.filter((field) => hasValue(field.value)).length;
+export function AssistantWorkflowProgress({ instance }: { instance: ActiveWorkflow }) {
+  const collected = instance.details.filter(({ value }) => value !== null).length;
 
   return (
     <Collapsible.Root className="assistant-progress shrink-0 border-b border-emerald-950/8 bg-emerald-50/70">
       <Collapsible.Trigger className="group flex min-h-[3.75rem] w-full items-center justify-between gap-3 px-4 py-2.5 text-left outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-700/30 sm:min-h-[4.5rem] sm:px-6 sm:py-3">
         <span className="min-w-0">
-          <span className="block font-sans text-base/6 font-medium text-ink">
-            {WORKFLOW_TITLES[instance.workflowId] ?? formatFieldLabel(instance.workflowId)}
-          </span>
+          <span className="block font-sans text-base/6 font-medium text-ink">{instance.title}</span>
           <span aria-live="polite" className="block font-sans text-sm/5 text-muted">
-            {PHASE_LABELS[instance.progress.phase]} ·{" "}
+            {instance.run ? RUN_LABELS[instance.run.status] : PHASE_LABELS[instance.phase]} ·{" "}
             <span className="tabular-nums">
-              {collectedRequiredFields} of {requiredFields.length} details
+              {collected} of {instance.details.length} details
             </span>
           </span>
         </span>
@@ -54,99 +51,47 @@ export function AssistantWorkflowProgress({ instance }: AssistantWorkflowProgres
         />
       </Collapsible.Trigger>
 
-      <Collapsible.Panel className="h-(--collapsible-panel-height) overflow-hidden transition-[height] duration-150 ease-out data-ending-style:h-0 data-starting-style:h-0 motion-reduce:transition-none [&[hidden]:not([hidden='until-found'])]:hidden">
-        <ul role="list" className="max-h-[min(35dvh,20rem)] overflow-y-auto px-4 sm:px-6">
-          {instance.progress.fields.map((field) => {
-            const collected = hasValue(field.value);
+      {instance.run?.businessStatus && (
+        <p role="status" className="px-4 pb-2 text-sm sm:px-6">
+          {instance.run.businessStatus}
+        </p>
+      )}
 
-            return (
-              <li
-                key={field.key}
-                className="assistant-progress-row grid min-h-12 grid-cols-[7.5rem_minmax(0,1fr)_1rem] items-center gap-3 border-b border-emerald-950/8 py-2 first:border-t last:border-b-0 sm:grid-cols-[9rem_minmax(0,1fr)_1rem]"
-              >
-                <span className="block font-sans text-sm/5 font-medium text-ink">
-                  {field.required ? (
-                    <span className="whitespace-nowrap">
-                      {FIELD_LABELS[field.key] ?? formatFieldLabel(field.key)}
-                      <span aria-hidden="true" className="text-signal-700">
-                        {" "}
-                        *
-                      </span>
-                      <span className="sr-only"> required</span>
-                    </span>
-                  ) : (
-                    <>
-                      {FIELD_LABELS[field.key] ?? formatFieldLabel(field.key)}
-                      <span className="font-normal text-muted"> (optional)</span>
-                    </>
-                  )}
-                </span>
-                <span
-                  className={cn(
-                    "block min-w-0 break-words font-sans text-sm/5",
-                    collected ? "font-medium text-ink" : "font-normal text-muted",
-                  )}
-                >
-                  {hasValue(field.value)
-                    ? formatFieldValue(field.value)
-                    : missingValueCopy(field.key)}
-                </span>
-                {collected ? (
-                  <CheckIcon aria-hidden="true" className="size-4 shrink-0 stroke-signal-700" />
-                ) : (
-                  <MinusIcon aria-hidden="true" className="size-4 shrink-0 stroke-muted" />
-                )}
+      <Collapsible.Panel className="h-(--collapsible-panel-height) overflow-hidden transition-[height] duration-150 ease-out data-ending-style:h-0 data-starting-style:h-0 motion-reduce:transition-none [&[hidden]:not([hidden='until-found'])]:hidden">
+        {instance.run && (
+          <ol className="px-4 py-2 text-sm sm:px-6" aria-label="Execution steps">
+            {instance.run.steps.map(({ key, label, status }) => (
+              <li key={key} className="flex justify-between gap-3 py-1">
+                <span>{label}</span>
+                <span>{STEP_LABELS[status]}</span>
               </li>
-            );
-          })}
+            ))}
+          </ol>
+        )}
+        <ul role="list" className="max-h-[min(35dvh,20rem)] overflow-y-auto px-4 sm:px-6">
+          {instance.details.map(({ key, label, value }) => (
+            <li
+              key={key}
+              className="assistant-progress-row grid min-h-12 grid-cols-[7.5rem_minmax(0,1fr)_1rem] items-center gap-3 border-b border-emerald-950/8 py-2 first:border-t last:border-b-0 sm:grid-cols-[9rem_minmax(0,1fr)_1rem]"
+            >
+              <span className="block font-sans text-sm/5 font-medium text-ink">{label}</span>
+              <span
+                className={cn(
+                  "block min-w-0 break-words font-sans text-sm/5",
+                  value === null ? "font-normal text-muted" : "font-medium text-ink",
+                )}
+              >
+                {value ?? "Not provided"}
+              </span>
+              {value === null ? (
+                <MinusIcon aria-hidden="true" className="size-4 shrink-0 stroke-muted" />
+              ) : (
+                <CheckIcon aria-hidden="true" className="size-4 shrink-0 stroke-signal-700" />
+              )}
+            </li>
+          ))}
         </ul>
       </Collapsible.Panel>
     </Collapsible.Root>
   );
-}
-
-type WorkflowFieldValue = WorkflowProgress["fields"][number]["value"];
-
-function hasValue(value: WorkflowFieldValue): value is NonNullable<WorkflowFieldValue> {
-  return typeof value === "string" ? value.trim().length > 0 : value !== null;
-}
-
-export function formatFieldValue(value: NonNullable<WorkflowProgress["fields"][number]["value"]>) {
-  if (typeof value === "string") {
-    return value;
-  }
-
-  const start = new Date(value.start);
-
-  const end = new Date(value.end);
-
-  const date = new Intl.DateTimeFormat("en-GB", {
-    timeZone: "Europe/London",
-    weekday: "short",
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  }).format(start);
-
-  const time = new Intl.DateTimeFormat("en-GB", {
-    timeZone: "Europe/London",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  });
-
-  return `${date} · ${time.format(start)}–${time.format(end)} · London time`;
-}
-
-function missingValueCopy(fieldKey: string) {
-  return fieldKey === "selectedSlot" ? "Not chosen" : "Not provided";
-}
-
-export function formatFieldLabel(key: string) {
-  const label = key
-    .replace(/[-_]+/g, " ")
-    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
-    .trim();
-
-  return label ? `${label.charAt(0).toUpperCase()}${label.slice(1)}` : key;
 }

@@ -19,10 +19,11 @@ export type MeetingRecord = Omit<MeetingRecordInput, "rawProviderPayload"> & {
   updatedAt: Date;
 };
 
-export type MeetingStore = {
-  createMeeting(input: MeetingRecordInput): Promise<MeetingRecord>;
-  findMeetingByGoogleEventId(googleEventId: string): Promise<MeetingRecord | null>;
-  updateMeeting(input: MeetingRecordInput): Promise<MeetingRecord>;
+export type MeetingReservationStore = {
+  reserve(input: MeetingRecordInput): Promise<MeetingRecord | null>;
+  release(transaction: Prisma.TransactionClient, eventId: string): Promise<void>;
+  confirm(input: MeetingRecordInput): Promise<MeetingRecord | null>;
+  findMeetingByGoogleEventId(eventId: string): Promise<MeetingRecord | null>;
 };
 
 export type MeetingSlot = {
@@ -31,20 +32,12 @@ export type MeetingSlot = {
   timezone: string;
 };
 
-export type PendingCalendarEvent = {
-  googleEventId: string;
-  googleEventUrl: string | null;
-  rawProviderPayload: Prisma.JsonObject;
-};
-
 export type MeetingBookingDetails = {
   name: string;
   email: string;
   reason: string;
   slot: MeetingSlot;
 };
-
-export type BookMeetingInput = MeetingBookingDetails & { bookingOperationId: string };
 
 export class MeetingBookingError extends Error {
   constructor(
@@ -58,25 +51,7 @@ export class MeetingBookingError extends Error {
   }
 }
 
-export class MeetingPersistenceError extends Error {
-  constructor(
-    readonly pendingEvent: PendingCalendarEvent,
-    cause: unknown,
-  ) {
-    super("Calendar event was created but meeting persistence failed.", { cause });
-  }
-}
-
-export type MeetingServiceClient = {
+export type MeetingAvailability = {
   findAvailableSlots(input: { startDate: string; endDate: string }): Promise<MeetingSlot[]>;
-  isSlotAvailable(slot: MeetingSlot): Promise<boolean>;
-  bookMeeting(
-    input: BookMeetingInput,
-  ): Promise<{ googleEventId: string; googleEventUrl: string | null }>;
-  reconcileMeeting(
-    input: MeetingBookingDetails & {
-      pendingEvent: PendingCalendarEvent;
-      bookingOperationId?: string;
-    },
-  ): Promise<{ googleEventId: string; googleEventUrl: string | null }>;
+  isSlotAvailable(slot: MeetingSlot, signal?: AbortSignal): Promise<boolean>;
 };

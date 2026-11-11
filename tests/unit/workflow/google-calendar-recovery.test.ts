@@ -143,3 +143,22 @@ test("Calendar availability checks also use bounded non-retrying transport", asy
     { timeout: 10_000, retry: false },
   ]);
 });
+
+test("a workflow deadline also bounds a stalled Calendar SDK call", async (context) => {
+  const { calendar, client } = setup(context);
+
+  const controller = new AbortController();
+
+  const called = Promise.withResolvers<void>();
+
+  context.mock.method(calendar.events, "get", () => {
+    called.resolve();
+
+    return new Promise(() => {});
+  });
+  const result = client.findEvent("stable-event", controller.signal);
+
+  await called.promise;
+  controller.abort();
+  await assert.rejects(result, CalendarEventError);
+});

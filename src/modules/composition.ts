@@ -1,8 +1,8 @@
 import "server-only";
 
 import {
-  getNotificationOwnerEmail,
   getGoogleCalendarConfig,
+  getNotificationOwnerEmail,
   getRateLimitHmacSecret,
   getResendConfig,
 } from "@/infrastructure/config/env";
@@ -13,9 +13,9 @@ import { ResendClient } from "@/infrastructure/resend/client";
 import { OpenAIClient, createOpenAIClient, getResponseModel } from "@/infrastructure/openai/client";
 import { OpenAIEmbeddings } from "@/infrastructure/openai/embeddings";
 import { AssistantService } from "./assistant/service";
-import { GLOBAL_ASSISTANT_TOOLS, PORTFOLIO_SEARCH_TOOL } from "./assistant/tools/definitions";
 import { ContactRequestRepository } from "./contact/repository";
 import { ContactService } from "./contact/service";
+import { MeetingOwnerNotice } from "./meeting/owner-notice";
 import { MeetingRepository } from "./meeting/repository";
 import { MeetingService } from "./meeting/service";
 import { NotificationService } from "./notification/service";
@@ -30,11 +30,13 @@ import { PrismaPortfolioSeedRepository } from "./portfolio/repositories/portfoli
 import { PortfolioSeedService } from "./portfolio/seed.service";
 import { RateLimitRepository } from "./rate-limit/repository";
 import { RateLimitService } from "./rate-limit/service";
-import { MeetingBookingWorkflowDefinition } from "./workflow/definitions/meeting-booking/meeting-booking.definition";
-import { MeetingBookingWorkflowProgressProjector } from "./workflow/definitions/meeting-booking/meeting-booking.progress";
-import { WorkflowInstanceRepository } from "./workflow/repository";
+import { createMeetingBookingAction } from "./workflow/definitions/meeting-booking/actions";
+import { WorkflowRunner } from "./workflow/runner";
+import { WorkflowRunRepository } from "./workflow/run-repository";
+import { MeetingBookingWorkflowDefinition } from "./workflow/definitions/meeting-booking/definition";
+import { WorkflowRegistry } from "./workflow/registry";
+import { WorkflowRepository } from "./workflow/repository";
 import { WorkflowService } from "./workflow/service";
-import { WorkflowDefinitionRegistry } from "./workflow/registry";
 
 // Shared infrastructure
 const openAIProvider = new OpenAIClient(createOpenAIClient, getResponseModel);
@@ -52,15 +54,9 @@ const notificationService = new NotificationService(
   logger,
 );
 
-// Contact and meetings
+// Contact
 export const contactService = new ContactService(
   new ContactRequestRepository(prisma),
-  notificationService,
-);
-const meetingService = new MeetingService(
-  new GoogleCalendarClient(getGoogleCalendarConfig),
-  new MeetingRepository(prisma),
-  logger,
   notificationService,
 );
 
@@ -91,31 +87,49 @@ export function createPortfolioIndexSession(connection: string) {
   };
 }
 
-// Workflows
-
-const meetingBookingWorkflowProgress = new MeetingBookingWorkflowProgressProjector();
-
-const workflowRegistry = new WorkflowDefinitionRegistry([
-  new MeetingBookingWorkflowDefinition(meetingService, meetingBookingWorkflowProgress),
-]);
-
-const workflowService = new WorkflowService(
-  workflowRegistry,
-  new WorkflowInstanceRepository(prisma),
-  [...GLOBAL_ASSISTANT_TOOLS, PORTFOLIO_SEARCH_TOOL].map(({ name }) => name),
-  logger,
-);
-
 // Rate limiting
 export const rateLimitService = new RateLimitService(
   new RateLimitRepository(prisma),
   getRateLimitHmacSecret,
 );
 
+// Workflow
+const calendar = new GoogleCalendarClient(getGoogleCalendarConfig);
+
+const meetingStore = new MeetingRepository(prisma);
+
+const meetingService = new MeetingService(calendar, logger);
+
+const workflowRegistry = new WorkflowRegistry([
+  new MeetingBookingWorkflowDefinition(
+    meetingService,
+    createMeetingBookingAction(
+      meetingService,
+      calendar,
+      meetingStore,
+      new MeetingOwnerNotice(resendClient, () => ({
+        adminEmail: getNotificationOwnerEmail(),
+        fromEmail: getResendConfig().fromEmail,
+      })),
+    ),
+  ),
+]);
+
+export const workflowService = new WorkflowService(
+  workflowRegistry,
+  new WorkflowRepository(prisma),
+);
+
+export const workflowRunner = new WorkflowRunner(
+  workflowRegistry,
+  new WorkflowRunRepository(prisma),
+  logger,
+);
+
 // Assistant
 export const assistantService = new AssistantService(
   openAIProvider,
   logger,
-  workflowService,
   new PortfolioSearchService(new PrismaPortfolioSearchRepository(prisma), embeddings),
+  workflowService,
 );

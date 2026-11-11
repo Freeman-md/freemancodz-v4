@@ -1,6 +1,13 @@
 "use client";
 
-import { useEffect, useEffectEvent, useRef, useState, useSyncExternalStore } from "react";
+import {
+  useCallback,
+  useEffect,
+  useEffectEvent,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import {
   OPEN_PORTFOLIO_CHAT_EVENT,
   type AssistantDraft,
@@ -9,31 +16,34 @@ import {
 import type { ChatMessage } from "../types";
 
 function useMedia(query: string) {
-  return useSyncExternalStore(
-    (onChange) => {
+  const subscribe = useCallback(
+    (onChange: () => void) => {
       const media = window.matchMedia(query);
 
       media.addEventListener("change", onChange);
 
       return () => media.removeEventListener("change", onChange);
     },
+    [query],
+  );
+
+  return useSyncExternalStore(
+    subscribe,
     () => window.matchMedia(query).matches,
     () => false,
   );
 }
 
 export function useAssistantSurface({
-  messages,
+  onDraft,
+  lastMessage,
   isLoading,
-  setInput,
 }: {
-  messages: ChatMessage[];
+  onDraft: (draft: AssistantDraft) => void;
+  lastMessage: ChatMessage | undefined;
   isLoading: boolean;
-  setInput: (text: string) => void;
 }) {
   const [isOpen, setIsOpen] = useState(false);
-
-  const [subject, setSubject] = useState<string | null>(null);
 
   const isMobile = useMedia("(max-width: 639px), (max-height: 530px) and (orientation: landscape)");
 
@@ -45,70 +55,54 @@ export function useAssistantSurface({
 
   const returnFocus = useRef<HTMLElement | null>(null);
 
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-
   const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  const latestMessage = messages.at(-1);
 
   function openChat() {
     returnFocus.current = launcherRef.current;
     setIsOpen(true);
   }
 
-  function closeWithoutFocusReturn() {
-    returnFocus.current = null;
-    setIsOpen(false);
-  }
-
-  function openDraft(draft: AssistantDraft) {
-    setInput(draft.text);
-    setSubject(draft.subject);
-    setIsOpen(true);
-  }
-
-  const handleTriggerOpen = useEffectEvent((detail?: OpenPortfolioChatDetail) => {
-    if (!detail) {
-      return;
-    }
-
-    returnFocus.current = detail.returnFocus;
-    openDraft(detail.draft);
-    closeRef.current?.focus({ preventScroll: true });
-  });
+  const openFromEvent = useEffectEvent(
+    ({ draft, returnFocus: origin }: OpenPortfolioChatDetail) => {
+      returnFocus.current = origin;
+      onDraft(draft);
+      setIsOpen(true);
+      closeRef.current?.focus({ preventScroll: true });
+    },
+  );
 
   useEffect(() => {
-    function handleOpenEvent(event: Event) {
-      handleTriggerOpen((event as CustomEvent<OpenPortfolioChatDetail>).detail);
+    function handleOpen(event: Event) {
+      const { detail } = event as CustomEvent<OpenPortfolioChatDetail>;
+
+      if (detail) {
+        openFromEvent(detail);
+      }
     }
 
-    window.addEventListener(OPEN_PORTFOLIO_CHAT_EVENT, handleOpenEvent);
+    window.addEventListener(OPEN_PORTFOLIO_CHAT_EVENT, handleOpen);
 
-    return () => window.removeEventListener(OPEN_PORTFOLIO_CHAT_EVENT, handleOpenEvent);
+    return () => window.removeEventListener(OPEN_PORTFOLIO_CHAT_EVENT, handleOpen);
   }, []);
 
   useEffect(() => {
-    if (isOpen && latestMessage) {
+    if (isOpen && lastMessage) {
       messagesEndRef.current?.scrollIntoView({
         block: "nearest",
         behavior: shouldReduceMotion ? "auto" : "smooth",
       });
     }
-  }, [isLoading, isOpen, latestMessage, shouldReduceMotion]);
+  }, [isOpen, lastMessage, isLoading, shouldReduceMotion]);
 
   return {
     isOpen,
     setIsOpen,
-    subject,
-    setSubject,
     isMobile,
     shouldReduceMotion,
     launcherRef,
     closeRef,
     returnFocus,
-    textareaRef,
     messagesEndRef,
     openChat,
-    closeWithoutFocusReturn,
   };
 }

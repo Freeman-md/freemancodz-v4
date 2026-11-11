@@ -1,94 +1,49 @@
-# Workflow foundation
+# Assistant workflow and recovery
 
-The portfolio assistant runs executable workflows from versioned TypeScript definitions while keeping each visitor's workflow state private in PostgreSQL. The first definition is `meeting-booking` version 1. There is deliberately no database-authored definition table, workflow DSL, visual builder, or generic graph engine.
+The assistant can collect details and prepare a review through definition-owned tools. It offers those tools after resolving the browser's saved instance and revision. A definition validates state and supplies the review, ordered steps, and visitor-facing status. Register definitions and their providers in the composition root.
 
-## Definitions and instances
+The browser confirms a review by sending its ID and revision to the same-origin approval route. The approval transaction checks the browser owner, consumes the review, and creates one run with stable step IDs. Each worker claims one due step and saves its result only while it owns the claim. A reconciliation probe checks what happened after a timeout or expired claim. The visitor can close the assistant while the worker runs and reopen it to see the saved progress.
 
-A workflow definition owns its Zod state schema, initial state, model instructions, currently available tools, and tool execution. Its `(id, version)` pair is immutable. The definition registry resolves an exact version for an existing instance and the latest registered version for a new start. Publishing a newer version never upgrades stored instances automatically, so older versions must remain registered while active instances can still reference them.
+Meeting reserves the slot in Postgres, then creates an event with a stable Calendar ID and operation marker. The next step verifies or saves the booking by that ID. The booking appears confirmed as soon as the save succeeds. The final step freezes the owner email and sends it with a stable Resend key. A notification failure leaves the appointment confirmed.
 
-The registry contains executable application code; it does not persist anything. `WorkflowInstanceRepository` has the opposite responsibility: it persists an instance's workflow ID, exact version, lifecycle, JSON state, origin, and timestamps without selecting definitions or executing tools.
+## Release and scheduling
 
-`WorkflowService` coordinates those two boundaries:
+Apply the additive migrations to the verified shared database from the reviewed revision with `npm run prisma:migrate:production`. This command checks the configured production target. The migration adds private review, run, and step tables and restricts API-role access to Meeting data. Verify pending migrations and take the usual recoverable backup before applying them. Preview smoke checks that access workflow state require the shared schema. Keep provider fault tests and competing writes on disposable data.
 
-1. load an optional instance and resolve its exact definition;
-2. validate loaded JSON with that definition's schema;
-3. expose current instructions and tools;
-4. reject unavailable or stale tool calls;
-5. execute the definition and validate its next state and semantic output; and
-6. persist an active, completed, or cancelled lifecycle result.
+After deployment, drain older booking writers before enabling scheduled work. Configure the server-only `WORKFLOW_RUNNER_SECRET` with at least 32 characters. In Supabase Vault, store the same secret as `workflow_runner_secret` and the intended endpoint URL as `workflow_runner_url`. Enable Cron, Vault, and `pg_net`. An authorized operator installs one job for the shared database.
 
-Instances begin as `active`. Completion and cancellation are terminal and their durable records remain available to trusted server code. State is treated as untrusted on every database load and before every write.
-
-## Assistant and browser boundary
-
-Every normal OpenAI iteration combines the portfolio assistant's global instructions and the `ask_user_choice` tool with the current workflow context. With no active instance, that context can expose `start_workflow`. With an active instance, it exposes `cancel_workflow` and the definition tools available at the current state. It exposes `switch_workflow` only when another workflow is available. A start tool result is therefore followed immediately by another model iteration using the selected workflow's surface.
-
-An ordinary browser request carries:
-
-```json
-{
-  "message": "...",
-  "previousResponseId": "resp_... or null",
-  "workflowInstanceId": "session-bound reference or null"
-}
+```sql
+select cron.schedule(
+  'workflow-runner',
+  '* * * * *',
+  $job$
+    select net.http_post(
+      url := (select decrypted_secret from vault.decrypted_secrets where name = 'workflow_runner_url'),
+      headers := jsonb_build_object(
+        'Content-Type', 'application/json',
+        'Authorization', 'Bearer ' || (
+          select decrypted_secret from vault.decrypted_secrets where name = 'workflow_runner_secret'
+        )
+      ),
+      body := '{}'::jsonb,
+      timeout_milliseconds := 30000
+    );
+  $job$
+);
 ```
 
-The stream returns safe instance metadata (including its saved revision) and read-only progress: collected public values, missing required fields, and phase. Private workflow state stays on the server. The active workflow reference persists in sessionStorage. The chat route verifies its signature against the anonymous HttpOnly session cookie before looking up an instance. The next assistant request after refresh can resume the same workflow. Completion, cancellation, retirement or a rejected reference clears it. Saved references from before this binding was introduced require a new browser conversation. There is no separate public workflow-instance endpoint.
+Verify that an unauthenticated request returns 401. Check the authorized job and HTTP invocation results, then inspect the safe step status, attempt counters, and reason codes. Keep secret values and frozen payloads out of logs. [Supabase Cron](https://supabase.com/docs/guides/cron) · [Scheduled HTTP and Vault](https://supabase.com/docs/guides/functions/schedule-functions)
 
-Meeting confirmation uses the same rate-limited `/api/chat` route with `{ action: "confirm_booking", workflowInstanceId, expectedRevision }`; recovery uses `{ action: "retry_booking", workflowInstanceId }`. These strict alternatives cannot include a message or editable booking details. Action responses use the same stream without a model call. The next ordinary message reloads workflow state without the previous model checkpoint.
+## Resolve a run that needs attention
 
-### Conversational choices
+Use the run ID, step key, and safe reason to identify the unresolved effect. Match Calendar events by ID, operation marker, attendee, and reviewed details. For a missing or mismatched event after an uncertain insert, keep the reservation until the external result is established. For a booking save problem, look up the existing Calendar ID in Meeting before any correction. For an uncertain owner notice, use its saved message and idempotency key within the provider's 24-hour window. Once that window ends, verify provider history before any manual resend. Preserve confirmed appointments when only owner notification needs attention.
 
-The global `ask_user_choice` tool accepts a model-written question and two to six distinct reply strings. It has no workflow dependency. Once requested, remaining tool calls receive skipped acknowledgements. A single tools-disabled model continuation completes before the browser receives the choice and its response checkpoint.
+Before removing a definition in production, stop new approvals for it and drain or resolve every approved run. Keep the version registered while any of its runs still need automated processing.
 
-The picker temporarily replaces the composer. Selecting and sending an option submits its exact text through the ordinary chat request; “Write my own reply” restores text entry without sending anything. Choices are memory-only, never stored on a workflow, and disappear on refresh. The normal workflow tools still validate details and switch atomically. Neither a choice nor typed confirmation can authorise meeting booking; the saved summary's Confirm booking button is required. Read-only progress is unchanged.
+## Controlled verification
 
-## Meeting booking version 1
+Run the database suites with `WORKFLOW_TEST_DATABASE_URL` and `PORTFOLIO_TEST_DATABASE_URL` pointing to disposable PostgreSQL with pgvector. The approval suite drives the authorized endpoint and exercises edit and approval races, expired claims, and injected provider failures. It advances the worker clock to check the saved retry and probe delays.
 
-`update_meeting_context` saves name, email, reason and a selection from returned availability incrementally. Validated batches are atomic and use the existing revision check. Corrections invalidate preparation without discarding other details; availability refreshes discard the slot, not personal details. The next post-refresh interaction reloads these saved values through the existing ID-only restoration.
+Use `node tests/e2e/stage-workflow-variant.mjs /tmp/m28-meeting meeting` to build a disposable copy with controlled provider wiring. Generate Prisma and run the production build with the disposable database configured. Set `WORKFLOW_E2E_URL` and run `node --import tsx --test tests/e2e/workflow.test.ts` for the browser journey. Set `WORKFLOW_CRON_REHEARSAL=1` with a test Cron job pointed at the local worker to verify completion while the assistant is closed.
 
-Booking diagnostics reuse the existing logger: `workflow.booking_accepted`, `meeting.calendar_event_resolved` (created/existing/recovered), `meeting.booking_recovery_required`, `workflow.booking_completed`, and `workflow.booking_completion_save_failed`. Server logs correlate operation/workflow identifiers and revisions with typed categories and failure stages. They exclude personal fields, provider payloads and raw exceptions. Retry semantics and public error messages are unchanged.
-
-The meeting definition uses the Meeting module's public service interface for London-time availability, final slot rechecking, Calendar creation, Meeting persistence, and partial-failure reconciliation. It owns all attendee fields, booking state, meeting prompts, and meeting tools.
-
-Preparation exposes a saved summary and explicit Confirm booking button, not model-accessible confirmation or booking tools. The server checks that exact revision and current availability, then saves a UUID booking operation through a revision-checked write before any Calendar insertion. The saved details are frozen: correction, cancellation and switching cannot change an accepted booking. A preflight race lost to any of those mutations creates no event.
-
-The operation UUID determines a single Calendar event ID. Recovery looks up that ID before checking availability, validates its active status, attendee, times and operation metadata, then finds or creates the matching Meeting row. An uncertain insert rechecks the same event ID; it never generates a replacement. Calendar calls have a 10-second timeout and no automatic retries. A matching Meeting row cannot conceal a missing, cancelled or conflicting provider event. Notifications retain their existing stable Meeting-based idempotency key.
-
-Initial acceptance also claims the interval through `WorkflowInstanceRepository.claimMeetingBooking`. A short READ COMMITTED transaction takes the single-calendar advisory lock `hashtext('freemancodz:meeting-booking')`, then separately reads accepted meeting states and performs the existing revision-checked write. The separate read sees claims committed by the previous lock holder. Lock waiting is bounded to two seconds; the lock is released on commit or rollback, before any Calendar call.
-
-Active and completed meeting instances with `step: "confirmed"` reserve their saved interval, including legacy confirmed/pending states. The current instance is excluded; overlapping intervals conflict while adjacent intervals do not. Malformed accepted state fails closed. A losing confirmation clears its slot, availability and preparation through a revision-checked update, preserving personal details and any newer concurrent correction. Conflicts log `workflow.booking_slot_conflict` with only workflow ID, revision and safe category.
-
-The saved operation is the durable claim, not the transient lock. Claims never expire automatically: uncertain provider or persistence outcomes retain their interval through explicit recovery. This coordinates application bookings only; it cannot atomically prevent manual Google Calendar changes. Before eventual rollout, retire older confirmation handlers that do not participate in this protocol. No new table, migration or background worker is involved.
-
-If saving completion fails, the service reloads and accepts an already-completed result only for the same operation. Otherwise the operation remains available for explicit Retry booking; no automatic browser retry occurs. Losing the response stream does not cancel accepted work. A process termination may still require that explicit retry.
-
-Existing prepared instances remain usable. Legacy pending events retain their original event ID and must match the saved summary and current Calendar event before reconciliation. Legacy confirmed instances without an operation or event reference stop for manual reconciliation rather than risking a duplicate. Provider payloads, operation and event identifiers, and Calendar URLs remain server-only. This change adds no table or migration.
-
-## Adding a real future workflow
-
-Add a definition only after its workflow is proven and required:
-
-1. define a strict Zod state schema and infer its state type;
-2. implement one positive integer version with its own instructions, tools, and semantic execution;
-3. inject only the capability behaviour that execution needs;
-4. register the new definition in `src/modules/composition.ts`, retaining executable older versions; and
-5. add focused registry, lifecycle, definition, adapter, and database regression coverage.
-
-A new workflow does not require a definition table, generic lead model, condition language, or a second workflow service.
-
-## Database and operations
-
-Prisma migrations are the only migration source of truth. `workflow_instances` uses UUID identifiers and constrained JSON-object state. Row Level Security is enabled, table privileges are revoked from `PUBLIC`, `anon`, and `authenticated`, and there are no public policies. Only the trusted server database connection can access this internal state.
-
-Run the focused suite against a disposable non-production PostgreSQL server:
-
-```bash
-PORTFOLIO_TEST_DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54332/postgres npm test
-```
-
-The suite creates and drops a random database, applies the complete historical migration chain, proves representative data survives the forward migration, verifies constraints and access controls, and exercises repository lifecycle persistence.
-
-Workflow writes use revision checks to reject stale concurrent updates. The cleanup migration `20261008120000_remove_workflow_pending_interaction` removes only the obsolete pending form column and its check constraint, preserving state, revisions and permissions. For production, deploy code that no longer reads or writes that column, retire all old instances, and only then apply the cleanup migration. Do not run a migration-first deployment for this cleanup.
-
-Conversation transcripts, choices and drafts are not persisted. Generated free-text controls, structured form submissions, editable progress and preview components are not supported.
+Stage the `empty` and `services` variants in separate disposable directories with the same script. Both remove the Meeting definition, Meeting module, and Calendar adapter from the production source. The services variant registers the test-only Request Services definition. Build and start them separately, set `WORKFLOW_EMPTY_URL` and `WORKFLOW_SERVICES_URL`, and run `NODE_ENV=production node --conditions=react-server --import tsx --test tests/e2e/workflow-plugins.test.ts`. The test verifies the shared browser and runner paths, including recovery from a lost fixture acknowledgement.

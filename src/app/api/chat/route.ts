@@ -1,66 +1,28 @@
 import { type NextRequest, NextResponse } from "next/server";
+import { readChatVisitorKey } from "./helpers";
+import { createChatPostHandler } from "./post";
 
-import { getRateLimitHmacSecret } from "@/infrastructure/config/env";
-import type { Logger } from "@/infrastructure/logging/logger";
-import type { AssistantService } from "@/modules/assistant/service";
-import type { RateLimitService } from "@/modules/rate-limit/service";
+export async function GET(request: NextRequest) {
+  const headers = { "Cache-Control": "private, no-store" };
 
-import { checkChatRateLimit, parseChatRequest, resolveWorkflowSession } from "./helpers";
+  const visitorKey = readChatVisitorKey(request);
 
-export function createChatPostHandler({
-  assistantService,
-  rateLimitService,
-  logger,
-  getAccessSecret,
-  onVercel = process.env.VERCEL === "1",
-}: {
-  assistantService: Pick<AssistantService, "createResponse">;
-  rateLimitService: Pick<RateLimitService, "consume">;
-  logger: Logger;
-  getAccessSecret: () => string;
-  onVercel?: boolean;
-}) {
-  return async function POST(request: NextRequest) {
-    const parsed = await parseChatRequest(request);
+  if (!visitorKey) {
+    return NextResponse.json(null, { headers });
+  }
 
-    if (parsed instanceof NextResponse) {
-      return parsed;
-    }
+  const { workflowService, logger } = await import("@/modules/composition");
 
-    const rateLimitResponse = await checkChatRateLimit(request, { rateLimitService, logger, onVercel });
+  try {
+    return NextResponse.json(await workflowService.getActive(visitorKey), { headers });
+  } catch {
+    logger.error("chat.workflow_restore_failed");
 
-    if (rateLimitResponse) {
-      return rateLimitResponse;
-    }
-
-    const session = resolveWorkflowSession(request, parsed, onVercel, getAccessSecret);
-
-    if (session instanceof NextResponse) {
-      return session;
-    }
-
-    const response = new NextResponse(
-      assistantService.createResponse(session.input, session.encodeWorkflowId),
-      {
-        headers: {
-          "Cache-Control": "no-cache, no-transform",
-          "Content-Type": "application/x-ndjson; charset=utf-8",
-          "X-Content-Type-Options": "nosniff",
-        },
-      },
+    return NextResponse.json(
+      { error: "Could not restore workflow progress." },
+      { status: 503, headers },
     );
-
-    if (session.cookie) {
-      response.cookies.set(session.cookie.name, session.cookie.value, {
-        httpOnly: true,
-        sameSite: "strict",
-        secure: session.cookie.secure,
-        path: "/",
-      });
-    }
-
-    return response;
-  };
+  }
 }
 
 export async function POST(request: NextRequest) {
@@ -70,6 +32,5 @@ export async function POST(request: NextRequest) {
     assistantService,
     rateLimitService,
     logger,
-    getAccessSecret: getRateLimitHmacSecret,
   })(request);
 }

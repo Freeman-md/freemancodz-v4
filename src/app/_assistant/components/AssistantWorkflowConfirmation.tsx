@@ -1,81 +1,56 @@
 "use client";
 
-import type {
-  AssistantWorkflowAction,
-  WorkflowPublicInstance,
-} from "@/contracts/assistant.contract";
-import { Button } from "@/app/_components/ui/Button";
-import { formatFieldLabel, formatFieldValue } from "./AssistantWorkflowProgress";
+import type { ActiveWorkflow } from "@/contracts/assistant.contract";
 
 export function AssistantWorkflowConfirmation({
-  instance,
-  isLoading,
-  onSubmit,
+  review,
+  pending,
+  error,
+  onConfirm,
+  onChange,
 }: {
-  instance: WorkflowPublicInstance;
-  isLoading: boolean;
-  onSubmit: (action: AssistantWorkflowAction) => Promise<void>;
+  review: NonNullable<ActiveWorkflow["review"]>;
+  pending: boolean;
+  error: string | null;
+  onConfirm: () => void;
+  onChange: () => void;
 }) {
-  if (
-    instance.workflowId !== "meeting-booking" ||
-    !instance.confirmationAction ||
-    instance.status !== "active"
-  ) {
-    return null;
-  }
-
-  let buttonLabel =
-    instance.confirmationAction === "confirm" ? "Confirm booking" : "Retry booking";
-
-  if (isLoading) {
-    buttonLabel = "Checking request…";
-  }
-
   return (
     <section
-      aria-label="Review meeting booking"
-      className="assistant-workflow-review shrink-0 border-t border-black/10 bg-white px-4 py-3 sm:px-6"
+      aria-label="Review request"
+      className="shrink-0 border-b border-emerald-950/10 px-4 py-3 text-sm sm:px-6"
     >
-      <h3 className="text-sm font-medium text-ink">Review your meeting</h3>
-      <dl className="my-2 text-sm">
-        {instance.progress.fields.map(
-          (field) =>
-            field.value !== null && (
-              <div
-                key={field.key}
-                className="grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-2 py-1"
-              >
-                <dt className="break-words text-muted">{formatFieldLabel(field.key)}</dt>
-                <dd className="break-words text-ink">{formatFieldValue(field.value)}</dd>
-              </div>
-            ),
-        )}
+      <h2 className="font-medium">Review request</h2>
+      <dl className="mt-2 grid max-h-[22dvh] grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-1 overflow-y-auto">
+        {review.rows.map(({ key, label, value }) => (
+          <div key={key} className="contents">
+            <dt className="font-medium">{label}</dt>
+            <dd className="break-words">{value}</dd>
+          </div>
+        ))}
       </dl>
-      {instance.confirmationAction === "blocked" ? (
-        <p role="status" className="text-sm text-muted">
-          This booking needs reconciliation. Please contact Freeman before making another booking.
-        </p>
-      ) : (
-        <Button
-          disabled={isLoading}
-          className="min-h-12 w-full text-[#020c1b]"
-          onClick={() =>
-            void onSubmit(
-              instance.confirmationAction === "confirm"
-                ? {
-                    action: "confirm_booking",
-                    workflowInstanceId: instance.id,
-                    expectedRevision: instance.revision,
-                  }
-                : {
-                    action: "retry_booking",
-                    workflowInstanceId: instance.id,
-                  },
-            )
-          }
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <button
+          className="assistant-control min-h-11 px-3"
+          type="button"
+          onClick={onConfirm}
+          disabled={pending}
         >
-          {buttonLabel}
-        </Button>
+          {pending ? "Confirming…" : review.label}
+        </button>
+        <button
+          className="assistant-control min-h-11 px-3"
+          type="button"
+          onClick={onChange}
+          disabled={pending}
+        >
+          Request changes
+        </button>
+      </div>
+      {error && (
+        <p className="mt-2" role="status">
+          {error}
+        </p>
       )}
     </section>
   );

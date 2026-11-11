@@ -1,10 +1,3 @@
-import type { AssistantWorkflowAction } from "@/contracts/assistant.contract";
+import type { AssistantRequest } from "@/contracts/assistant.contract";
 
-export type AssistantResponseInput = (
-  | {
-      message: string;
-      previousResponseId: string | null;
-      workflowInstanceId: string | null;
-    }
-  | AssistantWorkflowAction
-) & { signal: AbortSignal };
+export type AssistantResponseInput = AssistantRequest & { visitorKey: string; signal: AbortSignal };

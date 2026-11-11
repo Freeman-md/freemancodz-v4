@@ -1,213 +1,202 @@
 import "server-only";
 
 import type { Prisma, PrismaClient, WorkflowInstance } from "@/generated/prisma/client";
-import { meetingBookingStateSchema } from "./definitions/meeting-booking/meeting-booking.schema";
-import { WorkflowInstanceStoreError } from "./errors";
-import type { IWorkflowInstanceRepository } from "./interfaces";
-import type { CreateWorkflowInstanceInput, SaveWorkflowInstanceInput } from "./types";
 
-export class WorkflowInstanceRepository implements IWorkflowInstanceRepository {
-  constructor(private readonly database: PrismaClient) {}
+export type StoredWorkflow = Pick<
+  WorkflowInstance,
+  "id" | "workflowId" | "workflowVersion" | "state" | "revision"
+>;
 
-  async create(input: CreateWorkflowInstanceInput): Promise<WorkflowInstance> {
-    try {
-      const record = await this.database.workflowInstance.create({
-        data: {
-          workflowId: input.workflowId,
-          workflowVersion: input.workflowVersion,
+const workflowFields = {
+  id: true,
+  workflowId: true,
+  workflowVersion: true,
+  state: true,
+  revision: true,
+} as const;
+
+export class WorkflowRepository {
+  constructor(private readonly prisma: PrismaClient) {}
+
+  async startOrResume(input: {
+    visitorKey: string;
+    workflowId: string;
+    workflowVersion: number;
+    state: Prisma.InputJsonObject;
+    originChannel: string;
+  }) {
+    const [instance] = await this.prisma.$queryRaw<StoredWorkflow[]>`
+      INSERT INTO "workflow_instances" (
+        "visitor_key", "workflow_id", "workflow_version", "state", "origin_channel"
+      )
+      VALUES (
+        ${input.visitorKey}, ${input.workflowId}, ${input.workflowVersion},
+        ${JSON.stringify(input.state)}::jsonb, ${input.originChannel}
+      )
+      ON CONFLICT ("visitor_key", "workflow_id")
+        WHERE "status" = 'active' AND "visitor_key" IS NOT NULL
+      DO UPDATE SET "workflow_id" = EXCLUDED."workflow_id"
+      RETURNING "id", "workflow_id" AS "workflowId", "workflow_version" AS "workflowVersion", "state", "revision"
+    `;
+
+    if (!instance) {
+      throw new Error("The workflow instance could not be saved.");
+    }
+
+    return instance;
+  }
+
+  async saveState(input: {
+    id: string;
+    visitorKey: string;
+    revision: number;
+    state: Prisma.InputJsonObject;
+  }): Promise<StoredWorkflow | null> {
+    return this.prisma.$transaction(async (tx) => {
+      const [updated] = await tx.workflowInstance.updateManyAndReturn({
+        where: {
+          id: input.id,
+          visitorKey: input.visitorKey,
           status: "active",
-          state: input.state,
-          originChannel: input.originChannel,
-          originPage: input.originPage,
-          originEntry: input.originEntry,
+          revision: input.revision,
+          reviews: { none: { status: "consumed" } },
         },
+        data: { state: input.state, revision: { increment: 1 } },
+        select: workflowFields,
       });
 
-      return record;
-    } catch (error) {
-      throw normalizePersistenceError(error);
-    }
-  }
+      if (!updated) {
+        return null;
+      }
 
-  async findById(id: string): Promise<WorkflowInstance | null> {
-    try {
-      const record = await this.database.workflowInstance.findUnique({ where: { id } });
+      await tx.workflowReview.updateMany({
+        where: { instanceId: input.id, status: "pending" },
+        data: { status: "invalidated" },
+      });
 
-      return record;
-    } catch (error) {
-      throw normalizePersistenceError(error);
-    }
-  }
-
-  async save(input: SaveWorkflowInstanceInput): Promise<WorkflowInstance> {
-    validateCompletedAt(input);
-    try {
-      return await this.database.$transaction((transaction) =>
-        this.saveInTransaction(transaction, input),
-      );
-    } catch (error) {
-      throw normalizePersistenceError(error);
-    }
-  }
-
-  async claimMeetingBooking(input: SaveWorkflowInstanceInput): Promise<WorkflowInstance> {
-    validateCompletedAt(input);
-    const parsed = meetingBookingStateSchema.safeParse(input.state);
-
-    if (
-      !parsed.success ||
-      parsed.data.step !== "confirmed" ||
-      !parsed.data.bookingOperation ||
-      !parsed.data.selectedSlot ||
-      input.status !== "active" ||
-      input.replacement
-    ) {
-      throw new WorkflowInstanceStoreError("unavailable", "The booking claim is invalid.");
-    }
-
-    const slot = parsed.data.selectedSlot;
-
-    const start = Date.parse(slot.start);
-
-    const end = Date.parse(slot.end);
-
-    if (!(start < end)) {
-      throw new WorkflowInstanceStoreError("unavailable", "The booking interval is invalid.");
-    }
-
-    try {
-      return await this.database.$transaction(
-        async (transaction) => {
-          await transaction.$executeRaw`SET LOCAL lock_timeout = '2s'`;
-          // One calendar: serialize acceptance, not the slower Calendar request.
-          await transaction.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('freemancodz:meeting-booking'))`;
-
-          const current = await transaction.workflowInstance.findUnique({
-            where: { id: input.id },
-            select: { workflowId: true },
-          });
-
-          if (!current || current.workflowId !== "meeting-booking") {
-            throw new WorkflowInstanceStoreError("unavailable", "The booking workflow is invalid.");
-          }
-
-          // This separate READ COMMITTED query sees the preceding lock holder's committed claim.
-          const claims = await transaction.workflowInstance.findMany({
-            where: {
-              id: { not: input.id },
-              workflowId: "meeting-booking",
-              status: { in: ["active", "completed"] },
-              state: { path: ["step"], equals: "confirmed" },
-            },
-            select: { state: true },
-          });
-
-          for (const claim of claims) {
-            const saved = meetingBookingStateSchema.safeParse(claim.state);
-
-            if (
-              !saved.success ||
-              !saved.data.selectedSlot ||
-              !(Date.parse(saved.data.selectedSlot.start) < Date.parse(saved.data.selectedSlot.end))
-            ) {
-              throw new WorkflowInstanceStoreError(
-                "unavailable",
-                "A saved booking needs reconciliation.",
-              );
-            }
-
-            if (
-              start < Date.parse(saved.data.selectedSlot.end) &&
-              end > Date.parse(saved.data.selectedSlot.start)
-            ) {
-              throw new WorkflowInstanceStoreError(
-                "slot_unavailable",
-                "Another booking owns this interval.",
-              );
-            }
-          }
-
-          return this.saveInTransaction(transaction, input);
-        },
-        { isolationLevel: "ReadCommitted" },
-      );
-    } catch (error) {
-      throw normalizePersistenceError(error);
-    }
-  }
-
-  private async saveInTransaction(
-    transaction: Prisma.TransactionClient,
-    input: SaveWorkflowInstanceInput,
-  ): Promise<WorkflowInstance> {
-    const update = await transaction.workflowInstance.updateMany({
-      where: { id: input.id, status: "active", revision: input.expectedRevision },
-      data: {
-        status: input.status,
-        state: input.state,
-        completedAt: input.completedAt,
-        revision: { increment: 1 },
-      },
+      return updated;
     });
+  }
 
-    if (update.count === 0) {
-      const existing = await transaction.workflowInstance.findUnique({
-        where: { id: input.id },
-        select: { status: true },
-      });
+  findActive(visitorKey: string): Promise<StoredWorkflow | null> {
+    return this.prisma.workflowInstance.findFirst({
+      where: {
+        visitorKey,
+        OR: [{ status: "active" }, { reviews: { some: { status: "consumed" } } }],
+      },
+      orderBy: [{ startedAt: "desc" }, { id: "desc" }],
+      select: workflowFields,
+    });
+  }
 
-      if (!existing) {
-        throw new WorkflowInstanceStoreError("not_found", "The workflow instance was not found.");
+  async findRun(instanceId: string) {
+    return this.prisma.workflowRun.findFirst({
+      where: { review: { instanceId } },
+      include: { review: { select: { actionKey: true } }, steps: { orderBy: { position: "asc" } } },
+    });
+  }
+
+  ensureReview(input: {
+    instance: StoredWorkflow;
+    actionKey: string;
+    display: Prisma.InputJsonObject;
+    payload: Prisma.InputJsonObject;
+  }) {
+    return this.prisma.$transaction(async (tx) => {
+      const { id, revision, workflowVersion } = input.instance;
+
+      const [current] = await tx.$queryRaw<{ id: string }[]>`
+        SELECT id FROM workflow_instances
+        WHERE id = ${id}::uuid AND revision = ${revision} AND status = 'active'
+        FOR UPDATE
+      `;
+
+      if (!current) {
+        return null;
       }
 
-      throw new WorkflowInstanceStoreError(
-        existing.status === "active" ? "stale" : "terminal",
-        "The workflow has changed.",
-      );
-    }
+      return tx.workflowReview.upsert({
+        where: { instanceId_revision: { instanceId: id, revision } },
+        update: {},
+        create: {
+          instanceId: id,
+          revision,
+          version: workflowVersion,
+          actionKey: input.actionKey,
+          display: input.display,
+          payload: input.payload,
+        },
+      });
+    });
+  }
 
-    const record = await transaction.workflowInstance.findUnique({ where: { id: input.id } });
+  async findOwnedReview(id: string, visitorKey: string) {
+    return this.prisma.workflowReview.findFirst({
+      where: { id, instance: { visitorKey } },
+      include: { instance: { select: workflowFields } },
+    });
+  }
 
-    if (!record) {
-      throw new WorkflowInstanceStoreError(
-        "not_found",
-        "The workflow instance was not found after persistence.",
-      );
-    }
+  approve(input: {
+    id: string;
+    instanceId: string;
+    visitorKey: string;
+    revision: number;
+    version: number;
+    steps: ReadonlyArray<{ key: string; label: string }>;
+  }) {
+    return this.prisma.$transaction(async (tx) => {
+      const [instance] = await tx.$queryRaw<
+        { revision: number; status: string; version: number }[]
+      >`
+        SELECT revision, status, workflow_version AS version
+        FROM workflow_instances
+        WHERE id = ${input.instanceId}::uuid AND visitor_key = ${input.visitorKey}
+        FOR UPDATE
+      `;
 
-    if (input.replacement) {
-      if (input.status !== "cancelled") {
-        throw new WorkflowInstanceStoreError("unavailable", "Invalid replacement.");
+      if (!instance || instance.version !== input.version) {
+        return false;
       }
 
-      return transaction.workflowInstance.create({
-        data: { ...input.replacement, status: "active" },
+      const review = await tx.workflowReview.findUnique({ where: { id: input.id } });
+
+      if (
+        !review ||
+        review.instanceId !== input.instanceId ||
+        review.revision !== input.revision ||
+        review.version !== input.version
+      ) {
+        return false;
+      }
+
+      if (review.status === "consumed") {
+        return true;
+      }
+
+      if (
+        review.status !== "pending" ||
+        instance.status !== "active" ||
+        instance.revision !== input.revision
+      ) {
+        return false;
+      }
+
+      await tx.workflowReview.update({ where: { id: review.id }, data: { status: "consumed" } });
+      await tx.workflowRun.create({
+        data: {
+          reviewId: review.id,
+          steps: {
+            create: input.steps.map(({ key, label }, position) => ({ key, label, position })),
+          },
+        },
       });
-    }
+      await tx.workflowInstance.update({
+        where: { id: input.instanceId },
+        data: { revision: { increment: 1 } },
+      });
 
-    return record;
+      return true;
+    });
   }
-}
-
-function validateCompletedAt(input: SaveWorkflowInstanceInput): void {
-  const completionTimestampIsValid =
-    (input.status === "completed" && input.completedAt !== null) ||
-    (input.status !== "completed" && input.completedAt === null);
-
-  if (!completionTimestampIsValid) {
-    throw new WorkflowInstanceStoreError(
-      "unavailable",
-      "The workflow lifecycle update is invalid.",
-    );
-  }
-}
-
-function normalizePersistenceError(error: unknown): WorkflowInstanceStoreError {
-  if (error instanceof WorkflowInstanceStoreError) {
-    return error;
-  }
-
-  return new WorkflowInstanceStoreError("unavailable", "Workflow persistence is unavailable.", {
-    cause: error,
-  });
 }

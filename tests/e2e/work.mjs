@@ -2,9 +2,9 @@ import assert from "node:assert/strict";
 import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
 
-const { chromium, webkit } = await import(process.env.PLAYWRIGHT_MODULE ?? "playwright");
+import { browserExecutables, homepageUrl as base, playwrightModule } from "./browser.config.mjs";
 
-const base = process.env.HOMEPAGE_URL ?? "http://localhost:3100";
+const { chromium, webkit } = await import(playwrightModule);
 
 const mediaBase = process.env.PORTFOLIO_MEDIA_FIXTURE_URL;
 
@@ -395,8 +395,8 @@ async function playback(browser) {
 }
 
 for (const [engine, executablePath] of [
-  [chromium, process.env.CHROMIUM_EXECUTABLE],
-  [webkit, process.env.WEBKIT_EXECUTABLE],
+  [chromium, browserExecutables.chromium],
+  [webkit, browserExecutables.webkit],
 ]) {
   const browser = await engine.launch({ executablePath });
 
