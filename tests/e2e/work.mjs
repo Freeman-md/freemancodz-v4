@@ -111,16 +111,18 @@ async function journey(browser, phone) {
 
     assert.equal(
       await page
-        .getByRole("link", { name: "View the Debby Art & Prints repository" })
+        .getByRole("link", { name: "Visit Debby Art & Prints website" })
         .getAttribute("href"),
-      "https://github.com/DebbyArts/debbyarts",
+      "https://www.debbyartprints.com.ng",
     );
     assert.equal(
-      await page.getByRole("link", { name: "View the JPScents repository" }).getAttribute("href"),
-      "https://github.com/JPScents/JPScents",
+      await page.getByRole("link", { name: "Visit JPScents website" }).getAttribute("href"),
+      "https://jpscents.shop",
     );
     assert.equal(
-      await page.getByRole("link", { name: "Visit Debby Art & Prints website" }).count(),
+      await page
+        .getByRole("link", { name: /^View the (Debby Art & Prints|JPScents|Email PA) repository$/ })
+        .count(),
       0,
     );
     const assistantCard = page
@@ -172,6 +174,7 @@ async function journey(browser, phone) {
       "https://github.com/Freeman-md/ui-builds",
     );
     await page.goto(`${base}/work/email-pa`, documentReady);
+    assert.equal(await page.locator(".case-banner a").count(), 0);
     assert.equal(
       await page.getByRole("button", { name: /Request Automation \+ AI/ }).isDisabled(),
       true,

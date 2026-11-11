@@ -17,11 +17,6 @@
         "kind": "live-site",
         "label": "Visit JPScents",
         "url": "https://jpscents.shop"
-      },
-      {
-        "kind": "repository",
-        "label": "View the JPScents repository",
-        "url": "https://github.com/JPScents/JPScents"
       }
     ],
     "featured": {
@@ -51,9 +46,9 @@
     },
     "links": [
       {
-        "kind": "repository",
-        "label": "View the Debby Art & Prints repository",
-        "url": "https://github.com/DebbyArts/debbyarts"
+        "kind": "live-site",
+        "label": "Visit Debby Art & Prints",
+        "url": "https://www.debbyartprints.com.ng"
       }
     ],
     "featured": {
@@ -132,13 +127,7 @@
       "provenance": "Approved Paper workflow illustration with example data",
       "reference": "https://app.paper.design/file/01M5VJC7VWD8F9QYARYR43X33M/p-2-0"
     },
-    "links": [
-      {
-        "kind": "repository",
-        "label": "View the Email PA repository",
-        "url": "https://github.com/Freeman-md/email-pa"
-      }
-    ],
+    "links": [],
     "questions": [
       "How does Email PA avoid processing the same message twice?",
       "How does it decide whether to create or update an Airtable job record?"

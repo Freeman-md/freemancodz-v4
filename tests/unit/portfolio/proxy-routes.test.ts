@@ -13,6 +13,7 @@ test("proxy allows the homepage and working system routes", async () => {
     "/images/logo.svg",
     "/videos/portfolio-clip.webm",
     "/icon.svg",
+    "/2b5064e8-eb63-4bb5-9d84-aac6fdb5ef1f.html",
     "/opengraph-image",
     "/robots.txt",
     "/sitemap.xml",

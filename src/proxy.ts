@@ -17,7 +17,8 @@ export async function proxy(req: NextRequest) {
     path.startsWith("/images/") ||
     path.startsWith("/videos/") ||
     path === "/favicon.ico" ||
-    path === "/icon.svg";
+    path === "/icon.svg" ||
+    path === "/2b5064e8-eb63-4bb5-9d84-aac6fdb5ef1f.html";
 
   const isApiRoute = path === "/api" || path.startsWith("/api/");
 
