@@ -4,7 +4,12 @@ import type { Logger } from "@/infrastructure/logging/logger";
 import type { AssistantService } from "@/modules/assistant/service";
 import type { RateLimitService } from "@/modules/rate-limit/service";
 
-import { checkChatRateLimit, parseChatRequest } from "./helpers";
+import {
+  checkChatRateLimit,
+  getChatVisitor,
+  parseChatRequest,
+  readChatVisitorKey,
+} from "./helpers";
 
 export function createChatPostHandler({
   assistantService,
@@ -24,6 +29,12 @@ export function createChatPostHandler({
       return parsed;
     }
 
+    const visitorKey = getChatVisitor(request);
+
+    if (visitorKey instanceof NextResponse) {
+      return visitorKey;
+    }
+
     const rateLimitResponse = await checkChatRateLimit(request, {
       rateLimitService,
       logger,
@@ -35,7 +46,7 @@ export function createChatPostHandler({
     }
 
     return new NextResponse(
-      assistantService.createResponse({ ...parsed, signal: request.signal }),
+      assistantService.createResponse({ ...parsed, visitorKey, signal: request.signal }),
       {
         headers: {
           "Cache-Control": "no-cache, no-transform",
@@ -45,6 +56,29 @@ export function createChatPostHandler({
       },
     );
   };
+}
+
+export async function GET(request: NextRequest) {
+  const headers = { "Cache-Control": "private, no-store" };
+
+  const visitorKey = readChatVisitorKey(request);
+
+  if (!visitorKey) {
+    return NextResponse.json(null, { headers });
+  }
+
+  const { workflowService, logger } = await import("@/modules/composition");
+
+  try {
+    return NextResponse.json(await workflowService.getActive(visitorKey), { headers });
+  } catch {
+    logger.error("chat.workflow_restore_failed");
+
+    return NextResponse.json(
+      { error: "Could not restore workflow progress." },
+      { status: 503, headers },
+    );
+  }
 }
 
 export async function POST(request: NextRequest) {

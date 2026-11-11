@@ -1,13 +1,20 @@
 import "server-only";
 
+import { createHash, randomBytes } from "node:crypto";
 import { isIP } from "node:net";
-import { NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 
 import { assistantRequestSchema, type AssistantRequest } from "@/contracts/assistant.contract";
 import type { Logger } from "@/infrastructure/logging/logger";
 import type { RateLimitService } from "@/modules/rate-limit/service";
 
-import { CHAT_RATE_LIMIT_RULES, CHAT_RATE_LIMIT_SCOPE, MAX_CHAT_BODY_BYTES } from "./constants";
+import {
+  CHAT_RATE_LIMIT_RULES,
+  CHAT_RATE_LIMIT_SCOPE,
+  CHAT_VISITOR_COOKIE,
+  MAX_CHAT_BODY_BYTES,
+  SECURE_CHAT_VISITOR_COOKIE,
+} from "./constants";
 
 // Request parsing
 export async function parseChatRequest(request: Request): Promise<AssistantRequest | NextResponse> {
@@ -68,6 +75,37 @@ async function readChatBody(request: Request): Promise<string | null> {
   } finally {
     reader.releaseLock();
   }
+}
+
+export function readChatVisitorKey(request: NextRequest): string | null {
+  const token = request.cookies.get(CHAT_VISITOR_COOKIE)?.value;
+
+  return token && /^[a-f0-9]{64}$/.test(token)
+    ? createHash("sha256").update(token).digest("hex")
+    : null;
+}
+
+// Establish the browser session before a chat turn can persist a workflow.
+export function getChatVisitor(request: NextRequest): string | NextResponse {
+  const visitorKey = readChatVisitorKey(request);
+
+  if (visitorKey) {
+    return visitorKey;
+  }
+
+  const response = NextResponse.json(
+    { error: "A browser session is required. Please try again." },
+    { status: 428, headers: { "Cache-Control": "no-store" } },
+  );
+
+  response.cookies.set(CHAT_VISITOR_COOKIE, randomBytes(32).toString("hex"), {
+    httpOnly: true,
+    secure: SECURE_CHAT_VISITOR_COOKIE,
+    sameSite: "strict",
+    path: "/",
+  });
+
+  return response;
 }
 
 // Rate limiting

@@ -9,11 +9,17 @@ function decodeEvent(line: string) {
 }
 
 export async function* streamAssistant(request: AssistantRequest) {
-  const response = await fetch("/api/chat", {
+  const options = {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(request),
-  });
+  };
+
+  let response = await fetch("/api/chat", options);
+
+  if (response.status === 428) {
+    response = await fetch("/api/chat", options);
+  }
 
   if (!response.ok) {
     const body: unknown = await response.json().catch(() => null);

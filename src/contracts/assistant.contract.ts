@@ -38,10 +38,30 @@ const sourceSchema = z
   })
   .strict();
 
+export const activeWorkflowSchema = z.strictObject({
+  id: z.uuid(),
+  title: z.string(),
+  status: z.literal("active"),
+  nextStep: z.string().nullable(),
+  details: z.array(
+    z.strictObject({
+      key: z.string(),
+      label: z.string(),
+      value: z.string().nullable(),
+    }),
+  ),
+});
+
+export type ActiveWorkflow = z.infer<typeof activeWorkflowSchema>;
+
 export const assistantStreamEventSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("delta"), delta: z.string() }).strict(),
   z.object({ type: z.literal("options"), options: assistantReplyOptionsSchema }).strict(),
   z.object({ type: z.literal("sources"), sources: z.array(sourceSchema) }).strict(),
+  z.strictObject({
+    type: z.literal("workflow_instance"),
+    instance: activeWorkflowSchema,
+  }),
   z.object({ type: z.literal("response_id"), responseId: z.string() }).strict(),
   z.object({ type: z.literal("done") }).strict(),
   z.object({ type: z.literal("error"), error: z.string() }).strict(),

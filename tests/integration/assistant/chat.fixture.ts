@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { randomBytes } from "node:crypto";
 import { once } from "node:events";
 import { createServer } from "node:http";
 import type { TestContext } from "node:test";
@@ -10,19 +11,31 @@ import {
 } from "next/dist/server/web/spec-extension/adapters/next-request";
 import { NextRequest } from "next/server";
 import type { ResponseStreamEvent } from "openai/resources/responses/responses";
+import { CHAT_VISITOR_COOKIE } from "@/app/api/chat/constants";
 import { createChatPostHandler } from "@/app/api/chat/route";
 import { assistantStreamEventSchema } from "@/contracts/assistant.contract";
 import type { OpenAIResponseRequest, OpenAITransport } from "@/infrastructure/openai/types";
 import { AssistantService } from "@/modules/assistant/service";
 import type { PortfolioSearchService } from "@/modules/portfolio/services/portfolio-search.service";
 import type { RateLimitResult } from "@/modules/rate-limit/rate-limit.types";
+import type { WorkflowService } from "@/modules/workflow/service";
 
 export function createChatFixture(
   streamResponse: OpenAITransport["streamResponse"],
   {
     search = async () => [],
     limit = { allowed: true },
-  }: { search?: PortfolioSearchService["search"]; limit?: RateLimitResult } = {},
+    workflow = {
+      listAvailable: () => [],
+      start: async () => {
+        throw new Error("No test workflow is registered.");
+      },
+    },
+  }: {
+    search?: PortfolioSearchService["search"];
+    limit?: RateLimitResult;
+    workflow?: Pick<WorkflowService, "listAvailable" | "start">;
+  } = {},
 ) {
   const requests: OpenAIResponseRequest[] = [];
 
@@ -39,7 +52,7 @@ export function createChatFixture(
   };
 
   const post = createChatPostHandler({
-    assistantService: new AssistantService(openai, logger, { search }),
+    assistantService: new AssistantService(openai, logger, { search }, workflow),
     rateLimitService: { consume: async () => limit },
     logger,
     onVercel: false,
@@ -64,13 +77,23 @@ export async function* providerEvents(...events: object[]) {
   yield* events as ResponseStreamEvent[];
 }
 
+const testCookie = `${CHAT_VISITOR_COOKIE}=${randomBytes(32).toString("hex")}`;
+
 export const chatRequestOptions = {
   method: "POST",
-  headers: { "Content-Type": "application/json" },
+  headers: { "Content-Type": "application/json", Cookie: testCookie },
 };
 
-export function chatRequest(body: string) {
-  return new NextRequest("http://localhost/api/chat", { ...chatRequestOptions, body });
+export function chatRequest(body: string, cookie: string | null = testCookie) {
+  const headers = new Headers(chatRequestOptions.headers);
+
+  if (cookie === null) {
+    headers.delete("Cookie");
+  } else {
+    headers.set("Cookie", cookie);
+  }
+
+  return new NextRequest("http://localhost/api/chat", { method: "POST", headers, body });
 }
 
 export function parseEvents(body: string) {

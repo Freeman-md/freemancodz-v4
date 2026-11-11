@@ -21,6 +21,7 @@ type AssistantMessagesProps = {
   children?: ReactNode;
   className?: string;
   isLoading: boolean;
+  showStarters?: boolean;
   messages: ChatMessage[];
   messagesEndRef: RefObject<HTMLDivElement | null>;
   shouldReduceMotion: boolean | null;
@@ -32,6 +33,7 @@ export function AssistantMessages({
   children,
   className,
   isLoading,
+  showStarters = true,
   messages,
   messagesEndRef,
   shouldReduceMotion,
@@ -43,7 +45,7 @@ export function AssistantMessages({
       className={cn("assistant-messages min-h-0 flex-1 overscroll-contain bg-[#fbfbfa]", className)}
     >
       <div className="flex min-h-full flex-col gap-5 px-4 py-5 sm:px-6 sm:py-6">
-        {messages.length === 0 ? (
+        {messages.length === 0 && showStarters ? (
           <motion.div
             initial={shouldReduceMotion ? false : { opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}

@@ -49,6 +49,24 @@ test("decodes stream events split across chunks", async (t) => {
   assert.deepEqual(await readReply(), events);
 });
 
+test("retries the same message once to establish a browser session", async (t) => {
+  const established = responseFromChunks(encoder.encode('{"type":"done"}\n'));
+
+  let attempts = 0;
+
+  const fetch = t.mock.method(globalThis, "fetch", async () => {
+    if (++attempts === 1) {
+      return new Response(null, { status: 428 });
+    }
+
+    return established;
+  });
+
+  assert.deepEqual(await readReply(), [{ type: "done" }]);
+  assert.equal(fetch.mock.callCount(), 2);
+  assert.deepEqual(fetch.mock.calls[0].arguments, fetch.mock.calls[1].arguments);
+});
+
 test("reports malformed and interrupted streams safely", async (t) => {
   const cases = [
     {

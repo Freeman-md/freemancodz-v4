@@ -9,8 +9,10 @@ import { FALLBACK_ANSWER, PLAIN_CHAT_SYSTEM_PROMPT } from "./constants";
 import { ASSISTANT_ERRORS, AssistantError } from "./errors";
 import { ASK_USER_CHOICE_TOOL } from "./tools/ask-user-choice/definition";
 import type { PortfolioSearchService } from "../portfolio/services/portfolio-search.service";
+import type { WorkflowService } from "../workflow/service";
 import { executeTool, type ToolReplyEvent } from "./tools/execute";
 import { SEARCH_PORTFOLIO_TOOL } from "./tools/search-portfolio/definition";
+import { createStartWorkflowTool } from "./tools/start-workflow/definition";
 import type { AssistantResponseInput } from "./types";
 
 const encoder = new TextEncoder();
@@ -24,6 +26,7 @@ export class AssistantService {
     private readonly openai: OpenAITransport,
     private readonly logger: Logger,
     private readonly portfolioSearch: Pick<PortfolioSearchService, "search">,
+    private readonly workflow: Pick<WorkflowService, "listAvailable" | "start">,
   ) {}
 
   createResponse(request: AssistantResponseInput) {
@@ -31,11 +34,24 @@ export class AssistantService {
     return ReadableStream.from(this.streamReply(request)) as globalThis.ReadableStream<Uint8Array>;
   }
 
-  private async *streamReply({ message, previousResponseId, signal }: AssistantResponseInput) {
+  private async *streamReply({
+    message,
+    previousResponseId,
+    visitorKey,
+    signal,
+  }: AssistantResponseInput) {
+    const workflows = this.workflow.listAvailable();
+
+    const tools: OpenAIResponseRequest["tools"] = [ASK_USER_CHOICE_TOOL, SEARCH_PORTFOLIO_TOOL];
+
+    if (workflows.length > 0) {
+      tools.push(createStartWorkflowTool(workflows));
+    }
+
     let modelRequest: OpenAIResponseRequest = {
       input: [{ type: "user_message", content: message }],
       instructions: PLAIN_CHAT_SYSTEM_PROMPT,
-      tools: [ASK_USER_CHOICE_TOOL, SEARCH_PORTFOLIO_TOOL],
+      tools,
       previousResponseId,
       signal,
     };
@@ -68,7 +84,10 @@ export class AssistantService {
               const [functionCall] = functionCalls;
 
               if (functionCall) {
-                if (functionCalls.length !== 1 || modelRequest.tools.length === 0) {
+                if (
+                  functionCalls.length !== 1 ||
+                  !modelRequest.tools.some(({ name }) => name === functionCall.name)
+                ) {
                   throw new Error("Unexpected assistant tool call.");
                 }
 
@@ -77,11 +96,16 @@ export class AssistantService {
                   functionCall.arguments,
                   this.portfolioSearch,
                   signal,
+                  { service: this.workflow, visitorKey },
                 );
 
                 signal.throwIfAborted();
 
-                replyEvent = result.event;
+                if (result.event?.type === "workflow_instance") {
+                  yield encodeEvent(result.event);
+                } else {
+                  replyEvent = result.event;
+                }
 
                 // Continue from this tool call so the model can use its result in the same turn.
                 modelRequest = {

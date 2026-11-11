@@ -30,6 +30,7 @@ model WorkflowInstance {
   id                 String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   workflowId         String          @map("workflow_id")
   workflowVersion    Int             @map("workflow_version")
+  visitorKey         String?         @map("visitor_key")
   status             String          @default("active")
   state              Json            @db.JsonB
   revision           Int             @default(0)

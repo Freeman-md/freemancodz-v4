@@ -96,4 +96,5 @@ export const assistantService = new AssistantService(
   openAIProvider,
   logger,
   new PortfolioSearchService(new PrismaPortfolioSearchRepository(prisma), embeddings),
+  workflowService,
 );

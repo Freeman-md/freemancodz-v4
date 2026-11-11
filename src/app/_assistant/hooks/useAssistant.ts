@@ -1,7 +1,12 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { MAX_MESSAGE_LENGTH, type AssistantSource } from "@/contracts/assistant.contract";
+import { useCallback, useRef, useState } from "react";
+import {
+  MAX_MESSAGE_LENGTH,
+  type ActiveWorkflow,
+  type AssistantSource,
+} from "@/contracts/assistant.contract";
+import { fetchActiveWorkflow } from "../api/fetch-active-workflow";
 import { streamAssistant } from "../api/stream-assistant-response";
 import type { ChatMessage } from "../types";
 
@@ -18,6 +23,33 @@ export function useAssistant() {
   const [isLoading, setIsLoading] = useState(false);
 
   const [replyOptions, setReplyOptions] = useState<string[]>([]);
+
+  const [workflow, setWorkflow] = useState<ActiveWorkflow | null>(null);
+
+  const [workflowRestoreFailed, setWorkflowRestoreFailed] = useState(false);
+
+  const workflowRestore = useRef<AbortController | null>(null);
+
+  const restoreWorkflow = useCallback(() => {
+    const controller = new AbortController();
+
+    workflowRestore.current = controller;
+
+    void fetchActiveWorkflow(controller.signal)
+      .then((instance) => {
+        if (!controller.signal.aborted) {
+          setWorkflow(instance);
+          setWorkflowRestoreFailed(false);
+        }
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) {
+          setWorkflowRestoreFailed(true);
+        }
+      });
+
+    return () => controller.abort();
+  }, []);
 
   const previousResponseId = useRef<string | null>(null);
 
@@ -87,6 +119,12 @@ export function useAssistant() {
             sources = event.sources;
             break;
 
+          case "workflow_instance":
+            workflowRestore.current?.abort();
+            setWorkflow(event.instance);
+            setWorkflowRestoreFailed(false);
+            break;
+
           case "response_id":
             responseId = event.responseId;
             break;
@@ -134,6 +172,9 @@ export function useAssistant() {
     messages,
     isLoading,
     replyOptions,
+    workflow,
+    workflowRestoreFailed,
+    restoreWorkflow,
     submitDraft,
     submitMessage,
   };

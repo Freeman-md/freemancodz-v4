@@ -2,12 +2,13 @@
 
 import { Dialog } from "@base-ui/react/dialog";
 import { Bot, X } from "lucide-react";
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { followHomeAnchor } from "../../_components/layout/follow-home-anchor";
 import { useAssistant } from "../hooks/useAssistant";
 import { useAssistantSurface } from "../hooks/useAssistantSurface";
 import { AssistantComposer } from "./AssistantComposer";
 import { AssistantMessages } from "./AssistantMessages";
+import { AssistantWorkflowProgress } from "./AssistantWorkflowProgress";
 
 export function FloatingPortfolioChat() {
   const chat = useAssistant();
@@ -27,6 +28,14 @@ export function FloatingPortfolioChat() {
     lastMessage: chat.messages.at(-1),
     isLoading: chat.isLoading,
   });
+
+  const { workflow, workflowRestoreFailed, restoreWorkflow } = chat;
+
+  useEffect(() => {
+    if (isOpen) {
+      return restoreWorkflow();
+    }
+  }, [isOpen, restoreWorkflow]);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -102,7 +111,16 @@ export function FloatingPortfolioChat() {
               </Dialog.Close>
             </header>
 
+            {workflow && <AssistantWorkflowProgress key={workflow.id} instance={workflow} />}
+
+            {workflowRestoreFailed && (
+              <p role="status" className="px-4 py-2 text-sm sm:px-6">
+                Could not restore workflow progress.
+              </p>
+            )}
+
             <AssistantMessages
+              showStarters={!workflow}
               isLoading={chat.isLoading}
               messages={chat.messages}
               messagesEndRef={messagesEndRef}

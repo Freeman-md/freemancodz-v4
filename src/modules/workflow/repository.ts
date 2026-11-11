@@ -1,19 +1,50 @@
 import "server-only";
 
-import type { Prisma, PrismaClient } from "@/generated/prisma/client";
+import type { Prisma, PrismaClient, WorkflowInstance } from "@/generated/prisma/client";
+
+export type StoredWorkflow = Pick<
+  WorkflowInstance,
+  "id" | "workflowId" | "workflowVersion" | "state"
+>;
 
 export class WorkflowRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
-  async create(input: {
+  async startOrResume(input: {
+    visitorKey: string;
     workflowId: string;
     workflowVersion: number;
     state: Prisma.InputJsonObject;
     originChannel: string;
   }) {
-    return this.prisma.workflowInstance.create({
-      data: input,
-      select: { id: true, workflowId: true, workflowVersion: true },
+    // Assigning the same workflow ID lets PostgreSQL return the existing row in the
+    // same statement while preserving its state and version.
+    const [instance] = await this.prisma.$queryRaw<StoredWorkflow[]>`
+      INSERT INTO "workflow_instances" (
+        "visitor_key", "workflow_id", "workflow_version", "state", "origin_channel"
+      )
+      VALUES (
+        ${input.visitorKey}, ${input.workflowId}, ${input.workflowVersion},
+        ${JSON.stringify(input.state)}::jsonb, ${input.originChannel}
+      )
+      ON CONFLICT ("visitor_key", "workflow_id")
+        WHERE "status" = 'active' AND "visitor_key" IS NOT NULL
+      DO UPDATE SET "workflow_id" = EXCLUDED."workflow_id"
+      RETURNING "id", "workflow_id" AS "workflowId", "workflow_version" AS "workflowVersion", "state"
+    `;
+
+    if (!instance) {
+      throw new Error("The workflow instance could not be saved.");
+    }
+
+    return instance;
+  }
+
+  findActive(visitorKey: string): Promise<StoredWorkflow | null> {
+    return this.prisma.workflowInstance.findFirst({
+      where: { visitorKey, status: "active" },
+      orderBy: [{ startedAt: "desc" }, { id: "desc" }],
+      select: { id: true, workflowId: true, workflowVersion: true, state: true },
     });
   }
 }

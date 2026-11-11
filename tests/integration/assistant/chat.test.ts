@@ -1,8 +1,12 @@
 import assert from "node:assert/strict";
+import { createHash, randomUUID } from "node:crypto";
 import { once } from "node:events";
 import test from "node:test";
-import { MAX_CHAT_BODY_BYTES } from "@/app/api/chat/constants";
+import { CHAT_VISITOR_COOKIE, MAX_CHAT_BODY_BYTES } from "@/app/api/chat/constants";
+import type { ActiveWorkflow } from "@/contracts/assistant.contract";
 import type { RateLimitResult } from "@/modules/rate-limit/rate-limit.types";
+import { meetingBooking } from "@/modules/workflow/definitions/meeting-booking/definition";
+import type { WorkflowService } from "@/modules/workflow/service";
 import {
   chatRequest,
   chatRequestOptions,
@@ -19,6 +23,96 @@ import {
 const requestBody = JSON.stringify({
   message: "What did Freeman build for JPScents?",
   previousResponseId: "resp_previous",
+});
+
+test("starts workflows only after establishing browser ownership and completing an offered tool call", async (t) => {
+  const call = toolCall("start_workflow", { workflowId: meetingBooking.id });
+
+  const body = JSON.stringify({ message: "I want to book a meeting with Freeman." });
+
+  const instance: ActiveWorkflow = {
+    id: randomUUID(),
+    title: "Meeting booking",
+    status: "active",
+    nextStep: "What would you like to discuss?",
+    details: [{ key: "reason", label: "Topic", value: null }],
+  };
+
+  for (const scenario of ["completed", "incomplete", "unoffered", "follow-up failed"] as const) {
+    await t.test(scenario, async (t) => {
+      const start = t.mock.fn(async (_input: Parameters<WorkflowService["start"]>[0]) => instance);
+
+      const { post, requests } = createChatFixture(
+        async ({ previousResponseId }) => {
+          if (previousResponseId === "resp_start") {
+            return scenario === "follow-up failed"
+              ? providerEvents({ type: "response.failed" })
+              : providerEvents(delta("Your meeting request is open."), complete("resp_reply"));
+          }
+
+          if (scenario === "incomplete") {
+            return providerEvents({ type: "response.output_item.done", item: call });
+          }
+
+          return providerEvents(complete("resp_start", [call]));
+        },
+        {
+          workflow: {
+            listAvailable: () => (scenario === "unoffered" ? [] : [meetingBooking]),
+            start,
+          },
+        },
+      );
+
+      const first = await post(chatRequest(body, null));
+
+      assert.equal(first.status, 428);
+      const session = first.cookies.get(CHAT_VISITOR_COOKIE);
+
+      assert.ok(session?.httpOnly);
+      assert.equal(session.sameSite, "strict");
+      assert.equal(requests.length, 0);
+      assert.equal(start.mock.callCount(), 0);
+
+      const second = await post(chatRequest(body, `${CHAT_VISITOR_COOKIE}=${session.value}`));
+
+      assert.equal(second.status, 200);
+      const events = parseEvents(await second.text());
+
+      if (scenario === "incomplete" || scenario === "unoffered") {
+        assert.equal(start.mock.callCount(), 0);
+        assert.deepEqual(
+          events.map(({ type }) => type),
+          ["error"],
+        );
+
+        return;
+      }
+
+      assert.deepEqual(events[0], { type: "workflow_instance", instance });
+
+      const offered = requests[0].tools.find(({ name }) => name === "start_workflow");
+
+      assert.deepEqual(offered?.parameters.properties, {
+        workflowId: { type: "string", enum: [meetingBooking.id] },
+      });
+      assert.equal(start.mock.callCount(), 1);
+      const [input] = start.mock.calls[0].arguments;
+
+      assert.equal(input.visitorKey, createHash("sha256").update(session.value).digest("hex"));
+      assert.equal(input.workflowId, meetingBooking.id);
+      assert.equal(input.originChannel, "web");
+      assert.deepEqual(requests[1].input, [
+        { type: "function_call_output", callId: "call_1", output: '{"status":"active"}' },
+      ]);
+      assert.deepEqual(
+        events.map(({ type }) => type),
+        scenario === "follow-up failed"
+          ? ["workflow_instance", "error"]
+          : ["workflow_instance", "delta", "response_id", "done"],
+      );
+    });
+  }
 });
 
 test("streams a plain reply before completion", { timeout: 5000 }, async () => {

@@ -3,7 +3,7 @@ import test from "node:test";
 import type { AssistantStreamEvent } from "@/contracts/assistant.contract";
 
 type ChatRoute = {
-  request(): { postDataJSON(): unknown };
+  request(): { method(): string; postDataJSON(): unknown };
   fulfill(response: { contentType: string; body: string }): Promise<void>;
 };
 
@@ -68,6 +68,12 @@ test("assistant browser journeys", { timeout: 120_000 }, async (t) => {
 
         page.setDefaultTimeout(8000);
         await page.route("**/api/chat", async (route: ChatRoute) => {
+          if (route.request().method() === "GET") {
+            await route.fulfill({ contentType: "application/json", body: "null" });
+
+            return;
+          }
+
           requests.push(route.request().postDataJSON());
 
           const events = requests.length === 1 ? choiceReply : sourceReply;

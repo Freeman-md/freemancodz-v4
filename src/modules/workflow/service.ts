@@ -1,15 +1,30 @@
 import "server-only";
 
+import type { ActiveWorkflow } from "@/contracts/assistant.contract";
 import type { WorkflowRegistry } from "./registry";
-import type { WorkflowRepository } from "./repository";
+import type { StoredWorkflow, WorkflowRepository } from "./repository";
 
 export class WorkflowService {
   constructor(
     private readonly registry: WorkflowRegistry,
-    private readonly repository: Pick<WorkflowRepository, "create">,
+    private readonly repository: Pick<WorkflowRepository, "startOrResume" | "findActive">,
   ) {}
 
-  async start(workflowId: string, originChannel: string, signal: AbortSignal) {
+  listAvailable() {
+    return this.registry.list().map(({ id, description }) => ({ id, description }));
+  }
+
+  async start({
+    workflowId,
+    visitorKey,
+    originChannel,
+    signal,
+  }: {
+    workflowId: string;
+    visitorKey: string;
+    originChannel: string;
+    signal: AbortSignal;
+  }) {
     const definition = this.registry.get(workflowId);
 
     if (!definition) {
@@ -20,11 +35,35 @@ export class WorkflowService {
 
     signal.throwIfAborted();
 
-    return this.repository.create({
+    const instance = await this.repository.startOrResume({
+      visitorKey,
       workflowId: definition.id,
       workflowVersion: definition.version,
       state,
       originChannel,
     });
+
+    return this.project(instance);
+  }
+
+  async getActive(visitorKey: string): Promise<ActiveWorkflow | null> {
+    const instance = await this.repository.findActive(visitorKey);
+
+    return instance ? this.project(instance) : null;
+  }
+
+  private project(instance: StoredWorkflow): ActiveWorkflow {
+    const definition = this.registry.get(instance.workflowId, instance.workflowVersion);
+
+    if (!definition) {
+      throw new Error("The saved workflow definition is unavailable.");
+    }
+
+    return {
+      id: instance.id,
+      title: definition.title,
+      status: "active",
+      ...definition.projectProgress(instance.state),
+    };
   }
 }
