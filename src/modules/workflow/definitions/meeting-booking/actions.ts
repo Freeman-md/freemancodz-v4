@@ -67,10 +67,6 @@ export function createMeetingBookingAction(
   ): Promise<WorkflowStepResult> {
     const { eventId } = meeting(context);
 
-    if (context.now.getTime() - context.firstEffect.getTime() >= NOTICE_WINDOW_MS) {
-      return { kind: "terminal", reason: "notice_window_expired" };
-    }
-
     const saved = noticeSchema.safeParse(context.checkpoint);
 
     let notice;
@@ -100,8 +96,17 @@ export function createMeetingBookingAction(
     }
 
     context.signal.throwIfAborted();
+
+    const remaining = context.firstEffect.getTime() + NOTICE_WINDOW_MS - context.clock().getTime();
+
+    if (remaining <= 0) {
+      return { kind: "terminal", reason: "notice_window_expired" };
+    }
+
+    const signal = AbortSignal.any([context.signal, AbortSignal.timeout(remaining)]);
+
     try {
-      const receipt = await notices.sendMeetingNotice(notice, context.signal);
+      const receipt = await notices.sendMeetingNotice(notice, signal);
 
       return { kind: "success", outcome: { receipt } };
     } catch (error) {
@@ -201,7 +206,9 @@ export function createMeetingBookingAction(
           try {
             return resultForEvent(context, event);
           } catch (error) {
-            if (!(error instanceof MeetingBookingError)) {throw error;}
+            if (!(error instanceof MeetingBookingError)) {
+              throw error;
+            }
 
             return { kind: "terminal", reason: "calendar_mismatch" };
           }
@@ -298,7 +305,9 @@ function bookingOutcome(
 
     return { kind: "success", outcome: { meetingId: record.id } } as const;
   } catch (error) {
-    if (!(error instanceof MeetingBookingError)) {throw error;}
+    if (!(error instanceof MeetingBookingError)) {
+      throw error;
+    }
 
     return { kind: "terminal", reason: "booking_mismatch" } as const;
   }

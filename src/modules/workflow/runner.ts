@@ -3,10 +3,12 @@ import "server-only";
 import type { WorkflowStep } from "@/generated/prisma/client";
 import type { Logger } from "@/infrastructure/logging/logger";
 import type { WorkflowRegistry } from "./registry";
-import { WORKFLOW_ATTEMPTS, type WorkflowRunRepository } from "./run-repository";
+import {
+  WORKFLOW_ATTEMPTS,
+  WORKFLOW_BACKOFF_MS,
+  type WorkflowRunRepository,
+} from "./run-repository";
 import type { WorkflowProbeResult, WorkflowStepInput, WorkflowStepResult } from "./types";
-
-const BACKOFF_MS = [60_000, 300_000];
 
 export class WorkflowRunner {
   constructor(
@@ -68,7 +70,7 @@ export class WorkflowRunner {
         payload: payload.data,
         previous: new Map(steps.map(({ key, outcome }) => [key, outcome])),
         firstEffect: step.firstEffect ?? now,
-        now,
+        clock: this.clock,
         signal,
         checkpoint: step.checkpoint,
         saveCheckpoint: (value, persist) =>
@@ -128,7 +130,7 @@ export class WorkflowRunner {
           : ({
               status: "retry",
               reason: result.kind === "retry" ? result.reason : undefined,
-              nextAt: new Date(now.getTime() + BACKOFF_MS[step.attempts - 1]),
+              nextAt: new Date(now.getTime() + WORKFLOW_BACKOFF_MS[step.attempts - 1]),
             } as const);
       case "uncertain":
         return reconcile && step.probes >= WORKFLOW_ATTEMPTS
@@ -136,7 +138,9 @@ export class WorkflowRunner {
           : ({
               status: "reconciling",
               reason: result.reason,
-              nextAt: new Date(now.getTime() + (reconcile ? BACKOFF_MS[step.probes - 1] : 0)),
+              nextAt: new Date(
+                now.getTime() + (reconcile ? WORKFLOW_BACKOFF_MS[step.probes - 1] : 0),
+              ),
             } as const);
     }
   }

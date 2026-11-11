@@ -40,7 +40,7 @@ test(
     await t.test(
       "a removed Meeting plugin cannot block chat, choices, or portfolio search",
       async () => {
-        const context = await browser.newContext();
+        const context = await browser.newContext({ reducedMotion: "reduce" });
 
         const page = await context.newPage();
 
@@ -108,6 +108,7 @@ test(
           await dialog.getByRole("button", { name: "Web app", exact: true }).waitFor();
           await send("What did Freeman build for JPScents?");
           await dialog.getByRole("link", { name: /JPScents/ }).waitFor();
+          await page.screenshot({ path: "/tmp/m28-empty-restore.png", animations: "disabled" });
           const restore = await context.request.get(new URL("/api/chat", emptyUrl).href);
 
           assert.equal(await restore.json(), null);
@@ -135,7 +136,7 @@ test(
     await t.test(
       "Request Services uses the same browser approval and resumes after a lost acknowledgement",
       async () => {
-        const context = await browser.newContext();
+        const context = await browser.newContext({ reducedMotion: "reduce" });
 
         try {
           const page = await context.newPage();
@@ -181,7 +182,7 @@ test(
           assert.deepEqual(row.outcome, { receipt: row.id, accepted: 1 });
           assert.equal(row.attempts, 1);
           assert.equal(row.probes, 1);
-          await page.screenshot({ path: "/tmp/m28-services-restore.png" });
+          await page.screenshot({ path: "/tmp/m28-services-restore.png", animations: "disabled" });
         } finally {
           await context.close();
         }

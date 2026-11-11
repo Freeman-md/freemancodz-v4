@@ -33,7 +33,10 @@ test(
 
     t.after(() => browser.close());
 
-    const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
+    const context = await browser.newContext({
+      viewport: { width: 390, height: 844 },
+      reducedMotion: "reduce",
+    });
 
     const page = await context.newPage();
 

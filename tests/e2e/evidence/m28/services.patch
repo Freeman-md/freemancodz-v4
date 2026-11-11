@@ -1,0 +1,1716 @@
+--- a/src/modules/composition.ts
++++ b/src/modules/composition.ts
+@@ -1,0 +2,2 @@
++import { RequestServicesDefinition } from "./request-services-fixture";
++import { fixtureModel, fixturePortfolio } from "./workflow-fixture";
+@@ -10 +11,0 @@
+-import { GoogleCalendarClient } from "@/infrastructure/google-calendar/client";
+@@ -18,3 +18,0 @@
+-import { MeetingOwnerNotice } from "./meeting/owner-notice";
+-import { MeetingRepository } from "./meeting/repository";
+-import { MeetingService } from "./meeting/service";
+@@ -33 +30,0 @@
+-import { createMeetingBookingAction } from "./workflow/definitions/meeting-booking/actions";
+@@ -36 +32,0 @@
+-import { MeetingBookingWorkflowDefinition } from "./workflow/definitions/meeting-booking/definition";
+@@ -97,20 +93 @@
+-const calendar = new GoogleCalendarClient(getGoogleCalendarConfig);
+-
+-const meetingStore = new MeetingRepository(prisma);
+-
+-const meetingService = new MeetingService(calendar, logger);
+-
+-const workflowRegistry = new WorkflowRegistry([
+-  new MeetingBookingWorkflowDefinition(
+-    meetingService,
+-    createMeetingBookingAction(
+-      meetingService,
+-      calendar,
+-      meetingStore,
+-      new MeetingOwnerNotice(resendClient, () => ({
+-        adminEmail: getNotificationOwnerEmail(),
+-        fromEmail: getResendConfig().fromEmail,
+-      })),
+-    ),
+-  ),
+-]);
++const workflowRegistry = new WorkflowRegistry([new RequestServicesDefinition()]);
+@@ -131 +108 @@
+-  openAIProvider,
++  fixtureModel,
+@@ -133 +110 @@
+-  new PortfolioSearchService(new PrismaPortfolioSearchRepository(prisma), embeddings),
++  fixturePortfolio,
+--- /dev/null
++++ b/src/modules/workflow-fixture.ts
+@@ -0,0 +1,169 @@
++import type { ResponseStreamEvent } from "openai/resources/responses/responses";
++import type { OpenAITransport } from "@/infrastructure/openai/types";
++
++const selectedStart = "2099-06-15T11:00:00.000Z";
++
++const selectedEnd = "2099-06-15T11:30:00.000Z";
++
++export const fixtureModel: OpenAITransport = {
++  async streamResponse({ input, tools, previousResponseId }) {
++    const last = input.at(-1);
++
++    const names = new Set(tools.map(({ name }) => name));
++
++    const output = last?.type === "user_message" ? last.content : "";
++
++    let reply = "Hello! How can I help?";
++
++    let action: { name: string; args: object } | undefined;
++
++    if (last?.type === "function_call_output") {
++      switch (previousResponseId) {
++        case "resp_start_workflow":
++          reply = "Your meeting request is open.";
++          break;
++        case "resp_save_meeting_topic":
++          reply = "I saved the topic.";
++          break;
++        case "resp_save_meeting_identity":
++          reply = "I saved your details.";
++          break;
++        case "resp_find_meeting_slots":
++          reply = "Available: 12:00 London time.";
++          break;
++        case "resp_select_meeting_slot":
++          reply = "That time is saved for review.";
++          break;
++        case "resp_search_portfolio":
++          reply = "Freeman built the JPScents storefront.";
++          break;
++        case "resp_ask_user_choice":
++          reply = "Which would you prefer?";
++          break;
++        case "resp_save_service_brief":
++          reply = "Your brief is ready to review.";
++          break;
++      }
++    } else if (/book a meeting/i.test(output) && names.has("start_workflow")) {
++      action = { name: "start_workflow", args: { workflowId: "meeting-booking" } };
++    } else if (/request services/i.test(output) && names.has("start_workflow")) {
++      action = { name: "start_workflow", args: { workflowId: "request-services" } };
++    } else if (output.startsWith("Brief: ") && names.has("save_service_brief")) {
++      action = { name: "save_service_brief", args: { brief: output.slice(7) } };
++    } else if (/Discuss|discuss/.test(output) && names.has("save_meeting_topic")) {
++      action = { name: "save_meeting_topic", args: { reason: output } };
++    } else if (output.includes("@") && names.has("save_meeting_identity")) {
++      const [name, email] = output.split(", ");
++
++      action = { name: "save_meeting_identity", args: { name, email } };
++    } else if (/Show times/.test(output) && names.has("find_meeting_slots")) {
++      action = {
++        name: "find_meeting_slots",
++        args: { startDate: "2099-06-15", endDate: "2099-06-15" },
++      };
++    } else if (/choose 12/.test(output) && names.has("select_meeting_slot")) {
++      action = { name: "select_meeting_slot", args: { start: selectedStart } };
++    } else if (/JPScents/.test(output) && names.has("search_portfolio")) {
++      action = { name: "search_portfolio", args: { query: "JPScents" } };
++    } else if (/give me options/i.test(output) && names.has("ask_user_choice")) {
++      action = { name: "ask_user_choice", args: { options: ["Web app", "Mobile app"] } };
++    }
++
++    return (async function* () {
++      if (action) {
++        yield {
++          type: "response.completed",
++          response: {
++            id: `resp_${action.name}`,
++            output: [
++              {
++                type: "function_call",
++                name: action.name,
++                arguments: JSON.stringify(action.args),
++                call_id: "fixture_call",
++              },
++            ],
++          },
++        } as unknown as ResponseStreamEvent;
++
++        return;
++      }
++
++      yield { type: "response.output_text.delta", delta: reply } as unknown as ResponseStreamEvent;
++      yield {
++        type: "response.completed",
++        response: { id: "resp_reply", output: [] },
++      } as unknown as ResponseStreamEvent;
++    })();
++  },
++};
++
++export const fixturePortfolio = {
++  async search() {
++    return [
++      {
++        excerpt: "Freeman built the JPScents storefront.",
++        source: { id: "jpscents", title: "JPScents", url: "/work/jpscents" },
++      },
++    ];
++  },
++};
++
++type EventInput = {
++  eventId: string;
++  bookingOperationId: string;
++  summary: string;
++  description: string;
++  attendeeEmail: string;
++  start: Date;
++  end: Date;
++  timezone: string;
++};
++
++const events = new Map<string, ReturnType<typeof makeEvent>>();
++
++function makeEvent(input: EventInput) {
++  return {
++    id: input.eventId,
++    htmlLink: null,
++    payload: {
++      id: input.eventId,
++      status: "confirmed",
++      summary: input.summary,
++      description: input.description,
++      attendees: [{ email: input.attendeeEmail }],
++      start: { dateTime: input.start.toISOString(), timeZone: input.timezone },
++      end: { dateTime: input.end.toISOString(), timeZone: input.timezone },
++      extendedProperties: { private: { bookingOperationId: input.bookingOperationId } },
++    },
++  };
++}
++
++export const fixtureCalendar = {
++  getBusyPeriods: async () => [],
++  findEvent: async (id: string) => events.get(id) ?? null,
++  createEvent: async (input: EventInput) => {
++    const event = makeEvent(input);
++
++    if (events.has(event.id)) {throw new Error("Unexpected duplicate Calendar insert.");}
++
++    events.set(event.id, event);
++
++    return event;
++  },
++};
++
++export const fixtureAvailability = {
++  async findAvailableSlots() {
++    return [{ start: selectedStart, end: selectedEnd, timezone: "Europe/London" }];
++  },
++  async isSlotAvailable() {
++    return true;
++  },
++};
++
++export const fixtureNotice = {
++  async sendWithReceipt(input: { idempotencyKey: string }) {
++    return `fixture-${input.idempotencyKey}`;
++  },
++};
+--- /dev/null
++++ b/src/modules/request-services-fixture.ts
+@@ -0,0 +1,103 @@
++import { z } from "zod";
++import type { IWorkflowDefinition, WorkflowAction } from "@/modules/workflow/types";
++
++const schema = z.strictObject({ brief: z.string().trim().min(1).max(200) });
++
++const stateSchema = z.strictObject({ brief: schema.shape.brief.nullable() });
++
++export class RequestServicesDefinition implements IWorkflowDefinition {
++  readonly id = "request-services";
++
++  readonly version = 1;
++
++  readonly title = "Request services";
++
++  readonly description = "Send a brief about a potential project.";
++
++  readonly stateSchema = stateSchema;
++
++  private readonly accepted = new Map<string, string>();
++
++  createInitialState() {
++    return { brief: null };
++  }
++
++  getProgress(saved: unknown) {
++    const { brief } = stateSchema.parse(saved);
++
++    return {
++      phase: "collecting" as const,
++      details: [{ key: "brief", label: "Brief", value: brief }],
++    };
++  }
++
++  getGuidance() {
++    return "Ask for a short project brief.";
++  }
++
++  getTools() {
++    return [
++      {
++        tool: {
++          type: "function" as const,
++          name: "save_service_brief",
++          description: "Save the supplied brief.",
++          strict: true as const,
++          parameters: {
++            type: "object",
++            properties: { brief: { type: "string" } },
++            required: ["brief"],
++            additionalProperties: false,
++          },
++        },
++        apply: (_saved: unknown, args: unknown) => ({
++          state: schema.parse(args),
++          output: { status: "saved" },
++        }),
++      },
++    ];
++  }
++
++  getReview(saved: unknown) {
++    const { brief } = stateSchema.parse(saved);
++
++    return brief
++      ? {
++          actionKey: "send-brief",
++          label: "Submit brief",
++          rows: [{ key: "brief", label: "Brief", value: brief }],
++          payload: { brief },
++        }
++      : null;
++  }
++
++  getAction(key: string): WorkflowAction | undefined {
++    if (key !== "send-brief") {return undefined;}
++
++    return {
++      payloadSchema: schema,
++      getStatus: (succeeded) => (succeeded.has("submit") ? "Brief received" : undefined),
++      steps: [
++        {
++          key: "submit",
++          label: "Submit brief",
++          execute: async ({ id, payload }) => {
++            const { brief } = schema.parse(payload);
++
++            const previous = this.accepted.get(id);
++
++            if (previous) {return { kind: "terminal", reason: "duplicate_submission" };}
++
++            this.accepted.set(id, brief);
++
++            return { kind: "uncertain", reason: "fixture_lost_acknowledgement" };
++          },
++          reconcile: async ({ id, payload }) =>
++            this.accepted.get(id) === schema.parse(payload).brief
++              ? { kind: "success", outcome: { receipt: id, accepted: Number(this.accepted.has(id)) } }
++              : { kind: "uncertain", reason: "fixture_receipt_missing" },
++        },
++      ],
++    };
++  }
++}
+--- a/src/modules/workflow/definitions/meeting-booking/actions.ts
++++ /dev/null
+@@ -1,314 +0,0 @@
+-import "server-only";
+-
+-import { z } from "zod";
+-import {
+-  CalendarEventError,
+-  type CalendarClient,
+-  type CreatedCalendarEvent,
+-} from "@/infrastructure/google-calendar/types";
+-import { ResendClientError } from "@/infrastructure/resend/client";
+-import type { MeetingOwnerNotice } from "@/modules/meeting/owner-notice";
+-import { assertMatchingCalendarEvent, assertMatchingMeeting } from "@/modules/meeting/service";
+-import {
+-  MeetingBookingError,
+-  type MeetingRecord,
+-  type MeetingRecordInput,
+-  type MeetingAvailability,
+-  type MeetingReservationStore,
+-} from "@/modules/meeting/types";
+-import type { WorkflowAction, WorkflowStepInput, WorkflowStepResult } from "../../types";
+-import { meetingBookingPayloadSchema } from "./schema";
+-
+-const CALENDAR = "calendar";
+-
+-const BOOKING = "booking";
+-
+-const NOTICE = "owner-notice";
+-
+-const NOTICE_WINDOW_MS = 24 * 60 * 60 * 1000;
+-
+-const eventSchema = z.strictObject({
+-  id: z.string(),
+-  htmlLink: z.string().nullable(),
+-  payload: z.record(z.string(), z.json()),
+-});
+-
+-const noticeSchema = z.strictObject({
+-  from: z.string().min(1),
+-  to: z.email(),
+-  replyTo: z.email(),
+-  subject: z.string().min(1),
+-  text: z.string().min(1),
+-  idempotencyKey: z.string().min(1),
+-});
+-
+-const dispatchSchema = z.object({ dispatching: z.boolean() });
+-
+-export function createMeetingBookingAction(
+-  availability: Pick<MeetingAvailability, "isSlotAvailable">,
+-  calendar: CalendarClient,
+-  store: MeetingReservationStore,
+-  notices: Pick<MeetingOwnerNotice, "prepareMeetingNotice" | "sendMeetingNotice">,
+-): WorkflowAction {
+-  function resultForEvent(context: WorkflowStepInput, event: CreatedCalendarEvent) {
+-    const { booking, eventId } = meeting(context);
+-
+-    assertMatchingCalendarEvent(event, booking, eventId);
+-
+-    return {
+-      kind: "success",
+-      outcome: { id: event.id, htmlLink: event.htmlLink, payload: event.payload },
+-    } as const;
+-  }
+-
+-  async function sendNotice(
+-    context: WorkflowStepInput,
+-    reconcile: boolean,
+-  ): Promise<WorkflowStepResult> {
+-    const { eventId } = meeting(context);
+-
+-    const saved = noticeSchema.safeParse(context.checkpoint);
+-
+-    let notice;
+-
+-    if (saved.success) {
+-      notice = saved.data;
+-    } else if (context.checkpoint !== null) {
+-      return { kind: "terminal", reason: "notice_payload_unavailable" };
+-    } else if (reconcile) {
+-      return { kind: "retry", reason: "notice_not_dispatched" };
+-    } else {
+-      const booked = await store.findMeetingByGoogleEventId(eventId);
+-
+-      if (!booked || booked.status !== "confirmed") {
+-        return { kind: "terminal", reason: "booking_missing" };
+-      }
+-
+-      try {
+-        notice = notices.prepareMeetingNotice(booked);
+-      } catch {
+-        return { kind: "terminal", reason: "notice_configuration" };
+-      }
+-
+-      if (!(await context.saveCheckpoint(notice))) {
+-        return { kind: "uncertain", reason: "claim_lost" };
+-      }
+-    }
+-
+-    context.signal.throwIfAborted();
+-
+-    const remaining = context.firstEffect.getTime() + NOTICE_WINDOW_MS - context.clock().getTime();
+-
+-    if (remaining <= 0) {
+-      return { kind: "terminal", reason: "notice_window_expired" };
+-    }
+-
+-    const signal = AbortSignal.any([context.signal, AbortSignal.timeout(remaining)]);
+-
+-    try {
+-      const receipt = await notices.sendMeetingNotice(notice, signal);
+-
+-      return { kind: "success", outcome: { receipt } };
+-    } catch (error) {
+-      const kind = error instanceof ResendClientError ? error.outcome : "uncertain";
+-
+-      return { kind, reason: "owner_notice_unavailable" };
+-    }
+-  }
+-
+-  return {
+-    payloadSchema: meetingBookingPayloadSchema,
+-    getStatus: (successful) => (successful.has(BOOKING) ? "Booking confirmed" : undefined),
+-    steps: [
+-      {
+-        key: CALENDAR,
+-        label: "Create Calendar event",
+-        async execute(context) {
+-          const { booking, eventId, record } = meeting(context);
+-
+-          const reservation = await store.reserve(record);
+-
+-          if (!reservation) {
+-            return { kind: "terminal", reason: "slot_reserved" };
+-          }
+-
+-          assertMatchingMeeting({ ...reservation, status: "confirmed" }, booking, eventId);
+-
+-          let available;
+-
+-          try {
+-            available = await availability.isSlotAvailable(booking.slot, context.signal);
+-          } catch {
+-            return { kind: "retry", reason: "availability_unavailable" };
+-          }
+-
+-          if (!available) {
+-            return (await context.saveCheckpoint({ dispatching: false }, (tx) =>
+-              store.release(tx, eventId),
+-            ))
+-              ? { kind: "terminal", reason: "slot_unavailable" }
+-              : { kind: "uncertain", reason: "claim_lost" };
+-          }
+-
+-          context.signal.throwIfAborted();
+-          if (!(await context.saveCheckpoint({ dispatching: true }))) {
+-            return { kind: "uncertain", reason: "claim_lost" };
+-          }
+-
+-          try {
+-            const event = await calendar.createEvent(
+-              {
+-                eventId,
+-                bookingOperationId: booking.bookingOperationId,
+-                summary: `Meeting with ${booking.name}`,
+-                description: booking.reason,
+-                attendeeEmail: booking.email,
+-                start: record.startsAt,
+-                end: record.endsAt,
+-                timezone: record.timezone,
+-              },
+-              context.signal,
+-            );
+-
+-            return resultForEvent(context, event);
+-          } catch (error) {
+-            if (error instanceof MeetingBookingError) {
+-              return { kind: "terminal", reason: "calendar_mismatch" };
+-            }
+-
+-            if (
+-              error instanceof CalendarEventError &&
+-              error.outcome !== "uncertain" &&
+-              (await context.saveCheckpoint(
+-                { dispatching: false },
+-                error.outcome === "terminal" ? (tx) => store.release(tx, eventId) : undefined,
+-              ))
+-            ) {
+-              return { kind: error.outcome, reason: "calendar_insert_rejected" };
+-            }
+-
+-            return { kind: "uncertain", reason: "calendar_insert_unconfirmed" };
+-          }
+-        },
+-        async reconcile(context) {
+-          const { eventId } = meeting(context);
+-
+-          const event = await calendar.findEvent(eventId, context.signal);
+-
+-          if (!event) {
+-            const dispatch = dispatchSchema.safeParse(context.checkpoint);
+-
+-            return context.checkpoint === null || (dispatch.success && !dispatch.data.dispatching)
+-              ? { kind: "safe" }
+-              : { kind: "uncertain", reason: "calendar_event_not_visible" };
+-          }
+-
+-          try {
+-            return resultForEvent(context, event);
+-          } catch (error) {
+-            if (!(error instanceof MeetingBookingError)) {
+-              throw error;
+-            }
+-
+-            return { kind: "terminal", reason: "calendar_mismatch" };
+-          }
+-        },
+-      },
+-      {
+-        key: BOOKING,
+-        label: "Save booking",
+-        async execute(context) {
+-          const { booking, eventId, record } = meeting(context);
+-
+-          const event = eventSchema.parse(context.previous.get(CALENDAR));
+-
+-          const existing = await store.findMeetingByGoogleEventId(eventId);
+-
+-          const saved =
+-            existing?.status === "confirmed"
+-              ? existing
+-              : await store.confirm({
+-                  ...record,
+-                  status: "confirmed",
+-                  googleEventUrl: event.htmlLink,
+-                  rawProviderPayload: event.payload,
+-                });
+-
+-          return bookingOutcome(saved, booking, eventId);
+-        },
+-        async reconcile(context) {
+-          const { booking, eventId } = meeting(context);
+-
+-          const saved = await store.findMeetingByGoogleEventId(eventId);
+-
+-          if (saved?.status === "pending") {
+-            assertMatchingMeeting({ ...saved, status: "confirmed" }, booking, eventId);
+-
+-            return { kind: "safe" };
+-          }
+-
+-          return bookingOutcome(saved, booking, eventId);
+-        },
+-      },
+-      {
+-        key: NOTICE,
+-        label: "Notify owner",
+-        execute: (context) => sendNotice(context, false),
+-        async reconcile(context) {
+-          const result = await sendNotice(context, true);
+-
+-          return result.kind === "retry"
+-            ? context.checkpoint === null
+-              ? { kind: "safe" }
+-              : { kind: "uncertain", reason: result.reason }
+-            : result;
+-        },
+-      },
+-    ],
+-  };
+-}
+-
+-function meeting(context: WorkflowStepInput) {
+-  const payload = meetingBookingPayloadSchema.parse(context.payload);
+-
+-  const booking = { ...payload, bookingOperationId: context.runId };
+-
+-  const eventId = `b${context.runId.replaceAll("-", "").toLowerCase()}`;
+-
+-  const record: MeetingRecordInput = {
+-    googleEventId: eventId,
+-    name: payload.name,
+-    email: payload.email,
+-    timezone: payload.slot.timezone,
+-    reason: payload.reason,
+-    startsAt: new Date(payload.slot.start),
+-    endsAt: new Date(payload.slot.end),
+-    status: "pending",
+-    googleEventUrl: null,
+-    rawProviderPayload: {},
+-  };
+-
+-  return { booking, eventId, record };
+-}
+-
+-function bookingOutcome(
+-  record: MeetingRecord | null,
+-  booking: ReturnType<typeof meeting>["booking"],
+-  eventId: string,
+-) {
+-  if (!record) {
+-    return { kind: "terminal", reason: "booking_reservation_missing" } as const;
+-  }
+-
+-  try {
+-    assertMatchingMeeting(record, booking, eventId);
+-
+-    return { kind: "success", outcome: { meetingId: record.id } } as const;
+-  } catch (error) {
+-    if (!(error instanceof MeetingBookingError)) {
+-      throw error;
+-    }
+-
+-    return { kind: "terminal", reason: "booking_mismatch" } as const;
+-  }
+-}
+--- a/src/modules/workflow/definitions/meeting-booking/definition.ts
++++ /dev/null
+@@ -1,118 +0,0 @@
+-import type { MeetingAvailability } from "@/modules/meeting/types";
+-import type { ActiveWorkflow } from "@/contracts/assistant.contract";
+-import type {
+-  IWorkflowDefinition,
+-  WorkflowAction,
+-  WorkflowReview,
+-  WorkflowTool,
+-} from "../../types";
+-import { type MeetingState, meetingBookingPayloadSchema, meetingStateSchema } from "./schema";
+-import { formatMeetingSlot } from "./tool-handlers";
+-import {
+-  createFindMeetingSlotsTool,
+-  createSelectMeetingSlotTool,
+-  saveMeetingTopicTool,
+-  saveMeetingIdentityTool,
+-} from "./tools";
+-
+-export class MeetingBookingWorkflowDefinition implements IWorkflowDefinition<MeetingState> {
+-  readonly id = "meeting-booking";
+-
+-  readonly version: number = 1;
+-
+-  readonly title: string = "Book a meeting";
+-
+-  readonly description = "Book a meeting with Freeman.";
+-
+-  readonly stateSchema = meetingStateSchema;
+-
+-  private readonly findSlotsTool: WorkflowTool;
+-
+-  constructor(
+-    private readonly availability: MeetingAvailability,
+-    private readonly booking?: WorkflowAction,
+-  ) {
+-    this.findSlotsTool = createFindMeetingSlotsTool(availability);
+-  }
+-
+-  createInitialState(): MeetingState {
+-    return this.stateSchema.parse({});
+-  }
+-
+-  getProgress(savedState: unknown): Pick<ActiveWorkflow, "phase" | "details"> {
+-    const { name, email, reason, selectedSlot } = this.stateSchema.parse(savedState);
+-
+-    return {
+-      phase: "collecting",
+-      details: [
+-        { key: "name", label: "Name", value: name },
+-        { key: "email", label: "Email", value: email },
+-        { key: "reason", label: "Topic", value: reason },
+-        {
+-          key: "time",
+-          label: "Time",
+-          value: selectedSlot ? formatMeetingSlot(selectedSlot) : null,
+-        },
+-      ],
+-    };
+-  }
+-
+-  getGuidance(savedState: unknown): string {
+-    const { name, email, reason, selectedSlot } = this.stateSchema.parse(savedState);
+-
+-    const missing = [
+-      name ? null : "name",
+-      email ? null : "email address",
+-      reason ? null : "topic",
+-      selectedSlot ? null : "time",
+-    ].filter(Boolean);
+-
+-    return missing.length
+-      ? `The meeting request still needs: ${missing.join(", ")}. Ask for the next missing detail or act on the detail the visitor offered. A saved time is a preference.`
+-      : "The meeting details are complete. Let the visitor review them or correct a detail.";
+-  }
+-
+-  getReview(savedState: unknown): WorkflowReview | null {
+-    const { name, email, reason, selectedSlot } = this.stateSchema.parse(savedState);
+-
+-    const parsed = meetingBookingPayloadSchema.safeParse({
+-      name,
+-      email,
+-      reason,
+-      slot: selectedSlot,
+-    });
+-
+-    if (!parsed.success || !this.booking) {
+-      return null;
+-    }
+-
+-    return {
+-      actionKey: "book-meeting",
+-      label: "Confirm booking",
+-      rows: [
+-        { key: "name", label: "Name", value: parsed.data.name },
+-        { key: "email", label: "Email", value: parsed.data.email },
+-        { key: "reason", label: "Topic", value: parsed.data.reason },
+-        { key: "time", label: "Time", value: formatMeetingSlot(parsed.data.slot) },
+-      ],
+-      payload: parsed.data,
+-    };
+-  }
+-
+-  getAction(key: string) {
+-    return key === "book-meeting" ? this.booking : undefined;
+-  }
+-
+-  getTools(savedState: unknown): readonly WorkflowTool[] {
+-    const { availableSlots } = this.stateSchema.parse(savedState);
+-
+-    return [
+-      saveMeetingTopicTool,
+-      this.findSlotsTool,
+-      ...(availableSlots.length
+-        ? [createSelectMeetingSlotTool(this.availability, availableSlots)]
+-        : []),
+-      saveMeetingIdentityTool,
+-    ];
+-  }
+-}
+--- a/src/modules/workflow/definitions/meeting-booking/schema.ts
++++ /dev/null
+@@ -1,50 +0,0 @@
+-import { z } from "zod";
+-import { MEETING_CONFIG } from "@/modules/meeting/config";
+-
+-export const meetingSlotSchema = z.strictObject({
+-  start: z.iso.datetime(),
+-  end: z.iso.datetime(),
+-  timezone: z.literal(MEETING_CONFIG.timezone),
+-});
+-
+-export const meetingStateSchema = z.strictObject({
+-  name: z.string().trim().min(1).max(160).nullable().default(null),
+-  email: z.email().max(320).nullable().default(null),
+-  reason: z.string().trim().min(1).max(500).nullable().default(null),
+-  availableSlots: z.array(meetingSlotSchema).default([]),
+-  selectedSlot: meetingSlotSchema.nullable().default(null),
+-});
+-
+-export type MeetingState = z.infer<typeof meetingStateSchema>;
+-
+-export const identityArgumentsSchema = z
+-  .strictObject({
+-    name: z.string().trim().min(1).max(160).nullable(),
+-    email: z.string().trim().pipe(z.email().max(320)).nullable(),
+-  })
+-  .refine(({ name, email }) => name !== null || email !== null);
+-
+-export const topicArgumentsSchema = z.strictObject({
+-  reason: z.string().trim().min(1).max(500),
+-});
+-
+-export const findSlotsArgumentsSchema = z.strictObject({
+-  startDate: z.iso.date(),
+-  endDate: z.iso.date(),
+-});
+-
+-export const selectSlotArgumentsSchema = z.strictObject({
+-  start: z.iso.datetime(),
+-});
+-
+-export const meetingBookingPayloadSchema = z
+-  .strictObject({
+-    name: z.string().trim().min(1).max(160),
+-    email: z.email().max(320),
+-    reason: z.string().trim().min(1).max(500),
+-    slot: meetingSlotSchema,
+-  })
+-  .refine(
+-    ({ slot }) =>
+-      Date.parse(slot.end) - Date.parse(slot.start) === MEETING_CONFIG.durationMinutes * 60_000,
+-  );
+--- a/src/modules/workflow/definitions/meeting-booking/tool-handlers.ts
++++ /dev/null
+@@ -1,131 +0,0 @@
+-import { CalendarAvailabilityError } from "@/infrastructure/google-calendar/types";
+-import { MEETING_CONFIG } from "@/modules/meeting/config";
+-import type { MeetingAvailability, MeetingSlot } from "@/modules/meeting/types";
+-import type { WorkflowToolResult } from "../../types";
+-import {
+-  findSlotsArgumentsSchema,
+-  identityArgumentsSchema,
+-  meetingStateSchema,
+-  selectSlotArgumentsSchema,
+-  topicArgumentsSchema,
+-} from "./schema";
+-
+-const londonDate = new Intl.DateTimeFormat("sv-SE", {
+-  timeZone: MEETING_CONFIG.timezone,
+-  year: "numeric",
+-  month: "2-digit",
+-  day: "2-digit",
+-});
+-
+-const slotLabel = new Intl.DateTimeFormat("en-GB", {
+-  timeZone: MEETING_CONFIG.timezone,
+-  weekday: "short",
+-  day: "numeric",
+-  month: "short",
+-  year: "numeric",
+-  hour: "2-digit",
+-  minute: "2-digit",
+-  hourCycle: "h23",
+-});
+-
+-export function formatMeetingSlot(slot: MeetingSlot) {
+-  return `${slotLabel.format(new Date(slot.start))} London time`;
+-}
+-
+-export function saveMeetingTopic(savedState: unknown, args: unknown): WorkflowToolResult {
+-  const state = meetingStateSchema.parse(savedState);
+-
+-  const { reason } = topicArgumentsSchema.parse(args);
+-
+-  return { state: { ...state, reason }, output: { status: "saved" } };
+-}
+-
+-export function saveMeetingIdentity(savedState: unknown, args: unknown): WorkflowToolResult {
+-  const state = meetingStateSchema.parse(savedState);
+-
+-  const { name, email } = identityArgumentsSchema.parse(args);
+-
+-  return {
+-    state: { ...state, name: name ?? state.name, email: email ?? state.email },
+-    output: { status: "saved" },
+-  };
+-}
+-
+-export async function findMeetingSlots(
+-  availability: MeetingAvailability,
+-  savedState: unknown,
+-  args: unknown,
+-): Promise<WorkflowToolResult> {
+-  const state = meetingStateSchema.parse(savedState);
+-
+-  const range = findSlotsArgumentsSchema.parse(args);
+-
+-  const daysBetween = (Date.parse(range.endDate) - Date.parse(range.startDate)) / 86_400_000;
+-
+-  if (
+-    range.startDate < londonDate.format(new Date()) ||
+-    daysBetween < 0 ||
+-    daysBetween >= MEETING_CONFIG.maximumRangeDays
+-  ) {
+-    return {
+-      output: {
+-        status: "invalid_date_range",
+-        message: "Choose an upcoming date range of up to 14 days.",
+-      },
+-    };
+-  }
+-
+-  try {
+-    const slots = (await availability.findAvailableSlots(range)).slice(0, 4);
+-
+-    return {
+-      state: { ...state, availableSlots: slots },
+-      output: {
+-        status: slots.length > 0 ? "available" : "no_slots",
+-        slots: slots.map((slot) => ({ start: slot.start, label: formatMeetingSlot(slot) })),
+-      },
+-    };
+-  } catch (error) {
+-    if (!(error instanceof CalendarAvailabilityError)) {
+-      throw error;
+-    }
+-
+-    return { output: { status: "availability_unavailable" } };
+-  }
+-}
+-
+-export async function selectMeetingSlot(
+-  availability: MeetingAvailability,
+-  savedState: unknown,
+-  args: unknown,
+-): Promise<WorkflowToolResult> {
+-  const state = meetingStateSchema.parse(savedState);
+-
+-  const { start } = selectSlotArgumentsSchema.parse(args);
+-
+-  const slot = state.availableSlots.find((offered) => offered.start === start);
+-
+-  if (!slot) {
+-    return { output: { status: "slot_not_offered" } };
+-  }
+-
+-  try {
+-    if (!(await availability.isSlotAvailable(slot))) {
+-      return {
+-        state: { ...state, availableSlots: state.availableSlots.filter((item) => item !== slot) },
+-        output: { status: "slot_unavailable" },
+-      };
+-    }
+-  } catch (error) {
+-    if (!(error instanceof CalendarAvailabilityError)) {
+-      throw error;
+-    }
+-
+-    return { output: { status: "availability_unavailable" } };
+-  }
+-
+-  return {
+-    state: { ...state, availableSlots: [], selectedSlot: slot },
+-    output: { status: "selected", label: formatMeetingSlot(slot) },
+-  };
+-}
+--- a/src/modules/workflow/definitions/meeting-booking/tools.ts
++++ /dev/null
+@@ -1,97 +0,0 @@
+-import type { MeetingAvailability, MeetingSlot } from "@/modules/meeting/types";
+-import type { WorkflowTool } from "../../types";
+-import {
+-  findMeetingSlots,
+-  formatMeetingSlot,
+-  saveMeetingTopic,
+-  saveMeetingIdentity,
+-  selectMeetingSlot,
+-} from "./tool-handlers";
+-
+-export const saveMeetingTopicTool: WorkflowTool = {
+-  tool: {
+-    type: "function",
+-    name: "save_meeting_topic",
+-    description:
+-      "Save the topic the visitor gave for this meeting. Use their stated reason. " +
+-      "For unrelated questions, continue the conversation without saving a topic.",
+-    strict: true,
+-    parameters: {
+-      type: "object",
+-      properties: { reason: { type: "string" } },
+-      required: ["reason"],
+-      additionalProperties: false,
+-    },
+-  },
+-  apply: saveMeetingTopic,
+-};
+-
+-export const saveMeetingIdentityTool: WorkflowTool = {
+-  tool: {
+-    type: "function",
+-    name: "save_meeting_identity",
+-    description:
+-      "Save the name or email the visitor gave for this meeting. Use null for a field the visitor did not supply.",
+-    strict: true,
+-    parameters: {
+-      type: "object",
+-      properties: { name: { type: ["string", "null"] }, email: { type: ["string", "null"] } },
+-      required: ["name", "email"],
+-      additionalProperties: false,
+-    },
+-  },
+-  apply: saveMeetingIdentity,
+-};
+-
+-export function createFindMeetingSlotsTool(availability: MeetingAvailability): WorkflowTool {
+-  return {
+-    tool: {
+-      type: "function",
+-      name: "find_meeting_slots",
+-      description:
+-        "Find free meeting times for the visitor's requested dates in London time. " +
+-        "Show only the returned labels and ask the visitor to choose one. " +
+-        "If no times are returned, ask for other dates. If Calendar is unavailable, say so.",
+-      strict: true,
+-      parameters: {
+-        type: "object",
+-        properties: {
+-          startDate: { type: "string", description: "First date, YYYY-MM-DD" },
+-          endDate: { type: "string", description: "Last date, YYYY-MM-DD" },
+-        },
+-        required: ["startDate", "endDate"],
+-        additionalProperties: false,
+-      },
+-    },
+-    apply: (state, args) => findMeetingSlots(availability, state, args),
+-  };
+-}
+-
+-export function createSelectMeetingSlotTool(
+-  availability: MeetingAvailability,
+-  availableSlots: readonly MeetingSlot[],
+-): WorkflowTool {
+-  const offeredTimes = availableSlots.map((slot) => formatMeetingSlot(slot) + " = " + slot.start);
+-
+-  return {
+-    tool: {
+-      type: "function",
+-      name: "select_meeting_slot",
+-      description:
+-        "Save a time only when the visitor clearly selects one of the latest offered slots. " +
+-        "Pass the exact start value returned for that time. Ask if the choice is ambiguous. " +
+-        "Confirm a selected time as a preference. A selection does not book a meeting. " +
+-        "If the slot is unavailable or was not offered, ask the visitor to check availability again. " +
+-        "Current offered times: " +
+-        offeredTimes.join("; "),
+-      strict: true,
+-      parameters: {
+-        type: "object",
+-        properties: { start: { type: "string", enum: availableSlots.map(({ start }) => start) } },
+-        required: ["start"],
+-        additionalProperties: false,
+-      },
+-    },
+-    apply: (state, args) => selectMeetingSlot(availability, state, args),
+-  };
+-}
+--- a/src/modules/meeting/config.ts
++++ /dev/null
+@@ -1,8 +0,0 @@
+-export const MEETING_CONFIG = {
+-  timezone: "Europe/London",
+-  startHour: 12,
+-  endHour: 13,
+-  durationMinutes: 30,
+-  maximumRangeDays: 14,
+-  workingDays: [1, 2, 3, 4, 5],
+-} as const;
+--- a/src/modules/meeting/owner-notice.ts
++++ /dev/null
+@@ -1,38 +0,0 @@
+-import "server-only";
+-
+-import type { ResendClient, ResendEmailInput } from "@/infrastructure/resend/client";
+-import type { MeetingRecord } from "./types";
+-
+-export class MeetingOwnerNotice {
+-  constructor(
+-    private readonly sender: Pick<ResendClient, "sendWithReceipt">,
+-    private readonly getConfig: () => { adminEmail: string; fromEmail: string },
+-  ) {}
+-
+-  prepareMeetingNotice(meeting: MeetingRecord): ResendEmailInput {
+-    const config = this.getConfig();
+-
+-    return {
+-      from: config.fromEmail,
+-      to: config.adminEmail,
+-      replyTo: meeting.email,
+-      idempotencyKey: `meeting-booked/${meeting.id}`,
+-      subject: `New meeting booked with ${meeting.name}`,
+-      text: [
+-        `Name: ${meeting.name}`,
+-        `Email: ${meeting.email}`,
+-        `Reason: ${meeting.reason}`,
+-        `Starts: ${meeting.startsAt.toISOString()}`,
+-        `Ends: ${meeting.endsAt.toISOString()}`,
+-        `Timezone: ${meeting.timezone}`,
+-        meeting.googleEventUrl ? `Calendar event: ${meeting.googleEventUrl}` : null,
+-      ]
+-        .filter((line) => line !== null)
+-        .join("\n"),
+-    };
+-  }
+-
+-  sendMeetingNotice(notice: ResendEmailInput, signal: AbortSignal) {
+-    return this.sender.sendWithReceipt(notice, signal);
+-  }
+-}
+--- a/src/modules/meeting/repository.ts
++++ /dev/null
+@@ -1,70 +0,0 @@
+-import "server-only";
+-import type { Prisma, PrismaClient } from "@/generated/prisma/client";
+-import type { MeetingRecord, MeetingRecordInput, MeetingReservationStore } from "./types";
+-
+-export class MeetingRepository implements MeetingReservationStore {
+-  constructor(private readonly database: PrismaClient) {}
+-
+-  reserve(input: MeetingRecordInput) {
+-    return this.database.$transaction(async (tx) => {
+-      await tx.$executeRaw`SET LOCAL lock_timeout = '2s'`;
+-      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('freemancodz:meeting-booking'))`;
+-
+-      const existing = await tx.meeting.findUnique({
+-        where: { googleEventId: input.googleEventId },
+-      });
+-
+-      if (existing) {
+-        return existing;
+-      }
+-
+-      const overlap = await tx.meeting.findFirst({
+-        where: {
+-          startsAt: { lt: input.endsAt },
+-          endsAt: { gt: input.startsAt },
+-          status: { in: ["pending", "confirmed"] },
+-        },
+-        select: { id: true },
+-      });
+-
+-      if (overlap) {
+-        return null;
+-      }
+-
+-      // Legacy workflows can hold a slot before the Meeting row exists.
+-      const [legacy] = await tx.$queryRaw<{ blocked: boolean }[]>`
+-        SELECT EXISTS (
+-          SELECT 1 FROM workflow_instances w
+-          WHERE w.workflow_id = 'meeting-booking' AND w.status = 'active'
+-            AND w.state->>'step' = 'confirmed'
+-            AND CASE
+-              WHEN (w.state->'selectedSlot'->>'start') ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}T'
+-               AND (w.state->'selectedSlot'->>'end') ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}T'
+-              THEN (w.state->'selectedSlot'->>'start')::timestamptz < ${input.endsAt}
+-                AND (w.state->'selectedSlot'->>'end')::timestamptz > ${input.startsAt}
+-              ELSE true
+-            END
+-        ) AS blocked
+-      `;
+-
+-      return legacy?.blocked ? null : tx.meeting.create({ data: input });
+-    });
+-  }
+-
+-  async release(transaction: Prisma.TransactionClient, eventId: string) {
+-    await transaction.meeting.deleteMany({ where: { googleEventId: eventId, status: "pending" } });
+-  }
+-
+-  async confirm(input: MeetingRecordInput) {
+-    const [confirmed] = await this.database.meeting.updateManyAndReturn({
+-      where: { googleEventId: input.googleEventId, status: "pending" },
+-      data: input,
+-    });
+-
+-    return confirmed ?? null;
+-  }
+-
+-  async findMeetingByGoogleEventId(googleEventId: string): Promise<MeetingRecord | null> {
+-    return this.database.meeting.findUnique({ where: { googleEventId } });
+-  }
+-}
+--- a/src/modules/meeting/service.ts
++++ /dev/null
+@@ -1,211 +0,0 @@
+-import "server-only";
+-import { z } from "zod";
+-import type { MeetingBookingDetails, MeetingRecord, MeetingSlot } from "./types";
+-import {
+-  CalendarAvailabilityError,
+-  type CalendarBusyPeriod,
+-  type CalendarClient,
+-  type CreatedCalendarEvent,
+-} from "@/infrastructure/google-calendar/types";
+-import type { Logger } from "@/infrastructure/logging/logger";
+-import { MEETING_CONFIG } from "./config";
+-import { MeetingBookingError } from "./types";
+-
+-const recoveredEventSchema = z.object({
+-  id: z.string(),
+-  status: z.literal("confirmed"),
+-  summary: z.string(),
+-  description: z.string(),
+-  attendees: z.array(z.object({ email: z.string().email() })).length(1),
+-  start: z.object({ dateTime: z.string().datetime({ offset: true }), timeZone: z.string() }),
+-  end: z.object({ dateTime: z.string().datetime({ offset: true }), timeZone: z.string() }),
+-  extendedProperties: z
+-    .object({
+-      private: z.object({ bookingOperationId: z.string().optional() }).optional(),
+-    })
+-    .optional(),
+-});
+-
+-export class MeetingService {
+-  constructor(
+-    private readonly calendar: CalendarClient,
+-    private readonly logger: Logger,
+-  ) {}
+-
+-  async findAvailableSlots(input: { startDate: string; endDate: string }): Promise<MeetingSlot[]> {
+-    const candidates = this.createCandidates(input.startDate, input.endDate);
+-
+-    if (!candidates.length) {
+-      return [];
+-    }
+-
+-    let busy: CalendarBusyPeriod[];
+-
+-    try {
+-      busy = await this.calendar.getBusyPeriods({
+-        start: new Date(candidates[0].start),
+-        end: new Date(candidates.at(-1)!.end),
+-      });
+-    } catch (error) {
+-      if (error instanceof CalendarAvailabilityError) {
+-        this.logger.error("meeting.availability_failed", { category: "calendar_unavailable" });
+-      }
+-
+-      throw error;
+-    }
+-
+-    return candidates.filter(
+-      (slot) =>
+-        !busy.some((period) =>
+-          overlaps(new Date(slot.start), new Date(slot.end), period.start, period.end),
+-        ),
+-    );
+-  }
+-
+-  async isSlotAvailable(slot: MeetingSlot, signal?: AbortSignal) {
+-    if (slot.timezone !== MEETING_CONFIG.timezone || new Date(slot.start).getTime() <= Date.now()) {
+-      return false;
+-    }
+-
+-    const busy = await this.calendar.getBusyPeriods(
+-      {
+-        start: new Date(slot.start),
+-        end: new Date(slot.end),
+-      },
+-      signal,
+-    );
+-
+-    return !busy.some((period) =>
+-      overlaps(new Date(slot.start), new Date(slot.end), period.start, period.end),
+-    );
+-  }
+-
+-  private createCandidates(startDate: string, endDate: string): MeetingSlot[] {
+-    const start = new Date(`${startDate}T00:00:00Z`);
+-
+-    const end = new Date(`${endDate}T00:00:00Z`);
+-
+-    const now = Date.now();
+-
+-    const slots: MeetingSlot[] = [];
+-
+-    for (let current = start; current <= end; current = new Date(current.getTime() + 86_400_000)) {
+-      if (!MEETING_CONFIG.workingDays.includes(current.getUTCDay() as 1 | 2 | 3 | 4 | 5)) {
+-        continue;
+-      }
+-
+-      const date = current.toISOString().slice(0, 10);
+-
+-      for (
+-        let hour = MEETING_CONFIG.startHour;
+-        hour < MEETING_CONFIG.endHour;
+-        hour += MEETING_CONFIG.durationMinutes / 60
+-      ) {
+-        const startsAt = zonedDateTimeToUtc(date, hour, MEETING_CONFIG.timezone);
+-
+-        const endsAt = new Date(startsAt.getTime() + MEETING_CONFIG.durationMinutes * 60_000);
+-
+-        if (startsAt.getTime() > now) {
+-          slots.push({
+-            start: startsAt.toISOString(),
+-            end: endsAt.toISOString(),
+-            timezone: MEETING_CONFIG.timezone,
+-          });
+-        }
+-      }
+-    }
+-
+-    return slots;
+-  }
+-}
+-
+-export function assertMatchingMeeting(
+-  meeting: MeetingRecord,
+-  input: MeetingBookingDetails,
+-  eventId: string,
+-): void {
+-  if (
+-    meeting.googleEventId !== eventId ||
+-    meeting.status !== "confirmed" ||
+-    meeting.name !== input.name ||
+-    meeting.email.toLowerCase() !== input.email.toLowerCase() ||
+-    meeting.reason !== input.reason ||
+-    meeting.timezone !== MEETING_CONFIG.timezone ||
+-    meeting.startsAt.getTime() !== Date.parse(input.slot.start) ||
+-    meeting.endsAt.getTime() !== Date.parse(input.slot.end)
+-  ) {
+-    throw new MeetingBookingError("conflict");
+-  }
+-}
+-
+-export function assertMatchingCalendarEvent(
+-  event: CreatedCalendarEvent,
+-  input: MeetingBookingDetails & { bookingOperationId?: string },
+-  eventId: string,
+-): void {
+-  const result = recoveredEventSchema.safeParse(event.payload);
+-
+-  if (!result.success) {
+-    throw new MeetingBookingError("conflict");
+-  }
+-
+-  const payload = result.data;
+-
+-  if (
+-    event.id !== eventId ||
+-    payload.id !== eventId ||
+-    (input.bookingOperationId !== undefined &&
+-      payload.extendedProperties?.private?.bookingOperationId !== input.bookingOperationId) ||
+-    payload.summary !== `Meeting with ${input.name}` ||
+-    payload.description !== input.reason ||
+-    payload.attendees[0].email.toLowerCase() !== input.email.toLowerCase() ||
+-    Date.parse(payload.start.dateTime) !== Date.parse(input.slot.start) ||
+-    Date.parse(payload.end.dateTime) !== Date.parse(input.slot.end) ||
+-    payload.start.timeZone !== MEETING_CONFIG.timezone ||
+-    payload.end.timeZone !== MEETING_CONFIG.timezone
+-  ) {
+-    throw new MeetingBookingError("conflict");
+-  }
+-}
+-
+-function overlaps(start: Date, end: Date, busyStart: Date, busyEnd: Date) {
+-  return start < busyEnd && end > busyStart;
+-}
+-
+-function zonedDateTimeToUtc(date: string, hour: number, timezone: string) {
+-  const [year, month, day] = date.split("-").map(Number);
+-
+-  const naive = Date.UTC(year!, month! - 1, day!, Math.floor(hour), (hour % 1) * 60);
+-
+-  let result = new Date(naive);
+-
+-  for (let attempt = 0; attempt < 2; attempt += 1) {
+-    const parts = new Intl.DateTimeFormat("en-GB", {
+-      timeZone: timezone,
+-      hour: "2-digit",
+-      minute: "2-digit",
+-      hourCycle: "h23",
+-      year: "numeric",
+-      month: "2-digit",
+-      day: "2-digit",
+-    }).formatToParts(result);
+-
+-    const values = Object.fromEntries(
+-      parts
+-        .filter(({ type }) => type !== "literal")
+-        .map(({ type, value }) => [type, Number(value)]),
+-    );
+-
+-    const displayed = Date.UTC(
+-      values.year!,
+-      values.month! - 1,
+-      values.day!,
+-      values.hour!,
+-      values.minute!,
+-    );
+-
+-    result = new Date(result.getTime() + (naive - displayed));
+-  }
+-
+-  return result;
+-}
+--- a/src/modules/meeting/types.ts
++++ /dev/null
+@@ -1,57 +0,0 @@
+-import type { Prisma } from "@/generated/prisma/client";
+-
+-export type MeetingRecordInput = {
+-  googleEventId: string;
+-  name: string;
+-  email: string;
+-  timezone: string;
+-  reason: string;
+-  startsAt: Date;
+-  endsAt: Date;
+-  status: string;
+-  googleEventUrl: string | null;
+-  rawProviderPayload: Prisma.InputJsonObject;
+-};
+-export type MeetingRecord = Omit<MeetingRecordInput, "rawProviderPayload"> & {
+-  rawProviderPayload: Prisma.JsonValue;
+-  id: string;
+-  createdAt: Date;
+-  updatedAt: Date;
+-};
+-
+-export type MeetingReservationStore = {
+-  reserve(input: MeetingRecordInput): Promise<MeetingRecord | null>;
+-  release(transaction: Prisma.TransactionClient, eventId: string): Promise<void>;
+-  confirm(input: MeetingRecordInput): Promise<MeetingRecord | null>;
+-  findMeetingByGoogleEventId(eventId: string): Promise<MeetingRecord | null>;
+-};
+-
+-export type MeetingSlot = {
+-  start: string;
+-  end: string;
+-  timezone: string;
+-};
+-
+-export type MeetingBookingDetails = {
+-  name: string;
+-  email: string;
+-  reason: string;
+-  slot: MeetingSlot;
+-};
+-
+-export class MeetingBookingError extends Error {
+-  constructor(
+-    readonly code:
+-      "unavailable" | "uncertain" | "conflict" | "slot_unavailable" | "invalid_operation",
+-    cause?: unknown,
+-  ) {
+-    super("The booking could not be safely completed. Retry the existing booking operation.", {
+-      cause,
+-    });
+-  }
+-}
+-
+-export type MeetingAvailability = {
+-  findAvailableSlots(input: { startDate: string; endDate: string }): Promise<MeetingSlot[]>;
+-  isSlotAvailable(slot: MeetingSlot, signal?: AbortSignal): Promise<boolean>;
+-};
+--- a/src/infrastructure/google-calendar/client.ts
++++ /dev/null
+@@ -1,214 +0,0 @@
+-import "server-only";
+-import { google } from "googleapis";
+-import { z } from "zod";
+-import {
+-  CalendarAvailabilityError,
+-  CalendarEventError,
+-  type CalendarBusyPeriod,
+-  type CalendarClient,
+-  type CreatedCalendarEvent,
+-  type GoogleCalendarConfig,
+-} from "./types";
+-
+-const eventPayloadSchema = z.record(z.string(), z.json());
+-
+-const requestOptions = { timeout: 10_000, retry: false } as const;
+-
+-export class GoogleCalendarClient implements CalendarClient {
+-  private calendar: ReturnType<typeof google.calendar> | null = null;
+-
+-  private calendarId: string | null = null;
+-
+-  constructor(private readonly getConfig: () => GoogleCalendarConfig) {}
+-
+-  async getBusyPeriods(
+-    input: { start: Date; end: Date },
+-    signal?: AbortSignal,
+-  ): Promise<CalendarBusyPeriod[]> {
+-    try {
+-      const { calendar, calendarId } = this.getCalendar();
+-
+-      const response = await withSignal(signal, () =>
+-        calendar.freebusy.query(
+-          {
+-            requestBody: {
+-              timeMin: input.start.toISOString(),
+-              timeMax: input.end.toISOString(),
+-              items: [{ id: calendarId }],
+-            },
+-          },
+-          signal ? { ...requestOptions, signal } : requestOptions,
+-        ),
+-      );
+-
+-      const result = response.data.calendars?.[calendarId];
+-
+-      // A failed or missing Calendar result is not evidence that the time is free.
+-      if (!result || result.errors?.length || !Array.isArray(result.busy)) {
+-        throw new CalendarAvailabilityError();
+-      }
+-
+-      const periods = result.busy;
+-
+-      return periods.map((period) => {
+-        const start = new Date(period.start ?? "");
+-
+-        const end = new Date(period.end ?? "");
+-
+-        if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime()) || end <= start) {
+-          throw new CalendarAvailabilityError();
+-        }
+-
+-        return { start, end };
+-      });
+-    } catch (error) {
+-      throw new CalendarAvailabilityError(error);
+-    }
+-  }
+-
+-  async findEvent(eventId: string, signal?: AbortSignal): Promise<CreatedCalendarEvent | null> {
+-    try {
+-      const { calendar, calendarId } = this.getCalendar();
+-
+-      const response = await withSignal(signal, () =>
+-        calendar.events.get(
+-          { calendarId, eventId },
+-          signal ? { ...requestOptions, signal } : requestOptions,
+-        ),
+-      );
+-
+-      return toCalendarEvent(response.data);
+-    } catch (error) {
+-      if (
+-        typeof error === "object" &&
+-        error !== null &&
+-        "response" in error &&
+-        typeof error.response === "object" &&
+-        error.response !== null &&
+-        "status" in error.response &&
+-        error.response.status === 404
+-      ) {
+-        return null;
+-      }
+-
+-      throw new CalendarEventError(error);
+-    }
+-  }
+-
+-  async createEvent(
+-    input: {
+-      eventId: string;
+-      bookingOperationId: string;
+-      summary: string;
+-      description: string;
+-      attendeeEmail: string;
+-      start: Date;
+-      end: Date;
+-      timezone: string;
+-    },
+-    signal?: AbortSignal,
+-  ): Promise<CreatedCalendarEvent> {
+-    try {
+-      const { calendar, calendarId } = this.getCalendar();
+-
+-      const response = await withSignal(signal, () =>
+-        calendar.events.insert(
+-          {
+-            calendarId,
+-            sendUpdates: "all",
+-            requestBody: {
+-              id: input.eventId,
+-              extendedProperties: { private: { bookingOperationId: input.bookingOperationId } },
+-              summary: input.summary,
+-              description: input.description,
+-              attendees: [{ email: input.attendeeEmail }],
+-              start: { dateTime: input.start.toISOString(), timeZone: input.timezone },
+-              end: { dateTime: input.end.toISOString(), timeZone: input.timezone },
+-            },
+-          },
+-          signal ? { ...requestOptions, signal } : requestOptions,
+-        ),
+-      );
+-
+-      return toCalendarEvent(response.data);
+-    } catch (error) {
+-      throw new CalendarEventError(error, insertFailure(error));
+-    }
+-  }
+-
+-  private getCalendar() {
+-    if (this.calendar && this.calendarId) {
+-      return { calendar: this.calendar, calendarId: this.calendarId };
+-    }
+-
+-    const config = this.getConfig();
+-
+-    const auth = new google.auth.OAuth2(config.clientId, config.clientSecret);
+-
+-    auth.setCredentials({ refresh_token: config.refreshToken });
+-    this.calendar = google.calendar({ version: "v3", auth });
+-    this.calendarId = config.calendarId;
+-
+-    return { calendar: this.calendar, calendarId: this.calendarId };
+-  }
+-}
+-
+-function toCalendarEvent(data: unknown): CreatedCalendarEvent {
+-  const payload = eventPayloadSchema.parse(data);
+-
+-  const id = z.string().min(1).parse(payload.id);
+-
+-  const htmlLink = z.string().url().nullish().parse(payload.htmlLink) ?? null;
+-
+-  return { id, htmlLink, payload };
+-}
+-
+-function insertFailure(error: unknown) {
+-  const response = z
+-    .object({
+-      response: z.object({
+-        status: z.number(),
+-        data: z
+-          .object({ error: z.object({ errors: z.array(z.object({ reason: z.string() })) }) })
+-          .optional(),
+-      }),
+-    })
+-    .safeParse(error);
+-
+-  if (!response.success) {
+-    return "uncertain";
+-  }
+-
+-  const { status, data } = response.data.response;
+-
+-  if (
+-    status === 429 ||
+-    (status === 403 &&
+-      data?.error.errors.some(
+-        ({ reason }) => reason === "rateLimitExceeded" || reason === "userRateLimitExceeded",
+-      ))
+-  ) {
+-    return "retry";
+-  }
+-
+-  return [400, 401, 403, 404].includes(status) ? "terminal" : "uncertain";
+-}
+-
+-async function withSignal<Result>(signal: AbortSignal | undefined, request: () => Promise<Result>) {
+-  if (!signal) {
+-    return request();
+-  }
+-
+-  signal.throwIfAborted();
+-  const aborted = Promise.withResolvers<never>();
+-
+-  const abort = () => aborted.reject(signal.reason);
+-
+-  signal.addEventListener("abort", abort, { once: true });
+-  try {
+-    // OAuth token refresh can precede the signal-aware Calendar request.
+-    return await Promise.race([request(), aborted.promise]);
+-  } finally {
+-    signal.removeEventListener("abort", abort);
+-  }
+-}
+--- a/src/infrastructure/google-calendar/types.ts
++++ /dev/null
+@@ -1,51 +0,0 @@
+-export type CalendarBusyPeriod = { start: Date; end: Date };
+-import type { Prisma } from "@/generated/prisma/client";
+-
+-export class CalendarAvailabilityError extends Error {
+-  constructor(cause?: unknown) {
+-    super("Calendar availability is temporarily unavailable.", { cause });
+-  }
+-}
+-
+-export class CalendarEventError extends Error {
+-  constructor(
+-    cause?: unknown,
+-    readonly outcome: "retry" | "terminal" | "uncertain" = "uncertain",
+-  ) {
+-    super("Calendar event lookup or creation is temporarily unavailable.", { cause });
+-  }
+-}
+-
+-export type CreatedCalendarEvent = {
+-  id: string;
+-  htmlLink: string | null;
+-  payload: Prisma.JsonObject;
+-};
+-
+-export type GoogleCalendarConfig = {
+-  clientId: string;
+-  clientSecret: string;
+-  refreshToken: string;
+-  calendarId: string;
+-};
+-
+-export type CalendarClient = {
+-  getBusyPeriods(
+-    input: { start: Date; end: Date },
+-    signal?: AbortSignal,
+-  ): Promise<CalendarBusyPeriod[]>;
+-  findEvent(eventId: string, signal?: AbortSignal): Promise<CreatedCalendarEvent | null>;
+-  createEvent(
+-    input: {
+-      eventId: string;
+-      bookingOperationId: string;
+-      summary: string;
+-      description: string;
+-      attendeeEmail: string;
+-      start: Date;
+-      end: Date;
+-      timezone: string;
+-    },
+-    signal?: AbortSignal,
+-  ): Promise<CreatedCalendarEvent>;
+-};

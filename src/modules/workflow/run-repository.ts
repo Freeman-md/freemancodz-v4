@@ -7,6 +7,8 @@ const CLAIM_MS = 45_000;
 
 export const WORKFLOW_ATTEMPTS = 3;
 
+export const WORKFLOW_BACKOFF_MS = [60_000, 300_000] as const;
+
 export class WorkflowRunRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
@@ -19,7 +21,8 @@ export class WorkflowRunRepository {
         JOIN workflow_runs r ON r.id = s.run_id
         WHERE r.status IN ('queued', 'running')
           AND ((s.status IN ('queued', 'retry', 'reconciling') AND s.claim_token IS NULL AND s.next_at <= ${now})
-            OR (s.status IN ('running', 'reconciling') AND s.claim_expires <= ${now}))
+            OR (s.status = 'running' AND s.claim_expires <= ${now})
+            OR (s.status = 'reconciling' AND s.claim_expires <= ${now} AND s.next_at <= ${now}))
           AND NOT EXISTS (
             SELECT 1 FROM workflow_steps earlier
             WHERE earlier.run_id = s.run_id AND earlier.position < s.position
@@ -57,7 +60,13 @@ export class WorkflowRunRepository {
           claimToken: randomUUID(),
           claimExpires: new Date(now.getTime() + CLAIM_MS),
           status: reconcile ? "reconciling" : "running",
-          ...(reconcile ? { probes: { increment: 1 } } : { attempts: { increment: 1 } }),
+          ...(reconcile
+            ? {
+                probes: { increment: 1 },
+                // If a worker disappears, its successor still observes this probe's delay.
+                nextAt: new Date(now.getTime() + (WORKFLOW_BACKOFF_MS[candidate.probes] ?? 0)),
+              }
+            : { attempts: { increment: 1 } }),
         },
         include: {
           run: {

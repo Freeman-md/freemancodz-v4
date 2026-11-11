@@ -55,7 +55,7 @@ export type WorkflowStepInput = {
   previous: ReadonlyMap<string, Prisma.JsonValue>;
   checkpoint: Prisma.JsonValue;
   firstEffect: Date;
-  now: Date;
+  clock(): Date;
   signal: AbortSignal;
   saveCheckpoint(
     value: Prisma.InputJsonObject,

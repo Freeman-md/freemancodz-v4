@@ -122,6 +122,8 @@ test(
 
     let rejectNotice = false;
 
+    let delayBeforeNoticeProbe = 0;
+
     const clock = () => new Date(now);
 
     const advance = (ms: number) => {
@@ -173,7 +175,9 @@ test(
         sendWithReceipt: async (notice) => {
           assert.deepEqual(receipts.get(notice.idempotencyKey) ?? notice, notice);
           sent.push(notice.idempotencyKey);
-          if (rejectNotice) {throw new ResendClientError("provider", "terminal");}
+          if (rejectNotice) {
+            throw new ResendClientError("provider", "terminal");
+          }
 
           receipts.set(notice.idempotencyKey, notice);
           if (lostNotice) {
@@ -214,7 +218,21 @@ test(
       notices,
     );
 
-    const definition = new MeetingBookingWorkflowDefinition(availability, action);
+    const definition = new MeetingBookingWorkflowDefinition(availability, {
+      ...action,
+      steps: action.steps.map((step) =>
+        step.key === "owner-notice"
+          ? {
+              ...step,
+              reconcile: (context) => {
+                advance(delayBeforeNoticeProbe);
+
+                return step.reconcile(context);
+              },
+            }
+          : step,
+      ),
+    });
 
     const registry = new WorkflowRegistry([definition]);
 
@@ -489,6 +507,37 @@ test(
         },
       );
 
+      await t.test("lost reconciliation claims preserve both probe backoffs", async () => {
+        const booking = await enqueue({
+          ...slot,
+          start: "2098-06-23T11:00:00.000Z",
+          end: "2098-06-23T11:30:00.000Z",
+        });
+
+        lostCalendar = true;
+        await runner(1).runDue();
+
+        const first = await runRepository.claim(clock());
+
+        assert.ok(first?.status === "claimed" && first.reconcile);
+        assert.equal(first.step.probes, 1);
+
+        advance(45_000);
+        assert.equal(await runRepository.claim(clock()), null);
+        advance(15_000);
+        const second = await runRepository.claim(clock());
+
+        assert.ok(second?.status === "claimed" && second.reconcile);
+        assert.equal(second.step.probes, 2);
+        assert.equal(second.step.id, first.step.id);
+
+        advance(45_000);
+        assert.equal(await runRepository.claim(clock()), null);
+        advance(255_000);
+        await runner().runDue();
+        assert.equal((await workflow.getActive(booking.key))?.run?.status, "finished");
+      });
+
       await t.test(
         "a save failure retries independently and owner rejection preserves booking",
         async () => {
@@ -526,8 +575,10 @@ test(
           // Keep the initial send's unresolved claim durable without invoking the probe in the same batch.
           await runner(3).runDue();
           assert.equal(sent.length, callsBefore + 1);
-          advance(24 * 60 * 60 * 1000 + 1);
+          advance(24 * 60 * 60 * 1000 - 1);
+          delayBeforeNoticeProbe = 2;
           await runner().runDue();
+          delayBeforeNoticeProbe = 0;
           assert.equal(sent.length, callsBefore + 1);
           const visible = await workflow.getActive(booking.key);
 
