@@ -5,6 +5,14 @@ type ChatRequest = Pick<
   "message" | "previousResponseId"
 >;
 
+function decodeEvent(line: string) {
+  try {
+    return assistantStreamEventSchema.parse(JSON.parse(line));
+  } catch {
+    throw new Error("The assistant returned an invalid response.");
+  }
+}
+
 export async function* streamAssistant(request: ChatRequest) {
   const response = await fetch("/api/chat", {
     method: "POST",
@@ -50,7 +58,7 @@ export async function* streamAssistant(request: ChatRequest) {
           continue;
         }
 
-        const event = assistantStreamEventSchema.parse(JSON.parse(line));
+        const event = decodeEvent(line);
 
         if (event.type === "error") {
           throw new Error(event.error);
