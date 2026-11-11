@@ -16,7 +16,10 @@ import { ContactService } from "./contact/service";
 import { NotificationService } from "./notification/service";
 import { PrismaPublicPortfolioRepository } from "./portfolio/repositories/public-portfolio.repository";
 import { PrismaPortfolioSearchRepository } from "./portfolio/repositories/portfolio-search.repository";
-import { PortfolioIndexService } from "./portfolio/services/portfolio-search.service";
+import {
+  PortfolioIndexService,
+  PortfolioSearchService,
+} from "./portfolio/services/portfolio-search.service";
 import { PublicPortfolioService } from "./portfolio/services/public-portfolio.service";
 import { PrismaPortfolioSeedRepository } from "./portfolio/repositories/portfolio-seed.repository";
 import { PortfolioSeedService } from "./portfolio/seed.service";
@@ -79,4 +82,8 @@ export const rateLimitService = new RateLimitService(
 );
 
 // Assistant
-export const assistantService = new AssistantService(openAIProvider, logger);
+export const assistantService = new AssistantService(
+  openAIProvider,
+  logger,
+  new PortfolioSearchService(new PrismaPortfolioSearchRepository(prisma), embeddings),
+);

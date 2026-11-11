@@ -6,8 +6,11 @@ import type { AssistantStreamEvent } from "@/contracts/assistant.contract";
 import type { Logger } from "@/infrastructure/logging/logger";
 import type { OpenAIResponseRequest, OpenAITransport } from "@/infrastructure/openai/types";
 import { FALLBACK_ANSWER, PLAIN_CHAT_SYSTEM_PROMPT } from "./constants";
+import { ASSISTANT_ERRORS, AssistantError } from "./errors";
 import { ASK_USER_CHOICE_TOOL } from "./tools/ask-user-choice/definition";
-import { executeTool } from "./tools/execute";
+import type { PortfolioSearchService } from "../portfolio/services/portfolio-search.service";
+import { executeTool, type ToolReplyEvent } from "./tools/execute";
+import { SEARCH_PORTFOLIO_TOOL } from "./tools/search-portfolio/definition";
 import type { AssistantResponseInput } from "./types";
 
 const encoder = new TextEncoder();
@@ -20,6 +23,7 @@ export class AssistantService {
   constructor(
     private readonly openai: OpenAITransport,
     private readonly logger: Logger,
+    private readonly portfolioSearch: Pick<PortfolioSearchService, "search">,
   ) {}
 
   createResponse(request: Extract<AssistantResponseInput, { message: string }>) {
@@ -35,12 +39,12 @@ export class AssistantService {
     let modelRequest: OpenAIResponseRequest = {
       input: [{ type: "user_message", content: message }],
       instructions: PLAIN_CHAT_SYSTEM_PROMPT,
-      tools: [ASK_USER_CHOICE_TOOL],
+      tools: [ASK_USER_CHOICE_TOOL, SEARCH_PORTFOLIO_TOOL],
       previousResponseId,
       signal,
     };
 
-    let replyOptions: string[] | undefined;
+    let replyEvent: ToolReplyEvent | undefined;
 
     try {
       // Only the first pass offers tools, so a reply takes at most two model requests.
@@ -72,18 +76,25 @@ export class AssistantService {
                   throw new Error("Unexpected assistant tool call.");
                 }
 
-                const result = executeTool(functionCall.name, functionCall.arguments);
+                const result = await executeTool(
+                  functionCall.name,
+                  functionCall.arguments,
+                  this.portfolioSearch,
+                  signal,
+                );
 
-                replyOptions = result.options;
+                signal.throwIfAborted();
 
-                // Return the result for this call so the model can ask the question in the same turn.
+                replyEvent = result.event;
+
+                // Continue from this tool call so the model can use its result in the same turn.
                 modelRequest = {
                   ...modelRequest,
                   input: [
                     {
                       type: "function_call_output",
                       callId: functionCall.call_id,
-                      output: JSON.stringify(result),
+                      output: result.output,
                     },
                   ],
                   tools: [],
@@ -95,14 +106,14 @@ export class AssistantService {
 
               if (!hasText) {
                 if (modelRequest.tools.length === 0) {
-                  throw new Error("Expected a clarifying question.");
+                  throw new Error("Expected text after the tool result.");
                 }
 
                 yield encodeEvent({ type: "delta", delta: FALLBACK_ANSWER });
               }
 
-              if (replyOptions) {
-                yield encodeEvent({ type: "options", options: replyOptions });
+              if (replyEvent) {
+                yield encodeEvent(replyEvent);
               }
 
               yield encodeEvent({ type: "response_id", responseId: event.response.id });
@@ -120,15 +131,16 @@ export class AssistantService {
 
         throw new Error("The model stream ended before completion.");
       }
-    } catch {
-      if (!signal.aborted) {
-        this.logger.error("assistant.response_failed");
-
-        yield encodeEvent({
-          type: "error",
-          error: "The assistant could not respond. Please try again.",
-        });
+    } catch (error) {
+      if (signal.aborted) {
+        return;
       }
+
+      const failure =
+        error instanceof AssistantError ? error.failure : ASSISTANT_ERRORS.RESPONSE_FAILED;
+
+      this.logger.error(failure.code);
+      yield encodeEvent({ type: "error", error: failure.publicMessage });
     }
   }
 }

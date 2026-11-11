@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { MAX_MESSAGE_LENGTH } from "@/contracts/assistant.contract";
+import { MAX_MESSAGE_LENGTH, type AssistantSource } from "@/contracts/assistant.contract";
 import { streamAssistant } from "../api/stream-assistant-response";
 import type { ChatMessage } from "../types";
 
@@ -67,6 +67,8 @@ export function useAssistant() {
 
     let options: string[] = [];
 
+    let sources: AssistantSource[] | undefined;
+
     try {
       for await (const event of streamAssistant({
         message,
@@ -81,6 +83,10 @@ export function useAssistant() {
             options = event.options;
             break;
 
+          case "sources":
+            sources = event.sources;
+            break;
+
           case "response_id":
             responseId = event.responseId;
             break;
@@ -92,6 +98,11 @@ export function useAssistant() {
 
             previousResponseId.current = responseId;
             setReplyOptions(options);
+
+            if (sources) {
+              updateReply((reply) => ({ ...reply, sources }));
+            }
+
             break;
         }
       }

@@ -3,6 +3,7 @@
 import { Dialog } from "@base-ui/react/dialog";
 import { Bot, X } from "lucide-react";
 import { useRef } from "react";
+import { followHomeAnchor } from "../../_components/layout/follow-home-anchor";
 import { useAssistant } from "../hooks/useAssistant";
 import { useAssistantSurface } from "../hooks/useAssistantSurface";
 import { AssistantComposer } from "./AssistantComposer";
@@ -18,7 +19,7 @@ export function FloatingPortfolioChat() {
     shouldReduceMotion,
     launcherRef,
     closeRef,
-    returnFocus,
+    returnFocus: returnFocusRef,
     messagesEndRef,
     openChat,
   } = useAssistantSurface({
@@ -29,15 +30,40 @@ export function FloatingPortfolioChat() {
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  const pendingSource = useRef<string | null>(null);
+
   const showReplyOptions =
     !chat.isLoading &&
     !chat.draft.subject &&
     !chat.draft.text.trim() &&
     chat.replyOptions.length > 0;
 
+  function closeForSource(href: string) {
+    pendingSource.current = href;
+    returnFocusRef.current = null;
+    setIsOpen(false);
+  }
+
+  function finishClose(open: boolean) {
+    if (open || !pendingSource.current) {
+      return;
+    }
+
+    const href = pendingSource.current;
+
+    pendingSource.current = null;
+    // Base UI queues the dialog unmount before invoking this callback.
+    requestAnimationFrame(() => followHomeAnchor(href, true));
+  }
+
   return (
     <div className="assistant-root">
-      <Dialog.Root open={isOpen} onOpenChange={setIsOpen} modal={isMobile}>
+      <Dialog.Root
+        open={isOpen}
+        onOpenChange={setIsOpen}
+        onOpenChangeComplete={finishClose}
+        modal={isMobile}
+      >
         <Dialog.Trigger
           className="assistant-launcher"
           aria-label="Open portfolio chat"
@@ -53,9 +79,13 @@ export function FloatingPortfolioChat() {
             className="portfolio-chat-surface"
             initialFocus={closeRef}
             finalFocus={() => {
-              const origin = returnFocus.current;
+              const origin = returnFocusRef.current;
 
-              return origin?.isConnected ? origin : launcherRef.current;
+              if (!origin) {
+                return false;
+              }
+
+              return origin.isConnected ? origin : launcherRef.current;
             }}
           >
             <header className="assistant-header">
@@ -78,6 +108,7 @@ export function FloatingPortfolioChat() {
               messagesEndRef={messagesEndRef}
               shouldReduceMotion={shouldReduceMotion}
               onStarterAction={(message) => void chat.submitMessage(message)}
+              onInternalSource={closeForSource}
             />
 
             {showReplyOptions && (

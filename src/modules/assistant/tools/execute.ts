@@ -1,10 +1,40 @@
+import type { AssistantStreamEvent } from "@/contracts/assistant.contract";
+import type { PortfolioSearchService } from "../../portfolio/services/portfolio-search.service";
 import { ASK_USER_CHOICE_TOOL } from "./ask-user-choice/definition";
 import { askUserChoice } from "./ask-user-choice/implementation";
+import { SEARCH_PORTFOLIO_TOOL } from "./search-portfolio/definition";
+import { searchPortfolio } from "./search-portfolio/implementation";
 
-export function executeTool(name: string, rawArguments: string) {
-  if (name === ASK_USER_CHOICE_TOOL.name) {
-    return askUserChoice(rawArguments);
+export type ToolReplyEvent = Extract<AssistantStreamEvent, { type: "options" | "sources" }>;
+
+type ToolResult = { output: string; event?: ToolReplyEvent };
+
+export async function executeTool(
+  name: string,
+  rawArguments: string,
+  search: Pick<PortfolioSearchService, "search">,
+  signal: AbortSignal,
+): Promise<ToolResult> {
+  switch (name) {
+    case ASK_USER_CHOICE_TOOL.name: {
+      const result = askUserChoice(rawArguments);
+
+      return {
+        output: JSON.stringify(result),
+        event: { type: "options", options: result.options },
+      };
+    }
+
+    case SEARCH_PORTFOLIO_TOOL.name: {
+      const result = await searchPortfolio(rawArguments, search, signal);
+
+      return {
+        output: JSON.stringify({ excerpts: result.matches }),
+        event: result.sources.length ? { type: "sources", sources: result.sources } : undefined,
+      };
+    }
+
+    default:
+      throw new Error("Unsupported assistant tool.");
   }
-
-  throw new Error("Unsupported assistant tool.");
 }
