@@ -9,6 +9,7 @@ import {
 } from "@/infrastructure/google-calendar/types";
 import type { Logger } from "@/infrastructure/logging/logger";
 import { MEETING_CONFIG } from "./config";
+import { resolveMeetingTime } from "./time";
 import { MeetingBookingError } from "./types";
 
 const recoveredEventSchema = z.object({
@@ -48,7 +49,7 @@ export class MeetingService {
       });
     } catch (error) {
       if (error instanceof CalendarAvailabilityError) {
-        this.logger.error("meeting.availability_failed", { category: "calendar_unavailable" });
+        this.logger.error("meeting.availability_failed", { category: error.category });
       }
 
       throw error;
@@ -101,7 +102,15 @@ export class MeetingService {
         hour < MEETING_CONFIG.endHour;
         hour += MEETING_CONFIG.durationMinutes / 60
       ) {
-        const startsAt = zonedDateTimeToUtc(date, hour, MEETING_CONFIG.timezone);
+        const hours = String(Math.floor(hour)).padStart(2, "0");
+
+        const minutes = String((hour % 1) * 60).padStart(2, "0");
+
+        const startsAt = resolveMeetingTime(date, `${hours}:${minutes}`, MEETING_CONFIG.timezone);
+
+        if (!startsAt) {
+          continue;
+        }
 
         const endsAt = new Date(startsAt.getTime() + MEETING_CONFIG.durationMinutes * 60_000);
 
@@ -170,42 +179,4 @@ export function assertMatchingCalendarEvent(
 
 function overlaps(start: Date, end: Date, busyStart: Date, busyEnd: Date) {
   return start < busyEnd && end > busyStart;
-}
-
-function zonedDateTimeToUtc(date: string, hour: number, timezone: string) {
-  const [year, month, day] = date.split("-").map(Number);
-
-  const naive = Date.UTC(year!, month! - 1, day!, Math.floor(hour), (hour % 1) * 60);
-
-  let result = new Date(naive);
-
-  for (let attempt = 0; attempt < 2; attempt += 1) {
-    const parts = new Intl.DateTimeFormat("en-GB", {
-      timeZone: timezone,
-      hour: "2-digit",
-      minute: "2-digit",
-      hourCycle: "h23",
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    }).formatToParts(result);
-
-    const values = Object.fromEntries(
-      parts
-        .filter(({ type }) => type !== "literal")
-        .map(({ type, value }) => [type, Number(value)]),
-    );
-
-    const displayed = Date.UTC(
-      values.year!,
-      values.month! - 1,
-      values.day!,
-      values.hour!,
-      values.minute!,
-    );
-
-    result = new Date(result.getTime() + (naive - displayed));
-  }
-
-  return result;
 }

@@ -14,10 +14,11 @@ import type { WorkflowToolResult } from "./types";
 
 export type ActiveWorkflowTool = {
   tool: OpenAIResponseTool;
+  activityLabel?: string;
   run(
     rawArguments: string,
     signal: AbortSignal,
-  ): Promise<{ output: WorkflowToolResult["output"]; instance?: ActiveWorkflow } | null>;
+  ): Promise<(Omit<WorkflowToolResult, "state"> & { instance?: ActiveWorkflow }) | null>;
 };
 
 export class WorkflowService {
@@ -32,6 +33,7 @@ export class WorkflowService {
       | "ensureReview"
       | "findOwnedReview"
       | "approve"
+      | "discardDraft"
     >,
     private readonly clock: () => Date = () => new Date(),
   ) {}
@@ -80,14 +82,20 @@ export class WorkflowService {
       : null;
   }
 
+  discardDraft(visitorKey: string, observation: WorkflowObservation) {
+    return this.repository.discardDraft(visitorKey, observation);
+  }
+
   async getTurn(
     visitorKey: string,
     observed?: WorkflowObservation,
   ): Promise<{
     tools: ActiveWorkflowTool[];
+    workflow?: ActiveWorkflow;
     guidance?: string;
     refreshed?: ActiveWorkflow;
     hasActive?: boolean;
+    draft?: WorkflowObservation;
   }> {
     const instance = await this.repository.findActive(visitorKey);
 
@@ -103,10 +111,16 @@ export class WorkflowService {
 
     const run = await this.repository.findRun(instance.id);
 
+    const workflow = await this.project(instance, run);
+
+    const isStale = observed?.id !== instance.id || observed.revision !== instance.revision;
+
     if (run) {
       const inProgress = run.status === "queued" || run.status === "running";
 
       return {
+        workflow,
+        refreshed: isStale ? workflow : undefined,
         tools: [],
         hasActive: inProgress,
         guidance: inProgress
@@ -115,47 +129,73 @@ export class WorkflowService {
       };
     }
 
-    if (observed?.id !== instance.id || observed.revision !== instance.revision) {
+    if (isStale) {
       return {
+        workflow,
         tools: [],
-        refreshed: await this.project(instance),
+        refreshed: workflow,
         hasActive: true,
         guidance:
-          "The booking details were refreshed. Ask the visitor to check them before changing the request.",
+          "The request details were refreshed. Ask the visitor to check them before changing the request.",
       };
     }
 
     return {
+      workflow,
       hasActive: true,
+      draft: { id: instance.id, revision: instance.revision },
       guidance: definition.getGuidance(instance.state),
-      tools: definition.getTools(instance.state).map(({ tool, apply }) => ({
+      tools: definition.getTools(instance.state).map(({ tool, activityLabel, apply }) => ({
         tool,
+        activityLabel,
         run: async (rawArguments, signal) => {
           signal.throwIfAborted();
           const args: unknown = JSON.parse(rawArguments);
 
-          const result = await apply(instance.state, args);
+          const { state, ...result } = await apply(instance.state, args);
 
           signal.throwIfAborted();
 
-          if (result.state === undefined) {
-            return { output: result.output };
+          if (state === undefined) {
+            return result;
           }
 
           const updated = await this.repository.saveState({
             id: instance.id,
             visitorKey,
             revision: instance.revision,
-            state: definition.stateSchema.parse(result.state),
+            state: definition.stateSchema.parse(state),
           });
 
-          return updated ? { output: result.output, instance: await this.project(updated) } : null;
+          return updated ? { ...result, instance: await this.project(updated) } : null;
         },
       })),
     };
   }
 
-  async approve(visitorKey: string, input: WorkflowApproval) {
+  async approve(
+    visitorKey: string,
+    input: WorkflowApproval,
+    executeApprovedReview?: (reviewId: string) => Promise<void>,
+  ) {
+    const approval = await this.acceptReview(visitorKey, input);
+
+    if (approval.status !== "accepted") {
+      return approval;
+    }
+
+    await executeApprovedReview?.(approval.reviewId);
+
+    const workflow = await this.getApprovedResult(visitorKey, approval.reviewId);
+
+    if (!workflow) {
+      throw new Error("The approved run could not be restored.");
+    }
+
+    return { status: "accepted", workflow } as const;
+  }
+
+  async acceptReview(visitorKey: string, input: WorkflowApproval) {
     const review = await this.repository.findOwnedReview(input.reviewId, visitorKey);
 
     if (!review) {
@@ -184,9 +224,26 @@ export class WorkflowService {
       steps: action.steps,
     });
 
-    return accepted
-      ? ({ status: "accepted", workflow: await this.getActive(visitorKey) } as const)
-      : ({ status: "conflict" } as const);
+    if (!accepted) {
+      return { status: "conflict" } as const;
+    }
+
+    return { status: "accepted", reviewId: review.id } as const;
+  }
+
+  async getApprovedResult(visitorKey: string, reviewId: string): Promise<ActiveWorkflow | null> {
+    const review = await this.repository.findOwnedReview(reviewId, visitorKey);
+
+    if (
+      review?.status !== "consumed" ||
+      !this.registry.get(review.instance.workflowId, review.version)
+    ) {
+      return null;
+    }
+
+    const run = await this.repository.findRun(review.instanceId, review.id);
+
+    return run ? this.project(review.instance, run) : null;
   }
 
   private resolveDefinition(instance: StoredWorkflow) {
@@ -199,7 +256,10 @@ export class WorkflowService {
     return definition;
   }
 
-  private async project(instance: StoredWorkflow): Promise<ActiveWorkflow> {
+  private async project(
+    instance: StoredWorkflow,
+    savedRun?: Awaited<ReturnType<WorkflowRepository["findRun"]>>,
+  ): Promise<ActiveWorkflow> {
     const definition = this.resolveDefinition(instance);
 
     const base = {
@@ -210,21 +270,46 @@ export class WorkflowService {
       ...definition.getProgress(instance.state),
     };
 
-    const run = await this.repository.findRun(instance.id);
+    const run = savedRun === undefined ? await this.repository.findRun(instance.id) : savedRun;
 
     if (run) {
       const current = run.steps.find(({ status }) => status !== "succeeded");
 
       const now = this.clock();
 
+      const claimExpired = !!current?.claimExpires && current.claimExpires <= now;
+
       const retryPending =
         current?.status === "retry" ||
+        (current?.status === "running" && claimExpired) ||
         (current?.status === "reconciling" &&
-          (!current.claimToken || !current.claimExpires || current.claimExpires <= now));
+          (!current.claimToken || !current.claimExpires || claimExpired));
 
       const completed = run.status === "finished";
 
       const attention = run.status === "attention";
+
+      const uncertain =
+        current?.status === "reconciling" ||
+        (current?.status === "running" && !!current.firstEffect && claimExpired);
+
+      const certainty = current?.outcome;
+
+      const definiteFailure =
+        certainty &&
+        typeof certainty === "object" &&
+        !Array.isArray(certainty) &&
+        certainty.certainty === "failure";
+
+      let outcome: NonNullable<ActiveWorkflow["run"]>["outcome"] = "pending";
+
+      if (completed) {
+        outcome = "success";
+      } else if (attention) {
+        outcome = definiteFailure ? "failure" : "uncertain";
+      } else if (uncertain) {
+        outcome = "uncertain";
+      }
 
       const action = definition.getAction?.(run.review.actionKey);
 
@@ -238,6 +323,7 @@ export class WorkflowService {
         phase: completed ? "completed" : "processing",
         run: {
           status: retryPending ? "retry" : run.status,
+          outcome,
           businessStatus: action?.getStatus(successful),
           steps: run.steps.map(({ key, label, status }) => ({
             key,

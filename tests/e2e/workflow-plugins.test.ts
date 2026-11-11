@@ -152,29 +152,54 @@ test(
 
           await send("Request services");
           await dialog.getByRole("button", { name: /Request services/ }).waitFor();
+          await dialog.getByRole("button", { name: "Discard draft" }).click();
+          await dialog.getByRole("button", { name: "Confirm discard" }).click();
+          await dialog
+            .getByRole("button", { name: /Request services/ })
+            .waitFor({ state: "hidden" });
+          assert.equal(
+            await (await context.request.get(new URL("/api/chat", servicesUrl).href)).json(),
+            null,
+          );
+
+          await send("Request services");
+          await dialog.getByRole("button", { name: /Request services/ }).waitFor();
           await send("Brief: Build a storefront");
           const review = dialog.getByRole("region", { name: "Review request" });
 
           await review.getByText("Build a storefront", { exact: true }).waitFor();
-          await review.getByRole("button", { name: "Submit brief" }).click();
-          await dialog.getByText(/Queued/).waitFor();
-          await dialog.getByRole("button", { name: "Close assistant" }).click();
-          const kicked = await context.request.post(
-            new URL("/api/internal/workflow-runner", servicesUrl).href,
-            {
-              headers: { authorization: `Bearer ${runnerSecret}` },
+          let approvalStatus: number | undefined;
+
+          await page.route(
+            "**/api/workflow/approve",
+            async (route: { fetch(): Promise<{ status(): number }>; abort(): Promise<void> }) => {
+              const response = await route.fetch();
+
+              approvalStatus = response.status();
+              await route.abort();
             },
           );
 
-          assert.equal(kicked.status(), 200);
+          await review.getByRole("button", { name: "Submit brief" }).click();
+          const reply = dialog.getByRole("article").getByText("Brief received.", { exact: true });
+
+          await reply.waitFor();
+          assert.equal(await reply.count(), 1);
+          assert.equal(
+            await dialog.getByRole("article").getByText("Submit brief", { exact: true }).count(),
+            1,
+          );
+          assert.equal(approvalStatus, 200);
+          assert.equal(await review.count(), 0);
           await page.reload();
           await page.getByRole("button", { name: "Open portfolio chat" }).click();
-          await dialog.getByText("Brief received", { exact: true }).waitFor();
+          await dialog.getByRole("heading", { name: "What would you like to know?" }).waitFor();
           const restored = await context.request.get(new URL("/api/chat", servicesUrl).href);
 
           const instance = activeWorkflowSchema.parse(await restored.json());
 
           assert.equal(instance.run?.status, "finished");
+          assert.equal(instance.run?.outcome, "success");
           const row = await db.workflowStep.findFirstOrThrow({
             where: { run: { review: { instanceId: instance.id } } },
           });

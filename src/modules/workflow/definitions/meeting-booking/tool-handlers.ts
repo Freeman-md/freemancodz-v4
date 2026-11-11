@@ -1,5 +1,6 @@
 import { CalendarAvailabilityError } from "@/infrastructure/google-calendar/types";
 import { MEETING_CONFIG } from "@/modules/meeting/config";
+import { getLondonDate, resolveMeetingTime } from "@/modules/meeting/time";
 import type { MeetingAvailability, MeetingSlot } from "@/modules/meeting/types";
 import type { WorkflowToolResult } from "../../types";
 import {
@@ -9,13 +10,6 @@ import {
   selectSlotArgumentsSchema,
   topicArgumentsSchema,
 } from "./schema";
-
-const londonDate = new Intl.DateTimeFormat("sv-SE", {
-  timeZone: MEETING_CONFIG.timezone,
-  year: "numeric",
-  month: "2-digit",
-  day: "2-digit",
-});
 
 const slotLabel = new Intl.DateTimeFormat("en-GB", {
   timeZone: MEETING_CONFIG.timezone,
@@ -55,15 +49,41 @@ export async function findMeetingSlots(
   availability: MeetingAvailability,
   savedState: unknown,
   args: unknown,
+  now = new Date(),
 ): Promise<WorkflowToolResult> {
   const state = meetingStateSchema.parse(savedState);
 
-  const range = findSlotsArgumentsSchema.parse(args);
+  const { startDate, endDate, preferredTime } = findSlotsArgumentsSchema.parse(args);
+
+  const today = getLondonDate(now);
+
+  const requested = preferredTime
+    ? resolveMeetingTime(preferredTime.date, preferredTime.time, preferredTime.timeZone)
+    : null;
+
+  if (preferredTime && !requested) {
+    return {
+      output: {
+        status: "invalid_preferred_time",
+        message: "Ask for an unambiguous time and timezone.",
+      },
+    };
+  }
+
+  const requestedDate = requested && getLondonDate(requested);
+
+  const windowEnd = new Date(Date.parse(today) + 6 * 86_400_000).toISOString().slice(0, 10);
+
+  const range = {
+    startDate: requestedDate ?? startDate ?? today,
+    endDate: requestedDate ?? endDate ?? windowEnd,
+  };
 
   const daysBetween = (Date.parse(range.endDate) - Date.parse(range.startDate)) / 86_400_000;
 
   if (
-    range.startDate < londonDate.format(new Date()) ||
+    range.startDate < today ||
+    (requested && requested <= now) ||
     daysBetween < 0 ||
     daysBetween >= MEETING_CONFIG.maximumRangeDays
   ) {
@@ -76,13 +96,22 @@ export async function findMeetingSlots(
   }
 
   try {
-    const slots = (await availability.findAvailableSlots(range)).slice(0, 4);
+    const available = await availability.findAvailableSlots(range);
+
+    const exact =
+      requested && available.find(({ start }) => Date.parse(start) === requested.getTime());
+
+    const slots = exact ? [exact] : available.slice(0, 4);
+
+    const offered = slots.map((slot) => ({ start: slot.start, label: formatMeetingSlot(slot) }));
 
     return {
       state: { ...state, availableSlots: slots },
+      replyOptions: offered.map(({ label }) => label),
       output: {
         status: slots.length > 0 ? "available" : "no_slots",
-        slots: slots.map((slot) => ({ start: slot.start, label: formatMeetingSlot(slot) })),
+        ...(requested ? { requestedTimeAvailable: Boolean(exact) } : {}),
+        slots: offered,
       },
     };
   } catch (error) {
@@ -90,7 +119,13 @@ export async function findMeetingSlots(
       throw error;
     }
 
-    return { output: { status: "availability_unavailable" } };
+    return {
+      output: {
+        status: "availability_unavailable",
+        message:
+          "Freeman's calendar is temporarily unavailable. Offer to retry later or direct the visitor to Contact.",
+      },
+    };
   }
 }
 
@@ -121,7 +156,13 @@ export async function selectMeetingSlot(
       throw error;
     }
 
-    return { output: { status: "availability_unavailable" } };
+    return {
+      output: {
+        status: "availability_unavailable",
+        message:
+          "Freeman's calendar is temporarily unavailable. Offer to retry later or direct the visitor to Contact.",
+      },
+    };
   }
 
   return {

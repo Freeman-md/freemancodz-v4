@@ -31,6 +31,7 @@ test("workflow start saves only validated initial state", async (t) => {
     ensureReview: async () => null,
     findOwnedReview: async () => null,
     approve: async () => false,
+    discardDraft: async () => false,
   };
 
   const service = new WorkflowService(new WorkflowRegistry([meetingBooking]), repository);

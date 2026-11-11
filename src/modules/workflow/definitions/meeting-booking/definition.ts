@@ -26,14 +26,10 @@ export class MeetingBookingWorkflowDefinition implements IWorkflowDefinition<Mee
 
   readonly stateSchema = meetingStateSchema;
 
-  private readonly findSlotsTool: WorkflowTool;
-
   constructor(
     private readonly availability: MeetingAvailability,
     private readonly booking?: WorkflowAction,
-  ) {
-    this.findSlotsTool = createFindMeetingSlotsTool(availability);
-  }
+  ) {}
 
   createInitialState(): MeetingState {
     return this.stateSchema.parse({});
@@ -67,9 +63,15 @@ export class MeetingBookingWorkflowDefinition implements IWorkflowDefinition<Mee
       selectedSlot ? null : "time",
     ].filter(Boolean);
 
-    return missing.length
-      ? `The meeting request still needs: ${missing.join(", ")}. Ask for the next missing detail or act on the detail the visitor offered. A saved time is a preference.`
-      : "The meeting details are complete. Let the visitor review them or correct a detail.";
+    const progress = missing.length
+      ? `The meeting request still needs: ${missing.join(", ")}. Ask only for missing details.`
+      : "The meeting details are complete. Let the visitor review or correct them.";
+
+    return (
+      progress +
+      " Check availability when asked, even if other details are missing. If no times have been offered, check the next seven days when the visitor leaves the dates to you or time is the last missing detail and they gave no preference." +
+      " Narrow a day-only reply to that day. Use ask_user_choice with exact returned labels when several times match. Select a clearly chosen offered slot directly. For a new exact time, check availability, then select the exact match. Reuse the saved date and time zone for a clock-time-only change when the reference is clear. If the requested time is unavailable, state which time is still saved and offer returned alternatives."
+    );
   }
 
   getReview(savedState: unknown): WorkflowReview | null {
@@ -108,7 +110,7 @@ export class MeetingBookingWorkflowDefinition implements IWorkflowDefinition<Mee
 
     return [
       saveMeetingTopicTool,
-      this.findSlotsTool,
+      createFindMeetingSlotsTool(this.availability),
       ...(availableSlots.length
         ? [createSelectMeetingSlotTool(this.availability, availableSlots)]
         : []),

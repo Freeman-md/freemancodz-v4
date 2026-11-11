@@ -1,8 +1,12 @@
 import type { NextRequest } from "next/server";
 import { createWorkflowApprovalPost } from "./post";
 
-export async function POST(request: NextRequest) {
-  const { workflowService, logger } = await import("@/modules/composition");
+export const maxDuration = 30;
 
-  return createWorkflowApprovalPost(workflowService, logger)(request);
+export async function POST(request: NextRequest) {
+  const { workflowService, workflowRunner, logger } = await import("@/modules/composition");
+
+  return createWorkflowApprovalPost(workflowService, logger, (reviewId, onActivity) =>
+    workflowRunner.runDue(reviewId, onActivity),
+  )(request);
 }

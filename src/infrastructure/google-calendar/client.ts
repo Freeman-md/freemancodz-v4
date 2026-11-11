@@ -12,6 +12,15 @@ import {
 
 const eventPayloadSchema = z.record(z.string(), z.json());
 
+const availabilityFailureSchema = z.object({
+  response: z
+    .object({
+      status: z.number(),
+      data: z.object({ error: z.unknown() }).optional(),
+    })
+    .optional(),
+});
+
 const requestOptions = { timeout: 10_000, retry: false } as const;
 
 export class GoogleCalendarClient implements CalendarClient {
@@ -25,9 +34,17 @@ export class GoogleCalendarClient implements CalendarClient {
     input: { start: Date; end: Date },
     signal?: AbortSignal,
   ): Promise<CalendarBusyPeriod[]> {
-    try {
-      const { calendar, calendarId } = this.getCalendar();
+    let connection: ReturnType<GoogleCalendarClient["getCalendar"]>;
 
+    try {
+      connection = this.getCalendar();
+    } catch (error) {
+      throw new CalendarAvailabilityError(error, "configuration");
+    }
+
+    const { calendar, calendarId } = connection;
+
+    try {
       const response = await withSignal(signal, () =>
         calendar.freebusy.query(
           {
@@ -44,8 +61,12 @@ export class GoogleCalendarClient implements CalendarClient {
       const result = response.data.calendars?.[calendarId];
 
       // A failed or missing Calendar result is not evidence that the time is free.
-      if (!result || result.errors?.length || !Array.isArray(result.busy)) {
-        throw new CalendarAvailabilityError();
+      if (result?.errors?.length) {
+        throw new CalendarAvailabilityError(undefined, "provider");
+      }
+
+      if (!Array.isArray(result?.busy)) {
+        throw new CalendarAvailabilityError(undefined, "invalid_response");
       }
 
       const periods = result.busy;
@@ -56,13 +77,28 @@ export class GoogleCalendarClient implements CalendarClient {
         const end = new Date(period.end ?? "");
 
         if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime()) || end <= start) {
-          throw new CalendarAvailabilityError();
+          throw new CalendarAvailabilityError(undefined, "invalid_response");
         }
 
         return { start, end };
       });
     } catch (error) {
-      throw new CalendarAvailabilityError(error);
+      if (error instanceof CalendarAvailabilityError) {
+        throw error;
+      }
+
+      const response = availabilityFailureSchema.safeParse(error).data?.response;
+
+      if (
+        response?.status === 401 ||
+        response?.status === 403 ||
+        response?.data?.error === "invalid_grant" ||
+        response?.data?.error === "invalid_client"
+      ) {
+        throw new CalendarAvailabilityError(error, "authorization");
+      }
+
+      throw new CalendarAvailabilityError(error, response ? "provider" : "network");
     }
   }
 

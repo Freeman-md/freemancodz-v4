@@ -5,6 +5,11 @@ import { NextRequest } from "next/server";
 import { createWorkflowRunnerPost } from "@/app/api/internal/workflow-runner/post";
 import { CHAT_VISITOR_COOKIE } from "@/app/api/chat/constants";
 import { createWorkflowApprovalPost } from "@/app/api/workflow/approve/post";
+import {
+  activeWorkflowSchema,
+  assistantStreamEventSchema,
+  type AssistantActivity,
+} from "@/contracts/assistant.contract";
 import { createPrismaClient } from "@/infrastructure/database/prisma";
 import {
   CalendarEventError,
@@ -114,6 +119,8 @@ test(
 
     let lostCalendar = false;
 
+    let rejectCalendar = false;
+
     let lostBooking = false;
 
     let failBooking = false;
@@ -135,6 +142,10 @@ test(
       findEvent: async (id) => (hideEvent ? null : (bookedEvents.get(id) ?? null)),
       createEvent: async (input) => {
         inserted.push(input.eventId);
+        if (rejectCalendar) {
+          throw new CalendarEventError(undefined, "terminal");
+        }
+
         assert.equal(
           bookedEvents.has(input.eventId),
           false,
@@ -296,6 +307,7 @@ test(
           const body = { reviewId, expectedRevision };
 
           assert.equal((await workflow.getActive(visitorKey))?.review?.id, reviewId);
+          assert.equal(await workflow.getApprovedResult(visitorKey, reviewId), null);
           assert.equal(
             (await approve(approvalRequest(body, "https://foreign.example"))).status,
             403,
@@ -321,6 +333,12 @@ test(
 
           assert.equal(first.status, 202);
           assert.equal(second.status, 202);
+          assert.equal(await workflow.getApprovedResult("different-visitor", reviewId), null);
+          assert.equal(
+            (await workflow.getApprovedResult(visitorKey, reviewId))?.run?.outcome,
+            "pending",
+          );
+          assert.equal(inserted.length, 0);
           const run = await prisma.workflowRun.findUniqueOrThrow({
             where: { reviewId },
             include: { review: true, steps: { orderBy: { position: "asc" } } },
@@ -458,6 +476,7 @@ test(
             "Booking confirmed",
           );
           assert.equal((await workflow.getActive(second.key))?.run?.status, "attention");
+          assert.equal((await workflow.getActive(second.key))?.run?.outcome, "failure");
           assert.equal(
             [...bookedEvents.values()].filter((event) =>
               JSON.stringify(event.payload).includes(thirdSlot.start),
@@ -486,6 +505,7 @@ test(
 
           const first = await step();
 
+          assert.equal((await workflow.getActive(booking.key))?.run?.outcome, "uncertain");
           assert.equal(first.attempts, 1);
           assert.equal(first.probes, 1);
           assert.equal(first.nextAt.getTime(), now + 60_000);
@@ -540,6 +560,7 @@ test(
         const waiting = (await workflow.getActive(booking.key))?.run;
 
         assert.equal(waiting?.status, "retry");
+        assert.equal(waiting?.outcome, "uncertain");
         assert.equal(waiting?.steps[0].status, "retry");
         advance(255_000);
         await runner().runDue();
@@ -555,14 +576,38 @@ test(
           rejectNotice = true;
           const eventsBefore = inserted.length;
 
-          await runner().runDue();
+          const activities: AssistantActivity[] = [];
+
+          const report = (event: AssistantActivity) => activities.push(event);
+
+          await runner().runDue(booking.reviewId, report);
+          assert.ok(
+            activities.some(
+              ({ label, status }) =>
+                label === "Saving booking details" && status === "retry_scheduled",
+            ),
+          );
           assert.equal((await workflow.getActive(booking.key))?.run?.status, "retry");
+          assert.equal((await workflow.getActive(booking.key))?.run?.outcome, "pending");
           advance(60_000);
-          await runner().runDue();
+          await runner().runDue(booking.reviewId, report);
+          assert.deepEqual(
+            activities
+              .filter(({ status }) => status === "started" || status === "retrying")
+              .map(({ label }) => label),
+            [
+              "Creating meeting",
+              "Saving booking details",
+              "Saving booking details",
+              "Sending notification",
+            ],
+          );
+          assert.equal(activities.at(-1)?.status, "failed");
           const visible = await workflow.getActive(booking.key);
 
           assert.equal(visible?.run?.businessStatus, "Booking confirmed");
           assert.equal(visible?.run?.status, "attention");
+          assert.equal(visible?.run?.outcome, "failure");
           assert.equal(inserted.length, eventsBefore + 1);
           rejectNotice = false;
         },
@@ -591,6 +636,7 @@ test(
           const visible = await workflow.getActive(booking.key);
 
           assert.equal(visible?.run?.status, "attention");
+          assert.equal(visible?.run?.outcome, "uncertain");
           assert.equal(visible?.run?.businessStatus, "Booking confirmed");
         },
       );
@@ -630,9 +676,193 @@ test(
 
         await runner().runDue();
         assert.equal((await workflow.getActive(booking.key))?.run?.status, "attention");
+        assert.equal((await workflow.getActive(booking.key))?.run?.outcome, "uncertain");
         assert.equal(savedMeetings.length, before);
         mismatch = false;
       });
+
+      await t.test(
+        "approval reports a definite Calendar rejection and handles legacy outcomes",
+        async () => {
+          const token = randomBytes(32).toString("hex");
+
+          const key = createHash("sha256").update(token).digest("hex");
+
+          const { reviewId, expectedRevision } = await ready(key, {
+            ...slot,
+            start: "2098-06-24T11:00:00.000Z",
+            end: "2098-06-24T11:30:00.000Z",
+          });
+
+          const confirm = createWorkflowApprovalPost(workflow, logger, (id) => runner().runDue(id));
+
+          rejectCalendar = true;
+          const response = await confirm(
+            approvalRequest({ reviewId, expectedRevision }, undefined, token),
+          );
+
+          rejectCalendar = false;
+
+          assert.equal(response.status, 200);
+          const result = activeWorkflowSchema.parse(await response.json());
+
+          assert.equal(result.run?.outcome, "failure");
+          assert.equal(result.run?.businessStatus, undefined);
+
+          await prisma.workflowStep.updateMany({
+            where: { run: { reviewId }, key: "calendar" },
+            data: { outcome: {} },
+          });
+          assert.equal((await workflow.getActive(key))?.run?.outcome, "uncertain");
+        },
+      );
+
+      await t.test(
+        "the worker resumes the original event after the approval process stops",
+        async () => {
+          const token = randomBytes(32).toString("hex");
+
+          const key = createHash("sha256").update(token).digest("hex");
+
+          const { instance, reviewId, expectedRevision } = await ready(key, {
+            ...slot,
+            start: "2098-06-25T11:00:00.000Z",
+            end: "2098-06-25T11:30:00.000Z",
+          });
+
+          const interrupted = new WorkflowRunRepository(prisma);
+
+          const release = Promise.withResolvers<void>();
+
+          const stopped = Promise.withResolvers<void>();
+
+          t.mock.method(interrupted, "settle", async () => {
+            await release.promise;
+            throw new Error("Execution stopped after writing to Calendar");
+          });
+          const firstAttempt = new WorkflowRunner(registry, interrupted, logger, clock);
+
+          const confirm = createWorkflowApprovalPost(workflow, logger, async (id, onActivity) => {
+            try {
+              return await firstAttempt.runDue(id, onActivity);
+            } finally {
+              stopped.resolve();
+            }
+          });
+
+          const before = inserted.length;
+
+          const request = approvalRequest({ reviewId, expectedRevision }, undefined, token);
+
+          request.headers.set("accept", "application/x-ndjson");
+
+          const response = await confirm(request);
+
+          assert.equal(response.status, 200);
+          assert.ok(response.body);
+          const reader = response.body.getReader();
+
+          try {
+            const first = await reader.read();
+
+            assert.deepEqual(
+              assistantStreamEventSchema.parse(JSON.parse(new TextDecoder().decode(first.value))),
+              {
+                type: "activity",
+                label: "Creating meeting",
+                status: "started",
+              },
+            );
+            const cancellation = reader.cancel();
+
+            release.resolve();
+            await cancellation;
+          } finally {
+            release.resolve();
+          }
+
+          await stopped.promise;
+          assert.equal((await workflow.getActive(key))?.run?.outcome, "pending");
+          const original = await prisma.workflowRun.findUniqueOrThrow({ where: { reviewId } });
+
+          const eventId = inserted.at(-1);
+
+          assert.ok(eventId && bookedEvents.has(eventId));
+          advance(46_000);
+          assert.equal((await workflow.getActive(key))?.run?.outcome, "uncertain");
+
+          const secret = "disposable-test-secret-32-characters";
+
+          const worker = createWorkflowRunnerPost(() => secret, runner(), logger);
+
+          const recovery = await worker(
+            new Request("http://localhost/api/internal/workflow-runner", {
+              method: "POST",
+              headers: { authorization: `Bearer ${secret}` },
+            }),
+          );
+
+          assert.equal(recovery.status, 200);
+          const restored = await workflow.getActive(key);
+
+          assert.equal(restored?.id, instance.id);
+          assert.equal(restored?.run?.outcome, "success");
+          assert.equal(restored?.run?.businessStatus, "Booking confirmed");
+          assert.equal(
+            (await prisma.workflowRun.findUniqueOrThrow({ where: { reviewId } })).id,
+            original.id,
+          );
+          assert.equal(inserted.length, before + 1);
+          assert.equal((await store.findMeetingByGoogleEventId(eventId))?.status, "confirmed");
+        },
+      );
+
+      await t.test(
+        "duplicate approvals execute only their review with the scheduler off",
+        async () => {
+          const unrelated = await enqueue({
+            ...slot,
+            start: "2098-06-26T11:00:00.000Z",
+            end: "2098-06-26T11:30:00.000Z",
+          });
+
+          const token = randomBytes(32).toString("hex");
+
+          const key = createHash("sha256").update(token).digest("hex");
+
+          const { instance, reviewId, expectedRevision } = await ready(key, {
+            ...slot,
+            start: "2098-06-27T11:00:00.000Z",
+            end: "2098-06-27T11:30:00.000Z",
+          });
+
+          const confirm = createWorkflowApprovalPost(workflow, logger, (id) => runner().runDue(id));
+
+          const submit = () =>
+            confirm(approvalRequest({ reviewId, expectedRevision }, undefined, token));
+
+          const before = inserted.length;
+
+          const responses = await Promise.all([submit(), submit()]);
+
+          assert.ok(responses.every((response) => response.ok));
+          assert.ok(responses.some((response) => response.status === 200));
+          assert.equal((await workflow.getActive(key))?.run?.outcome, "success");
+          assert.equal(await prisma.workflowRun.count({ where: { reviewId } }), 1);
+          assert.equal(inserted.length, before + 1);
+          assert.equal((await workflow.getActive(unrelated.key))?.run?.status, "queued");
+
+          await ready(key, secondSlot);
+          const replay = await submit();
+
+          assert.equal(replay.status, 200);
+          const saved = activeWorkflowSchema.parse(await replay.json());
+
+          assert.equal(saved.id, instance.id);
+          assert.equal(saved.run?.businessStatus, "Booking confirmed");
+          assert.equal(inserted.length, before + 1);
+        },
+      );
     } finally {
       const instances = await prisma.workflowInstance.findMany({
         where: { visitorKey: { in: [...visitors] } },

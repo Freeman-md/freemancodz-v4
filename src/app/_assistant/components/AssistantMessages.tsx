@@ -18,6 +18,7 @@ const ASSISTANT_STARTER_ACTIONS = [
 export type StarterAction = (typeof ASSISTANT_STARTER_ACTIONS)[number];
 
 type AssistantMessagesProps = {
+  activityLabel?: string | null;
   children?: ReactNode;
   className?: string;
   isLoading: boolean;
@@ -30,6 +31,7 @@ type AssistantMessagesProps = {
 };
 
 export function AssistantMessages({
+  activityLabel,
   children,
   className,
   isLoading,
@@ -40,6 +42,10 @@ export function AssistantMessages({
   onStarterAction,
   onInternalSource,
 }: AssistantMessagesProps) {
+  const pendingReplyId = isLoading ? messages.at(-1)?.id : undefined;
+
+  const pendingLabel = activityLabel ? `${activityLabel}…` : "Thinking…";
+
   return (
     <ScrollArea
       className={cn("assistant-messages min-h-0 flex-1 overscroll-contain bg-[#fbfbfa]", className)}
@@ -82,10 +88,8 @@ export function AssistantMessages({
         <AnimatePresence initial={false}>
           {messages
             .filter(
-              (message, index) =>
-                message.content ||
-                message.sources?.length ||
-                (isLoading && index === messages.length - 1),
+              (message) =>
+                message.content || message.sources?.length || message.id === pendingReplyId,
             )
             .map((message) => (
               <motion.article
@@ -116,8 +120,20 @@ export function AssistantMessages({
                 <div className="whitespace-pre-wrap text-base/6">
                   {message.content ? (
                     <AssistantMarkdown content={message.content} />
-                  ) : message.role === "assistant" && isLoading && !message.error ? (
-                    "Thinking…"
+                  ) : message.role === "assistant" &&
+                    message.id === pendingReplyId &&
+                    !message.error ? (
+                    <span role="status">
+                      <motion.span
+                        key={pendingLabel}
+                        initial={shouldReduceMotion ? false : { opacity: 0.75, y: 2 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.18, ease: "easeOut" }}
+                        className="inline-block"
+                      >
+                        {pendingLabel}
+                      </motion.span>
+                    </span>
                   ) : null}
                 </div>
 

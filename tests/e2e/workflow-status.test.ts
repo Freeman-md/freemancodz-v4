@@ -3,13 +3,14 @@ import { createHash, randomUUID } from "node:crypto";
 import test from "node:test";
 import { createPrismaClient } from "@/infrastructure/database/prisma";
 import { CHAT_VISITOR_COOKIE } from "@/app/api/chat/constants";
+import { activeWorkflowSchema } from "@/contracts/assistant.contract";
 
 const workflowUrl = process.env.WORKFLOW_E2E_URL;
 
 const databaseUrl = process.env.WORKFLOW_TEST_DATABASE_URL;
 
 test(
-  "the booking remains visibly confirmed through notice retry and operator attention",
+  "notice recovery remains available after reopen without reviving an old activity indicator",
   {
     skip:
       !(workflowUrl && databaseUrl) &&
@@ -118,17 +119,15 @@ test(
 
       const dialog = page.getByRole("dialog");
 
-      const progress = dialog.getByRole("button", { name: /Book a meeting/ });
+      const chatUrl = new URL("/api/chat", workflowUrl).href;
 
       await open.click();
-      await progress.getByText(/Retry pending/).waitFor();
-      await dialog.getByText("Booking confirmed", { exact: true }).waitFor();
-      await progress.click();
-      await dialog
-        .getByRole("list", { name: "Execution steps" })
-        .getByText("Notify owner", { exact: true })
-        .waitFor();
-      await page.screenshot({ path: "/tmp/m28-notice-retry.png" });
+      await dialog.getByRole("heading", { name: "What would you like to know?" }).waitFor();
+      const pending = activeWorkflowSchema.parse(await (await context.request.get(chatUrl)).json());
+
+      assert.equal(pending.run?.status, "retry");
+      assert.equal(pending.run?.businessStatus, "Booking confirmed");
+      assert.equal(await dialog.getByRole("status").count(), 0);
       await dialog.getByRole("button", { name: "Close assistant" }).click();
       await dialog.waitFor({ state: "hidden" });
 
@@ -141,9 +140,14 @@ test(
       ]);
 
       await open.click();
-      await progress.getByText(/Needs attention/).waitFor();
-      await dialog.getByText("Booking confirmed", { exact: true }).waitFor();
-      await page.screenshot({ path: "/tmp/m28-notice-attention.png" });
+      await dialog.getByRole("heading", { name: "What would you like to know?" }).waitFor();
+      const restored = activeWorkflowSchema.parse(
+        await (await context.request.get(chatUrl)).json(),
+      );
+
+      assert.equal(restored.run?.status, "attention");
+      assert.equal(restored.run?.businessStatus, "Booking confirmed");
+      assert.equal(await dialog.getByRole("status").count(), 0);
       await context.close();
     } finally {
       await db.workflowStep.deleteMany({ where: { runId: run.id } });

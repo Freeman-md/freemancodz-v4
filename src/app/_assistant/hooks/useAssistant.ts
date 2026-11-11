@@ -4,10 +4,14 @@ import { useCallback, useRef, useState } from "react";
 import {
   MAX_MESSAGE_LENGTH,
   type ActiveWorkflow,
+  type AssistantActivity,
   type AssistantSource,
+  type WorkflowObservation,
 } from "@/contracts/assistant.contract";
 import { approveWorkflow } from "../api/approve-workflow";
+import { discardWorkflow } from "../api/discard-workflow";
 import { fetchActiveWorkflow } from "../api/fetch-active-workflow";
+import { fetchWorkflowResult } from "../api/fetch-workflow-result";
 import { streamAssistant } from "../api/stream-assistant-response";
 import type { ChatMessage } from "../types";
 
@@ -16,10 +20,57 @@ const EMPTY_DRAFT: { text: string; subject: string | null } = {
   subject: null,
 };
 
+function savedResultText(workflow: ActiveWorkflow | null) {
+  const run = workflow?.run;
+
+  if (run?.businessStatus) {
+    const time = workflow?.details.find(({ key }) => key === "time")?.value;
+
+    return time ? `${run.businessStatus} for ${time}.` : `${run.businessStatus}.`;
+  }
+
+  switch (run?.outcome) {
+    case "success":
+      return "Your request is complete.";
+    case "pending":
+      return "Your request is saved and still waiting to finish.";
+    case "failure":
+      return "I couldn’t complete the request. Contact Freeman for help.";
+    case "uncertain":
+      return "I can’t verify the outcome yet. Check the saved workflow status before trying again.";
+    default:
+      return "I couldn’t verify the confirmation. Check the saved workflow before trying again.";
+  }
+}
+
 export function useAssistant() {
   const [draft, setDraft] = useState(EMPTY_DRAFT);
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+
+  const [activityLabel, setActivityLabel] = useState<string | null>(null);
+
+  function recordActivity({ label, status }: AssistantActivity) {
+    switch (status) {
+      case "started":
+        setActivityLabel(label);
+        break;
+      case "retrying":
+        setActivityLabel("Retrying");
+        break;
+      case "checking":
+        setActivityLabel("Checking outcome");
+        break;
+      case "retry_scheduled":
+        setActivityLabel("Waiting to retry");
+        break;
+      case "check_scheduled":
+        setActivityLabel("Waiting to check the outcome");
+        break;
+      default:
+        setActivityLabel(null);
+    }
+  }
 
   const [isLoading, setIsLoading] = useState(false);
 
@@ -29,11 +80,23 @@ export function useAssistant() {
 
   const [workflowRestoreFailed, setWorkflowRestoreFailed] = useState(false);
 
-  const [approvalError, setApprovalError] = useState<string | null>(null);
-
   const [isApproving, setIsApproving] = useState(false);
 
-  const approvalInProgress = useRef(false);
+  const workflowUpdateInProgress = useRef(false);
+
+  const [discardTarget, setDiscardTarget] = useState<WorkflowObservation | null>(null);
+
+  const [discardError, setDiscardError] = useState<string | null>(null);
+
+  const [isDiscarding, setIsDiscarding] = useState(false);
+
+  const discardConfirmation =
+    workflow &&
+    !workflow.run &&
+    workflow.id === discardTarget?.id &&
+    workflow.revision === discardTarget.revision
+      ? discardTarget
+      : null;
 
   const workflowRestore = useRef<AbortController | null>(null);
 
@@ -47,7 +110,7 @@ export function useAssistant() {
     workflowRestore.current?.abort();
     workflowRestore.current = controller;
 
-    void fetchActiveWorkflow(controller.signal)
+    return fetchActiveWorkflow(controller.signal)
       .then((instance) => {
         if (!controller.signal.aborted) {
           setWorkflow(instance);
@@ -59,8 +122,6 @@ export function useAssistant() {
           setWorkflowRestoreFailed(true);
         }
       });
-
-    return () => controller.abort();
   }, []);
 
   const previousResponseId = useRef<string | null>(null);
@@ -73,7 +134,8 @@ export function useAssistant() {
 
   const text = draft.text.trim();
 
-  const canSubmit = !isLoading && text.length > 0 && text.length <= maxLength;
+  const canSubmit =
+    !isLoading && !isApproving && !isDiscarding && text.length > 0 && text.length <= maxLength;
 
   function setInput(text: string) {
     setDraft((current) => ({ ...current, text }));
@@ -82,12 +144,18 @@ export function useAssistant() {
   async function submitMessage(rawMessage: string) {
     const message = rawMessage.trim();
 
-    if (!message || message.length > MAX_MESSAGE_LENGTH || submissionInProgress.current) {
+    if (
+      !message ||
+      message.length > MAX_MESSAGE_LENGTH ||
+      submissionInProgress.current ||
+      workflowUpdateInProgress.current
+    ) {
       return;
     }
 
     submissionInProgress.current = true;
     setIsLoading(true);
+    setActivityLabel(null);
     setDraft(EMPTY_DRAFT);
     setReplyOptions([]);
 
@@ -120,6 +188,9 @@ export function useAssistant() {
         observedWorkflow: workflow ? { id: workflow.id, revision: workflow.revision } : undefined,
       })) {
         switch (event.type) {
+          case "activity":
+            recordActivity(event);
+            break;
           case "delta":
             updateReply((reply) => ({ ...reply, content: reply.content + event.delta }));
             break;
@@ -136,6 +207,11 @@ export function useAssistant() {
             workflowRestore.current?.abort();
             setWorkflow(event.instance);
             setWorkflowRestoreFailed(false);
+            break;
+
+          case "confirm_workflow_discard":
+            setDiscardError(null);
+            setDiscardTarget(event.draft);
             break;
 
           case "response_id":
@@ -171,31 +247,111 @@ export function useAssistant() {
   }
 
   async function confirmReview() {
-    if (!workflow?.review || approvalInProgress.current) {return;}
+    if (!workflow?.review || workflowUpdateInProgress.current || submissionInProgress.current) {
+      return;
+    }
 
-    approvalInProgress.current = true;
+    workflowUpdateInProgress.current = true;
     cancelWorkflowRestore();
     setIsApproving(true);
-    setApprovalError(null);
+    setActivityLabel(null);
+    setReplyOptions([]);
+
+    const { id: reviewId, label } = workflow.review;
+
+    const turnId = crypto.randomUUID();
+
+    const replyId = `${turnId}-assistant`;
+
+    setMessages((current) => [
+      ...current,
+      { id: `${turnId}-user`, role: "user", content: label },
+      { id: replyId, role: "assistant", content: "" },
+    ]);
+
+    function showResult(content: string) {
+      setMessages((current) =>
+        current.map((message) => (message.id === replyId ? { ...message, content } : message)),
+      );
+    }
 
     try {
-      const result = await approveWorkflow({
-        reviewId: workflow.review.id,
-        expectedRevision: workflow.revision,
-      });
+      const approval = await approveWorkflow(
+        {
+          reviewId,
+          expectedRevision: workflow.revision,
+        },
+        recordActivity,
+      ).catch(() => null);
 
-      if (result.status === "accepted") {
-        setWorkflow(result.workflow);
-      } else {
-        setApprovalError("The review changed. Check the latest details.");
-        restoreWorkflow();
+      if (approval?.status === "conflict") {
+        setWorkflow(null);
+        await restoreWorkflow();
+        showResult("The review changed. Check the latest details before confirming.");
+
+        return;
       }
-    } catch {
-      setApprovalError("Could not confirm the request. Check its saved progress.");
-      restoreWorkflow();
+
+      const result = await fetchWorkflowResult({
+        reviewId,
+        previousResponseId: previousResponseId.current,
+      }).catch(() => null);
+
+      const saved = result?.workflow ?? approval?.workflow ?? null;
+
+      if (saved) {
+        cancelWorkflowRestore();
+        setWorkflow(saved);
+        setWorkflowRestoreFailed(false);
+      } else {
+        setWorkflow(null);
+        await restoreWorkflow();
+      }
+
+      if (result?.reply) {
+        previousResponseId.current = result.reply.responseId;
+      }
+
+      showResult(result?.reply?.text ?? savedResultText(saved));
     } finally {
-      approvalInProgress.current = false;
+      workflowUpdateInProgress.current = false;
       setIsApproving(false);
+    }
+  }
+
+  function requestDiscard() {
+    if (workflow?.status === "active" && !workflow.run) {
+      setDiscardError(null);
+      setDiscardTarget({ id: workflow.id, revision: workflow.revision });
+    }
+  }
+
+  async function confirmDiscard() {
+    if (!discardConfirmation || workflowUpdateInProgress.current || submissionInProgress.current) {
+      return;
+    }
+
+    workflowUpdateInProgress.current = true;
+    cancelWorkflowRestore();
+    setIsDiscarding(true);
+    setDiscardError(null);
+
+    try {
+      if (await discardWorkflow(discardConfirmation)) {
+        setWorkflow(null);
+        previousResponseId.current = null;
+        setReplyOptions([]);
+      } else {
+        setDiscardError("The draft changed. Check the latest details.");
+      }
+
+      setDiscardTarget(null);
+      restoreWorkflow();
+    } catch {
+      setDiscardError("Could not discard the draft. Try again.");
+    } finally {
+      workflowUpdateInProgress.current = false;
+      setIsDiscarding(false);
     }
   }
 
@@ -212,6 +368,7 @@ export function useAssistant() {
     maxLength,
     canSubmit,
     messages,
+    activityLabel,
     isLoading,
     replyOptions,
     workflow,
@@ -219,8 +376,13 @@ export function useAssistant() {
     restoreWorkflow,
     cancelWorkflowRestore,
     confirmReview,
-    approvalError,
     isApproving,
+    requestDiscard,
+    confirmDiscard,
+    discardConfirmation,
+    keepDraft: () => setDiscardTarget(null),
+    discardError,
+    isDiscarding,
     submitDraft,
     submitMessage,
   };

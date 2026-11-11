@@ -1,7 +1,7 @@
 import "server-only";
 
 import { randomUUID } from "node:crypto";
-import type { Prisma, PrismaClient, WorkflowStep } from "@/generated/prisma/client";
+import { Prisma, type PrismaClient, type WorkflowStep } from "@/generated/prisma/client";
 
 const CLAIM_MS = 45_000;
 
@@ -12,7 +12,9 @@ export const WORKFLOW_BACKOFF_MS = [60_000, 300_000] as const;
 export class WorkflowRunRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
-  claim(now: Date) {
+  claim(now: Date, reviewId?: string) {
+    const reviewFilter = reviewId ? Prisma.sql`AND r.review_id = ${reviewId}::uuid` : Prisma.empty;
+
     return this.prisma.$transaction(async (tx) => {
       const [candidate] = await tx.$queryRaw<WorkflowStep[]>`
         SELECT s.id, s.status, s.attempts, s.probes, s.run_id AS "runId",
@@ -20,6 +22,7 @@ export class WorkflowRunRepository {
         FROM workflow_steps s
         JOIN workflow_runs r ON r.id = s.run_id
         WHERE r.status IN ('queued', 'running')
+          ${reviewFilter}
           AND ((s.status IN ('queued', 'retry', 'reconciling') AND s.claim_token IS NULL AND s.next_at <= ${now})
             OR (s.status = 'running' AND s.claim_expires <= ${now})
             OR (s.status = 'reconciling' AND s.claim_expires <= ${now} AND s.next_at <= ${now}))
@@ -46,11 +49,12 @@ export class WorkflowRunRepository {
             claimToken: null,
             claimExpires: null,
             reason: "attempts_exhausted",
+            outcome: { certainty: reconcile ? "uncertain" : "failure" },
           },
         });
         await finishRun(tx, candidate.runId, "attention", now);
 
-        return { status: "exhausted" } as const;
+        return { status: "exhausted", uncertain: reconcile } as const;
       }
 
       await tx.workflowRun.update({ where: { id: candidate.runId }, data: { status: "running" } });

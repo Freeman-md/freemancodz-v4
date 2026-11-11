@@ -1,51 +1,67 @@
 "use client";
 
 import type { ActiveWorkflow } from "@/contracts/assistant.contract";
+import { Button } from "@/app/_components/ui/Button";
 
 export function AssistantWorkflowConfirmation({
-  review,
-  pending,
+  title,
+  rows,
+  confirmLabel,
+  declineLabel,
+  destructive,
+  disabled,
   error,
   onConfirm,
-  onChange,
+  onDecline,
 }: {
-  review: NonNullable<ActiveWorkflow["review"]>;
-  pending: boolean;
-  error: string | null;
+  title: string;
+  rows?: NonNullable<ActiveWorkflow["review"]>["rows"];
+  confirmLabel: string;
+  declineLabel: string;
+  destructive?: boolean;
+  disabled: boolean;
+  error?: string | null;
   onConfirm: () => void;
-  onChange: () => void;
+  onDecline: () => void;
 }) {
   return (
     <section
-      aria-label="Review request"
-      className="shrink-0 border-b border-emerald-950/10 px-4 py-3 text-sm sm:px-6"
+      aria-label={title}
+      className="shrink-0 border-t border-[var(--assistant-line)] px-4 py-3 text-sm sm:px-6"
     >
-      <h2 className="font-medium">Review request</h2>
-      <dl className="mt-2 grid max-h-[22dvh] grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-1 overflow-y-auto">
-        {review.rows.map(({ key, label, value }) => (
-          <div key={key} className="contents">
-            <dt className="font-medium">{label}</dt>
-            <dd className="break-words">{value}</dd>
-          </div>
-        ))}
-      </dl>
+      <h2 className="font-medium">{title}</h2>
+      {rows && (
+        <dl className="mt-2 grid max-h-[22dvh] grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-1 overflow-y-auto">
+          {rows.map(({ key, label, value }) => (
+            <div key={key} className="contents">
+              <dt className="font-medium">{label}</dt>
+              <dd className="break-words">{value}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
       <div className="mt-3 flex flex-wrap items-center gap-2">
-        <button
-          className="assistant-control min-h-11 px-3"
+        <Button
+          variant={destructive ? "destructive" : "primary"}
+          size="md"
+          className={destructive ? undefined : "text-slate-950"}
           type="button"
           onClick={onConfirm}
-          disabled={pending}
+          disabled={disabled}
         >
-          {pending ? "Confirming…" : review.label}
-        </button>
-        <button
-          className="assistant-control min-h-11 px-3"
+          {confirmLabel}
+        </Button>
+        <Button
+          variant="ghost"
+          className="hover:bg-[var(--home-chip)]"
+          size="md"
           type="button"
-          onClick={onChange}
-          disabled={pending}
+          autoFocus={destructive}
+          onClick={onDecline}
+          disabled={disabled}
         >
-          Request changes
-        </button>
+          {declineLabel}
+        </Button>
       </div>
       {error && (
         <p className="mt-2" role="status">

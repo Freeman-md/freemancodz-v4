@@ -65,6 +65,7 @@ export const activeWorkflowSchema = workflowObservationSchema.extend({
   run: z
     .strictObject({
       status: z.enum(["queued", "running", "retry", "finished", "attention"]),
+      outcome: z.enum(["success", "failure", "pending", "uncertain"]),
       businessStatus: z.string().optional(),
       steps: z.array(
         z.strictObject({
@@ -87,13 +88,51 @@ export const activeWorkflowSchema = workflowObservationSchema.extend({
 
 export type ActiveWorkflow = z.infer<typeof activeWorkflowSchema>;
 
+export const workflowResultRequestSchema = z.strictObject({
+  reviewId: z.uuid(),
+  previousResponseId: z.string().nullable().optional().transform(normalizePreviousResponseId),
+});
+
+export const chatRequestSchema = z.union([assistantRequestSchema, workflowResultRequestSchema]);
+
+export const workflowResultResponseSchema = z.strictObject({
+  workflow: activeWorkflowSchema,
+  reply: z.strictObject({ text: z.string().min(1), responseId: z.string().min(1) }).optional(),
+});
+
+export type ChatRequest = z.infer<typeof chatRequestSchema>;
+export type WorkflowResultRequest = z.infer<typeof workflowResultRequestSchema>;
+export type WorkflowResultResponse = z.infer<typeof workflowResultResponseSchema>;
+
+export const assistantActivitySchema = z.strictObject({
+  type: z.literal("activity"),
+  label: z.string().min(1).max(120),
+  status: z.enum([
+    "started",
+    "finished",
+    "retrying",
+    "retry_scheduled",
+    "checking",
+    "check_scheduled",
+    "failed",
+    "uncertain",
+  ]),
+});
+
+export type AssistantActivity = z.infer<typeof assistantActivitySchema>;
+
 export const assistantStreamEventSchema = z.discriminatedUnion("type", [
+  assistantActivitySchema,
   z.object({ type: z.literal("delta"), delta: z.string() }).strict(),
   z.object({ type: z.literal("options"), options: assistantReplyOptionsSchema }).strict(),
   z.object({ type: z.literal("sources"), sources: z.array(sourceSchema) }).strict(),
   z.strictObject({
     type: z.literal("workflow_instance"),
     instance: activeWorkflowSchema,
+  }),
+  z.strictObject({
+    type: z.literal("confirm_workflow_discard"),
+    draft: workflowObservationSchema,
   }),
   z.object({ type: z.literal("response_id"), responseId: z.string() }).strict(),
   z.object({ type: z.literal("done") }).strict(),
