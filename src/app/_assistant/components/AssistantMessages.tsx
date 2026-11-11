@@ -44,6 +44,8 @@ export function AssistantMessages({
 }: AssistantMessagesProps) {
   const pendingReplyId = isLoading ? messages.at(-1)?.id : undefined;
 
+  const pendingLabel = activityLabel ? `${activityLabel}…` : "Thinking…";
+
   return (
     <ScrollArea
       className={cn("assistant-messages min-h-0 flex-1 overscroll-contain bg-[#fbfbfa]", className)}
@@ -121,7 +123,17 @@ export function AssistantMessages({
                   ) : message.role === "assistant" &&
                     message.id === pendingReplyId &&
                     !message.error ? (
-                    <span role="status">{activityLabel ? `${activityLabel}…` : "Thinking…"}</span>
+                    <span role="status">
+                      <motion.span
+                        key={pendingLabel}
+                        initial={shouldReduceMotion ? false : { opacity: 0.75, y: 2 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.18, ease: "easeOut" }}
+                        className="inline-block"
+                      >
+                        {pendingLabel}
+                      </motion.span>
+                    </span>
                   ) : null}
                 </div>
 
