@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import test from "node:test";
 import { createPrismaClient } from "@/infrastructure/database/prisma";
 import { CHAT_VISITOR_COOKIE } from "@/app/api/chat/constants";
@@ -103,7 +103,9 @@ test(
               key: "owner-notice",
               position: 2,
               label: "Notify owner",
-              status: "retry",
+              status: "reconciling",
+              claimToken: randomUUID(),
+              claimExpires: new Date(Date.now() - 1000),
               nextAt: new Date("2099-06-15T11:00:00.000Z"),
             },
           ],
@@ -133,7 +135,7 @@ test(
       await db.$transaction([
         db.workflowStep.update({
           where: { runId_key: { runId: run.id, key: "owner-notice" } },
-          data: { status: "attention" },
+          data: { status: "attention", claimToken: null, claimExpires: null },
         }),
         db.workflowRun.update({ where: { id: run.id }, data: { status: "attention" } }),
       ]);

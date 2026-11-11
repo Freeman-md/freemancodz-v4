@@ -33,6 +33,7 @@ export class WorkflowService {
       | "findOwnedReview"
       | "approve"
     >,
+    private readonly clock: () => Date = () => new Date(),
   ) {}
 
   listAvailable() {
@@ -214,6 +215,13 @@ export class WorkflowService {
     if (run) {
       const current = run.steps.find(({ status }) => status !== "succeeded");
 
+      const now = this.clock();
+
+      const retryPending =
+        current?.status === "retry" ||
+        (current?.status === "reconciling" &&
+          (!current.claimToken || !current.claimExpires || current.claimExpires <= now));
+
       const completed = run.status === "finished";
 
       const attention = run.status === "attention";
@@ -229,13 +237,13 @@ export class WorkflowService {
         status: completed ? "completed" : attention ? "attention" : "active",
         phase: completed ? "completed" : "processing",
         run: {
-          status:
-            current?.status === "retry" ||
-            (current?.status === "reconciling" && !current.claimToken)
-              ? "retry"
-              : run.status,
+          status: retryPending ? "retry" : run.status,
           businessStatus: action?.getStatus(successful),
-          steps: run.steps.map(({ key, label, status }) => ({ key, label, status })),
+          steps: run.steps.map(({ key, label, status }) => ({
+            key,
+            label,
+            status: key === current?.key && retryPending ? "retry" : status,
+          })),
         },
       });
     }

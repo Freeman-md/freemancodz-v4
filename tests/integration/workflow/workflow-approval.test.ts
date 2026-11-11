@@ -236,7 +236,7 @@ test(
 
     const registry = new WorkflowRegistry([definition]);
 
-    const workflow = new WorkflowService(registry, repository);
+    const workflow = new WorkflowService(registry, repository, clock);
 
     const runner = (batchSize?: number) =>
       new WorkflowRunner(registry, runRepository, logger, clock, batchSize);
@@ -530,9 +530,17 @@ test(
         assert.ok(second?.status === "claimed" && second.reconcile);
         assert.equal(second.step.probes, 2);
         assert.equal(second.step.id, first.step.id);
+        const live = (await workflow.getActive(booking.key))?.run;
+
+        assert.equal(live?.status, "running");
+        assert.equal(live?.steps[0].status, "reconciling");
 
         advance(45_000);
         assert.equal(await runRepository.claim(clock()), null);
+        const waiting = (await workflow.getActive(booking.key))?.run;
+
+        assert.equal(waiting?.status, "retry");
+        assert.equal(waiting?.steps[0].status, "retry");
         advance(255_000);
         await runner().runDue();
         assert.equal((await workflow.getActive(booking.key))?.run?.status, "finished");
