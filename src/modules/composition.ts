@@ -25,6 +25,10 @@ import { PrismaPortfolioSeedRepository } from "./portfolio/repositories/portfoli
 import { PortfolioSeedService } from "./portfolio/seed.service";
 import { RateLimitRepository } from "./rate-limit/repository";
 import { RateLimitService } from "./rate-limit/service";
+import { meetingBooking } from "./workflow/definitions/meeting-booking/definition";
+import { WorkflowRegistry } from "./workflow/registry";
+import { WorkflowRepository } from "./workflow/repository";
+import { WorkflowService } from "./workflow/service";
 
 // Shared infrastructure
 const openAIProvider = new OpenAIClient(createOpenAIClient, getResponseModel);
@@ -79,6 +83,12 @@ export function createPortfolioIndexSession(connection: string) {
 export const rateLimitService = new RateLimitService(
   new RateLimitRepository(prisma),
   getRateLimitHmacSecret,
+);
+
+// Workflow
+export const workflowService = new WorkflowService(
+  new WorkflowRegistry([meetingBooking]),
+  new WorkflowRepository(prisma),
 );
 
 // Assistant

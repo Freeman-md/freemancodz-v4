@@ -1,51 +1,25 @@
-import type { IWorkflowDefinition } from "./interfaces";
+import type { WorkflowDefinition } from "./types";
 
-export class WorkflowDefinitionRegistry {
-  private readonly definitions = new Map<string, IWorkflowDefinition>();
+export class WorkflowRegistry {
+  private readonly definitions = new Map<string, WorkflowDefinition>();
 
-  private readonly latest = new Map<string, IWorkflowDefinition>();
-
-  constructor(definitions: readonly IWorkflowDefinition[]) {
+  constructor(definitions: readonly WorkflowDefinition[]) {
     for (const definition of definitions) {
-      if (
-        !definition.id.trim() ||
-        !Number.isInteger(definition.version) ||
-        definition.version <= 0
-      ) {
-        throw new Error("Workflow definitions require an ID and positive integer version.");
+      const { id, version } = definition;
+
+      if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(id) || !Number.isSafeInteger(version) || version < 1) {
+        throw new Error("Workflow definitions require a valid ID and a positive integer version.");
       }
 
-      const key = definitionKey(definition.id, definition.version);
-
-      if (this.definitions.has(key)) {
-        throw new Error(
-          `Duplicate workflow definition: ${definition.id} version ${definition.version}.`,
-        );
+      if (this.definitions.has(id)) {
+        throw new Error(`Duplicate workflow ID: ${id}`);
       }
 
-      this.definitions.set(key, definition);
-
-      const latest = this.latest.get(definition.id);
-
-      if (!latest || definition.version > latest.version) {
-        this.latest.set(definition.id, definition);
-      }
+      this.definitions.set(id, definition);
     }
   }
 
-  get(workflowId: string, version: number): IWorkflowDefinition | undefined {
-    return this.definitions.get(definitionKey(workflowId, version));
+  get(id: string) {
+    return this.definitions.get(id);
   }
-
-  getLatest(workflowId: string): IWorkflowDefinition | undefined {
-    return this.latest.get(workflowId);
-  }
-
-  listRoutable(): readonly IWorkflowDefinition[] {
-    return [...this.latest.values()].sort((left, right) => left.id.localeCompare(right.id));
-  }
-}
-
-function definitionKey(workflowId: string, version: number): string {
-  return `${workflowId}\u0000${version}`;
 }
