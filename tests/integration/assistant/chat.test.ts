@@ -233,14 +233,36 @@ test("cancels the provider on HTTP disconnect", { timeout: 5000 }, async (t) => 
 });
 
 test("rejects invalid, oversized, and rate-limited requests before generation", async (t) => {
+  const denied: RateLimitResult = {
+    allowed: false,
+    limit: 40,
+    remaining: 0,
+    resetAt: Date.now() + 60_000,
+  };
+
   const cases: { name: string; body: string; status: number; limit?: RateLimitResult }[] = [
     { name: "invalid message", body: '{"message":""}', status: 400 },
+    {
+      name: "retired workflow reference",
+      body: JSON.stringify({ message: "Hello", workflowInstanceId: null }),
+      status: 400,
+    },
+    {
+      name: "retired booking action",
+      body: JSON.stringify({
+        action: "confirm_booking",
+        workflowInstanceId: `11111111-1111-4111-8111-111111111111.${"a".repeat(43)}`,
+        expectedRevision: 0,
+      }),
+      status: 400,
+      limit: denied,
+    },
     { name: "oversized body", body: "x".repeat(MAX_CHAT_BODY_BYTES + 1), status: 413 },
     {
       name: "rate-limited request",
       body: requestBody,
       status: 429,
-      limit: { allowed: false, limit: 40, remaining: 0, resetAt: Date.now() + 60_000 },
+      limit: denied,
     },
   ];
 

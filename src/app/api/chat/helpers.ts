@@ -1,16 +1,10 @@
 import "server-only";
 
-import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { isIP } from "node:net";
-import { type NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 
-import {
-  assistantRequestSchema,
-  WORKFLOW_ACCESS_DENIED,
-  type AssistantRequest,
-} from "@/contracts/assistant.contract";
+import { assistantRequestSchema, type AssistantRequest } from "@/contracts/assistant.contract";
 import type { Logger } from "@/infrastructure/logging/logger";
-import type { AssistantResponseInput } from "@/modules/assistant/types";
 import type { RateLimitService } from "@/modules/rate-limit/service";
 
 import { CHAT_RATE_LIMIT_RULES, CHAT_RATE_LIMIT_SCOPE, MAX_CHAT_BODY_BYTES } from "./constants";
@@ -79,7 +73,11 @@ async function readChatBody(request: Request): Promise<string | null> {
 // Rate limiting
 export async function checkChatRateLimit(
   request: Request,
-  { rateLimitService, logger, onVercel }: {
+  {
+    rateLimitService,
+    logger,
+    onVercel,
+  }: {
     rateLimitService: Pick<RateLimitService, "consume">;
     logger: Logger;
     onVercel: boolean;
@@ -133,77 +131,4 @@ function rateLimitError(limit: number) {
   return limit === CHAT_RATE_LIMIT_RULES[0].limit
     ? "Too many messages. Please try again in a few minutes."
     : "Daily message limit reached. Please try again later.";
-}
-
-// Workflow session access
-export function resolveWorkflowSession(
-  request: NextRequest,
-  parsed: Extract<AssistantRequest, { message: string }>,
-  onVercel: boolean,
-  getAccessSecret: () => string,
-) {
-  const secure = onVercel || request.nextUrl.protocol === "https:";
-
-  const cookieName = secure ? "__Host-portfolio-chat" : "portfolio-chat";
-
-  const cookie = request.cookies.get(cookieName)?.value;
-
-  const existingSession = isVisitorSession(cookie) ? cookie : null;
-
-  const session = existingSession ?? createVisitorSession();
-
-  const access = createWorkflowAccess(session, getAccessSecret());
-
-  const reference = parsed.workflowInstanceId;
-
-  const workflowInstanceId = reference && existingSession ? access.decode(reference) : null;
-
-  if (reference && !workflowInstanceId) {
-    return NextResponse.json(
-      { error: "This workflow is unavailable in this browser session.", code: WORKFLOW_ACCESS_DENIED },
-      { status: 403 },
-    );
-  }
-
-  return {
-    input: { ...parsed, workflowInstanceId, signal: request.signal } satisfies AssistantResponseInput,
-    cookie: existingSession ? null : { name: cookieName, value: session, secure },
-  };
-}
-
-export function createWorkflowAccess(session: string, secret: string) {
-  function sign(instanceId: string) {
-    return createHmac("sha256", secret)
-      .update(JSON.stringify(["assistant-workflow-access-v1", session, instanceId]))
-      .digest("base64url");
-  }
-
-  return {
-    encode(instanceId: string) {
-      return `${instanceId}.${sign(instanceId)}`;
-    },
-    decode(reference: string) {
-      const [instanceId, signature, extra] = reference.split(".");
-
-      if (!instanceId || !signature || extra !== undefined) {
-        return null;
-      }
-
-      const expected = Buffer.from(sign(instanceId));
-
-      const actual = Buffer.from(signature);
-
-      return actual.length === expected.length && timingSafeEqual(actual, expected)
-        ? instanceId
-        : null;
-    },
-  };
-}
-
-function createVisitorSession() {
-  return randomBytes(32).toString("base64url");
-}
-
-function isVisitorSession(value: string | undefined): value is string {
-  return value !== undefined && /^[A-Za-z0-9_-]{43}$/.test(value);
 }

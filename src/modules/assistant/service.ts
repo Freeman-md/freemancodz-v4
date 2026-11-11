@@ -26,16 +26,12 @@ export class AssistantService {
     private readonly portfolioSearch: Pick<PortfolioSearchService, "search">,
   ) {}
 
-  createResponse(request: Extract<AssistantResponseInput, { message: string }>) {
+  createResponse(request: AssistantResponseInput) {
     // NextResponse uses the DOM declarations for the same Web Streams API.
     return ReadableStream.from(this.streamReply(request)) as globalThis.ReadableStream<Uint8Array>;
   }
 
-  private async *streamReply({
-    message,
-    previousResponseId,
-    signal,
-  }: Extract<AssistantResponseInput, { message: string }>) {
+  private async *streamReply({ message, previousResponseId, signal }: AssistantResponseInput) {
     let modelRequest: OpenAIResponseRequest = {
       input: [{ type: "user_message", content: message }],
       instructions: PLAIN_CHAT_SYSTEM_PROMPT,

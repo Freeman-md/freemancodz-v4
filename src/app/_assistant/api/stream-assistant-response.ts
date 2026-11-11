@@ -1,10 +1,5 @@
 import { assistantStreamEventSchema, type AssistantRequest } from "@/contracts/assistant.contract";
 
-type ChatRequest = Pick<
-  Extract<AssistantRequest, { message: string }>,
-  "message" | "previousResponseId"
->;
-
 function decodeEvent(line: string) {
   try {
     return assistantStreamEventSchema.parse(JSON.parse(line));
@@ -13,7 +8,7 @@ function decodeEvent(line: string) {
   }
 }
 
-export async function* streamAssistant(request: ChatRequest) {
+export async function* streamAssistant(request: AssistantRequest) {
   const response = await fetch("/api/chat", {
     method: "POST",
     headers: { "Content-Type": "application/json" },

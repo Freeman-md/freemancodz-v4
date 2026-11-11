@@ -42,7 +42,6 @@ export function createChatFixture(
     assistantService: new AssistantService(openai, logger, { search }),
     rateLimitService: { consume: async () => limit },
     logger,
-    getAccessSecret: () => "test-only-workflow-access",
     onVercel: false,
   });
 
