@@ -3,6 +3,10 @@ export const ASSISTANT_ERRORS = {
     code: "assistant.portfolio_search_failed",
     publicMessage: "I couldn’t search the portfolio just now. Please try again shortly.",
   },
+  WORKFLOW_CHANGED: {
+    code: "assistant.workflow_changed",
+    publicMessage: "The workflow changed while I was replying. Please try again.",
+  },
   RESPONSE_FAILED: {
     code: "assistant.response_failed",
     publicMessage: "The assistant could not respond. Please try again.",

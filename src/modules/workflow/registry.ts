@@ -1,11 +1,11 @@
-import type { WorkflowDefinition } from "./types";
+import type { IWorkflowDefinition } from "./types";
 
 export class WorkflowRegistry {
-  private readonly definitions = new Map<string, WorkflowDefinition>();
+  private readonly definitions = new Map<string, IWorkflowDefinition>();
 
-  private readonly latest = new Map<string, WorkflowDefinition>();
+  private readonly latest = new Map<string, IWorkflowDefinition>();
 
-  constructor(definitions: readonly WorkflowDefinition[]) {
+  constructor(definitions: readonly IWorkflowDefinition[]) {
     for (const definition of definitions) {
       const { id, version } = definition;
 

@@ -1,6 +1,7 @@
 import type { AssistantStreamEvent } from "@/contracts/assistant.contract";
 import type { PortfolioSearchService } from "../../portfolio/services/portfolio-search.service";
-import type { WorkflowService } from "../../workflow/service";
+import type { ActiveWorkflowTool, WorkflowService } from "../../workflow/service";
+import { ASSISTANT_ERRORS, AssistantError } from "../errors";
 import { ASK_USER_CHOICE_TOOL } from "./ask-user-choice/definition";
 import { askUserChoice } from "./ask-user-choice/implementation";
 import { SEARCH_PORTFOLIO_TOOL } from "./search-portfolio/definition";
@@ -22,7 +23,11 @@ export async function executeTool(
   rawArguments: string,
   search: Pick<PortfolioSearchService, "search">,
   signal: AbortSignal,
-  workflow: { service: Pick<WorkflowService, "start">; visitorKey: string },
+  workflow: {
+    service: Pick<WorkflowService, "start">;
+    visitorKey: string;
+    tools: readonly ActiveWorkflowTool[];
+  },
 ): Promise<ToolResult> {
   switch (name) {
     case ASK_USER_CHOICE_TOOL.name: {
@@ -59,7 +64,23 @@ export async function executeTool(
       };
     }
 
-    default:
-      throw new Error("Unsupported assistant tool.");
+    default: {
+      const workflowTool = workflow.tools.find(({ tool }) => tool.name === name);
+
+      if (!workflowTool) {
+        throw new Error("Unsupported assistant tool.");
+      }
+
+      const instance = await workflowTool.run(rawArguments, signal);
+
+      if (!instance) {
+        throw new AssistantError(ASSISTANT_ERRORS.WORKFLOW_CHANGED);
+      }
+
+      return {
+        output: JSON.stringify({ status: "saved" }),
+        event: { type: "workflow_instance", instance },
+      };
+    }
   }
 }

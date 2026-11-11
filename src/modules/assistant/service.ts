@@ -26,7 +26,7 @@ export class AssistantService {
     private readonly openai: OpenAITransport,
     private readonly logger: Logger,
     private readonly portfolioSearch: Pick<PortfolioSearchService, "search">,
-    private readonly workflow: Pick<WorkflowService, "listAvailable" | "start">,
+    private readonly workflow: Pick<WorkflowService, "listAvailable" | "start" | "getActiveTools">,
   ) {}
 
   createResponse(request: AssistantResponseInput) {
@@ -59,6 +59,11 @@ export class AssistantService {
     let replyEvent: ToolReplyEvent | undefined;
 
     try {
+      signal.throwIfAborted();
+      const workflowTools = await this.workflow.getActiveTools(visitorKey);
+
+      modelRequest.tools.push(...workflowTools.map(({ tool }) => tool));
+
       // Only the first pass offers tools, so a reply takes at most two model requests.
       modelResponses: for (;;) {
         signal.throwIfAborted();
@@ -96,7 +101,7 @@ export class AssistantService {
                   functionCall.arguments,
                   this.portfolioSearch,
                   signal,
-                  { service: this.workflow, visitorKey },
+                  { service: this.workflow, visitorKey, tools: workflowTools },
                 );
 
                 signal.throwIfAborted();

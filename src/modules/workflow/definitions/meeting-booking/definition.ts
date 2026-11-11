@@ -1,23 +1,35 @@
-import { z } from "zod";
-import type { WorkflowDefinition } from "../../types";
+import type { ActiveWorkflow } from "@/contracts/assistant.contract";
+import type { IWorkflowDefinition, WorkflowTool } from "../../types";
+import { type MeetingState, meetingStateSchema } from "./schema";
+import { saveMeetingTopicTool } from "./tools";
 
-const stateSchema = z.strictObject({
-  reason: z.string().trim().min(1).nullable(),
-});
+export class MeetingBookingWorkflowDefinition implements IWorkflowDefinition<MeetingState> {
+  readonly id = "meeting-booking";
 
-export const meetingBooking = {
-  id: "meeting-booking",
-  version: 1,
-  description: "Book a meeting with Freeman.",
-  stateSchema,
-  title: "Meeting booking",
-  createInitialState: () => ({ reason: null }),
-  projectProgress(savedState: unknown) {
-    const { reason } = stateSchema.parse(savedState);
+  readonly version: number = 1;
+
+  readonly title: string = "Book a meeting";
+
+  readonly description = "Book a meeting with Freeman.";
+
+  readonly stateSchema = meetingStateSchema;
+
+  createInitialState(): MeetingState {
+    return { reason: null };
+  }
+
+  getProgress(savedState: unknown): Pick<ActiveWorkflow, "phase" | "details"> {
+    const { reason } = this.stateSchema.parse(savedState);
 
     return {
-      nextStep: reason === null ? "What would you like to discuss?" : null,
+      phase: "collecting",
       details: [{ key: "reason", label: "Topic", value: reason }],
     };
-  },
-} satisfies WorkflowDefinition<z.infer<typeof stateSchema>>;
+  }
+
+  getTools(savedState: unknown): readonly WorkflowTool[] {
+    const { reason } = this.stateSchema.parse(savedState);
+
+    return reason === null ? [saveMeetingTopicTool] : [];
+  }
+}

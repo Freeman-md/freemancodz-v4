@@ -27,6 +27,7 @@ export function createChatFixture(
     limit = { allowed: true },
     workflow = {
       listAvailable: () => [],
+      getActiveTools: async () => [],
       start: async () => {
         throw new Error("No test workflow is registered.");
       },
@@ -34,7 +35,7 @@ export function createChatFixture(
   }: {
     search?: PortfolioSearchService["search"];
     limit?: RateLimitResult;
-    workflow?: Pick<WorkflowService, "listAvailable" | "start">;
+    workflow?: Pick<WorkflowService, "listAvailable" | "start" | "getActiveTools">;
   } = {},
 ) {
   const requests: OpenAIResponseRequest[] = [];

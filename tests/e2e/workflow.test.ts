@@ -41,12 +41,13 @@ test(
       .fill("I want to book a meeting with Freeman.");
     await dialog.getByRole("button", { name: "Send message" }).click();
 
-    const progress = dialog.getByRole("button", { name: /Meeting booking/ });
+    const progress = dialog.getByRole("button", { name: /Book a meeting/ });
 
     await progress.waitFor();
-    assert.ok(await progress.getByText("In progress", { exact: true }).isVisible());
-    assert.ok(
-      await dialog.getByText("What would you like to discuss?", { exact: true }).isVisible(),
+    await progress.getByText("Collecting", { exact: false }).waitFor();
+    assert.equal(
+      await dialog.getByText("What would you like to discuss?", { exact: true }).count(),
+      0,
     );
     await progress.focus();
     await progress.press("Enter");
@@ -58,6 +59,14 @@ test(
     assert.equal(started.status(), 200);
     const instance = activeWorkflowSchema.parse(await started.json());
 
+    const topic = "I want to discuss a project.";
+
+    await dialog.getByText("Your meeting request is open.", { exact: true }).waitFor();
+    await dialog.getByRole("textbox", { name: "Your message" }).fill(topic);
+    await dialog.getByRole("button", { name: "Send message" }).click();
+    await dialog.getByRole("listitem").getByText(topic, { exact: true }).waitFor();
+    await progress.getByText("1 of 1 details", { exact: true }).waitFor();
+
     await page.reload({ waitUntil: "load" });
     const [restored] = await Promise.all([
       page.waitForResponse(
@@ -68,11 +77,12 @@ test(
     ]);
 
     assert.equal(restored.status(), 200);
-    assert.deepEqual(activeWorkflowSchema.parse(await restored.json()), instance);
-    await progress.waitFor();
-    assert.ok(
-      await dialog.getByText("What would you like to discuss?", { exact: true }).isVisible(),
-    );
+    assert.deepEqual(activeWorkflowSchema.parse(await restored.json()), {
+      ...instance,
+      details: [{ key: "reason", label: "Topic", value: topic }],
+    });
+    await progress.press("Enter");
+    await dialog.getByRole("listitem").getByText(topic, { exact: true }).waitFor();
 
     const other = await browser.newContext({ reducedMotion: "reduce" });
 
@@ -90,6 +100,6 @@ test(
 
     assert.equal(separate.status(), 200);
     assert.equal(await separate.json(), null);
-    assert.equal(await separateDialog.getByRole("button", { name: /Meeting booking/ }).count(), 0);
+    assert.equal(await separateDialog.getByRole("button", { name: /Book a meeting/ }).count(), 0);
   },
 );

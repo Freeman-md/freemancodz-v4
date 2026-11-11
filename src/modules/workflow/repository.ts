@@ -4,7 +4,7 @@ import type { Prisma, PrismaClient, WorkflowInstance } from "@/generated/prisma/
 
 export type StoredWorkflow = Pick<
   WorkflowInstance,
-  "id" | "workflowId" | "workflowVersion" | "state"
+  "id" | "workflowId" | "workflowVersion" | "state" | "revision"
 >;
 
 export class WorkflowRepository {
@@ -30,7 +30,7 @@ export class WorkflowRepository {
       ON CONFLICT ("visitor_key", "workflow_id")
         WHERE "status" = 'active' AND "visitor_key" IS NOT NULL
       DO UPDATE SET "workflow_id" = EXCLUDED."workflow_id"
-      RETURNING "id", "workflow_id" AS "workflowId", "workflow_version" AS "workflowVersion", "state"
+      RETURNING "id", "workflow_id" AS "workflowId", "workflow_version" AS "workflowVersion", "state", "revision"
     `;
 
     if (!instance) {
@@ -40,11 +40,40 @@ export class WorkflowRepository {
     return instance;
   }
 
+  async saveState(input: {
+    id: string;
+    visitorKey: string;
+    revision: number;
+    state: Prisma.InputJsonObject;
+  }): Promise<StoredWorkflow | null> {
+    const [updated] = await this.prisma.workflowInstance.updateManyAndReturn({
+      where: {
+        id: input.id,
+        visitorKey: input.visitorKey,
+        status: "active",
+        revision: input.revision,
+      },
+      data: {
+        state: input.state,
+        revision: { increment: 1 },
+      },
+      select: {
+        id: true,
+        workflowId: true,
+        workflowVersion: true,
+        state: true,
+        revision: true,
+      },
+    });
+
+    return updated ?? null;
+  }
+
   findActive(visitorKey: string): Promise<StoredWorkflow | null> {
     return this.prisma.workflowInstance.findFirst({
       where: { visitorKey, status: "active" },
       orderBy: [{ startedAt: "desc" }, { id: "desc" }],
-      select: { id: true, workflowId: true, workflowVersion: true, state: true },
+      select: { id: true, workflowId: true, workflowVersion: true, state: true, revision: true },
     });
   }
 }

@@ -25,7 +25,7 @@ import { PrismaPortfolioSeedRepository } from "./portfolio/repositories/portfoli
 import { PortfolioSeedService } from "./portfolio/seed.service";
 import { RateLimitRepository } from "./rate-limit/repository";
 import { RateLimitService } from "./rate-limit/service";
-import { meetingBooking } from "./workflow/definitions/meeting-booking/definition";
+import { MeetingBookingWorkflowDefinition } from "./workflow/definitions/meeting-booking/definition";
 import { WorkflowRegistry } from "./workflow/registry";
 import { WorkflowRepository } from "./workflow/repository";
 import { WorkflowService } from "./workflow/service";
@@ -87,7 +87,7 @@ export const rateLimitService = new RateLimitService(
 
 // Workflow
 export const workflowService = new WorkflowService(
-  new WorkflowRegistry([meetingBooking]),
+  new WorkflowRegistry([new MeetingBookingWorkflowDefinition()]),
   new WorkflowRepository(prisma),
 );
 

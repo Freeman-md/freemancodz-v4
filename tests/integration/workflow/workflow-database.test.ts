@@ -2,10 +2,16 @@ import assert from "node:assert/strict";
 import { randomBytes } from "node:crypto";
 import test from "node:test";
 import { createPrismaClient } from "@/infrastructure/database/prisma";
-import { meetingBooking } from "@/modules/workflow/definitions/meeting-booking/definition";
+import { MeetingBookingWorkflowDefinition } from "@/modules/workflow/definitions/meeting-booking/definition";
 import { WorkflowRegistry } from "@/modules/workflow/registry";
 import { WorkflowRepository } from "@/modules/workflow/repository";
 import { WorkflowService } from "@/modules/workflow/service";
+
+class MeetingBookingVersionTwo extends MeetingBookingWorkflowDefinition {
+  override readonly version = 2;
+
+  override readonly title = "Meeting booking v2";
+}
 
 const databaseUrl = process.env.WORKFLOW_TEST_DATABASE_URL;
 
@@ -21,6 +27,8 @@ test(
     const prisma = createPrismaClient(databaseUrl);
 
     const repository = new WorkflowRepository(prisma);
+
+    const meetingBooking = new MeetingBookingWorkflowDefinition();
 
     const service = new WorkflowService(new WorkflowRegistry([meetingBooking]), repository);
 
@@ -41,26 +49,30 @@ test(
       assert.deepEqual(repeated, started);
       assert.equal(await prisma.workflowInstance.count({ where: { visitorKey } }), 1);
 
-      await prisma.workflowInstance.update({
-        where: { id: started.id },
-        data: { state: { reason: "Discuss a project" }, revision: 1 },
+      const [firstTool] = await service.getActiveTools(visitorKey);
+
+      const [staleTool] = await service.getActiveTools(visitorKey);
+
+      assert.ok(firstTool && staleTool);
+      assert.equal(firstTool.tool.name, "save_meeting_topic");
+
+      const saved = await firstTool.run('{"reason":"Discuss a project"}', input.signal);
+
+      assert.deepEqual(saved, {
+        ...started,
+        details: [{ key: "reason", label: "Topic", value: "Discuss a project" }],
       });
+      assert.equal(await staleTool.run('{"reason":"Another topic"}', input.signal), null);
+      assert.deepEqual(await service.getActiveTools(visitorKey), []);
 
       const updatedService = new WorkflowService(
-        new WorkflowRegistry([
-          meetingBooking,
-          { ...meetingBooking, version: 2, title: "Meeting booking v2" },
-        ]),
+        new WorkflowRegistry([meetingBooking, new MeetingBookingVersionTwo()]),
         repository,
       );
 
       const resumed = await updatedService.start(input);
 
-      assert.deepEqual(resumed, {
-        ...started,
-        nextStep: null,
-        details: [{ key: "reason", label: "Topic", value: "Discuss a project" }],
-      });
+      assert.deepEqual(resumed, saved);
       assert.deepEqual(await updatedService.getActive(visitorKey), resumed);
       assert.equal(await updatedService.getActive(otherVisitorKey), null);
 

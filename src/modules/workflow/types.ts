@@ -1,13 +1,23 @@
 import type { ActiveWorkflow } from "@/contracts/assistant.contract";
 import type { Prisma } from "@/generated/prisma/client";
 import type { z } from "zod";
+import type { OpenAIResponseTool } from "@/infrastructure/openai/types";
 
-export type WorkflowDefinition<State extends Prisma.InputJsonObject = Prisma.InputJsonObject> = {
-  id: string;
-  version: number;
-  description: string;
-  stateSchema: z.ZodType<State>;
-  title: string;
-  createInitialState(): State;
-  projectProgress(state: unknown): Pick<ActiveWorkflow, "nextStep" | "details">;
+export type WorkflowTool = {
+  tool: OpenAIResponseTool;
+  apply(state: unknown, args: unknown): Prisma.InputJsonObject;
 };
+
+export interface IWorkflowDefinition<
+  State extends Prisma.InputJsonObject = Prisma.InputJsonObject,
+> {
+  readonly id: string;
+  readonly version: number;
+  readonly title: string;
+  readonly description: string;
+  readonly stateSchema: z.ZodType<State>;
+
+  createInitialState(): State;
+  getProgress(savedState: unknown): Pick<ActiveWorkflow, "phase" | "details">;
+  getTools(savedState: unknown): readonly WorkflowTool[];
+}

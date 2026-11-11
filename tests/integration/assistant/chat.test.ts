@@ -5,8 +5,9 @@ import test from "node:test";
 import { CHAT_VISITOR_COOKIE, MAX_CHAT_BODY_BYTES } from "@/app/api/chat/constants";
 import type { ActiveWorkflow } from "@/contracts/assistant.contract";
 import type { RateLimitResult } from "@/modules/rate-limit/rate-limit.types";
-import { meetingBooking } from "@/modules/workflow/definitions/meeting-booking/definition";
-import type { WorkflowService } from "@/modules/workflow/service";
+import { MeetingBookingWorkflowDefinition } from "@/modules/workflow/definitions/meeting-booking/definition";
+import { WorkflowRegistry } from "@/modules/workflow/registry";
+import { WorkflowService } from "@/modules/workflow/service";
 import {
   chatRequest,
   chatRequestOptions,
@@ -20,6 +21,8 @@ import {
   toolCall,
 } from "./chat.fixture";
 
+const meetingBooking = new MeetingBookingWorkflowDefinition();
+
 const requestBody = JSON.stringify({
   message: "What did Freeman build for JPScents?",
   previousResponseId: "resp_previous",
@@ -32,9 +35,9 @@ test("starts workflows only after establishing browser ownership and completing 
 
   const instance: ActiveWorkflow = {
     id: randomUUID(),
-    title: "Meeting booking",
+    title: "Book a meeting",
     status: "active",
-    nextStep: "What would you like to discuss?",
+    phase: "collecting",
     details: [{ key: "reason", label: "Topic", value: null }],
   };
 
@@ -60,6 +63,7 @@ test("starts workflows only after establishing browser ownership and completing 
           workflow: {
             listAvailable: () => (scenario === "unoffered" ? [] : [meetingBooking]),
             start,
+            getActiveTools: async () => [],
           },
         },
       );
@@ -110,6 +114,55 @@ test("starts workflows only after establishing browser ownership and completing 
         scenario === "follow-up failed"
           ? ["workflow_instance", "error"]
           : ["workflow_instance", "delta", "response_id", "done"],
+      );
+    });
+  }
+});
+
+test("topic collection leaves unrelated questions and invalid arguments out of workflow state", async (t) => {
+  const instance = {
+    id: randomUUID(),
+    workflowId: meetingBooking.id,
+    workflowVersion: meetingBooking.version,
+    revision: 0,
+    state: { reason: null },
+  };
+
+  for (const scenario of ["unrelated question", "invalid topic"] as const) {
+    await t.test(scenario, async (t) => {
+      const saveState = t.mock.fn(async () => null);
+
+      const workflow = new WorkflowService(new WorkflowRegistry([meetingBooking]), {
+        startOrResume: async () => instance,
+        findActive: async () => instance,
+        saveState,
+      });
+
+      const { post, requests } = createChatFixture(
+        async () =>
+          scenario === "invalid topic"
+            ? providerEvents(
+                complete("resp_topic", [toolCall("save_meeting_topic", { reason: "  " })]),
+              )
+            : providerEvents(delta("Hello!"), complete("resp_reply")),
+        { workflow },
+      );
+
+      const body = JSON.stringify({ message: "Hello" });
+
+      const events = parseEvents(await (await post(chatRequest(body))).text());
+
+      assert.ok(requests[0].tools.some(({ name }) => name === "save_meeting_topic"));
+      assert.equal(saveState.mock.callCount(), 0);
+      assert.deepEqual(
+        events,
+        scenario === "invalid topic"
+          ? [{ type: "error", error: "The assistant could not respond. Please try again." }]
+          : [
+              { type: "delta", delta: "Hello!" },
+              { type: "response_id", responseId: "resp_reply" },
+              { type: "done" },
+            ],
       );
     });
   }

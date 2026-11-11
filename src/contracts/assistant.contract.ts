@@ -42,7 +42,7 @@ export const activeWorkflowSchema = z.strictObject({
   id: z.uuid(),
   title: z.string(),
   status: z.literal("active"),
-  nextStep: z.string().nullable(),
+  phase: z.enum(["collecting", "awaiting_confirmation", "processing", "completed", "cancelled"]),
   details: z.array(
     z.strictObject({
       key: z.string(),
