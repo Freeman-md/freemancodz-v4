@@ -10,7 +10,7 @@ import { AssistantMarkdown } from "./AssistantMarkdown";
 import { AssistantSources } from "./AssistantSources";
 
 const ASSISTANT_STARTER_ACTIONS = [
-  "What has Freeman built?",
+  "Can you show me a few of Freeman’s projects?",
   "How can Freeman help my business?",
   "Tell me about Freeman’s experience.",
 ] as const;

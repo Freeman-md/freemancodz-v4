@@ -64,7 +64,7 @@ export class MeetingBookingWorkflowDefinition implements IWorkflowDefinition<Mee
     ].filter(Boolean);
 
     const progress = missing.length
-      ? `The meeting request still needs: ${missing.join(", ")}. Ask only for missing details.`
+      ? `The meeting request still needs: ${missing.join(", ")}. Save any details the visitor supplied, then ask one conversational question about the next missing detail. Do not list the remaining fields.`
       : "The meeting details are complete. Let the visitor review or correct them.";
 
     return (
