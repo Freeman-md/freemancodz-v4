@@ -12,7 +12,7 @@ export function createChatPostHandler({
   logger,
   onVercel = process.env.VERCEL === "1",
 }: {
-  assistantService: Pick<AssistantService, "createResponse">;
+  assistantService: Pick<AssistantService, "createResponse" | "describeWorkflowResult">;
   rateLimitService: Pick<RateLimitService, "consume">;
   logger: Logger;
   onVercel?: boolean;
@@ -38,6 +38,29 @@ export function createChatPostHandler({
 
     if (rateLimitResponse) {
       return rateLimitResponse;
+    }
+
+    if ("reviewId" in parsed) {
+      const headers = { "Cache-Control": "private, no-store" };
+
+      try {
+        const result = await assistantService.describeWorkflowResult({
+          ...parsed,
+          visitorKey,
+          signal: request.signal,
+        });
+
+        return result
+          ? NextResponse.json(result, { headers })
+          : NextResponse.json({ error: "Approved review unavailable." }, { status: 404, headers });
+      } catch {
+        logger.error("chat.workflow_result_failed");
+
+        return NextResponse.json(
+          { error: "Could not read the saved result." },
+          { status: 503, headers },
+        );
+      }
     }
 
     return new NextResponse(

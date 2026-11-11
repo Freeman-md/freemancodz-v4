@@ -14,10 +14,11 @@ import type { WorkflowToolResult } from "./types";
 
 export type ActiveWorkflowTool = {
   tool: OpenAIResponseTool;
+  activityLabel?: string;
   run(
     rawArguments: string,
     signal: AbortSignal,
-  ): Promise<{ output: WorkflowToolResult["output"]; instance?: ActiveWorkflow } | null>;
+  ): Promise<(Omit<WorkflowToolResult, "state"> & { instance?: ActiveWorkflow }) | null>;
 };
 
 export class WorkflowService {
@@ -144,28 +145,29 @@ export class WorkflowService {
       hasActive: true,
       draft: { id: instance.id, revision: instance.revision },
       guidance: definition.getGuidance(instance.state),
-      tools: definition.getTools(instance.state).map(({ tool, apply }) => ({
+      tools: definition.getTools(instance.state).map(({ tool, activityLabel, apply }) => ({
         tool,
+        activityLabel,
         run: async (rawArguments, signal) => {
           signal.throwIfAborted();
           const args: unknown = JSON.parse(rawArguments);
 
-          const result = await apply(instance.state, args);
+          const { state, ...result } = await apply(instance.state, args);
 
           signal.throwIfAborted();
 
-          if (result.state === undefined) {
-            return { output: result.output };
+          if (state === undefined) {
+            return result;
           }
 
           const updated = await this.repository.saveState({
             id: instance.id,
             visitorKey,
             revision: instance.revision,
-            state: definition.stateSchema.parse(result.state),
+            state: definition.stateSchema.parse(state),
           });
 
-          return updated ? { output: result.output, instance: await this.project(updated) } : null;
+          return updated ? { ...result, instance: await this.project(updated) } : null;
         },
       })),
     };
@@ -176,6 +178,24 @@ export class WorkflowService {
     input: WorkflowApproval,
     executeApprovedReview?: (reviewId: string) => Promise<void>,
   ) {
+    const approval = await this.acceptReview(visitorKey, input);
+
+    if (approval.status !== "accepted") {
+      return approval;
+    }
+
+    await executeApprovedReview?.(approval.reviewId);
+
+    const workflow = await this.getApprovedResult(visitorKey, approval.reviewId);
+
+    if (!workflow) {
+      throw new Error("The approved run could not be restored.");
+    }
+
+    return { status: "accepted", workflow } as const;
+  }
+
+  async acceptReview(visitorKey: string, input: WorkflowApproval) {
     const review = await this.repository.findOwnedReview(input.reviewId, visitorKey);
 
     if (!review) {
@@ -208,17 +228,22 @@ export class WorkflowService {
       return { status: "conflict" } as const;
     }
 
-    await executeApprovedReview?.(review.id);
+    return { status: "accepted", reviewId: review.id } as const;
+  }
 
-    const savedReview = await this.repository.findOwnedReview(review.id, visitorKey);
+  async getApprovedResult(visitorKey: string, reviewId: string): Promise<ActiveWorkflow | null> {
+    const review = await this.repository.findOwnedReview(reviewId, visitorKey);
+
+    if (
+      review?.status !== "consumed" ||
+      !this.registry.get(review.instance.workflowId, review.version)
+    ) {
+      return null;
+    }
 
     const run = await this.repository.findRun(review.instanceId, review.id);
 
-    if (!savedReview || !run) {
-      throw new Error("The approved run could not be restored.");
-    }
-
-    return { status: "accepted", workflow: await this.project(savedReview.instance, run) } as const;
+    return run ? this.project(review.instance, run) : null;
   }
 
   private resolveDefinition(instance: StoredWorkflow) {
@@ -252,10 +277,13 @@ export class WorkflowService {
 
       const now = this.clock();
 
+      const claimExpired = !!current?.claimExpires && current.claimExpires <= now;
+
       const retryPending =
         current?.status === "retry" ||
+        (current?.status === "running" && claimExpired) ||
         (current?.status === "reconciling" &&
-          (!current.claimToken || !current.claimExpires || current.claimExpires <= now));
+          (!current.claimToken || !current.claimExpires || claimExpired));
 
       const completed = run.status === "finished";
 
@@ -263,10 +291,7 @@ export class WorkflowService {
 
       const uncertain =
         current?.status === "reconciling" ||
-        (current?.status === "running" &&
-          !!current.firstEffect &&
-          !!current.claimExpires &&
-          current.claimExpires <= now);
+        (current?.status === "running" && !!current.firstEffect && claimExpired);
 
       const certainty = current?.outcome;
 

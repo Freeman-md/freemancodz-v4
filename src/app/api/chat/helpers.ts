@@ -4,7 +4,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { isIP } from "node:net";
 import { type NextRequest, NextResponse } from "next/server";
 
-import { assistantRequestSchema, type AssistantRequest } from "@/contracts/assistant.contract";
+import { chatRequestSchema, type ChatRequest } from "@/contracts/assistant.contract";
 import type { Logger } from "@/infrastructure/logging/logger";
 import type { RateLimitService } from "@/modules/rate-limit/service";
 
@@ -17,7 +17,7 @@ import {
 } from "./constants";
 
 // Request parsing
-export async function parseChatRequest(request: Request): Promise<AssistantRequest | NextResponse> {
+export async function parseChatRequest(request: Request): Promise<ChatRequest | NextResponse> {
   let payload: unknown;
 
   try {
@@ -32,7 +32,7 @@ export async function parseChatRequest(request: Request): Promise<AssistantReque
     return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
   }
 
-  const parsed = assistantRequestSchema.safeParse(payload);
+  const parsed = chatRequestSchema.safeParse(payload);
 
   if (!parsed.success) {
     return NextResponse.json(

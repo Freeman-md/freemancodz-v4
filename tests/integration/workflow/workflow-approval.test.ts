@@ -5,7 +5,11 @@ import { NextRequest } from "next/server";
 import { createWorkflowRunnerPost } from "@/app/api/internal/workflow-runner/post";
 import { CHAT_VISITOR_COOKIE } from "@/app/api/chat/constants";
 import { createWorkflowApprovalPost } from "@/app/api/workflow/approve/post";
-import { activeWorkflowSchema } from "@/contracts/assistant.contract";
+import {
+  activeWorkflowSchema,
+  assistantStreamEventSchema,
+  type AssistantActivity,
+} from "@/contracts/assistant.contract";
 import { createPrismaClient } from "@/infrastructure/database/prisma";
 import {
   CalendarEventError,
@@ -303,6 +307,7 @@ test(
           const body = { reviewId, expectedRevision };
 
           assert.equal((await workflow.getActive(visitorKey))?.review?.id, reviewId);
+          assert.equal(await workflow.getApprovedResult(visitorKey, reviewId), null);
           assert.equal(
             (await approve(approvalRequest(body, "https://foreign.example"))).status,
             403,
@@ -328,6 +333,12 @@ test(
 
           assert.equal(first.status, 202);
           assert.equal(second.status, 202);
+          assert.equal(await workflow.getApprovedResult("different-visitor", reviewId), null);
+          assert.equal(
+            (await workflow.getApprovedResult(visitorKey, reviewId))?.run?.outcome,
+            "pending",
+          );
+          assert.equal(inserted.length, 0);
           const run = await prisma.workflowRun.findUniqueOrThrow({
             where: { reviewId },
             include: { review: true, steps: { orderBy: { position: "asc" } } },
@@ -565,11 +576,33 @@ test(
           rejectNotice = true;
           const eventsBefore = inserted.length;
 
-          await runner().runDue();
+          const activities: AssistantActivity[] = [];
+
+          const report = (event: AssistantActivity) => activities.push(event);
+
+          await runner().runDue(booking.reviewId, report);
+          assert.ok(
+            activities.some(
+              ({ label, status }) =>
+                label === "Saving booking details" && status === "retry_scheduled",
+            ),
+          );
           assert.equal((await workflow.getActive(booking.key))?.run?.status, "retry");
           assert.equal((await workflow.getActive(booking.key))?.run?.outcome, "pending");
           advance(60_000);
-          await runner().runDue();
+          await runner().runDue(booking.reviewId, report);
+          assert.deepEqual(
+            activities
+              .filter(({ status }) => status === "started" || status === "retrying")
+              .map(({ label }) => label),
+            [
+              "Creating meeting",
+              "Saving booking details",
+              "Saving booking details",
+              "Sending notification",
+            ],
+          );
+          assert.equal(activities.at(-1)?.status, "failed");
           const visible = await workflow.getActive(booking.key);
 
           assert.equal(visible?.run?.businessStatus, "Booking confirmed");
@@ -699,23 +732,57 @@ test(
 
           const interrupted = new WorkflowRunRepository(prisma);
 
+          const release = Promise.withResolvers<void>();
+
+          const stopped = Promise.withResolvers<void>();
+
           t.mock.method(interrupted, "settle", async () => {
+            await release.promise;
             throw new Error("Execution stopped after writing to Calendar");
           });
           const firstAttempt = new WorkflowRunner(registry, interrupted, logger, clock);
 
-          const confirm = createWorkflowApprovalPost(workflow, logger, (id) =>
-            firstAttempt.runDue(id),
-          );
+          const confirm = createWorkflowApprovalPost(workflow, logger, async (id, onActivity) => {
+            try {
+              return await firstAttempt.runDue(id, onActivity);
+            } finally {
+              stopped.resolve();
+            }
+          });
 
           const before = inserted.length;
 
-          const response = await confirm(
-            approvalRequest({ reviewId, expectedRevision }, undefined, token),
-          );
+          const request = approvalRequest({ reviewId, expectedRevision }, undefined, token);
 
-          assert.equal(response.status, 202);
-          assert.equal(activeWorkflowSchema.parse(await response.json()).run?.outcome, "pending");
+          request.headers.set("accept", "application/x-ndjson");
+
+          const response = await confirm(request);
+
+          assert.equal(response.status, 200);
+          assert.ok(response.body);
+          const reader = response.body.getReader();
+
+          try {
+            const first = await reader.read();
+
+            assert.deepEqual(
+              assistantStreamEventSchema.parse(JSON.parse(new TextDecoder().decode(first.value))),
+              {
+                type: "activity",
+                label: "Creating meeting",
+                status: "started",
+              },
+            );
+            const cancellation = reader.cancel();
+
+            release.resolve();
+            await cancellation;
+          } finally {
+            release.resolve();
+          }
+
+          await stopped.promise;
+          assert.equal((await workflow.getActive(key))?.run?.outcome, "pending");
           const original = await prisma.workflowRun.findUniqueOrThrow({ where: { reviewId } });
 
           const eventId = inserted.at(-1);

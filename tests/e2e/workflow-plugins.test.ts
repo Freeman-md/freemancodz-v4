@@ -181,12 +181,19 @@ test(
           );
 
           await review.getByRole("button", { name: "Submit brief" }).click();
-          await dialog.getByText("Brief received", { exact: true }).waitFor();
+          const reply = dialog.getByRole("article").getByText("Brief received.", { exact: true });
+
+          await reply.waitFor();
+          assert.equal(await reply.count(), 1);
+          assert.equal(
+            await dialog.getByRole("article").getByText("Submit brief", { exact: true }).count(),
+            1,
+          );
           assert.equal(approvalStatus, 200);
           assert.equal(await review.count(), 0);
           await page.reload();
           await page.getByRole("button", { name: "Open portfolio chat" }).click();
-          await dialog.getByText("Brief received", { exact: true }).waitFor();
+          await dialog.getByRole("heading", { name: "What would you like to know?" }).waitFor();
           const restored = await context.request.get(new URL("/api/chat", servicesUrl).href);
 
           const instance = activeWorkflowSchema.parse(await restored.json());

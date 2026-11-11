@@ -32,6 +32,10 @@ export async function* streamAssistant(request: AssistantRequest) {
     throw new Error(message);
   }
 
+  yield* readAssistantStream(response);
+}
+
+export async function* readAssistantStream(response: Response) {
   if (!response.body) {
     throw new Error("The assistant response was unavailable.");
   }

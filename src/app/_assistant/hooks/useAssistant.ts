@@ -4,12 +4,14 @@ import { useCallback, useRef, useState } from "react";
 import {
   MAX_MESSAGE_LENGTH,
   type ActiveWorkflow,
+  type AssistantActivity,
   type AssistantSource,
   type WorkflowObservation,
 } from "@/contracts/assistant.contract";
 import { approveWorkflow } from "../api/approve-workflow";
 import { discardWorkflow } from "../api/discard-workflow";
 import { fetchActiveWorkflow } from "../api/fetch-active-workflow";
+import { fetchWorkflowResult } from "../api/fetch-workflow-result";
 import { streamAssistant } from "../api/stream-assistant-response";
 import type { ChatMessage } from "../types";
 
@@ -18,10 +20,57 @@ const EMPTY_DRAFT: { text: string; subject: string | null } = {
   subject: null,
 };
 
+function savedResultText(workflow: ActiveWorkflow | null) {
+  const run = workflow?.run;
+
+  if (run?.businessStatus) {
+    const time = workflow?.details.find(({ key }) => key === "time")?.value;
+
+    return time ? `${run.businessStatus} for ${time}.` : `${run.businessStatus}.`;
+  }
+
+  switch (run?.outcome) {
+    case "success":
+      return "Your request is complete.";
+    case "pending":
+      return "Your request is saved and still waiting to finish.";
+    case "failure":
+      return "I couldn’t complete the request. Contact Freeman for help.";
+    case "uncertain":
+      return "I can’t verify the outcome yet. Check the saved workflow status before trying again.";
+    default:
+      return "I couldn’t verify the confirmation. Check the saved workflow before trying again.";
+  }
+}
+
 export function useAssistant() {
   const [draft, setDraft] = useState(EMPTY_DRAFT);
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+
+  const [activityLabel, setActivityLabel] = useState<string | null>(null);
+
+  function recordActivity({ label, status }: AssistantActivity) {
+    switch (status) {
+      case "started":
+        setActivityLabel(label);
+        break;
+      case "retrying":
+        setActivityLabel("Retrying");
+        break;
+      case "checking":
+        setActivityLabel("Checking outcome");
+        break;
+      case "retry_scheduled":
+        setActivityLabel("Waiting to retry");
+        break;
+      case "check_scheduled":
+        setActivityLabel("Waiting to check the outcome");
+        break;
+      default:
+        setActivityLabel(null);
+    }
+  }
 
   const [isLoading, setIsLoading] = useState(false);
 
@@ -30,8 +79,6 @@ export function useAssistant() {
   const [workflow, setWorkflow] = useState<ActiveWorkflow | null>(null);
 
   const [workflowRestoreFailed, setWorkflowRestoreFailed] = useState(false);
-
-  const [approvalError, setApprovalError] = useState<string | null>(null);
 
   const [isApproving, setIsApproving] = useState(false);
 
@@ -87,7 +134,8 @@ export function useAssistant() {
 
   const text = draft.text.trim();
 
-  const canSubmit = !isLoading && !isDiscarding && text.length > 0 && text.length <= maxLength;
+  const canSubmit =
+    !isLoading && !isApproving && !isDiscarding && text.length > 0 && text.length <= maxLength;
 
   function setInput(text: string) {
     setDraft((current) => ({ ...current, text }));
@@ -107,6 +155,7 @@ export function useAssistant() {
 
     submissionInProgress.current = true;
     setIsLoading(true);
+    setActivityLabel(null);
     setDraft(EMPTY_DRAFT);
     setReplyOptions([]);
 
@@ -139,6 +188,9 @@ export function useAssistant() {
         observedWorkflow: workflow ? { id: workflow.id, revision: workflow.revision } : undefined,
       })) {
         switch (event.type) {
+          case "activity":
+            recordActivity(event);
+            break;
           case "delta":
             updateReply((reply) => ({ ...reply, content: reply.content + event.delta }));
             break;
@@ -202,27 +254,65 @@ export function useAssistant() {
     workflowUpdateInProgress.current = true;
     cancelWorkflowRestore();
     setIsApproving(true);
-    setApprovalError(null);
+    setActivityLabel(null);
+    setReplyOptions([]);
+
+    const { id: reviewId, label } = workflow.review;
+
+    const turnId = crypto.randomUUID();
+
+    const replyId = `${turnId}-assistant`;
+
+    setMessages((current) => [
+      ...current,
+      { id: `${turnId}-user`, role: "user", content: label },
+      { id: replyId, role: "assistant", content: "" },
+    ]);
+
+    function showResult(content: string) {
+      setMessages((current) =>
+        current.map((message) => (message.id === replyId ? { ...message, content } : message)),
+      );
+    }
 
     try {
-      const result = await approveWorkflow({
-        reviewId: workflow.review.id,
-        expectedRevision: workflow.revision,
-      });
+      const approval = await approveWorkflow(
+        {
+          reviewId,
+          expectedRevision: workflow.revision,
+        },
+        recordActivity,
+      ).catch(() => null);
 
-      if (result.status === "accepted") {
+      if (approval?.status === "conflict") {
+        setWorkflow(null);
+        await restoreWorkflow();
+        showResult("The review changed. Check the latest details before confirming.");
+
+        return;
+      }
+
+      const result = await fetchWorkflowResult({
+        reviewId,
+        previousResponseId: previousResponseId.current,
+      }).catch(() => null);
+
+      const saved = result?.workflow ?? approval?.workflow ?? null;
+
+      if (saved) {
         cancelWorkflowRestore();
-        setWorkflow(result.workflow);
+        setWorkflow(saved);
         setWorkflowRestoreFailed(false);
       } else {
-        setApprovalError("The review changed. Check the latest details.");
         setWorkflow(null);
         await restoreWorkflow();
       }
-    } catch {
-      setApprovalError("Could not confirm the request. Check its saved progress.");
-      setWorkflow(null);
-      await restoreWorkflow();
+
+      if (result?.reply) {
+        previousResponseId.current = result.reply.responseId;
+      }
+
+      showResult(result?.reply?.text ?? savedResultText(saved));
     } finally {
       workflowUpdateInProgress.current = false;
       setIsApproving(false);
@@ -251,7 +341,6 @@ export function useAssistant() {
         setWorkflow(null);
         previousResponseId.current = null;
         setReplyOptions([]);
-        setApprovalError(null);
       } else {
         setDiscardError("The draft changed. Check the latest details.");
       }
@@ -279,6 +368,7 @@ export function useAssistant() {
     maxLength,
     canSubmit,
     messages,
+    activityLabel,
     isLoading,
     replyOptions,
     workflow,
@@ -286,7 +376,6 @@ export function useAssistant() {
     restoreWorkflow,
     cancelWorkflowRestore,
     confirmReview,
-    approvalError,
     isApproving,
     requestDiscard,
     confirmDiscard,

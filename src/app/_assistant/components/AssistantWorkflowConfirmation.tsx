@@ -20,7 +20,7 @@ export function AssistantWorkflowConfirmation({
   declineLabel: string;
   destructive?: boolean;
   disabled: boolean;
-  error: string | null;
+  error?: string | null;
   onConfirm: () => void;
   onDecline: () => void;
 }) {

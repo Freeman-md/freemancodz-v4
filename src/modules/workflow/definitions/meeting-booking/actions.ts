@@ -127,6 +127,7 @@ export function createMeetingBookingAction(
       {
         key: CALENDAR,
         label: "Create Calendar event",
+        activityLabel: "Creating meeting",
         async execute(context) {
           const { booking, eventId, record } = meeting(context);
 
@@ -223,6 +224,7 @@ export function createMeetingBookingAction(
       {
         key: BOOKING,
         label: "Save booking",
+        activityLabel: "Saving booking details",
         async execute(context) {
           const { booking, eventId, record } = meeting(context);
 
@@ -259,6 +261,7 @@ export function createMeetingBookingAction(
       {
         key: NOTICE,
         label: "Notify owner",
+        activityLabel: "Sending notification",
         execute: (context) => sendNotice(context, false),
         async reconcile(context) {
           const result = await sendNotice(context, true);

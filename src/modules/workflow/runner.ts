@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { WorkflowStep } from "@/generated/prisma/client";
+import type { AssistantActivity } from "@/contracts/assistant.contract";
 import type { Logger } from "@/infrastructure/logging/logger";
 import type { WorkflowRegistry } from "./registry";
 import {
@@ -19,10 +20,18 @@ export class WorkflowRunner {
     private readonly batchSize = 4,
   ) {}
 
-  async runDue(reviewId?: string) {
+  async runDue(reviewId?: string, onActivity?: (activity: AssistantActivity) => void) {
     const signal = AbortSignal.timeout(20_000);
 
     let handled = 0;
+
+    function report(label: string, status: AssistantActivity["status"]) {
+      try {
+        onActivity?.({ type: "activity", label, status });
+      } catch {
+        // An observer can disappear while the durable step is in flight.
+      }
+    }
 
     while (handled < this.batchSize && !signal.aborted) {
       const claim = await this.repository.claim(this.clock(), reviewId);
@@ -34,6 +43,7 @@ export class WorkflowRunner {
       handled += 1;
 
       if (claim.status === "exhausted") {
+        report("Working on your request", claim.uncertain ? "uncertain" : "failed");
         continue;
       }
 
@@ -54,7 +64,7 @@ export class WorkflowRunner {
         !payload?.success ||
         review.version !== review.instance.workflowVersion
       ) {
-        await this.repository.settle(
+        const saved = await this.repository.settle(
           step,
           {
             status: "attention",
@@ -63,8 +73,15 @@ export class WorkflowRunner {
           },
           this.clock(),
         );
+
+        if (saved) {
+          report("Working on your request", step.firstEffect ? "uncertain" : "failed");
+        }
+
         continue;
       }
+
+      const label = handler.activityLabel ?? "Working on your request";
 
       const now = this.clock();
 
@@ -85,8 +102,10 @@ export class WorkflowRunner {
 
       try {
         if (reconcile) {
+          report(label, "checking");
           result = step.firstEffect ? await handler.reconcile(context) : { kind: "safe" };
         } else if (await this.repository.markEffect(step, now)) {
+          report(label, step.attempts > 1 ? "retrying" : "started");
           result = await handler.execute(context);
         } else {
           continue;
@@ -95,13 +114,30 @@ export class WorkflowRunner {
         result = { kind: "uncertain", reason: "step_unavailable" };
       }
 
-      const saved = await this.repository.settle(
-        step,
-        this.transition(step, result, reconcile),
-        this.clock(),
-      );
+      const transition = this.transition(step, result, reconcile);
 
-      if (saved && "reason" in result) {
+      const saved = await this.repository.settle(step, transition, this.clock());
+
+      if (!saved) {
+        continue;
+      }
+
+      switch (transition.status) {
+        case "succeeded":
+          report(label, "finished");
+          break;
+        case "retry":
+          report(label, "retry_scheduled");
+          break;
+        case "reconciling":
+          report(label, reconcile ? "check_scheduled" : "uncertain");
+          break;
+        case "attention":
+          report(label, transition.outcome.certainty === "failure" ? "failed" : "uncertain");
+          break;
+      }
+
+      if ("reason" in result) {
         this.logger.info("workflow.step_result", {
           runId: step.runId,
           step: step.key,

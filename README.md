@@ -37,25 +37,10 @@ I’m Freeman Madudili, a software engineer. I build intuitive interfaces and re
 
 Next.js builds the public pages from published PostgreSQL records. The deployment serves those built pages, while the assistant searches PostgreSQL at request time.
 
-### How the portfolio assistant answers
-
-The assistant uses retrieval-augmented generation (RAG). It finds relevant excerpts from published work, experience, services, and profile records, then gives the model those excerpts before it answers.
-
-```mermaid
-flowchart TD
-    P[Published portfolio records] --> E[Embed documents]
-    E --> I[(PostgreSQL search index)]
-    Q[Visitor question] --> R[Embed query and retrieve excerpts]
-    I --> R
-    R --> M[Give excerpts to the model]
-    M --> A[Stream answer and related links]
-```
-
-Ask “What did you build for JPScents?” The assistant retrieves excerpts from the JPScents case study and uses them to explain the fragrance storefront and its WhatsApp handoff for payment and delivery. Its source link opens [the JPScents case study](https://freemanmadudili.com/work/jpscents) at `/work/jpscents`.
-
-A full index refresh is simple for this small catalogue. Publishing changes includes an explicit refresh after the site is rebuilt and verified. Source links let readers inspect the case study or section behind the answer. When the records cannot support an answer, the assistant says so.
-
-Follow the [indexing command](src/entrypoints/maintenance/index-portfolio.ts), [search service](src/modules/portfolio/services/portfolio-search.service.ts), and [assistant answer and source handling](src/modules/assistant/service.ts) in the code. The assistant also supports booking a meeting. See the [workflow guide](docs/workflow-foundation.md).
+- [Assistant](docs/assistant.md) covers the conversation, tool calls, and live activity.
+- [RAG](docs/rag.md) covers indexing, retrieval, and source links.
+- [Workflows](docs/workflow-foundation.md) covers approval, execution, and recovery.
+- [Integrations](docs/integrations.md) covers provider configuration, deployment, and verification.
 
 <a name="local-development"></a>
 

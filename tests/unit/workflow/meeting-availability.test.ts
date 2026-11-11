@@ -28,7 +28,25 @@ test("a date range with no available times clears the previous offers", async ()
   assert.deepEqual(result, {
     state: { ...state, availableSlots: [] },
     output: { status: "no_slots", slots: [] },
+    replyOptions: [],
   });
+});
+
+test("an unavailable replacement leaves the saved time intact", async () => {
+  const [selectedSlot] = state.availableSlots;
+
+  const result = await findMeetingSlots(
+    { findAvailableSlots: async () => [selectedSlot], isSlotAvailable: async () => true },
+    { ...state, selectedSlot },
+    {
+      startDate: null,
+      endDate: null,
+      preferredTime: { date: "2099-06-15", time: "12:30", timeZone: "Europe/London" },
+    },
+  );
+
+  assert.equal(result.output.requestedTimeAvailable, false);
+  assert.deepEqual(result.state?.selectedSlot, selectedSlot);
 });
 
 test("an invalid date range does not call Calendar or change state", async (t) => {

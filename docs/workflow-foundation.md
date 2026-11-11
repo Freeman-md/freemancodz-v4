@@ -1,8 +1,8 @@
-# Assistant workflow and recovery
+# Workflows
 
 The assistant can collect details and prepare a review through definition-owned tools. It offers those tools after resolving the browser's saved instance and revision. A definition validates state and supplies the review, ordered steps, and visitor-facing status. Register definitions and their providers in the composition root.
 
-The browser confirms a review by sending its ID and revision to the same-origin approval route. The approval transaction checks the browser owner, consumes the review, and creates one run with stable step IDs. The route runs a bounded pass for that review and returns its saved result. The same executor lets the scheduled worker recover due work after the request ends. An executor can save a step result only while it owns the claim. A reconciliation probe checks what happened after a timeout or expired claim.
+The browser confirms a review by sending its ID and revision to the same-origin approval route. The approval transaction checks the browser owner, consumes the review, and creates one run with stable step IDs. The route runs a bounded pass for that review. Browser clients request NDJSON step activity and the final saved snapshot. JSON clients receive the saved snapshot after the pass. The same executor lets the scheduled worker recover due work after the request ends. While the approval stream is open, step events update the pending assistant reply. A claimed reconciliation displays **Checking outcome**. A delayed retry displays **Waiting to retry** until the assistant reports the saved pending outcome. The assistant polls the saved snapshot while a run remains pending. An executor can save a step result only while it owns the claim. A reconciliation probe checks what happened after a timeout or expired claim.
 
 The run reports success, definite failure, pending work, or an uncertain outcome. Older unresolved steps without recorded certainty are treated as uncertain. If the approval response is lost, the browser reloads the saved workflow before it can offer another confirmation.
 
@@ -10,7 +10,7 @@ Before approval, the visitor can use **Discard draft** in the workflow header or
 
 Known conversation limitation: after **Keep draft** dismisses a discard prompt, an ambiguous reply such as “Yes” can still prompt the assistant to refer to the dismissed control. This is a display mismatch. Approval and discard still require their own explicit, revision-checked browser requests.
 
-Meeting reserves the slot in Postgres, then creates an event with a stable Calendar ID and operation marker. The next step verifies or saves the booking by that ID. The booking appears confirmed as soon as the save succeeds. The final step freezes the owner email and sends it with a stable Resend key. A notification failure leaves the appointment confirmed.
+Meeting reserves the slot in Postgres, then creates an event with a stable Calendar ID and operation marker. The next step verifies or saves the booking by that ID. The saved outcome marks the booking confirmed as soon as the save succeeds. The final step freezes the owner notification and submits it to Resend with a stable idempotency key. A notification failure leaves the appointment confirmed.
 
 ## Release and scheduling
 
@@ -56,6 +56,6 @@ env -u GOOGLE_CLIENT_ID -u GOOGLE_CLIENT_SECRET -u GOOGLE_REFRESH_TOKEN -u GOOGL
 
 Run the database suites with `WORKFLOW_TEST_DATABASE_URL` and `PORTFOLIO_TEST_DATABASE_URL` pointing to disposable PostgreSQL with pgvector. The approval suite drives the authorized endpoint and exercises edit and approval races, expired claims, and injected provider failures. It advances the worker clock to check the saved retry and probe delays.
 
-Use `node tests/e2e/stage-workflow-variant.mjs /tmp/m28-meeting meeting` to build a disposable copy with controlled provider wiring. Generate Prisma and run the production build with the disposable database configured. Set `WORKFLOW_E2E_URL` and run `node --import tsx --test tests/e2e/workflow.test.ts` to verify that one confirmation finishes the booking with scheduling disabled and that the result survives reload.
+Use `node tests/e2e/stage-workflow-variant.mjs /tmp/m28-meeting meeting` to build a disposable copy with controlled provider wiring. Generate Prisma and run the production build with the disposable database configured. Set `WORKFLOW_E2E_URL` and run `node --import tsx --test tests/e2e/workflow.test.ts` to verify that one confirmation finishes the booking with scheduling disabled and that the saved outcome survives reload.
 
 Stage the `empty` and `services` variants in separate disposable directories with the same script. Both remove the Meeting definition, Meeting module, and Calendar adapter from the production source. The services variant registers the test-only Request Services definition. Build and start them separately, set `WORKFLOW_EMPTY_URL` and `WORKFLOW_SERVICES_URL`, and run `NODE_ENV=production node --conditions=react-server --import tsx --test tests/e2e/workflow-plugins.test.ts`. The test verifies the shared browser and runner paths, including recovery from a lost fixture acknowledgement.

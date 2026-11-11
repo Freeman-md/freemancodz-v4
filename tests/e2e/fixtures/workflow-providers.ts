@@ -6,6 +6,23 @@ const selectedStart = "2099-06-15T11:00:00.000Z";
 
 const selectedEnd = "2099-06-15T11:30:00.000Z";
 
+const friday = "2099-06-19";
+
+const fridaySlots = ["11:00", "11:30", "12:00"].map((time) => `${friday}T${time}:00.000Z`);
+
+const slots = [
+  { start: selectedStart, end: selectedEnd, timezone: "Europe/London" },
+  { start: fridaySlots[0], end: fridaySlots[1], timezone: "Europe/London" },
+  { start: fridaySlots[1], end: fridaySlots[2], timezone: "Europe/London" },
+];
+
+const slotResult = z.object({
+  result: z.object({
+    requestedTimeAvailable: z.boolean().optional(),
+    slots: z.array(z.object({ start: z.string(), label: z.string() })),
+  }),
+});
+
 const workflowInputSchema = z.object({
   message: z.string(),
   workflow: z.object({
@@ -33,7 +50,19 @@ export const fixtureModel: OpenAITransport = {
 
     let action: { name: string; args: object } | undefined;
 
-    if (last?.type === "function_call_output") {
+    if (content.startsWith('{"confirmedRequest":')) {
+      const result = z
+        .object({ savedResult: z.string(), time: z.string().nullish() })
+        .parse(JSON.parse(content));
+
+      if (result.savedResult === "Brief received") {
+        throw new Error("Fixture model unavailable after submission.");
+      }
+
+      reply = result.time
+        ? `Your meeting with Freeman is confirmed for ${result.time}.`
+        : result.savedResult;
+    } else if (last?.type === "function_call_output") {
       switch (previousResponseId) {
         case "resp_start_workflow":
           reply = "Your meeting request is open.";
@@ -41,12 +70,46 @@ export const fixtureModel: OpenAITransport = {
         case "resp_save_meeting_topic":
           reply = "I saved the topic.";
           break;
-        case "resp_save_meeting_identity":
+        case "resp_save_meeting_identity": {
+          const { workflow } = z
+            .object({ workflow: workflowInputSchema.shape.workflow })
+            .parse(JSON.parse(last.output));
+
+          if (workflow.collected.some(({ value }) => value === "moved@example.test")) {
+            action = {
+              name: "find_meeting_slots",
+              args: {
+                startDate: null,
+                endDate: null,
+                preferredTime: { date: friday, time: "12:30", timeZone: "Europe/London" },
+              },
+            };
+          } else if (workflow.collected.some(({ value }) => value === "Updated Visitor")) {
+            action = {
+              name: "save_meeting_topic",
+              args: { reason: "Discuss the booking marketplace." },
+            };
+          }
+
           reply = "I saved your details.";
           break;
-        case "resp_find_meeting_slots":
-          reply = "Available: 12:00 London time.";
+        }
+
+        case "resp_find_meeting_slots": {
+          const { result } = slotResult.parse(JSON.parse(last.output));
+
+          if (result.requestedTimeAvailable) {
+            action = { name: "select_meeting_slot", args: { start: result.slots[0].start } };
+          } else if (result.slots.length >= 2) {
+            action = {
+              name: "ask_user_choice",
+              args: { options: result.slots.map(({ label }) => label) },
+            };
+          }
+
           break;
+        }
+
         case "resp_select_meeting_slot":
           reply = "That time is saved for review.";
           break;
@@ -78,19 +141,33 @@ export const fixtureModel: OpenAITransport = {
       action = { name: "start_workflow", args: { workflowId: "request-services" } };
     } else if (output.startsWith("Brief: ") && names.has("save_service_brief")) {
       action = { name: "save_service_brief", args: { brief: output.slice(7) } };
+    } else if (output.startsWith("Change my name") && names.has("save_meeting_identity")) {
+      action = {
+        name: "save_meeting_identity",
+        args: { name: "Updated Visitor", email: "updated@example.test" },
+      };
+    } else if (output.startsWith("Change my email") && names.has("save_meeting_identity")) {
+      action = { name: "save_meeting_identity", args: { name: null, email: "moved@example.test" } };
     } else if (/Discuss|discuss/.test(output) && names.has("save_meeting_topic")) {
       action = { name: "save_meeting_topic", args: { reason: output } };
     } else if (output.includes("@") && names.has("save_meeting_identity")) {
       const [name, email] = output.split(", ");
 
       action = { name: "save_meeting_identity", args: { name, email } };
-    } else if (/Show times/.test(output) && names.has("find_meeting_slots")) {
+    } else if (
+      (/Show times/.test(output) || output === "Friday") &&
+      names.has("find_meeting_slots")
+    ) {
       action = {
         name: "find_meeting_slots",
-        args: { startDate: "2099-06-15", endDate: "2099-06-15" },
+        args: { startDate: output === "Friday" ? friday : "2099-06-15", endDate: friday },
       };
-    } else if (/choose 12/.test(output) && names.has("select_meeting_slot")) {
-      action = { name: "select_meeting_slot", args: { start: selectedStart } };
+    } else if (
+      output.includes("19 Jun 2099") &&
+      output.endsWith("12:00 London time") &&
+      names.has("select_meeting_slot")
+    ) {
+      action = { name: "select_meeting_slot", args: { start: fridaySlots[0] } };
     } else if (/JPScents/.test(output) && names.has("search_portfolio")) {
       action = { name: "search_portfolio", args: { query: "JPScents" } };
     } else if (/give me options/i.test(output) && names.has("ask_user_choice")) {
@@ -171,6 +248,7 @@ export const fixtureCalendar = {
   getBusyPeriods: async () => [],
   findEvent: async (id: string) => events.get(id) ?? null,
   createEvent: async (input: EventInput) => {
+    await new Promise((resolve) => setTimeout(resolve, 350));
     const event = makeEvent(input);
 
     if (events.has(event.id)) {
@@ -184,8 +262,10 @@ export const fixtureCalendar = {
 };
 
 export const fixtureAvailability = {
-  async findAvailableSlots() {
-    return [{ start: selectedStart, end: selectedEnd, timezone: "Europe/London" }];
+  async findAvailableSlots({ startDate, endDate }: { startDate: string; endDate: string }) {
+    return slots.filter(
+      ({ start }) => start.slice(0, 10) >= startDate && start.slice(0, 10) <= endDate,
+    );
   },
   async isSlotAvailable() {
     return true;
@@ -194,6 +274,8 @@ export const fixtureAvailability = {
 
 export const fixtureNotice = {
   async sendWithReceipt(input: { idempotencyKey: string }) {
+    await new Promise((resolve) => setTimeout(resolve, 1_000));
+
     return `fixture-${input.idempotencyKey}`;
   },
 };

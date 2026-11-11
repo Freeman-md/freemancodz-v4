@@ -20,7 +20,7 @@ export type ToolReplyEvent = Extract<
   { type: "options" | "sources" | "workflow_instance" | "confirm_workflow_discard" }
 >;
 
-type ToolResult = { output: string; event?: ToolReplyEvent };
+type ToolResult = { output: string; event?: ToolReplyEvent; replyOptions?: readonly string[] };
 
 export async function executeTool(
   name: string,
@@ -96,6 +96,7 @@ export async function executeTool(
 
       return {
         output: JSON.stringify(result.output),
+        replyOptions: result.replyOptions,
         event: result.instance
           ? { type: "workflow_instance", instance: result.instance }
           : undefined,

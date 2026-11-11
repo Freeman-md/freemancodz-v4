@@ -10,6 +10,7 @@ import {
 } from "./tool-handlers";
 
 export const saveMeetingTopicTool: WorkflowTool = {
+  activityLabel: "Saving the meeting topic",
   tool: {
     type: "function",
     name: "save_meeting_topic",
@@ -28,6 +29,7 @@ export const saveMeetingTopicTool: WorkflowTool = {
 };
 
 export const saveMeetingIdentityTool: WorkflowTool = {
+  activityLabel: "Saving meeting details",
   tool: {
     type: "function",
     name: "save_meeting_identity",
@@ -46,6 +48,7 @@ export const saveMeetingIdentityTool: WorkflowTool = {
 
 export function createFindMeetingSlotsTool(availability: MeetingAvailability): WorkflowTool {
   return {
+    activityLabel: "Checking availability",
     tool: {
       type: "function",
       name: "find_meeting_slots",
@@ -99,6 +102,7 @@ export function createSelectMeetingSlotTool(
   const offeredTimes = availableSlots.map((slot) => formatMeetingSlot(slot) + " = " + slot.start);
 
   return {
+    activityLabel: "Checking the selected time",
     tool: {
       type: "function",
       name: "select_meeting_slot",

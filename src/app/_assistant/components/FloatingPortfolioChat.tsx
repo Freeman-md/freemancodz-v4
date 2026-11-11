@@ -27,7 +27,7 @@ export function FloatingPortfolioChat() {
   } = useAssistantSurface({
     onDraft: chat.openDraft,
     lastMessage: chat.messages.at(-1),
-    isLoading: chat.isLoading,
+    isLoading: chat.isLoading || chat.isApproving,
   });
 
   const { workflow, workflowRestoreFailed, restoreWorkflow, cancelWorkflowRestore } = chat;
@@ -41,10 +41,6 @@ export function FloatingPortfolioChat() {
   }, [isOpen, restoreWorkflow, cancelWorkflowRestore]);
 
   const runStatus = workflow?.run?.status;
-
-  const runResult =
-    workflow?.run?.businessStatus ??
-    (runStatus === "finished" ? "Your request is complete." : undefined);
 
   const shouldPoll = runStatus === "queued" || runStatus === "running" || runStatus === "retry";
 
@@ -137,12 +133,12 @@ export function FloatingPortfolioChat() {
               </Dialog.Close>
             </header>
 
-            {workflow && runStatus !== "finished" && (
+            {workflow && !workflow.run && (
               <AssistantWorkflowProgress
-                key={`${workflow.id}:${workflow.run ? "submitted" : "draft"}`}
+                key={workflow.id}
                 instance={workflow}
                 onDiscard={
-                  workflow.status === "active" && !workflow.run && !chat.discardConfirmation
+                  workflow.status === "active" && !chat.discardConfirmation
                     ? chat.requestDiscard
                     : undefined
                 }
@@ -157,8 +153,9 @@ export function FloatingPortfolioChat() {
             )}
 
             <AssistantMessages
-              showStarters={!workflow}
-              isLoading={chat.isLoading}
+              activityLabel={chat.activityLabel}
+              showStarters={!workflow || !!workflow.run}
+              isLoading={chat.isLoading || chat.isApproving}
               messages={chat.messages}
               messagesEndRef={messagesEndRef}
               shouldReduceMotion={shouldReduceMotion}
@@ -211,26 +208,9 @@ export function FloatingPortfolioChat() {
                 confirmLabel={workflow.review.label}
                 declineLabel="Request changes"
                 disabled={chat.isApproving || chat.isLoading}
-                error={chat.approvalError}
                 onConfirm={() => void chat.confirmReview()}
                 onDecline={() => textareaRef.current?.focus()}
               />
-            )}
-
-            {(runResult || runStatus === "attention") && (
-              <div
-                role="status"
-                className="shrink-0 border-t border-[var(--assistant-line)] px-4 py-3 text-sm sm:px-6"
-              >
-                {runResult && <p className="font-medium">{runResult}</p>}
-                {runStatus === "attention" && (
-                  <p>
-                    {workflow?.run?.outcome === "failure"
-                      ? "Processing needs attention. Contact Freeman for help."
-                      : "The outcome could not be verified. Contact Freeman for help."}
-                  </p>
-                )}
-              </div>
             )}
 
             <AssistantComposer

@@ -54,7 +54,7 @@ export class WorkflowRunRepository {
         });
         await finishRun(tx, candidate.runId, "attention", now);
 
-        return { status: "exhausted" } as const;
+        return { status: "exhausted", uncertain: reconcile } as const;
       }
 
       await tx.workflowRun.update({ where: { id: candidate.runId }, data: { status: "running" } });

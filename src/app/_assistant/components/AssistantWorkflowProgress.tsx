@@ -14,23 +14,6 @@ const PHASE_LABELS: Record<ActiveWorkflow["phase"], string> = {
   cancelled: "Cancelled",
 };
 
-const RUN_LABELS = {
-  queued: "Submitted",
-  running: "Processing",
-  retry: "Retry pending",
-  finished: "Finished",
-  attention: "Needs attention",
-} as const;
-
-const STEP_LABELS = {
-  queued: "Queued",
-  running: "Running",
-  retry: "Retry pending",
-  reconciling: "Checking outcome",
-  succeeded: "Finished",
-  attention: "Needs attention",
-} as const;
-
 export function AssistantWorkflowProgress({
   instance,
   onDiscard,
@@ -55,20 +38,11 @@ export function AssistantWorkflowProgress({
             <span className="block font-sans text-base/6 font-medium text-ink">
               {instance.title}
             </span>
-            <span
-              aria-live={instance.run ? undefined : "polite"}
-              className="block font-sans text-sm/5 text-muted"
-            >
-              {instance.run ? (
-                RUN_LABELS[instance.run.status]
-              ) : (
-                <>
-                  {PHASE_LABELS[instance.phase]} ·{" "}
-                  <span className="tabular-nums">
-                    {collected} of {instance.details.length} details
-                  </span>
-                </>
-              )}
+            <span aria-live="polite" className="block font-sans text-sm/5 text-muted">
+              {PHASE_LABELS[instance.phase]} ·{" "}
+              <span className="tabular-nums">
+                {collected} of {instance.details.length} details
+              </span>
             </span>
           </span>
           <ChevronDownIcon
@@ -91,16 +65,6 @@ export function AssistantWorkflowProgress({
       </div>
 
       <Collapsible.Panel className="h-(--collapsible-panel-height) overflow-hidden transition-[height] duration-150 ease-out data-ending-style:h-0 data-starting-style:h-0 motion-reduce:transition-none [&[hidden]:not([hidden='until-found'])]:hidden">
-        {instance.run && (
-          <ol className="px-4 py-2 text-sm sm:px-6" aria-label="Execution steps">
-            {instance.run.steps.map(({ key, label, status }) => (
-              <li key={key} className="flex justify-between gap-3 py-1">
-                <span>{label}</span>
-                <span>{STEP_LABELS[status]}</span>
-              </li>
-            ))}
-          </ol>
-        )}
         <ul role="list" className="max-h-[min(35dvh,20rem)] overflow-y-auto px-4 sm:px-6">
           {instance.details.map(({ key, label, value }) => (
             <li

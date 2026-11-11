@@ -93,12 +93,17 @@ test(
     await dialog.getByRole("listitem").getByText(topic, { exact: true }).waitFor();
     await progress.getByText("1 of 4 details", { exact: true }).waitFor();
 
-    await dialog.getByRole("textbox", { name: "Your message" }).fill("Show times on 2099-06-15.");
+    await dialog.getByRole("textbox", { name: "Your message" }).fill("Show times this week.");
     await dialog.getByRole("button", { name: "Send message" }).click();
-    await dialog.getByText(/^Available: .*12:00 London time/).waitFor();
+    const choices = dialog.getByRole("group", { name: "Suggested replies" });
 
-    await dialog.getByRole("textbox", { name: "Your message" }).fill("I choose 12:00 London time.");
+    await choices.getByRole("button", { name: /15 Jun 2099.*12:00/ }).waitFor();
+    assert.equal(await choices.getByRole("button").count(), 3);
+    await dialog.getByRole("textbox", { name: "Your message" }).fill("Friday");
     await dialog.getByRole("button", { name: "Send message" }).click();
+    await choices.getByRole("button", { name: /19 Jun 2099.*12:30/ }).waitFor();
+    assert.equal(await choices.getByRole("button").count(), 2);
+    await choices.getByRole("button", { name: /19 Jun 2099.*12:00/ }).click();
     const timeRow = dialog.getByRole("listitem").filter({ hasText: "Time" });
 
     const selectedTime = timeRow.getByText(/12:00 London time$/);
@@ -120,7 +125,7 @@ test(
     assert.equal(restored.status(), 200);
     assert.deepEqual(activeWorkflowSchema.parse(await restored.json()), {
       ...instance,
-      revision: instance.revision + 3,
+      revision: instance.revision + 4,
       details: [
         { key: "name", label: "Name", value: null },
         { key: "email", label: "Email", value: null },
@@ -155,15 +160,19 @@ test(
     await dialog.getByText(/Name: Test Visitor.*Use Confirm booking to continue/).waitFor();
     await dialog
       .getByRole("textbox", { name: "Your message" })
-      .fill("Discuss the corrected scope.");
+      .fill(
+        "Change my name to Updated Visitor, email to updated@example.test, and topic to a booking marketplace.",
+      );
     await review.getByRole("button", { name: "Request changes" }).click();
     assert.equal((await (await owner.request.get(chatUrl)).json()).review.id, prepared.review.id);
     assert.equal(
       await dialog.getByRole("textbox", { name: "Your message" }).inputValue(),
-      "Discuss the corrected scope.",
+      "Change my name to Updated Visitor, email to updated@example.test, and topic to a booking marketplace.",
     );
     await dialog.getByRole("button", { name: "Send message" }).click();
-    await review.getByText("Discuss the corrected scope.", { exact: true }).waitFor();
+    await review.getByText("Discuss the booking marketplace.", { exact: true }).waitFor();
+    await review.getByText("Updated Visitor", { exact: true }).waitFor();
+    await review.getByText("updated@example.test", { exact: true }).waitFor();
     const staleApproval = await owner.request.post(
       new URL("/api/workflow/approve", workflowUrl).href,
       {
@@ -173,6 +182,27 @@ test(
     );
 
     assert.equal(staleApproval.status(), 409);
+    const corrected = activeWorkflowSchema.parse(await (await owner.request.get(chatUrl)).json());
+
+    assert.ok(corrected.review);
+    await dialog
+      .getByRole("textbox", { name: "Your message" })
+      .fill("Change my email to moved@example.test and move it to Friday at 12:30 London time.");
+    await dialog.getByRole("button", { name: "Send message" }).click();
+    await review.getByText(/12:30 London time$/).waitFor();
+    await review.getByText("moved@example.test", { exact: true }).waitFor();
+    const moved = activeWorkflowSchema.parse(await (await owner.request.get(chatUrl)).json());
+
+    assert.equal(moved.run, undefined);
+    assert.equal(
+      (
+        await owner.request.post(new URL("/api/workflow/approve", workflowUrl).href, {
+          headers: { origin: new URL(workflowUrl).origin },
+          data: { reviewId: corrected.review.id, expectedRevision: corrected.revision },
+        })
+      ).status(),
+      409,
+    );
     const reviewBounds = await review.boundingBox();
 
     const composerBounds = await dialog
@@ -189,26 +219,82 @@ test(
       });
     }
 
+    await dialog.getByRole("textbox", { name: "Your message" }).fill("Confirm booking");
+    await dialog.getByRole("button", { name: "Send message" }).click();
+    await dialog.getByText("Hello! How can I help?", { exact: true }).waitFor();
+    assert.equal((await (await owner.request.get(chatUrl)).json()).run, undefined);
+
     await review.getByRole("button", { name: "Confirm booking" }).focus();
-    const [approval] = await Promise.all([
-      page.waitForResponse(
-        (response: { url(): string; request(): { method(): string } }) =>
-          response.url().endsWith("/api/workflow/approve") &&
-          response.request().method() === "POST",
-      ),
-      review.getByRole("button", { name: "Confirm booking" }).press("Enter"),
-    ]);
+    await page.evaluate(() => {
+      const observed: string[] = [];
+
+      const observer = new MutationObserver(() => {
+        const label = document.querySelector(
+          '[role="dialog"] article [role="status"]',
+        )?.textContent;
+
+        if (label && observed.at(-1) !== label) {
+          observed.push(label);
+          document.body.dataset.bookingActivity = JSON.stringify(observed);
+        }
+      });
+
+      observer.observe(document.body, { childList: true, subtree: true, characterData: true });
+    });
+    const release = Promise.withResolvers<void>();
+
+    await page.route(
+      "**/api/workflow/approve",
+      async (route: { continue(): Promise<void> }) => {
+        await release.promise;
+        await route.continue();
+      },
+      { times: 1 },
+    );
+
+    const approvalResponse = page.waitForResponse(
+      (response: { url(): string; request(): { method(): string } }) =>
+        response.url().endsWith("/api/workflow/approve") && response.request().method() === "POST",
+    );
+
+    const activity = dialog.getByRole("article").getByRole("status");
+
+    try {
+      await review.getByRole("button", { name: "Confirm booking" }).press("Enter");
+      await activity.filter({ hasText: /^Thinking…$/ }).waitFor();
+    } finally {
+      release.resolve();
+    }
+
+    await activity.filter({ hasText: /^Creating meeting…$/ }).waitFor();
+    const approval = await approvalResponse;
 
     assert.equal(approval.status(), 200);
-    const approved = activeWorkflowSchema.parse(await approval.json());
+    const reply = dialog
+      .getByRole("article")
+      .getByText(/^Your meeting with Freeman is confirmed for .*12:30 London time\.$/);
+
+    await reply.waitFor();
+    assert.equal(await activity.count(), 0);
+    const observed = JSON.parse(
+      (await page.locator("body").getAttribute("data-booking-activity")) ?? "[]",
+    );
+
+    assert.ok(observed.includes("Sending notification…"), JSON.stringify(observed));
+    const approved = activeWorkflowSchema.parse(await (await owner.request.get(chatUrl)).json());
 
     assert.equal(approved.run?.outcome, "success");
-    await dialog.getByText("Booking confirmed", { exact: true }).waitFor();
+    assert.equal(await reply.count(), 1);
+    assert.equal(
+      await dialog.getByRole("article").getByText("Confirm booking", { exact: true }).count(),
+      2,
+    );
+    assert.equal(await dialog.getByText("Booking confirmed", { exact: true }).count(), 0);
     assert.equal(await progress.count(), 0);
     assert.equal(await review.count(), 0);
     await page.reload({ waitUntil: "load" });
     await page.getByRole("button", { name: "Open portfolio chat" }).click();
-    await dialog.getByText("Booking confirmed", { exact: true }).waitFor();
+    await dialog.getByRole("heading", { name: "What would you like to know?" }).waitFor();
     const saved = activeWorkflowSchema.parse(await (await owner.request.get(chatUrl)).json());
 
     assert.equal(saved.id, approved.id);

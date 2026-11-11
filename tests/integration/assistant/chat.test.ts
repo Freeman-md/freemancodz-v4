@@ -3,7 +3,11 @@ import { createHash, randomUUID } from "node:crypto";
 import { once } from "node:events";
 import test from "node:test";
 import { CHAT_VISITOR_COOKIE, MAX_CHAT_BODY_BYTES } from "@/app/api/chat/constants";
-import { type ActiveWorkflow, workflowReviewDisplaySchema } from "@/contracts/assistant.contract";
+import {
+  type ActiveWorkflow,
+  workflowResultResponseSchema,
+  workflowReviewDisplaySchema,
+} from "@/contracts/assistant.contract";
 import { CalendarAvailabilityError } from "@/infrastructure/google-calendar/types";
 import type { RateLimitResult } from "@/modules/rate-limit/rate-limit.types";
 import { MeetingBookingWorkflowDefinition } from "@/modules/workflow/definitions/meeting-booking/definition";
@@ -23,6 +27,10 @@ import {
   startChatServer,
   toolCall,
 } from "./chat.fixture";
+
+function parseReplyEvents(body: string) {
+  return parseEvents(body).filter(({ type }) => type !== "activity");
+}
 
 const meetingBooking = new MeetingBookingWorkflowDefinition({
   findAvailableSlots: async () => {
@@ -77,6 +85,7 @@ test("starts workflows only after establishing browser ownership and completing 
             start,
             getTurn: async () => ({ tools: [] }),
             getActive: async () => null,
+            getApprovedResult: async () => null,
           },
         },
       );
@@ -94,7 +103,7 @@ test("starts workflows only after establishing browser ownership and completing 
       const second = await post(chatRequest(body, `${CHAT_VISITOR_COOKIE}=${session.value}`));
 
       assert.equal(second.status, 200);
-      const events = parseEvents(await second.text());
+      const events = parseReplyEvents(await second.text());
 
       if (scenario === "incomplete" || scenario === "unoffered") {
         assert.equal(start.mock.callCount(), 0);
@@ -140,6 +149,107 @@ test("starts workflows only after establishing browser ownership and completing 
         scenario === "follow-up failed"
           ? ["workflow_instance", "error"]
           : ["workflow_instance", "delta", "response_id", "done"],
+      );
+    });
+  }
+});
+
+test("chat reports only the owned, saved workflow result", async (t) => {
+  const time = "Fri, 13 Nov 2026, 12:30 London time";
+
+  const reviewId = randomUUID();
+
+  for (const scenario of [
+    "success",
+    "notice uncertain",
+    "model failed",
+    "pending",
+    "failure",
+    "uncertain",
+    "unavailable",
+  ] as const) {
+    await t.test(scenario, async () => {
+      const verified =
+        scenario === "success" || scenario === "notice uncertain" || scenario === "model failed";
+
+      const workflow: ActiveWorkflow = {
+        id: randomUUID(),
+        revision: 4,
+        title: "Book a meeting",
+        status: scenario === "pending" ? "active" : "completed",
+        phase: "completed",
+        details: [
+          { key: "email", label: "Email", value: "private@example.test" },
+          { key: "time", label: "Time", value: time },
+        ],
+        run: {
+          status:
+            scenario === "pending"
+              ? "queued"
+              : verified && scenario !== "notice uncertain"
+                ? "finished"
+                : "attention",
+          outcome:
+            scenario === "model failed" || scenario === "unavailable"
+              ? "success"
+              : scenario === "notice uncertain"
+                ? "uncertain"
+                : scenario,
+          businessStatus: verified ? "Booking confirmed" : undefined,
+          steps: [],
+        },
+      };
+
+      const { post, requests } = createChatFixture(
+        async () =>
+          scenario === "model failed"
+            ? providerEvents(delta("Unfinished"), { type: "response.failed" })
+            : providerEvents(
+                delta(`Your meeting with Freeman is confirmed for ${time}.`),
+                complete("resp_result"),
+              ),
+        {
+          workflow: {
+            listAvailable: () => [],
+            start: async () => {
+              throw new Error("Result lookup must not start a workflow.");
+            },
+            getActive: async () => null,
+            getTurn: async () => {
+              throw new Error("Result lookup must not offer draft tools.");
+            },
+            getApprovedResult: async (_visitor, id) =>
+              scenario !== "unavailable" && id === reviewId ? workflow : null,
+          },
+        },
+      );
+
+      const response = await post(
+        chatRequest(JSON.stringify({ reviewId, previousResponseId: "resp_review" })),
+      );
+
+      assert.equal(requests.length, verified ? 1 : 0);
+      if (scenario === "unavailable") {
+        assert.equal(response.status, 404);
+
+        return;
+      }
+
+      assert.equal(response.status, 200);
+      const result = workflowResultResponseSchema.parse(await response.json());
+
+      assert.equal(result.workflow.run?.outcome, workflow.run?.outcome);
+      if (verified) {
+        assert.deepEqual(requests[0].tools, []);
+        assert.equal(requests[0].previousResponseId, "resp_review");
+        assert.ok(!JSON.stringify(requests[0].input).includes("private@example.test"));
+      }
+
+      assert.equal(
+        result.reply?.text,
+        verified && scenario !== "model failed"
+          ? `Your meeting with Freeman is confirmed for ${time}.`
+          : undefined,
       );
     });
   }
@@ -211,7 +321,7 @@ test("the assistant reads the saved draft on a fresh turn and sees its review af
   );
 
   async function send(revision: number) {
-    return parseEvents(
+    return parseReplyEvents(
       await (
         await post(
           chatRequest(
@@ -261,7 +371,8 @@ test("the assistant reads the saved draft on a fresh turn and sees its review af
   assert.equal(updated.instance.review?.id, reviewId);
   assert.equal(toolOutput.type, "function_call_output");
   assert.equal(followUp.instructions.includes("still needs: time"), false);
-  assert.deepEqual(followUp.tools, []);
+  assert.ok(followUp.tools.some(({ name }) => name === "save_meeting_identity"));
+  assert.ok(!followUp.tools.some(({ name }) => name === "select_meeting_slot"));
   assert.deepEqual(JSON.parse(toolOutput.output), {
     result: { status: "selected", label: updated.instance.details[3].value },
     workflow: {
@@ -279,6 +390,90 @@ test("the assistant reads the saved draft on a fresh turn and sees its review af
 
   assert.equal(restored.type, "user_message");
   assert.deepEqual(JSON.parse(restored.content).workflow, JSON.parse(toolOutput.output).workflow);
+});
+
+test("workflow tools stop at the call limit or when the saved revision changes", async (t) => {
+  for (const scenario of ["limit", "competing edit", "approval"] as const) {
+    await t.test(scenario, async () => {
+      let instance: StoredWorkflow = {
+        id: randomUUID(),
+        workflowId: meetingBooking.id,
+        workflowVersion: meetingBooking.version,
+        revision: 0,
+        state: { name: "Visitor" },
+      };
+
+      let approved = false;
+
+      let writes = 0;
+
+      const workflow = new WorkflowService(new WorkflowRegistry([meetingBooking]), {
+        startOrResume: async () => instance,
+        findActive: async () => instance,
+        saveState: async ({ state, revision }) => {
+          if (approved || revision !== instance.revision) {
+            return null;
+          }
+
+          writes += 1;
+          instance = {
+            ...instance,
+            state: meetingBooking.stateSchema.parse(state),
+            revision: revision + 1,
+          };
+
+          return instance;
+        },
+        findRun: async () => null,
+        ensureReview: async () => null,
+        findOwnedReview: async () => null,
+        approve: async () => false,
+        discardDraft: async () => false,
+      });
+
+      const { post, requests } = createChatFixture(
+        async ({ previousResponseId }) => {
+          if (previousResponseId === "resp_1") {
+            if (scenario === "competing edit") {
+              instance = { ...instance, revision: instance.revision + 1 };
+            }
+
+            approved = scenario === "approval";
+          }
+
+          return providerEvents(
+            delta("Intermediate text."),
+            complete(`resp_${writes + 1}`, [
+              toolCall("save_meeting_topic", { reason: `Topic ${writes + 1}` }),
+            ]),
+          );
+        },
+        { workflow },
+      );
+
+      const body = JSON.stringify({
+        message: "Change my topic.",
+        observedWorkflow: { id: instance.id, revision: 0 },
+      });
+
+      const events = parseReplyEvents(await (await post(chatRequest(body))).text());
+
+      assert.equal(writes, scenario === "limit" ? 4 : 1);
+      assert.equal(
+        events.filter(({ type }) => type === "workflow_instance").length,
+        scenario === "limit" ? 4 : 2,
+      );
+      assert.equal(events.at(-1)?.type, "error");
+      if (scenario === "limit") {
+        assert.equal(requests.length, 5);
+        assert.deepEqual(requests.at(-1)?.tools, []);
+      } else {
+        assert.equal(requests.length, 2);
+        assert.match(JSON.stringify(events.at(-1)), /Earlier updates were saved/);
+        assert.ok(!events.some(({ type }) => type === "delta"));
+      }
+    });
+  }
 });
 
 test("topic collection leaves unrelated questions and invalid arguments out of workflow state", async (t) => {
@@ -320,7 +515,7 @@ test("topic collection leaves unrelated questions and invalid arguments out of w
         observedWorkflow: { id: instance.id, revision: instance.revision },
       });
 
-      const events = parseEvents(await (await post(chatRequest(body))).text());
+      const events = parseReplyEvents(await (await post(chatRequest(body))).text());
 
       assert.ok(requests[0].tools.some(({ name }) => name === "save_meeting_topic"));
       assert.equal(saveState.mock.callCount(), 0);
@@ -380,8 +575,9 @@ test("reports Calendar unavailability without changing the active workflow", asy
     observedWorkflow: { id: instance.id, revision: instance.revision },
   });
 
-  const events = parseEvents(await (await post(chatRequest(body))).text());
+  const events = parseReplyEvents(await (await post(chatRequest(body))).text());
 
+  assert.deepEqual(requests[1].tools, []);
   assert.deepEqual(requests[1].input, [
     {
       type: "function_call_output",
@@ -424,7 +620,7 @@ test("streams a plain reply before completion", { timeout: 5000 }, async () => {
     const first = await reader.read();
 
     assert.ok(!first.done);
-    assert.deepEqual(parseEvents(first.value), [{ type: "delta", delta: "Hello." }]);
+    assert.deepEqual(parseReplyEvents(first.value), [{ type: "delta", delta: "Hello." }]);
     assert.equal(requests[0].previousResponseId, "resp_previous");
   } finally {
     finish.resolve();
@@ -435,6 +631,58 @@ test("streams a plain reply before completion", { timeout: 5000 }, async () => {
     { type: "done" },
   ]);
   assert.equal(requests.length, 1);
+});
+
+test("streams portfolio activity before the search returns and reports its outcome", async (t) => {
+  for (const fails of [false, true]) {
+    await t.test(fails ? "failed search" : "finished search", async () => {
+      const finish = Promise.withResolvers<void>();
+
+      const { post } = createChatFixture(
+        async ({ previousResponseId }) =>
+          previousResponseId === "resp_search"
+            ? providerEvents(delta("Portfolio reply."), complete("resp_reply"))
+            : providerEvents(
+                complete("resp_search", [toolCall("search_portfolio", { query: "private query" })]),
+              ),
+        {
+          search: async () => {
+            await finish.promise;
+            if (fails) {
+              throw new Error("private provider failure");
+            }
+
+            return [];
+          },
+        },
+      );
+
+      const response = await post(chatRequest(requestBody));
+
+      assert.ok(response.body);
+      const reader = response.body.pipeThrough(new TextDecoderStream()).getReader();
+
+      try {
+        const first = await reader.read();
+
+        assert.equal(first.done, false);
+        assert.deepEqual(parseEvents(first.value ?? ""), [
+          { type: "activity", label: "Searching the portfolio", status: "started" },
+        ]);
+      } finally {
+        finish.resolve();
+      }
+
+      const remaining = await readEvents(reader);
+
+      assert.deepEqual(remaining[0], {
+        type: "activity",
+        label: "Searching the portfolio",
+        status: fails ? "failed" : "finished",
+      });
+      assert.doesNotMatch(JSON.stringify(remaining), /private query|private provider failure/);
+    });
+  }
 });
 
 test("offers choices after the completed question", async () => {
@@ -451,7 +699,7 @@ test("offers choices after the completed question", async () => {
         ),
   );
 
-  assert.deepEqual(parseEvents(await (await post(chatRequest(requestBody))).text()), [
+  assert.deepEqual(parseReplyEvents(await (await post(chatRequest(requestBody))).text()), [
     { type: "delta", delta: "What are you looking to build?" },
     { type: "options", options },
     { type: "response_id", responseId: "resp_question" },
@@ -498,7 +746,7 @@ test("uses search excerpts and returns related sources after completion", async 
           },
         );
 
-        assert.deepEqual(parseEvents(await (await post(chatRequest(requestBody))).text()), [
+        assert.deepEqual(parseReplyEvents(await (await post(chatRequest(requestBody))).text()), [
           { type: "delta", delta: answer },
           ...(matches.length ? [{ type: "sources", sources: [source] }] : []),
           { type: "response_id", responseId: "resp_answer" },
@@ -531,7 +779,7 @@ test("reports search outages and unfinished provider turns safely", async (t) =>
       },
     );
 
-    assert.deepEqual(parseEvents(await (await post(chatRequest(requestBody))).text()), [
+    assert.deepEqual(parseReplyEvents(await (await post(chatRequest(requestBody))).text()), [
       {
         type: "error",
         error: "I couldn’t search the portfolio just now. Please try again shortly.",
@@ -561,7 +809,7 @@ test("reports search outages and unfinished provider turns safely", async (t) =>
       },
     );
 
-    assert.deepEqual(parseEvents(await (await post(chatRequest(requestBody))).text()), [
+    assert.deepEqual(parseReplyEvents(await (await post(chatRequest(requestBody))).text()), [
       { type: "delta", delta: "Checking the portfolio…" },
       { type: "error", error: "The assistant could not respond. Please try again." },
     ]);
@@ -603,7 +851,7 @@ test("cancels the provider on HTTP disconnect", { timeout: 5000 }, async (t) => 
   const first = await reader.read();
 
   assert.ok(!first.done);
-  assert.deepEqual(parseEvents(new TextDecoder().decode(first.value)), [
+  assert.deepEqual(parseReplyEvents(new TextDecoder().decode(first.value)), [
     { type: "delta", delta: "Started." },
   ]);
   controller.abort();

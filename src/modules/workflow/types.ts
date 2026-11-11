@@ -6,10 +6,12 @@ import type { OpenAIResponseTool } from "@/infrastructure/openai/types";
 export type WorkflowToolResult = {
   output: Prisma.InputJsonObject;
   state?: Prisma.InputJsonObject;
+  replyOptions?: readonly string[];
 };
 
 export type WorkflowTool = {
   tool: OpenAIResponseTool;
+  activityLabel?: string;
   apply(state: unknown, args: unknown): WorkflowToolResult | Promise<WorkflowToolResult>;
 };
 
@@ -71,6 +73,7 @@ export type WorkflowAction = {
   steps: readonly {
     key: string;
     label: string;
+    activityLabel?: string;
     execute(input: WorkflowStepInput): Promise<WorkflowStepResult>;
     reconcile(input: WorkflowStepInput): Promise<WorkflowProbeResult>;
   }[];

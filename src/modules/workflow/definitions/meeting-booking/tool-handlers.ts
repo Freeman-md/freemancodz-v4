@@ -103,12 +103,15 @@ export async function findMeetingSlots(
 
     const slots = exact ? [exact] : available.slice(0, 4);
 
+    const offered = slots.map((slot) => ({ start: slot.start, label: formatMeetingSlot(slot) }));
+
     return {
       state: { ...state, availableSlots: slots },
+      replyOptions: offered.map(({ label }) => label),
       output: {
         status: slots.length > 0 ? "available" : "no_slots",
         ...(requested ? { requestedTimeAvailable: Boolean(exact) } : {}),
-        slots: slots.map((slot) => ({ start: slot.start, label: formatMeetingSlot(slot) })),
+        slots: offered,
       },
     };
   } catch (error) {
