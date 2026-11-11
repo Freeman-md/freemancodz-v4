@@ -47,7 +47,9 @@ export function FloatingPortfolioChat() {
   const workflowId = workflow?.id;
 
   useEffect(() => {
-    if (!isOpen || !shouldPoll) {return;}
+    if (!isOpen || !shouldPoll) {
+      return;
+    }
 
     const interval = window.setInterval(restoreWorkflow, 5000);
 
@@ -131,16 +133,16 @@ export function FloatingPortfolioChat() {
               </Dialog.Close>
             </header>
 
-            {workflow && <AssistantWorkflowProgress key={workflow.id} instance={workflow} />}
-
-            {workflow?.review && (
-              <AssistantWorkflowConfirmation
-                key={workflow.review.id}
-                review={workflow.review}
-                pending={chat.isApproving || chat.isLoading}
-                error={chat.approvalError}
-                onConfirm={() => void chat.confirmReview()}
-                onChange={() => textareaRef.current?.focus()}
+            {workflow && (
+              <AssistantWorkflowProgress
+                key={workflow.id}
+                instance={workflow}
+                onDiscard={
+                  workflow.status === "active" && !workflow.run && !chat.discardConfirmation
+                    ? chat.requestDiscard
+                    : undefined
+                }
+                discardDisabled={chat.isDiscarding || chat.isApproving || chat.isLoading}
               />
             )}
 
@@ -176,6 +178,39 @@ export function FloatingPortfolioChat() {
                   </button>
                 ))}
               </div>
+            )}
+
+            {workflow && chat.discardConfirmation && (
+              <AssistantWorkflowConfirmation
+                title={`Discard the draft for “${workflow.title}”?`}
+                confirmLabel={chat.isDiscarding ? "Discarding…" : "Confirm discard"}
+                declineLabel="Keep draft"
+                destructive
+                disabled={chat.isDiscarding || chat.isLoading}
+                error={chat.discardError}
+                onDecline={chat.keepDraft}
+                onConfirm={() => void chat.confirmDiscard()}
+              />
+            )}
+
+            {chat.discardError && !chat.discardConfirmation && (
+              <p role="status" className="px-4 py-2 text-sm sm:px-6">
+                {chat.discardError}
+              </p>
+            )}
+
+            {workflow?.review && !chat.discardConfirmation && (
+              <AssistantWorkflowConfirmation
+                key={workflow.review.id}
+                title="Review request"
+                rows={workflow.review.rows}
+                confirmLabel={chat.isApproving ? "Confirming…" : workflow.review.label}
+                declineLabel="Request changes"
+                disabled={chat.isApproving || chat.isLoading}
+                error={chat.approvalError}
+                onConfirm={() => void chat.confirmReview()}
+                onDecline={() => textareaRef.current?.focus()}
+              />
             )}
 
             <AssistantComposer

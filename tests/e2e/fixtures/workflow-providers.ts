@@ -34,6 +34,9 @@ export const fixtureModel: OpenAITransport = {
         case "resp_select_meeting_slot":
           reply = "That time is saved for review.";
           break;
+        case "resp_request_workflow_draft_discard":
+          reply = "Confirm if you want to discard this draft.";
+          break;
         case "resp_search_portfolio":
           reply = "Freeman built the JPScents storefront.";
           break;
@@ -44,6 +47,8 @@ export const fixtureModel: OpenAITransport = {
           reply = "Your brief is ready to review.";
           break;
       }
+    } else if (/cancel this draft/i.test(output) && names.has("request_workflow_draft_discard")) {
+      action = { name: "request_workflow_draft_discard", args: {} };
     } else if (/book a meeting/i.test(output) && names.has("start_workflow")) {
       action = { name: "start_workflow", args: { workflowId: "meeting-booking" } };
     } else if (/request services/i.test(output) && names.has("start_workflow")) {
@@ -145,7 +150,9 @@ export const fixtureCalendar = {
   createEvent: async (input: EventInput) => {
     const event = makeEvent(input);
 
-    if (events.has(event.id)) {throw new Error("Unexpected duplicate Calendar insert.");}
+    if (events.has(event.id)) {
+      throw new Error("Unexpected duplicate Calendar insert.");
+    }
 
     events.set(event.id, event);
 

@@ -3,6 +3,7 @@ import { readChatVisitorKey, readRequestBody } from "../../chat/helpers";
 import { workflowApprovalSchema } from "@/contracts/assistant.contract";
 import type { Logger } from "@/infrastructure/logging/logger";
 import type { WorkflowService } from "@/modules/workflow/service";
+import { isSameWorkflowOrigin } from "../origin";
 
 export function createWorkflowApprovalPost(
   workflow: Pick<WorkflowService, "approve">,
@@ -11,12 +12,7 @@ export function createWorkflowApprovalPost(
   return async function POST(request: NextRequest) {
     const headers = { "Cache-Control": "no-store" };
 
-    const host = request.headers.get("host") ?? request.nextUrl.host;
-
-    const protocol = process.env.VERCEL === "1" ? "https:" : request.nextUrl.protocol;
-
-    // Next may use its bind address for nextUrl on a self-hosted production server.
-    if (request.headers.get("origin") !== `${protocol}//${host}`) {
+    if (!isSameWorkflowOrigin(request)) {
       return NextResponse.json({ error: "Invalid request origin." }, { status: 403, headers });
     }
 

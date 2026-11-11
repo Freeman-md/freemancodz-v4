@@ -50,6 +50,23 @@ test(
 
     await progress.waitFor();
     await progress.getByText("Collecting", { exact: false }).waitFor();
+    const header = await progress.boundingBox();
+
+    const discardBadge = await dialog.getByRole("button", { name: "Discard draft" }).boundingBox();
+
+    assert.ok(header && discardBadge);
+    assert.ok(discardBadge.x > header.x + header.width / 2);
+    assert.ok(
+      discardBadge.y >= header.y &&
+        discardBadge.y + discardBadge.height <= header.y + header.height,
+    );
+    if (process.env.WORKFLOW_DRAFT_SCREENSHOT) {
+      await page.screenshot({
+        path: process.env.WORKFLOW_DRAFT_SCREENSHOT,
+        animations: "disabled",
+      });
+    }
+
     assert.equal(
       await dialog.getByText("What would you like to discuss?", { exact: true }).count(),
       0,
@@ -132,6 +149,17 @@ test(
     );
     await dialog.getByRole("button", { name: "Send message" }).click();
     await review.getByText("Discuss the corrected scope.", { exact: true }).waitFor();
+    const reviewBounds = await review.boundingBox();
+
+    const composerBounds = await dialog.getByRole("textbox", { name: "Your message" }).boundingBox();
+
+    assert.ok(reviewBounds && composerBounds);
+    assert.ok(reviewBounds.y > header.y + header.height);
+    assert.ok(reviewBounds.y + reviewBounds.height <= composerBounds.y);
+    if (process.env.WORKFLOW_REVIEW_SCREENSHOT) {
+      await page.screenshot({ path: process.env.WORKFLOW_REVIEW_SCREENSHOT, animations: "disabled" });
+    }
+
     await review.getByRole("button", { name: "Confirm booking" }).focus();
     const [approval] = await Promise.all([
       page.waitForResponse(
@@ -188,6 +216,30 @@ test(
 
     assert.equal(separate.status(), 200);
     assert.equal(await separate.json(), null);
+    assert.equal(await separateDialog.getByRole("button", { name: /Book a meeting/ }).count(), 0);
+
+    const separateComposer = separateDialog.getByRole("textbox", { name: "Your message" });
+
+    const separateSend = separateDialog.getByRole("button", { name: "Send message" });
+
+    await separateComposer.fill("I want to book a meeting with Freeman.");
+    await separateSend.click();
+    await separateDialog.getByRole("button", { name: /Book a meeting/ }).waitFor();
+    await separateComposer.fill("Cancel this draft");
+    await separateSend.click();
+    const discard = separateDialog.getByRole("region", { name: /Discard the draft/ });
+
+    await discard.getByRole("button", { name: "Keep draft" }).click();
+    assert.ok(await (await other.request.get(chatUrl)).json());
+    assert.ok(await separateDialog.getByRole("button", { name: /Book a meeting/ }).isVisible());
+    await separateDialog.getByRole("button", { name: "Discard draft" }).click();
+    await discard.getByRole("button", { name: "Confirm discard" }).click();
+    await separateDialog
+      .getByRole("button", { name: /Book a meeting/ })
+      .waitFor({ state: "hidden" });
+    await separatePage.reload();
+    await separatePage.getByRole("button", { name: "Open portfolio chat" }).click();
+    assert.equal(await (await other.request.get(chatUrl)).json(), null);
     assert.equal(await separateDialog.getByRole("button", { name: /Book a meeting/ }).count(), 0);
   },
 );

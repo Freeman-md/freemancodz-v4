@@ -4,6 +4,8 @@ The assistant can collect details and prepare a review through definition-owned 
 
 The browser confirms a review by sending its ID and revision to the same-origin approval route. The approval transaction checks the browser owner, consumes the review, and creates one run with stable step IDs. Each worker claims one due step and saves its result only while it owns the claim. A reconciliation probe checks what happened after a timeout or expired claim. The visitor can close the assistant while the worker runs and reopen it to see the saved progress.
 
+Before approval, the visitor can use **Discard draft** in the workflow header or ask to discard it in chat. Confirmation targets the saved instance and revision. Discard invalidates any pending review and prevents that draft from being restored or approved.
+
 Meeting reserves the slot in Postgres, then creates an event with a stable Calendar ID and operation marker. The next step verifies or saves the booking by that ID. The booking appears confirmed as soon as the save succeeds. The final step freezes the owner email and sends it with a stable Resend key. A notification failure leaves the appointment confirmed.
 
 ## Release and scheduling
@@ -41,6 +43,12 @@ Use the run ID, step key, and safe reason to identify the unresolved effect. Mat
 Before removing a definition in production, stop new approvals for it and drain or resolve every approved run. Keep the version registered while any of its runs still need automated processing.
 
 ## Controlled verification
+
+If the local shell exports Google credentials for another integration, start Next.js without those inherited values so it loads the portfolio project's Calendar configuration.
+
+```sh
+env -u GOOGLE_CLIENT_ID -u GOOGLE_CLIENT_SECRET -u GOOGLE_REFRESH_TOKEN -u GOOGLE_CALENDAR_ID npm run dev
+```
 
 Run the database suites with `WORKFLOW_TEST_DATABASE_URL` and `PORTFOLIO_TEST_DATABASE_URL` pointing to disposable PostgreSQL with pgvector. The approval suite drives the authorized endpoint and exercises edit and approval races, expired claims, and injected provider failures. It advances the worker clock to check the saved retry and probe delays.
 

@@ -5,8 +5,10 @@ import {
   MAX_MESSAGE_LENGTH,
   type ActiveWorkflow,
   type AssistantSource,
+  type WorkflowObservation,
 } from "@/contracts/assistant.contract";
 import { approveWorkflow } from "../api/approve-workflow";
+import { discardWorkflow } from "../api/discard-workflow";
 import { fetchActiveWorkflow } from "../api/fetch-active-workflow";
 import { streamAssistant } from "../api/stream-assistant-response";
 import type { ChatMessage } from "../types";
@@ -33,7 +35,21 @@ export function useAssistant() {
 
   const [isApproving, setIsApproving] = useState(false);
 
-  const approvalInProgress = useRef(false);
+  const workflowUpdateInProgress = useRef(false);
+
+  const [discardTarget, setDiscardTarget] = useState<WorkflowObservation | null>(null);
+
+  const [discardError, setDiscardError] = useState<string | null>(null);
+
+  const [isDiscarding, setIsDiscarding] = useState(false);
+
+  const discardConfirmation =
+    workflow &&
+    !workflow.run &&
+    workflow.id === discardTarget?.id &&
+    workflow.revision === discardTarget.revision
+      ? discardTarget
+      : null;
 
   const workflowRestore = useRef<AbortController | null>(null);
 
@@ -73,7 +89,7 @@ export function useAssistant() {
 
   const text = draft.text.trim();
 
-  const canSubmit = !isLoading && text.length > 0 && text.length <= maxLength;
+  const canSubmit = !isLoading && !isDiscarding && text.length > 0 && text.length <= maxLength;
 
   function setInput(text: string) {
     setDraft((current) => ({ ...current, text }));
@@ -82,7 +98,12 @@ export function useAssistant() {
   async function submitMessage(rawMessage: string) {
     const message = rawMessage.trim();
 
-    if (!message || message.length > MAX_MESSAGE_LENGTH || submissionInProgress.current) {
+    if (
+      !message ||
+      message.length > MAX_MESSAGE_LENGTH ||
+      submissionInProgress.current ||
+      workflowUpdateInProgress.current
+    ) {
       return;
     }
 
@@ -138,6 +159,11 @@ export function useAssistant() {
             setWorkflowRestoreFailed(false);
             break;
 
+          case "confirm_workflow_discard":
+            setDiscardError(null);
+            setDiscardTarget(event.draft);
+            break;
+
           case "response_id":
             responseId = event.responseId;
             break;
@@ -171,9 +197,11 @@ export function useAssistant() {
   }
 
   async function confirmReview() {
-    if (!workflow?.review || approvalInProgress.current) {return;}
+    if (!workflow?.review || workflowUpdateInProgress.current || submissionInProgress.current) {
+      return;
+    }
 
-    approvalInProgress.current = true;
+    workflowUpdateInProgress.current = true;
     cancelWorkflowRestore();
     setIsApproving(true);
     setApprovalError(null);
@@ -194,8 +222,45 @@ export function useAssistant() {
       setApprovalError("Could not confirm the request. Check its saved progress.");
       restoreWorkflow();
     } finally {
-      approvalInProgress.current = false;
+      workflowUpdateInProgress.current = false;
       setIsApproving(false);
+    }
+  }
+
+  function requestDiscard() {
+    if (workflow?.status === "active" && !workflow.run) {
+      setDiscardError(null);
+      setDiscardTarget({ id: workflow.id, revision: workflow.revision });
+    }
+  }
+
+  async function confirmDiscard() {
+    if (!discardConfirmation || workflowUpdateInProgress.current || submissionInProgress.current) {
+      return;
+    }
+
+    workflowUpdateInProgress.current = true;
+    cancelWorkflowRestore();
+    setIsDiscarding(true);
+    setDiscardError(null);
+
+    try {
+      if (await discardWorkflow(discardConfirmation)) {
+        setWorkflow(null);
+        previousResponseId.current = null;
+        setReplyOptions([]);
+        setApprovalError(null);
+      } else {
+        setDiscardError("The draft changed. Check the latest details.");
+      }
+
+      setDiscardTarget(null);
+      restoreWorkflow();
+    } catch {
+      setDiscardError("Could not discard the draft. Try again.");
+    } finally {
+      workflowUpdateInProgress.current = false;
+      setIsDiscarding(false);
     }
   }
 
@@ -221,6 +286,12 @@ export function useAssistant() {
     confirmReview,
     approvalError,
     isApproving,
+    requestDiscard,
+    confirmDiscard,
+    discardConfirmation,
+    keepDraft: () => setDiscardTarget(null),
+    discardError,
+    isDiscarding,
     submitDraft,
     submitMessage,
   };

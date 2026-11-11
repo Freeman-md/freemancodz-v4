@@ -26,14 +26,10 @@ export class MeetingBookingWorkflowDefinition implements IWorkflowDefinition<Mee
 
   readonly stateSchema = meetingStateSchema;
 
-  private readonly findSlotsTool: WorkflowTool;
-
   constructor(
     private readonly availability: MeetingAvailability,
     private readonly booking?: WorkflowAction,
-  ) {
-    this.findSlotsTool = createFindMeetingSlotsTool(availability);
-  }
+  ) {}
 
   createInitialState(): MeetingState {
     return this.stateSchema.parse({});
@@ -68,7 +64,7 @@ export class MeetingBookingWorkflowDefinition implements IWorkflowDefinition<Mee
     ].filter(Boolean);
 
     return missing.length
-      ? `The meeting request still needs: ${missing.join(", ")}. Ask for the next missing detail or act on the detail the visitor offered. A saved time is a preference.`
+      ? `The meeting request still needs: ${missing.join(", ")}. Act on details the visitor offers and ask only for missing details. If they ask for availability, check it without waiting for their name, email or topic. When they leave the dates to you, check the next seven days. A saved time is a preference.`
       : "The meeting details are complete. Let the visitor review them or correct a detail.";
   }
 
@@ -108,7 +104,7 @@ export class MeetingBookingWorkflowDefinition implements IWorkflowDefinition<Mee
 
     return [
       saveMeetingTopicTool,
-      this.findSlotsTool,
+      createFindMeetingSlotsTool(this.availability),
       ...(availableSlots.length
         ? [createSelectMeetingSlotTool(this.availability, availableSlots)]
         : []),

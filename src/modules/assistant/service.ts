@@ -5,12 +5,13 @@ import { ReadableStream } from "node:stream/web";
 import type { AssistantStreamEvent } from "@/contracts/assistant.contract";
 import type { Logger } from "@/infrastructure/logging/logger";
 import type { OpenAIResponseRequest, OpenAITransport } from "@/infrastructure/openai/types";
-import { FALLBACK_ANSWER, PLAIN_CHAT_SYSTEM_PROMPT } from "./constants";
+import { FALLBACK_ANSWER, CHAT_SYSTEM_PROMPT } from "./constants";
 import { ASSISTANT_ERRORS, AssistantError } from "./errors";
 import { ASK_USER_CHOICE_TOOL } from "./tools/ask-user-choice/definition";
 import type { PortfolioSearchService } from "../portfolio/services/portfolio-search.service";
 import type { WorkflowService } from "../workflow/service";
 import { executeTool, type ToolReplyEvent } from "./tools/execute";
+import { REQUEST_DRAFT_DISCARD_TOOL } from "./tools/request-draft-discard/definition";
 import { SEARCH_PORTFOLIO_TOOL } from "./tools/search-portfolio/definition";
 import {
   createStartWorkflowTool,
@@ -57,7 +58,7 @@ export class AssistantService {
 
     let modelRequest: OpenAIResponseRequest = {
       input: [{ type: "user_message", content: message }],
-      instructions: PLAIN_CHAT_SYSTEM_PROMPT,
+      instructions: CHAT_SYSTEM_PROMPT,
       tools,
       previousResponseId,
       signal,
@@ -90,6 +91,9 @@ export class AssistantService {
       }
 
       modelRequest.tools.push(...workflowTools.map(({ tool }) => tool));
+      if (workflowTurn?.draft) {
+        modelRequest.tools.push(REQUEST_DRAFT_DISCARD_TOOL);
+      }
 
       // Only the first pass offers tools, so a reply takes at most two model requests.
       modelResponses: for (;;) {
@@ -128,12 +132,20 @@ export class AssistantService {
                   functionCall.arguments,
                   this.portfolioSearch,
                   signal,
-                  { service: this.workflow, visitorKey, tools: workflowTools },
+                  {
+                    service: this.workflow,
+                    visitorKey,
+                    tools: workflowTools,
+                    draft: workflowTurn?.draft,
+                  },
                 );
 
                 signal.throwIfAborted();
 
-                if (result.event?.type === "workflow_instance") {
+                if (
+                  result.event?.type === "workflow_instance" ||
+                  result.event?.type === "confirm_workflow_discard"
+                ) {
                   yield encodeEvent(result.event);
                 } else {
                   replyEvent = result.event;

@@ -28,10 +28,19 @@ export const topicArgumentsSchema = z.strictObject({
   reason: z.string().trim().min(1).max(500),
 });
 
-export const findSlotsArgumentsSchema = z.strictObject({
-  startDate: z.iso.date(),
-  endDate: z.iso.date(),
-});
+export const findSlotsArgumentsSchema = z
+  .strictObject({
+    startDate: z.iso.date().nullable(),
+    endDate: z.iso.date().nullable(),
+    preferredTime: z
+      .strictObject({
+        date: z.iso.date(),
+        time: z.iso.time({ precision: -1 }),
+        timeZone: z.string().trim().min(1).max(100),
+      })
+      .nullish(),
+  })
+  .refine(({ startDate, endDate }) => (startDate === null) === (endDate === null));
 
 export const selectSlotArgumentsSchema = z.strictObject({
   start: z.iso.datetime(),

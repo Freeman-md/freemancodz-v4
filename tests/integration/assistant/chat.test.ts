@@ -151,6 +151,7 @@ test("topic collection leaves unrelated questions and invalid arguments out of w
         ensureReview: async () => null,
         findOwnedReview: async () => null,
         approve: async () => false,
+        discardDraft: async () => false,
       });
 
       const { post, requests } = createChatFixture(
@@ -205,6 +206,7 @@ test("reports Calendar unavailability without changing the active workflow", asy
     ensureReview: async () => null,
     findOwnedReview: async () => null,
     approve: async () => false,
+    discardDraft: async () => false,
   });
 
   const { post, requests } = createChatFixture(
@@ -233,7 +235,11 @@ test("reports Calendar unavailability without changing the active workflow", asy
     {
       type: "function_call_output",
       callId: "call_1",
-      output: '{"status":"availability_unavailable"}',
+      output: JSON.stringify({
+        status: "availability_unavailable",
+        message:
+          "Freeman's calendar is temporarily unavailable. Offer to retry later or direct the visitor to Contact.",
+      }),
     },
   ]);
   assert.deepEqual(events, [

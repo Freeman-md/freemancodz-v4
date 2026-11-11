@@ -152,6 +152,18 @@ test(
 
           await send("Request services");
           await dialog.getByRole("button", { name: /Request services/ }).waitFor();
+          await dialog.getByRole("button", { name: "Discard draft" }).click();
+          await dialog.getByRole("button", { name: "Confirm discard" }).click();
+          await dialog
+            .getByRole("button", { name: /Request services/ })
+            .waitFor({ state: "hidden" });
+          assert.equal(
+            await (await context.request.get(new URL("/api/chat", servicesUrl).href)).json(),
+            null,
+          );
+
+          await send("Request services");
+          await dialog.getByRole("button", { name: /Request services/ }).waitFor();
           await send("Brief: Build a storefront");
           const review = dialog.getByRole("region", { name: "Review request" });
 

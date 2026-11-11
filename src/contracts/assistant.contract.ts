@@ -95,6 +95,10 @@ export const assistantStreamEventSchema = z.discriminatedUnion("type", [
     type: z.literal("workflow_instance"),
     instance: activeWorkflowSchema,
   }),
+  z.strictObject({
+    type: z.literal("confirm_workflow_discard"),
+    draft: workflowObservationSchema,
+  }),
   z.object({ type: z.literal("response_id"), responseId: z.string() }).strict(),
   z.object({ type: z.literal("done") }).strict(),
   z.object({ type: z.literal("error"), error: z.string() }).strict(),

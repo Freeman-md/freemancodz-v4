@@ -89,6 +89,32 @@ export class WorkflowRepository {
     });
   }
 
+  discardDraft(visitorKey: string, { id, revision }: { id: string; revision: number }) {
+    return this.prisma.$transaction(async (tx) => {
+      const { count } = await tx.workflowInstance.updateMany({
+        where: {
+          id,
+          visitorKey,
+          revision,
+          status: "active",
+          reviews: { none: { status: "consumed" } },
+        },
+        data: { status: "cancelled", revision: { increment: 1 } },
+      });
+
+      if (count === 0) {
+        return false;
+      }
+
+      await tx.workflowReview.updateMany({
+        where: { instanceId: id, status: "pending" },
+        data: { status: "invalidated" },
+      });
+
+      return true;
+    });
+  }
+
   async findRun(instanceId: string) {
     return this.prisma.workflowRun.findFirst({
       where: { review: { instanceId } },

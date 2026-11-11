@@ -2,7 +2,10 @@ import assert from "node:assert/strict";
 import test, { type TestContext } from "node:test";
 import { google } from "googleapis";
 import { GoogleCalendarClient } from "@/infrastructure/google-calendar/client";
-import { CalendarEventError } from "@/infrastructure/google-calendar/types";
+import {
+  CalendarAvailabilityError,
+  CalendarEventError,
+} from "@/infrastructure/google-calendar/types";
 
 function setup(context: TestContext) {
   const calendar = google.calendar({ version: "v3" });
@@ -142,6 +145,35 @@ test("Calendar availability checks also use bounded non-retrying transport", asy
     },
     { timeout: 10_000, retry: false },
   ]);
+});
+
+test("FreeBusy distinguishes an OAuth rejection from missing availability data", async (context) => {
+  const { calendar, client } = setup(context);
+
+  const range = {
+    start: new Date("2099-06-15T11:00:00.000Z"),
+    end: new Date("2099-06-15T11:30:00.000Z"),
+  };
+
+  let authorized = false;
+
+  context.mock.method(calendar.freebusy, "query", async () => {
+    if (!authorized) {
+      throw { response: { status: 401 } };
+    }
+
+    return { data: { calendars: {} } };
+  });
+
+  await assert.rejects(client.getBusyPeriods(range), {
+    name: "Error",
+    category: "authorization",
+  });
+  authorized = true;
+  await assert.rejects(
+    client.getBusyPeriods(range),
+    (error) => error instanceof CalendarAvailabilityError && error.category === "invalid_response",
+  );
 });
 
 test("a workflow deadline also bounds a stalled Calendar SDK call", async (context) => {

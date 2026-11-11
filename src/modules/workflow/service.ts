@@ -32,6 +32,7 @@ export class WorkflowService {
       | "ensureReview"
       | "findOwnedReview"
       | "approve"
+      | "discardDraft"
     >,
     private readonly clock: () => Date = () => new Date(),
   ) {}
@@ -80,6 +81,10 @@ export class WorkflowService {
       : null;
   }
 
+  discardDraft(visitorKey: string, observation: WorkflowObservation) {
+    return this.repository.discardDraft(visitorKey, observation);
+  }
+
   async getTurn(
     visitorKey: string,
     observed?: WorkflowObservation,
@@ -88,6 +93,7 @@ export class WorkflowService {
     guidance?: string;
     refreshed?: ActiveWorkflow;
     hasActive?: boolean;
+    draft?: WorkflowObservation;
   }> {
     const instance = await this.repository.findActive(visitorKey);
 
@@ -121,12 +127,13 @@ export class WorkflowService {
         refreshed: await this.project(instance),
         hasActive: true,
         guidance:
-          "The booking details were refreshed. Ask the visitor to check them before changing the request.",
+          "The request details were refreshed. Ask the visitor to check them before changing the request.",
       };
     }
 
     return {
       hasActive: true,
+      draft: { id: instance.id, revision: instance.revision },
       guidance: definition.getGuidance(instance.state),
       tools: definition.getTools(instance.state).map(({ tool, apply }) => ({
         tool,

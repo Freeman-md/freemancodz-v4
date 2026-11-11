@@ -1,4 +1,5 @@
 import type { MeetingAvailability, MeetingSlot } from "@/modules/meeting/types";
+import { getLondonDate } from "@/modules/meeting/time";
 import type { WorkflowTool } from "../../types";
 import {
   findMeetingSlots,
@@ -49,17 +50,41 @@ export function createFindMeetingSlotsTool(availability: MeetingAvailability): W
       type: "function",
       name: "find_meeting_slots",
       description:
-        "Find free meeting times for the visitor's requested dates in London time. " +
-        "Show only the returned labels and ask the visitor to choose one. " +
-        "If no times are returned, ask for other dates. If Calendar is unavailable, say so.",
+        `Today in London is ${getLondonDate(new Date())}. Find free times for the requested dates. ` +
+        "For the next seven days or an open-ended request for availability, pass null for both dates and preferredTime. " +
+        "For a specific day without a time, use that date for both dates. " +
+        "For a specific time, use preferredTime with the visitor's local date, time and IANA timezone or explicit UTC offset. " +
+        "If the timezone is missing, ask whether they mean London time before calling. " +
+        "If requestedTimeAvailable is false, explain the requested time is unavailable and offer only returned alternatives. " +
+        "Only use returned slot labels. If Calendar is unavailable, report the outage and offer to retry. " +
+        "If the lookup succeeded with no slots, ask for different dates.",
       strict: true,
       parameters: {
         type: "object",
         properties: {
-          startDate: { type: "string", description: "First date, YYYY-MM-DD" },
-          endDate: { type: "string", description: "Last date, YYYY-MM-DD" },
+          startDate: {
+            type: ["string", "null"],
+            description: "First London date, YYYY-MM-DD, or null",
+          },
+          endDate: {
+            type: ["string", "null"],
+            description: "Last London date, YYYY-MM-DD, or null",
+          },
+          preferredTime: {
+            type: ["object", "null"],
+            properties: {
+              date: { type: "string", description: "Visitor's local date, YYYY-MM-DD" },
+              time: { type: "string", description: "Visitor's local time, HH:mm" },
+              timeZone: {
+                type: "string",
+                description: "IANA timezone or UTC offset, for example Europe/London or +05:30",
+              },
+            },
+            required: ["date", "time", "timeZone"],
+            additionalProperties: false,
+          },
         },
-        required: ["startDate", "endDate"],
+        required: ["startDate", "endDate", "preferredTime"],
         additionalProperties: false,
       },
     },
