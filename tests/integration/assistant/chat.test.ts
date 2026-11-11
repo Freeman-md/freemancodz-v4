@@ -4,6 +4,7 @@ import { once } from "node:events";
 import test from "node:test";
 import { CHAT_VISITOR_COOKIE, MAX_CHAT_BODY_BYTES } from "@/app/api/chat/constants";
 import type { ActiveWorkflow } from "@/contracts/assistant.contract";
+import { CalendarAvailabilityError } from "@/infrastructure/google-calendar/types";
 import type { RateLimitResult } from "@/modules/rate-limit/rate-limit.types";
 import { MeetingBookingWorkflowDefinition } from "@/modules/workflow/definitions/meeting-booking/definition";
 import { WorkflowRegistry } from "@/modules/workflow/registry";
@@ -21,7 +22,12 @@ import {
   toolCall,
 } from "./chat.fixture";
 
-const meetingBooking = new MeetingBookingWorkflowDefinition();
+const meetingBooking = new MeetingBookingWorkflowDefinition({
+  findAvailableSlots: async () => {
+    throw new CalendarAvailabilityError();
+  },
+  isSlotAvailable: async () => false,
+});
 
 const requestBody = JSON.stringify({
   message: "What did Freeman build for JPScents?",
@@ -38,7 +44,10 @@ test("starts workflows only after establishing browser ownership and completing 
     title: "Book a meeting",
     status: "active",
     phase: "collecting",
-    details: [{ key: "reason", label: "Topic", value: null }],
+    details: [
+      { key: "reason", label: "Topic", value: null },
+      { key: "time", label: "Time", value: null },
+    ],
   };
 
   for (const scenario of ["completed", "incomplete", "unoffered", "follow-up failed"] as const) {
@@ -166,6 +175,57 @@ test("topic collection leaves unrelated questions and invalid arguments out of w
       );
     });
   }
+});
+
+test("reports Calendar unavailability without changing the active workflow", async (t) => {
+  const instance = {
+    id: randomUUID(),
+    workflowId: meetingBooking.id,
+    workflowVersion: meetingBooking.version,
+    revision: 1,
+    state: { reason: "Discuss a project" },
+  };
+
+  const saveState = t.mock.fn(async () => null);
+
+  const workflow = new WorkflowService(new WorkflowRegistry([meetingBooking]), {
+    startOrResume: async () => instance,
+    findActive: async () => instance,
+    saveState,
+  });
+
+  const { post, requests } = createChatFixture(
+    async ({ previousResponseId }) =>
+      previousResponseId === "resp_slots"
+        ? providerEvents(
+            delta("Meeting availability is temporarily unavailable."),
+            complete("resp_reply"),
+          )
+        : providerEvents(
+            complete("resp_slots", [
+              toolCall("find_meeting_slots", { startDate: "2099-06-15", endDate: "2099-06-15" }),
+            ]),
+          ),
+    { workflow },
+  );
+
+  const body = JSON.stringify({ message: "What times are free on 15 June 2099?" });
+
+  const events = parseEvents(await (await post(chatRequest(body))).text());
+
+  assert.deepEqual(requests[1].input, [
+    {
+      type: "function_call_output",
+      callId: "call_1",
+      output: '{"status":"availability_unavailable"}',
+    },
+  ]);
+  assert.deepEqual(events, [
+    { type: "delta", delta: "Meeting availability is temporarily unavailable." },
+    { type: "response_id", responseId: "resp_reply" },
+    { type: "done" },
+  ]);
+  assert.equal(saveState.mock.callCount(), 0);
 });
 
 test("streams a plain reply before completion", { timeout: 5000 }, async () => {

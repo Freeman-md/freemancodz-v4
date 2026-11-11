@@ -51,7 +51,11 @@ test(
     );
     await progress.focus();
     await progress.press("Enter");
-    await dialog.getByText("Not provided", { exact: true }).waitFor();
+    await dialog
+      .getByRole("listitem")
+      .filter({ hasText: "Topic" })
+      .getByText("Not provided", { exact: true })
+      .waitFor();
     assert.ok(await dialog.getByText("Topic", { exact: true }).isVisible());
 
     const started = await owner.request.get(chatUrl);
@@ -65,7 +69,22 @@ test(
     await dialog.getByRole("textbox", { name: "Your message" }).fill(topic);
     await dialog.getByRole("button", { name: "Send message" }).click();
     await dialog.getByRole("listitem").getByText(topic, { exact: true }).waitFor();
-    await progress.getByText("1 of 1 details", { exact: true }).waitFor();
+    await progress.getByText("1 of 2 details", { exact: true }).waitFor();
+
+    await dialog.getByRole("textbox", { name: "Your message" }).fill("Show times on 2099-06-15.");
+    await dialog.getByRole("button", { name: "Send message" }).click();
+    await dialog.getByText(/^Available: .*12:00 London time/).waitFor();
+
+    await dialog.getByRole("textbox", { name: "Your message" }).fill("I choose 12:00 London time.");
+    await dialog.getByRole("button", { name: "Send message" }).click();
+    const timeRow = dialog.getByRole("listitem").filter({ hasText: "Time" });
+
+    const selectedTime = timeRow.getByText(/12:00 London time$/);
+
+    await selectedTime.waitFor();
+    const timeLabel = await selectedTime.textContent();
+
+    await progress.getByText("2 of 2 details", { exact: true }).waitFor();
 
     await page.reload({ waitUntil: "load" });
     const [restored] = await Promise.all([
@@ -79,10 +98,14 @@ test(
     assert.equal(restored.status(), 200);
     assert.deepEqual(activeWorkflowSchema.parse(await restored.json()), {
       ...instance,
-      details: [{ key: "reason", label: "Topic", value: topic }],
+      details: [
+        { key: "reason", label: "Topic", value: topic },
+        { key: "time", label: "Time", value: timeLabel },
+      ],
     });
     await progress.press("Enter");
     await dialog.getByRole("listitem").getByText(topic, { exact: true }).waitFor();
+    await selectedTime.waitFor();
 
     const other = await browser.newContext({ reducedMotion: "reduce" });
 

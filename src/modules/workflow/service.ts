@@ -4,10 +4,14 @@ import type { ActiveWorkflow } from "@/contracts/assistant.contract";
 import type { OpenAIResponseTool } from "@/infrastructure/openai/types";
 import type { WorkflowRegistry } from "./registry";
 import type { StoredWorkflow, WorkflowRepository } from "./repository";
+import type { WorkflowToolResult } from "./types";
 
 export type ActiveWorkflowTool = {
   tool: OpenAIResponseTool;
-  run(rawArguments: string, signal: AbortSignal): Promise<ActiveWorkflow | null>;
+  run(
+    rawArguments: string,
+    signal: AbortSignal,
+  ): Promise<{ output: WorkflowToolResult["output"]; instance?: ActiveWorkflow } | null>;
 };
 
 export class WorkflowService {
@@ -73,20 +77,25 @@ export class WorkflowService {
     return definition.getTools(instance.state).map(({ tool, apply }) => ({
       tool,
       run: async (rawArguments, signal) => {
+        signal.throwIfAborted();
         const args: unknown = JSON.parse(rawArguments);
 
-        const state = definition.stateSchema.parse(apply(instance.state, args));
+        const result = await apply(instance.state, args);
 
         signal.throwIfAborted();
+
+        if (result.state === undefined) {
+          return { output: result.output };
+        }
 
         const updated = await this.repository.saveState({
           id: instance.id,
           visitorKey,
           revision: instance.revision,
-          state,
+          state: definition.stateSchema.parse(result.state),
         });
 
-        return updated ? this.project(updated) : null;
+        return updated ? { output: result.output, instance: this.project(updated) } : null;
       },
     }));
   }

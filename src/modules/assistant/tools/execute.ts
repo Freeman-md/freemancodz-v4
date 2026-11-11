@@ -71,15 +71,17 @@ export async function executeTool(
         throw new Error("Unsupported assistant tool.");
       }
 
-      const instance = await workflowTool.run(rawArguments, signal);
+      const result = await workflowTool.run(rawArguments, signal);
 
-      if (!instance) {
+      if (!result) {
         throw new AssistantError(ASSISTANT_ERRORS.WORKFLOW_CHANGED);
       }
 
       return {
-        output: JSON.stringify({ status: "saved" }),
-        event: { type: "workflow_instance", instance },
+        output: JSON.stringify(result.output),
+        event: result.instance
+          ? { type: "workflow_instance", instance: result.instance }
+          : undefined,
       };
     }
   }

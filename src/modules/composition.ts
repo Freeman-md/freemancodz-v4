@@ -1,11 +1,13 @@
 import "server-only";
 
 import {
+  getGoogleCalendarConfig,
   getNotificationOwnerEmail,
   getRateLimitHmacSecret,
   getResendConfig,
 } from "@/infrastructure/config/env";
 import { createPrismaClient, prisma } from "@/infrastructure/database/prisma";
+import { GoogleCalendarClient } from "@/infrastructure/google-calendar/client";
 import { logger } from "@/infrastructure/logging/logger";
 import { ResendClient } from "@/infrastructure/resend/client";
 import { OpenAIClient, createOpenAIClient, getResponseModel } from "@/infrastructure/openai/client";
@@ -13,6 +15,8 @@ import { OpenAIEmbeddings } from "@/infrastructure/openai/embeddings";
 import { AssistantService } from "./assistant/service";
 import { ContactRequestRepository } from "./contact/repository";
 import { ContactService } from "./contact/service";
+import { MeetingRepository } from "./meeting/repository";
+import { MeetingService } from "./meeting/service";
 import { NotificationService } from "./notification/service";
 import { PrismaPublicPortfolioRepository } from "./portfolio/repositories/public-portfolio.repository";
 import { PrismaPortfolioSearchRepository } from "./portfolio/repositories/portfolio-search.repository";
@@ -86,8 +90,15 @@ export const rateLimitService = new RateLimitService(
 );
 
 // Workflow
+const meetingService = new MeetingService(
+  new GoogleCalendarClient(getGoogleCalendarConfig),
+  new MeetingRepository(prisma),
+  logger,
+  notificationService,
+);
+
 export const workflowService = new WorkflowService(
-  new WorkflowRegistry([new MeetingBookingWorkflowDefinition()]),
+  new WorkflowRegistry([new MeetingBookingWorkflowDefinition(meetingService)]),
   new WorkflowRepository(prisma),
 );
 

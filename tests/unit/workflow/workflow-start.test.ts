@@ -6,7 +6,10 @@ import type { WorkflowRepository } from "@/modules/workflow/repository";
 import { WorkflowService } from "@/modules/workflow/service";
 
 test("workflow start saves only validated initial state", async (t) => {
-  const meetingBooking = new MeetingBookingWorkflowDefinition();
+  const meetingBooking = new MeetingBookingWorkflowDefinition({
+    findAvailableSlots: async () => [],
+    isSlotAvailable: async () => false,
+  });
 
   const instance = {
     id: "instance-1",
@@ -41,11 +44,14 @@ test("workflow start saves only validated initial state", async (t) => {
   await t.test("rejects invalid initial state before writing", async () => {
     class InvalidMeetingDefinition extends MeetingBookingWorkflowDefinition {
       override createInitialState() {
-        return { reason: " " };
+        return { ...super.createInitialState(), reason: " " };
       }
     }
 
-    const invalidMeeting = new InvalidMeetingDefinition();
+    const invalidMeeting = new InvalidMeetingDefinition({
+      findAvailableSlots: async () => [],
+      isSlotAvailable: async () => false,
+    });
 
     const invalidService = new WorkflowService(new WorkflowRegistry([invalidMeeting]), repository);
 
@@ -71,7 +77,10 @@ test("workflow start saves only validated initial state", async (t) => {
       title: "Book a meeting",
       status: "active",
       phase: "collecting",
-      details: [{ key: "reason", label: "Topic", value: null }],
+      details: [
+        { key: "reason", label: "Topic", value: null },
+        { key: "time", label: "Time", value: null },
+      ],
     });
     assert.equal(startOrResume.mock.callCount(), 1);
     assert.deepEqual(startOrResume.mock.calls[0].arguments, [
@@ -79,7 +88,7 @@ test("workflow start saves only validated initial state", async (t) => {
         workflowId: "meeting-booking",
         workflowVersion: 1,
         visitorKey: input.visitorKey,
-        state: { reason: null },
+        state: { reason: null, availableSlots: [], selectedSlot: null },
         originChannel: "web",
       },
     ]);

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { randomBytes } from "node:crypto";
 import test from "node:test";
+import type { MeetingSlot } from "@/modules/meeting/types";
 import { createPrismaClient } from "@/infrastructure/database/prisma";
 import { MeetingBookingWorkflowDefinition } from "@/modules/workflow/definitions/meeting-booking/definition";
 import { WorkflowRegistry } from "@/modules/workflow/registry";
@@ -28,7 +29,30 @@ test(
 
     const repository = new WorkflowRepository(prisma);
 
-    const meetingBooking = new MeetingBookingWorkflowDefinition();
+    const slots: MeetingSlot[] = [
+      {
+        start: "2099-06-15T11:00:00.000Z",
+        end: "2099-06-15T11:30:00.000Z",
+        timezone: "Europe/London",
+      },
+      {
+        start: "2099-06-15T11:30:00.000Z",
+        end: "2099-06-15T12:00:00.000Z",
+        timezone: "Europe/London",
+      },
+      {
+        start: "2099-06-16T11:00:00.000Z",
+        end: "2099-06-16T11:30:00.000Z",
+        timezone: "Europe/London",
+      },
+    ];
+
+    const availability = {
+      findAvailableSlots: async () => slots,
+      isSlotAvailable: async (slot: MeetingSlot) => slot.start !== slots[0].start,
+    };
+
+    const meetingBooking = new MeetingBookingWorkflowDefinition(availability);
 
     const service = new WorkflowService(new WorkflowRegistry([meetingBooking]), repository);
 
@@ -58,21 +82,26 @@ test(
 
       const saved = await firstTool.run('{"reason":"Discuss a project"}', input.signal);
 
-      assert.deepEqual(saved, {
+      assert.deepEqual(saved?.instance, {
         ...started,
-        details: [{ key: "reason", label: "Topic", value: "Discuss a project" }],
+        details: [
+          { key: "reason", label: "Topic", value: "Discuss a project" },
+          { key: "time", label: "Time", value: null },
+        ],
       });
       assert.equal(await staleTool.run('{"reason":"Another topic"}', input.signal), null);
-      assert.deepEqual(await service.getActiveTools(visitorKey), []);
+      const [findSlots] = await service.getActiveTools(visitorKey);
+
+      assert.equal(findSlots.tool.name, "find_meeting_slots");
 
       const updatedService = new WorkflowService(
-        new WorkflowRegistry([meetingBooking, new MeetingBookingVersionTwo()]),
+        new WorkflowRegistry([meetingBooking, new MeetingBookingVersionTwo(availability)]),
         repository,
       );
 
       const resumed = await updatedService.start(input);
 
-      assert.deepEqual(resumed, saved);
+      assert.deepEqual(resumed, saved?.instance);
       assert.deepEqual(await updatedService.getActive(visitorKey), resumed);
       assert.equal(await updatedService.getActive(otherVisitorKey), null);
 
@@ -80,9 +109,60 @@ test(
         where: { id: resumed.id },
       });
 
-      assert.deepEqual(persisted.state, { reason: "Discuss a project" });
+      assert.deepEqual(persisted.state, {
+        reason: "Discuss a project",
+        availableSlots: [],
+        selectedSlot: null,
+      });
       assert.equal(persisted.revision, 1);
       assert.equal(persisted.workflowVersion, 1);
+
+      const offered = await findSlots.run(
+        '{"startDate":"2099-06-15","endDate":"2099-06-16"}',
+        input.signal,
+      );
+
+      assert.equal(offered?.output.status, "available");
+
+      const [, initialSelection] = await service.getActiveTools(visitorKey);
+
+      assert.equal(initialSelection.tool.name, "select_meeting_slot");
+      const unoffered = await initialSelection.run(
+        '{"start":"2099-06-17T11:00:00.000Z"}',
+        input.signal,
+      );
+
+      assert.deepEqual(unoffered, { output: { status: "slot_not_offered" } });
+      const busy = await initialSelection.run(
+        JSON.stringify({ start: slots[0].start }),
+        input.signal,
+      );
+
+      assert.equal(busy?.output.status, "slot_unavailable");
+      assert.equal(busy?.instance?.details.find(({ key }) => key === "time")?.value, null);
+
+      const [, firstSelection] = await service.getActiveTools(visitorKey);
+
+      const [, staleSelection] = await service.getActiveTools(visitorKey);
+
+      const selected = await firstSelection.run(
+        JSON.stringify({ start: slots[1].start }),
+        input.signal,
+      );
+
+      assert.equal(selected?.output.status, "selected");
+      assert.equal(
+        await staleSelection.run(JSON.stringify({ start: slots[2].start }), input.signal),
+        null,
+      );
+      assert.deepEqual(await service.getActive(visitorKey), selected?.instance);
+      const chosen = await prisma.workflowInstance.findUniqueOrThrow({ where: { id: started.id } });
+
+      assert.deepEqual(chosen.state, {
+        reason: "Discuss a project",
+        availableSlots: [],
+        selectedSlot: slots[1],
+      });
 
       const otherVisitor = await updatedService.start({ ...input, visitorKey: otherVisitorKey });
 

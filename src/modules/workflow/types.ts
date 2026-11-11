@@ -3,9 +3,14 @@ import type { Prisma } from "@/generated/prisma/client";
 import type { z } from "zod";
 import type { OpenAIResponseTool } from "@/infrastructure/openai/types";
 
+export type WorkflowToolResult = {
+  output: Prisma.InputJsonObject;
+  state?: Prisma.InputJsonObject;
+};
+
 export type WorkflowTool = {
   tool: OpenAIResponseTool;
-  apply(state: unknown, args: unknown): Prisma.InputJsonObject;
+  apply(state: unknown, args: unknown): WorkflowToolResult | Promise<WorkflowToolResult>;
 };
 
 export interface IWorkflowDefinition<
