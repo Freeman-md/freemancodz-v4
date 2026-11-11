@@ -1,49 +1,11 @@
-import {
-  assistantStreamEventSchema,
-  WORKFLOW_ACCESS_DENIED,
-  type AssistantRequest,
-  type AssistantStreamEvent,
-} from "@/contracts/assistant.contract";
+import { assistantStreamEventSchema, type AssistantRequest } from "@/contracts/assistant.contract";
 
-export class WorkflowAccessError extends Error {}
+type ChatRequest = Pick<
+  Extract<AssistantRequest, { message: string }>,
+  "message" | "previousResponseId"
+>;
 
-async function getResponseError(response: Response) {
-  try {
-    const body: unknown = await response.json();
-
-    if (typeof body === "object" && body && "error" in body && typeof body.error === "string") {
-      return response.status === 403 && "code" in body && body.code === WORKFLOW_ACCESS_DENIED
-        ? new WorkflowAccessError(body.error)
-        : new Error(body.error);
-    }
-  } catch {
-    // A non-JSON response is deliberately represented by the safe fallback below.
-  }
-
-  return new Error("The assistant request failed.");
-}
-
-function parseEvent(line: string) {
-  let parsed: unknown;
-
-  try {
-    parsed = JSON.parse(line);
-  } catch {
-    throw new Error("The assistant returned an invalid response.");
-  }
-
-  const result = assistantStreamEventSchema.safeParse(parsed);
-
-  if (!result.success) {
-    throw new Error("The assistant returned an invalid response.");
-  }
-
-  return result.data;
-}
-
-export async function* streamAssistant(
-  request: AssistantRequest,
-): AsyncGenerator<AssistantStreamEvent> {
+export async function* streamAssistant(request: ChatRequest) {
   const response = await fetch("/api/chat", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -51,11 +13,18 @@ export async function* streamAssistant(
   });
 
   if (!response.ok) {
-    throw await getResponseError(response);
+    const body: unknown = await response.json().catch(() => null);
+
+    const message =
+      body && typeof body === "object" && "error" in body && typeof body.error === "string"
+        ? body.error
+        : "The assistant request failed.";
+
+    throw new Error(message);
   }
 
   if (!response.body) {
-    throw new Error("Chat response stream is unavailable.");
+    throw new Error("The assistant response was unavailable.");
   }
 
   const reader = response.body.pipeThrough(new TextDecoderStream()).getReader();
@@ -63,14 +32,15 @@ export async function* streamAssistant(
   let buffer = "";
 
   try {
-    while (true) {
+    for (;;) {
       const { done, value } = await reader.read();
 
       if (done) {
-        break;
+        throw new Error("The assistant reply was interrupted. Please try again.");
       }
 
       buffer += value;
+
       const lines = buffer.split("\n");
 
       buffer = lines.pop() ?? "";
@@ -80,7 +50,7 @@ export async function* streamAssistant(
           continue;
         }
 
-        const event = parseEvent(line);
+        const event = assistantStreamEventSchema.parse(JSON.parse(line));
 
         if (event.type === "error") {
           throw new Error(event.error);
@@ -93,18 +63,8 @@ export async function* streamAssistant(
         }
       }
     }
-
-    if (buffer.trim()) {
-      const event = parseEvent(buffer);
-
-      if (event.type === "error") {
-        throw new Error(event.error);
-      }
-
-      yield event;
-    }
   } finally {
-    await reader.cancel();
+    await reader.cancel().catch(() => undefined);
     reader.releaseLock();
   }
 }

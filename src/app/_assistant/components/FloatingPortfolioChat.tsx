@@ -2,165 +2,42 @@
 
 import { Dialog } from "@base-ui/react/dialog";
 import { Bot, X } from "lucide-react";
-import { useEffect, useRef } from "react";
-import { AssistantChoice } from "./AssistantChoice";
-import { AssistantWorkflowConfirmation } from "./AssistantWorkflowConfirmation";
-import { AssistantComposer } from "./AssistantComposer";
-import { AssistantMessages, type StarterAction } from "./AssistantMessages";
-import { AssistantWorkflowProgress } from "./AssistantWorkflowProgress";
+import { useRef } from "react";
 import { useAssistant } from "../hooks/useAssistant";
 import { useAssistantSurface } from "../hooks/useAssistantSurface";
-import { MAX_MESSAGE_LENGTH } from "@/contracts/assistant.contract";
-import { followHomeAnchor } from "../../_components/layout/follow-home-anchor";
+import { AssistantComposer } from "./AssistantComposer";
+import { AssistantMessages } from "./AssistantMessages";
 
 export function FloatingPortfolioChat() {
-  const {
-    canSubmit,
-    input,
-    isLoading,
-    messages,
-    setInput,
-    submitMessage,
-    choice,
-    dismissChoice,
-    workflowInstance,
-    submitWorkflowAction,
-  } = useAssistant();
+  const chat = useAssistant();
 
   const {
     isOpen,
     setIsOpen,
-    subject,
-    setSubject,
     isMobile,
     shouldReduceMotion,
     launcherRef,
     closeRef,
     returnFocus,
-    textareaRef,
     messagesEndRef,
     openChat,
-    closeWithoutFocusReturn,
-  } = useAssistantSurface({ messages, isLoading, setInput });
+  } = useAssistantSurface({
+    onDraft: chat.openDraft,
+    lastMessage: chat.messages.at(-1),
+    isLoading: chat.isLoading,
+  });
 
-  const previousChoice = useRef(choice);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const pendingSource = useRef<string | null>(null);
-
-  useEffect(() => {
-    if (isOpen && previousChoice.current && !choice) {
-      textareaRef.current?.focus({ preventScroll: true });
-    }
-
-    previousChoice.current = choice;
-  }, [choice, isOpen, textareaRef]);
-
-  const context = subject ? `Context: ${subject}\n\n` : "";
-
-  const maxLength = MAX_MESSAGE_LENGTH - context.length;
-
-  async function handleSubmit() {
-    if (!canSubmit || input.trim().length > maxLength) {
-      return;
-    }
-
-    setSubject(null);
-    await submitMessage(context + input.trim());
-  }
-
-  async function handleStarterAction(action: StarterAction) {
-    if (!isLoading && messages.length === 0) {
-      setSubject(null);
-      await submitMessage(action);
-    }
-  }
-
-  function closeForSource(href: string) {
-    pendingSource.current = href;
-    closeWithoutFocusReturn();
-  }
-
-  function finishClose(open: boolean) {
-    if (open || !pendingSource.current) {
-      return;
-    }
-
-    const href = pendingSource.current;
-
-    pendingSource.current = null;
-    followHomeAnchor(href, true);
-  }
-
-  const panel = (
-    <Dialog.Popup
-      className="portfolio-chat-surface"
-      initialFocus={closeRef}
-      finalFocus={() => {
-        if (!returnFocus.current) {
-          return false;
-        }
-
-        return returnFocus.current.isConnected ? returnFocus.current : launcherRef.current;
-      }}
-    >
-      <header className="assistant-header">
-        <div>
-          <Dialog.Title>Freeman’s assistant</Dialog.Title>
-          <p>AI assistant</p>
-        </div>
-        <Dialog.Close className="assistant-control" aria-label="Close assistant" ref={closeRef}>
-          <X size={19} aria-hidden="true" />
-        </Dialog.Close>
-      </header>
-      {workflowInstance && (
-        <AssistantWorkflowProgress key={workflowInstance.id} instance={workflowInstance} />
-      )}
-      <AssistantMessages
-        isLoading={isLoading}
-        messages={messages}
-        messagesEndRef={messagesEndRef}
-        shouldReduceMotion={shouldReduceMotion}
-        onStarterAction={(action) => void handleStarterAction(action)}
-        onInternalSource={closeForSource}
-      >
-        {workflowInstance && (
-          <AssistantWorkflowConfirmation
-            instance={workflowInstance}
-            isLoading={isLoading}
-            onSubmit={submitWorkflowAction}
-          />
-        )}
-      </AssistantMessages>
-      {choice && !subject ? (
-        <AssistantChoice
-          key={messages.at(-1)?.id}
-          choice={choice}
-          isLoading={isLoading}
-          onSend={submitMessage}
-          onWriteReply={dismissChoice}
-        />
-      ) : (
-        <AssistantComposer
-          canSubmit={canSubmit && input.trim().length <= maxLength}
-          input={input}
-          subject={subject}
-          onInputChange={setInput}
-          onSubmit={handleSubmit}
-          textareaRef={textareaRef}
-          maxLength={maxLength}
-        />
-      )}
-    </Dialog.Popup>
-  );
+  const showReplyOptions =
+    !chat.isLoading &&
+    !chat.draft.subject &&
+    !chat.draft.text.trim() &&
+    chat.replyOptions.length > 0;
 
   return (
     <div className="assistant-root">
-      <Dialog.Root
-        open={isOpen}
-        onOpenChange={setIsOpen}
-        onOpenChangeComplete={finishClose}
-        modal={isMobile}
-      >
+      <Dialog.Root open={isOpen} onOpenChange={setIsOpen} modal={isMobile}>
         <Dialog.Trigger
           className="assistant-launcher"
           aria-label="Open portfolio chat"
@@ -170,7 +47,68 @@ export function FloatingPortfolioChat() {
         >
           <Bot size={22} aria-hidden="true" />
         </Dialog.Trigger>
-        <Dialog.Portal>{panel}</Dialog.Portal>
+
+        <Dialog.Portal>
+          <Dialog.Popup
+            className="portfolio-chat-surface"
+            initialFocus={closeRef}
+            finalFocus={() => {
+              const origin = returnFocus.current;
+
+              return origin?.isConnected ? origin : launcherRef.current;
+            }}
+          >
+            <header className="assistant-header">
+              <div>
+                <Dialog.Title>Freeman’s assistant</Dialog.Title>
+                <p>AI assistant</p>
+              </div>
+              <Dialog.Close
+                className="assistant-control"
+                aria-label="Close assistant"
+                ref={closeRef}
+              >
+                <X size={19} aria-hidden="true" />
+              </Dialog.Close>
+            </header>
+
+            <AssistantMessages
+              isLoading={chat.isLoading}
+              messages={chat.messages}
+              messagesEndRef={messagesEndRef}
+              shouldReduceMotion={shouldReduceMotion}
+              onStarterAction={(message) => void chat.submitMessage(message)}
+            />
+
+            {showReplyOptions && (
+              <div className="assistant-reply-options" role="group" aria-label="Suggested replies">
+                <p className="basis-full text-sm">Choose a reply or type your own.</p>
+                {chat.replyOptions.map((option) => (
+                  <button
+                    key={option}
+                    type="button"
+                    onClick={() => {
+                      textareaRef.current?.focus({ preventScroll: true });
+                      void chat.submitMessage(option);
+                    }}
+                  >
+                    {option}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <AssistantComposer
+              canSubmit={chat.canSubmit}
+              input={chat.draft.text}
+              subject={chat.draft.subject}
+              onInputChange={chat.setInput}
+              onSubmit={chat.submitDraft}
+              textareaRef={textareaRef}
+              maxLength={chat.maxLength}
+            />
+          </Dialog.Popup>
+        </Dialog.Portal>
       </Dialog.Root>
     </div>
   );

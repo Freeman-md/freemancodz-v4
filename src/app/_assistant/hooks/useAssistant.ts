@@ -1,184 +1,129 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { streamAssistant, WorkflowAccessError } from "../api/stream-assistant-response";
-import { ACTIVE_WORKFLOW_INSTANCE_STORAGE_KEY } from "../constants";
+import { useRef, useState } from "react";
+import { MAX_MESSAGE_LENGTH } from "@/contracts/assistant.contract";
+import { streamAssistant } from "../api/stream-assistant-response";
 import type { ChatMessage } from "../types";
-import {
-  MAX_MESSAGE_LENGTH,
-  workflowReferenceSchema,
-  type WorkflowPublicInstance,
-  type AssistantWorkflowAction,
-  type AssistantRequest,
-} from "@/contracts/assistant.contract";
-import type { AssistantChoice } from "@/contracts/assistant-choice.contract";
+
+const EMPTY_DRAFT: { text: string; subject: string | null } = {
+  text: "",
+  subject: null,
+};
 
 export function useAssistant() {
-  const [input, setInput] = useState("");
+  const [draft, setDraft] = useState(EMPTY_DRAFT);
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
 
   const [isLoading, setIsLoading] = useState(false);
 
-  const [workflowInstance, setWorkflowInstance] = useState<WorkflowPublicInstance | null>(null);
-
-  const [choice, setChoice] = useState<AssistantChoice | null>(null);
+  const [replyOptions, setReplyOptions] = useState<string[]>([]);
 
   const previousResponseId = useRef<string | null>(null);
 
-  const workflowInstanceId = useRef<string | null>(null);
-
   const submissionInProgress = useRef(false);
 
-  useEffect(() => {
-    const storedId = window.sessionStorage.getItem(ACTIVE_WORKFLOW_INSTANCE_STORAGE_KEY);
+  const context = draft.subject ? `Context: ${draft.subject}\n\n` : "";
 
-    const parsedId = workflowReferenceSchema.safeParse(storedId);
+  const maxLength = Math.max(0, MAX_MESSAGE_LENGTH - context.length);
 
-    if (parsedId.success) {
-      workflowInstanceId.current = parsedId.data;
+  const text = draft.text.trim();
 
-      return;
-    }
+  const canSubmit = !isLoading && text.length > 0 && text.length <= maxLength;
 
-    if (storedId !== null) {
-      window.sessionStorage.removeItem(ACTIVE_WORKFLOW_INSTANCE_STORAGE_KEY);
-    }
-  }, []);
+  function setInput(text: string) {
+    setDraft((current) => ({ ...current, text }));
+  }
 
-  const submitRequest = useCallback(async (request: AssistantRequest, message: string) => {
+  async function submitMessage(rawMessage: string) {
+    const message = rawMessage.trim();
+
     if (!message || message.length > MAX_MESSAGE_LENGTH || submissionInProgress.current) {
       return;
     }
 
     submissionInProgress.current = true;
-    if ("action" in request) {
-      // Booking actions have no model checkpoint; the next message reloads saved state.
-      previousResponseId.current = null;
-    } else {
-      setInput("");
-    }
-
     setIsLoading(true);
-    setChoice(null);
+    setDraft(EMPTY_DRAFT);
+    setReplyOptions([]);
 
-    const timestamp = Date.now();
+    const turnId = crypto.randomUUID();
 
-    const assistantMessageId = `assistant-${timestamp}`;
+    const assistantMessageId = `${turnId}-assistant`;
 
     setMessages((current) => [
       ...current,
-      { id: `user-${timestamp}`, role: "user", content: message },
-      { id: assistantMessageId, role: "assistant", content: "", sources: [] },
+      { id: `${turnId}-user`, role: "user", content: message },
+      { id: assistantMessageId, role: "assistant", content: "" },
     ]);
 
-    const updateAssistantMessage = (update: (message: ChatMessage) => ChatMessage) => {
+    function updateReply(update: (message: ChatMessage) => ChatMessage) {
       setMessages((current) =>
         current.map((item) => (item.id === assistantMessageId ? update(item) : item)),
       );
-    };
+    }
+
+    let responseId: string | null = null;
+
+    let options: string[] = [];
 
     try {
-      for await (const event of streamAssistant(request)) {
-        if (event.type === "choice") {
-          setChoice(event.choice);
-          // The reply panel owns this turn's question; don't repeat it in the transcript.
-          updateAssistantMessage((current) => ({ ...current, content: "" }));
-        }
+      for await (const event of streamAssistant({
+        message,
+        previousResponseId: previousResponseId.current,
+      })) {
+        switch (event.type) {
+          case "delta":
+            updateReply((reply) => ({ ...reply, content: reply.content + event.delta }));
+            break;
 
-        if (event.type === "delta") {
-          updateAssistantMessage((current) => ({
-            ...current,
-            content: current.content + event.delta,
-          }));
-        }
+          case "options":
+            options = event.options;
+            break;
 
-        if (event.type === "sources") {
-          updateAssistantMessage((current) => ({ ...current, sources: event.sources }));
-        }
+          case "response_id":
+            responseId = event.responseId;
+            break;
 
-        if (event.type === "response_id") {
-          previousResponseId.current = event.responseId;
-        }
+          case "done":
+            if (!responseId) {
+              throw new Error("The assistant reply was interrupted. Please try again.");
+            }
 
-        if (event.type === "workflow_instance") {
-          setWorkflowInstance(event.instance);
-
-          if (!event.instance) {
-            previousResponseId.current = null;
-          }
-
-          if (event.instance?.status === "active") {
-            workflowInstanceId.current = event.instance.id;
-            window.sessionStorage.setItem(ACTIVE_WORKFLOW_INSTANCE_STORAGE_KEY, event.instance.id);
-          } else {
-            workflowInstanceId.current = null;
-            window.sessionStorage.removeItem(ACTIVE_WORKFLOW_INSTANCE_STORAGE_KEY);
-          }
+            previousResponseId.current = responseId;
+            setReplyOptions(options);
+            break;
         }
       }
     } catch (error) {
-      if (error instanceof WorkflowAccessError) {
-        workflowInstanceId.current = null;
-        previousResponseId.current = null;
-        window.sessionStorage.removeItem(ACTIVE_WORKFLOW_INSTANCE_STORAGE_KEY);
-        setWorkflowInstance(null);
-      }
+      const content =
+        error instanceof Error
+          ? error.message
+          : "The assistant could not respond. Please try again.";
 
-      setChoice(null);
-      const messageText =
-        error instanceof Error ? error.message : "Something went wrong while fetching a response.";
-
-      updateAssistantMessage((current) => ({
-        ...current,
-        content: messageText,
-        sources: [],
-        error: true,
-      }));
+      updateReply((reply) => ({ ...reply, content, error: true }));
     } finally {
       submissionInProgress.current = false;
       setIsLoading(false);
     }
-  }, []);
+  }
 
-  const submitMessage = useCallback(
-    (rawMessage: string) =>
-      submitRequest(
-        {
-          message: rawMessage.trim(),
-          previousResponseId: previousResponseId.current,
-          workflowInstanceId: workflowInstanceId.current,
-        },
-        rawMessage.trim(),
-      ),
-    [submitRequest],
-  );
-
-  const submitWorkflowAction = useCallback(
-    (request: AssistantWorkflowAction) => {
-      return submitRequest(
-        request,
-        {
-          confirm_booking: "Confirm booking",
-          retry_booking: "Retry booking",
-        }[request.action],
-      );
-    },
-    [submitRequest],
-  );
-
-  const trimmedInput = input.trim();
+  function submitDraft() {
+    if (canSubmit) {
+      return submitMessage(context + text);
+    }
+  }
 
   return {
-    canSubmit: trimmedInput.length > 0 && trimmedInput.length <= MAX_MESSAGE_LENGTH && !isLoading,
-    input,
-    isLoading,
-    messages,
+    draft,
     setInput,
+    openDraft: setDraft,
+    maxLength,
+    canSubmit,
+    messages,
+    isLoading,
+    replyOptions,
+    submitDraft,
     submitMessage,
-    submitWorkflowAction,
-    choice,
-    dismissChoice: () => setChoice(null),
-    workflowInstance,
   };
 }
