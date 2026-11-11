@@ -1,5 +1,7 @@
 import "server-only";
 
+import { ReadableStream } from "node:stream/web";
+
 import type { AssistantStreamEvent } from "@/contracts/assistant.contract";
 import type { Logger } from "@/infrastructure/logging/logger";
 import type { OpenAITransport } from "@/infrastructure/openai/types";
@@ -8,6 +10,10 @@ import type { AssistantResponseInput } from "./types";
 
 const encoder = new TextEncoder();
 
+function encodeEvent(event: AssistantStreamEvent) {
+  return encoder.encode(`${JSON.stringify(event)}\n`);
+}
+
 export class AssistantService {
   constructor(
     private readonly openai: OpenAITransport,
@@ -15,77 +21,63 @@ export class AssistantService {
   ) {}
 
   createResponse(request: Extract<AssistantResponseInput, { message: string }>) {
-    const { signal } = request;
+    // NextResponse uses the DOM declarations for the same Web Streams API.
+    return ReadableStream.from(this.streamReply(request)) as globalThis.ReadableStream<Uint8Array>;
+  }
 
-    let readerCancelled = false;
+  private async *streamReply({
+    message,
+    previousResponseId,
+    signal,
+  }: Extract<AssistantResponseInput, { message: string }>) {
+    let hasText = false;
 
-    return new ReadableStream<Uint8Array>({
-      start: async (controller) => {
-        const sendEvent = (event: AssistantStreamEvent) => {
-          controller.enqueue(encoder.encode(`${JSON.stringify(event)}\n`));
-        };
+    try {
+      signal.throwIfAborted();
 
-        let hasText = false;
+      const events = await this.openai.streamResponse({
+        input: [{ type: "user_message", content: message }],
+        instructions: PLAIN_CHAT_SYSTEM_PROMPT,
+        tools: [],
+        previousResponseId,
+        signal,
+      });
 
-        try {
-          signal.throwIfAborted();
+      providerEvents: for await (const event of events) {
+        signal.throwIfAborted();
 
-          const events = await this.openai.streamResponse({
-            input: [{ type: "user_message", content: request.message }],
-            instructions: PLAIN_CHAT_SYSTEM_PROMPT,
-            tools: [],
-            previousResponseId: request.previousResponseId,
-            signal,
-          });
+        switch (event.type) {
+          case "response.output_text.delta":
+            hasText = hasText || event.delta.trim().length > 0;
+            yield encodeEvent({ type: "delta", delta: event.delta });
+            break;
 
-          providerEvents: for await (const event of events) {
-            if (readerCancelled) {
-              return;
+          case "response.completed":
+            if (!hasText) {
+              yield encodeEvent({ type: "delta", delta: FALLBACK_ANSWER });
             }
 
-            signal.throwIfAborted();
+            yield encodeEvent({ type: "response_id", responseId: event.response.id });
+            yield encodeEvent({ type: "done" });
 
-            switch (event.type) {
-              case "response.output_text.delta":
-                hasText = hasText || event.delta.trim().length > 0;
-                sendEvent({ type: "delta", delta: event.delta });
-                break;
+            return;
 
-              case "response.completed":
-                if (!hasText) {
-                  sendEvent({ type: "delta", delta: FALLBACK_ANSWER });
-                }
-
-                sendEvent({ type: "response_id", responseId: event.response.id });
-                sendEvent({ type: "done" });
-
-                return;
-
-              case "response.failed":
-              case "response.incomplete":
-              case "error":
-                break providerEvents;
-            }
-          }
-
-          throw new Error("The model response did not complete.");
-        } catch {
-          if (!signal.aborted && !readerCancelled) {
-            this.logger.error("assistant.response_failed");
-            sendEvent({
-              type: "error",
-              error: "The assistant could not respond. Please try again.",
-            });
-          }
-        } finally {
-          if (!readerCancelled) {
-            controller.close();
-          }
+          case "response.failed":
+          case "response.incomplete":
+          case "error":
+            break providerEvents;
         }
-      },
-      cancel() {
-        readerCancelled = true;
-      },
-    });
+      }
+
+      throw new Error("The model response did not complete.");
+    } catch {
+      if (!signal.aborted) {
+        this.logger.error("assistant.response_failed");
+        yield encodeEvent({
+          type: "error",
+          error: "The assistant could not respond. Please try again.",
+        });
+      }
+    }
   }
 }

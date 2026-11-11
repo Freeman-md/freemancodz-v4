@@ -1,7 +1,7 @@
 import "server-only";
 
 export type Logger = {
-  error(message: string, context?: unknown): void;
+  error(message: string, error?: unknown): void;
   info(message: string, context?: unknown): void;
 };
 
