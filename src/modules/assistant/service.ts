@@ -12,7 +12,10 @@ import type { PortfolioSearchService } from "../portfolio/services/portfolio-sea
 import type { WorkflowService } from "../workflow/service";
 import { executeTool, type ToolReplyEvent } from "./tools/execute";
 import { SEARCH_PORTFOLIO_TOOL } from "./tools/search-portfolio/definition";
-import { createStartWorkflowTool } from "./tools/start-workflow/definition";
+import {
+  createStartWorkflowTool,
+  START_WORKFLOW_TOOL_NAME,
+} from "./tools/start-workflow/definition";
 import type { AssistantResponseInput } from "./types";
 
 const encoder = new TextEncoder();
@@ -26,7 +29,10 @@ export class AssistantService {
     private readonly openai: OpenAITransport,
     private readonly logger: Logger,
     private readonly portfolioSearch: Pick<PortfolioSearchService, "search">,
-    private readonly workflow: Pick<WorkflowService, "listAvailable" | "start" | "getActiveTools">,
+    private readonly workflow: Pick<
+      WorkflowService,
+      "listAvailable" | "start" | "getTurn" | "getActive"
+    >,
   ) {}
 
   createResponse(request: AssistantResponseInput) {
@@ -37,6 +43,7 @@ export class AssistantService {
   private async *streamReply({
     message,
     previousResponseId,
+    observedWorkflow,
     visitorKey,
     signal,
   }: AssistantResponseInput) {
@@ -60,7 +67,27 @@ export class AssistantService {
 
     try {
       signal.throwIfAborted();
-      const workflowTools = await this.workflow.getActiveTools(visitorKey);
+      const workflowTurn = await this.workflow.getTurn(visitorKey, observedWorkflow).catch(() => {
+        this.logger.error("assistant.workflow_unavailable");
+
+        return null;
+      });
+
+      const workflowTools = workflowTurn?.tools ?? [];
+
+      if (workflowTurn === null || workflowTurn.hasActive) {
+        modelRequest.tools = modelRequest.tools.filter(
+          ({ name }) => name !== START_WORKFLOW_TOOL_NAME,
+        );
+      }
+
+      if (workflowTurn?.refreshed) {
+        yield encodeEvent({ type: "workflow_instance", instance: workflowTurn.refreshed });
+      }
+
+      if (workflowTurn?.guidance) {
+        modelRequest.instructions += `\n\nWorkflow guidance:\n${workflowTurn.guidance}`;
+      }
 
       modelRequest.tools.push(...workflowTools.map(({ tool }) => tool));
 
@@ -163,6 +190,14 @@ export class AssistantService {
 
       const failure =
         error instanceof AssistantError ? error.failure : ASSISTANT_ERRORS.RESPONSE_FAILED;
+
+      if (failure === ASSISTANT_ERRORS.WORKFLOW_CHANGED) {
+        const current = await this.workflow.getActive(visitorKey).catch(() => null);
+
+        if (current) {
+          yield encodeEvent({ type: "workflow_instance", instance: current });
+        }
+      }
 
       this.logger.error(failure.code);
       yield encodeEvent({ type: "error", error: failure.publicMessage });

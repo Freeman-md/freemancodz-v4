@@ -9,7 +9,7 @@ const browserConfigPath = "./browser.config.mjs";
 test(
   "Meeting progress appears after start and restores only in the owning browser session",
   {
-    timeout: 120_000,
+    timeout: 140_000,
     skip:
       !workflowUrl &&
       "Set WORKFLOW_E2E_URL for an app with disposable PostgreSQL and a controlled model.",
@@ -26,7 +26,12 @@ test(
 
     const chatUrl = new URL("/api/chat", workflowUrl).toString();
 
-    const owner = await browser.newContext({ reducedMotion: "reduce" });
+    const owner = await browser.newContext({
+      reducedMotion: "reduce",
+      viewport: { width: 390, height: 844 },
+      hasTouch: true,
+      isMobile: true,
+    });
 
     const page = await owner.newPage();
 
@@ -69,7 +74,7 @@ test(
     await dialog.getByRole("textbox", { name: "Your message" }).fill(topic);
     await dialog.getByRole("button", { name: "Send message" }).click();
     await dialog.getByRole("listitem").getByText(topic, { exact: true }).waitFor();
-    await progress.getByText("1 of 2 details", { exact: true }).waitFor();
+    await progress.getByText("1 of 4 details", { exact: true }).waitFor();
 
     await dialog.getByRole("textbox", { name: "Your message" }).fill("Show times on 2099-06-15.");
     await dialog.getByRole("button", { name: "Send message" }).click();
@@ -84,7 +89,7 @@ test(
     await selectedTime.waitFor();
     const timeLabel = await selectedTime.textContent();
 
-    await progress.getByText("2 of 2 details", { exact: true }).waitFor();
+    await progress.getByText("2 of 4 details", { exact: true }).waitFor();
 
     await page.reload({ waitUntil: "load" });
     const [restored] = await Promise.all([
@@ -98,7 +103,10 @@ test(
     assert.equal(restored.status(), 200);
     assert.deepEqual(activeWorkflowSchema.parse(await restored.json()), {
       ...instance,
+      revision: instance.revision + 3,
       details: [
+        { key: "name", label: "Name", value: null },
+        { key: "email", label: "Email", value: null },
         { key: "reason", label: "Topic", value: topic },
         { key: "time", label: "Time", value: timeLabel },
       ],
@@ -106,6 +114,63 @@ test(
     await progress.press("Enter");
     await dialog.getByRole("listitem").getByText(topic, { exact: true }).waitFor();
     await selectedTime.waitFor();
+
+    await dialog
+      .getByRole("textbox", { name: "Your message" })
+      .fill("Test Visitor, visitor@example.test");
+    await dialog.getByRole("button", { name: "Send message" }).click();
+    const review = dialog.getByRole("region", { name: "Review request" });
+
+    await review.getByText("visitor@example.test", { exact: true }).waitFor();
+    await dialog
+      .getByRole("textbox", { name: "Your message" })
+      .fill("Discuss the corrected scope.");
+    await review.getByRole("button", { name: "Request changes" }).click();
+    assert.equal(
+      await dialog.getByRole("textbox", { name: "Your message" }).inputValue(),
+      "Discuss the corrected scope.",
+    );
+    await dialog.getByRole("button", { name: "Send message" }).click();
+    await review.getByText("Discuss the corrected scope.", { exact: true }).waitFor();
+    await review.getByRole("button", { name: "Confirm booking" }).focus();
+    const [approval] = await Promise.all([
+      page.waitForResponse(
+        (response: { url(): string; request(): { method(): string } }) =>
+          response.url().endsWith("/api/workflow/approve") &&
+          response.request().method() === "POST",
+      ),
+      review.getByRole("button", { name: "Confirm booking" }).press("Enter"),
+    ]);
+
+    assert.equal(approval.status(), 202);
+    await progress.getByText(/Queued|Running/).waitFor();
+    await dialog.getByRole("button", { name: "Close assistant" }).click();
+    await dialog.waitFor({ state: "hidden" });
+
+    if (process.env.WORKFLOW_CRON_REHEARSAL === "1") {
+      const cutoff = Date.now() + 70_000;
+
+      let saved;
+
+      do {
+        const result = await owner.request.get(chatUrl);
+
+        saved = activeWorkflowSchema.parse(await result.json());
+        if (saved.run?.status === "finished") {
+          break;
+        }
+
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+      } while (Date.now() < cutoff);
+
+      assert.equal(saved?.run?.status, "finished");
+      await page.getByRole("button", { name: "Open portfolio chat" }).click();
+      await dialog.getByText("Booking confirmed", { exact: true }).waitFor();
+      assert.equal(await review.count(), 0);
+      await page.screenshot({
+        path: process.env.WORKFLOW_E2E_SCREENSHOT ?? "/tmp/m28-booking-mobile.png",
+      });
+    }
 
     const other = await browser.newContext({ reducedMotion: "reduce" });
 

@@ -15,6 +15,7 @@ import { OpenAIEmbeddings } from "@/infrastructure/openai/embeddings";
 import { AssistantService } from "./assistant/service";
 import { ContactRequestRepository } from "./contact/repository";
 import { ContactService } from "./contact/service";
+import { MeetingOwnerNotice } from "./meeting/owner-notice";
 import { MeetingRepository } from "./meeting/repository";
 import { MeetingService } from "./meeting/service";
 import { NotificationService } from "./notification/service";
@@ -29,6 +30,9 @@ import { PrismaPortfolioSeedRepository } from "./portfolio/repositories/portfoli
 import { PortfolioSeedService } from "./portfolio/seed.service";
 import { RateLimitRepository } from "./rate-limit/repository";
 import { RateLimitService } from "./rate-limit/service";
+import { createMeetingBookingAction } from "./workflow/definitions/meeting-booking/actions";
+import { WorkflowRunner } from "./workflow/runner";
+import { WorkflowRunRepository } from "./workflow/run-repository";
 import { MeetingBookingWorkflowDefinition } from "./workflow/definitions/meeting-booking/definition";
 import { WorkflowRegistry } from "./workflow/registry";
 import { WorkflowRepository } from "./workflow/repository";
@@ -90,16 +94,36 @@ export const rateLimitService = new RateLimitService(
 );
 
 // Workflow
-const meetingService = new MeetingService(
-  new GoogleCalendarClient(getGoogleCalendarConfig),
-  new MeetingRepository(prisma),
-  logger,
-  notificationService,
-);
+const calendar = new GoogleCalendarClient(getGoogleCalendarConfig);
+
+const meetingStore = new MeetingRepository(prisma);
+
+const meetingService = new MeetingService(calendar, logger);
+
+const workflowRegistry = new WorkflowRegistry([
+  new MeetingBookingWorkflowDefinition(
+    meetingService,
+    createMeetingBookingAction(
+      meetingService,
+      calendar,
+      meetingStore,
+      new MeetingOwnerNotice(resendClient, () => ({
+        adminEmail: getNotificationOwnerEmail(),
+        fromEmail: getResendConfig().fromEmail,
+      })),
+    ),
+  ),
+]);
 
 export const workflowService = new WorkflowService(
-  new WorkflowRegistry([new MeetingBookingWorkflowDefinition(meetingService)]),
+  workflowRegistry,
   new WorkflowRepository(prisma),
+);
+
+export const workflowRunner = new WorkflowRunner(
+  workflowRegistry,
+  new WorkflowRunRepository(prisma),
+  logger,
 );
 
 // Assistant

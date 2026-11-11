@@ -73,9 +73,19 @@ test(
       assert.deepEqual(repeated, started);
       assert.equal(await prisma.workflowInstance.count({ where: { visitorKey } }), 1);
 
-      const [firstTool] = await service.getActiveTools(visitorKey);
+      async function offeredTool(name: string, revision: number) {
+        const turn = await service.getTurn(visitorKey, { id: started.id, revision });
 
-      const [staleTool] = await service.getActiveTools(visitorKey);
+        const tool = turn.tools.find(({ tool }) => tool.name === name);
+
+        assert.ok(tool);
+
+        return tool;
+      }
+
+      const firstTool = await offeredTool("save_meeting_topic", 0);
+
+      const staleTool = await offeredTool("save_meeting_topic", 0);
 
       assert.ok(firstTool && staleTool);
       assert.equal(firstTool.tool.name, "save_meeting_topic");
@@ -84,13 +94,24 @@ test(
 
       assert.deepEqual(saved?.instance, {
         ...started,
+        revision: 1,
         details: [
+          { key: "name", label: "Name", value: null },
+          { key: "email", label: "Email", value: null },
           { key: "reason", label: "Topic", value: "Discuss a project" },
           { key: "time", label: "Time", value: null },
         ],
       });
       assert.equal(await staleTool.run('{"reason":"Another topic"}', input.signal), null);
-      const [findSlots] = await service.getActiveTools(visitorKey);
+      const staleTab = await service.getTurn(visitorKey, { id: started.id, revision: 0 });
+
+      assert.deepEqual(staleTab.tools, []);
+      assert.equal(staleTab.refreshed?.revision, 1);
+      assert.deepEqual(
+        (await service.getTurn(otherVisitorKey, { id: started.id, revision: 1 })).tools,
+        [],
+      );
+      const findSlots = await offeredTool("find_meeting_slots", 1);
 
       assert.equal(findSlots.tool.name, "find_meeting_slots");
 
@@ -110,6 +131,8 @@ test(
       });
 
       assert.deepEqual(persisted.state, {
+        name: null,
+        email: null,
         reason: "Discuss a project",
         availableSlots: [],
         selectedSlot: null,
@@ -124,7 +147,7 @@ test(
 
       assert.equal(offered?.output.status, "available");
 
-      const [, initialSelection] = await service.getActiveTools(visitorKey);
+      const initialSelection = await offeredTool("select_meeting_slot", 2);
 
       assert.equal(initialSelection.tool.name, "select_meeting_slot");
       const unoffered = await initialSelection.run(
@@ -141,9 +164,9 @@ test(
       assert.equal(busy?.output.status, "slot_unavailable");
       assert.equal(busy?.instance?.details.find(({ key }) => key === "time")?.value, null);
 
-      const [, firstSelection] = await service.getActiveTools(visitorKey);
+      const firstSelection = await offeredTool("select_meeting_slot", 3);
 
-      const [, staleSelection] = await service.getActiveTools(visitorKey);
+      const staleSelection = await offeredTool("select_meeting_slot", 3);
 
       const selected = await firstSelection.run(
         JSON.stringify({ start: slots[1].start }),
@@ -159,6 +182,8 @@ test(
       const chosen = await prisma.workflowInstance.findUniqueOrThrow({ where: { id: started.id } });
 
       assert.deepEqual(chosen.state, {
+        name: null,
+        email: null,
         reason: "Discuss a project",
         availableSlots: [],
         selectedSlot: slots[1],

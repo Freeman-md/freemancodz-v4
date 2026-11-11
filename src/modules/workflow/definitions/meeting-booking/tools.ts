@@ -1,10 +1,10 @@
-import type { MeetingSlot } from "@/modules/meeting/types";
+import type { MeetingAvailability, MeetingSlot } from "@/modules/meeting/types";
 import type { WorkflowTool } from "../../types";
 import {
   findMeetingSlots,
   formatMeetingSlot,
-  type MeetingAvailability,
   saveMeetingTopic,
+  saveMeetingIdentity,
   selectMeetingSlot,
 } from "./tool-handlers";
 
@@ -24,6 +24,23 @@ export const saveMeetingTopicTool: WorkflowTool = {
     },
   },
   apply: saveMeetingTopic,
+};
+
+export const saveMeetingIdentityTool: WorkflowTool = {
+  tool: {
+    type: "function",
+    name: "save_meeting_identity",
+    description:
+      "Save the name or email the visitor gave for this meeting. Use null for a field the visitor did not supply.",
+    strict: true,
+    parameters: {
+      type: "object",
+      properties: { name: { type: ["string", "null"] }, email: { type: ["string", "null"] } },
+      required: ["name", "email"],
+      additionalProperties: false,
+    },
+  },
+  apply: saveMeetingIdentity,
 };
 
 export function createFindMeetingSlotsTool(availability: MeetingAvailability): WorkflowTool {

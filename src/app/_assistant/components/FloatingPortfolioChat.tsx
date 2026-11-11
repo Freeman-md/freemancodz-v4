@@ -8,6 +8,7 @@ import { useAssistant } from "../hooks/useAssistant";
 import { useAssistantSurface } from "../hooks/useAssistantSurface";
 import { AssistantComposer } from "./AssistantComposer";
 import { AssistantMessages } from "./AssistantMessages";
+import { AssistantWorkflowConfirmation } from "./AssistantWorkflowConfirmation";
 import { AssistantWorkflowProgress } from "./AssistantWorkflowProgress";
 
 export function FloatingPortfolioChat() {
@@ -29,13 +30,32 @@ export function FloatingPortfolioChat() {
     isLoading: chat.isLoading,
   });
 
-  const { workflow, workflowRestoreFailed, restoreWorkflow } = chat;
+  const { workflow, workflowRestoreFailed, restoreWorkflow, cancelWorkflowRestore } = chat;
 
   useEffect(() => {
     if (isOpen) {
-      return restoreWorkflow();
+      restoreWorkflow();
+
+      return cancelWorkflowRestore;
     }
-  }, [isOpen, restoreWorkflow]);
+  }, [isOpen, restoreWorkflow, cancelWorkflowRestore]);
+
+  const runStatus = workflow?.run?.status;
+
+  const shouldPoll = runStatus === "queued" || runStatus === "running" || runStatus === "retry";
+
+  const workflowId = workflow?.id;
+
+  useEffect(() => {
+    if (!isOpen || !shouldPoll) {return;}
+
+    const interval = window.setInterval(restoreWorkflow, 5000);
+
+    return () => {
+      window.clearInterval(interval);
+      cancelWorkflowRestore();
+    };
+  }, [isOpen, shouldPoll, workflowId, restoreWorkflow, cancelWorkflowRestore]);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -112,6 +132,17 @@ export function FloatingPortfolioChat() {
             </header>
 
             {workflow && <AssistantWorkflowProgress key={workflow.id} instance={workflow} />}
+
+            {workflow?.review && (
+              <AssistantWorkflowConfirmation
+                key={workflow.review.id}
+                review={workflow.review}
+                pending={chat.isApproving || chat.isLoading}
+                error={chat.approvalError}
+                onConfirm={() => void chat.confirmReview()}
+                onChange={() => textareaRef.current?.focus()}
+              />
+            )}
 
             {workflowRestoreFailed && (
               <p role="status" className="px-4 py-2 text-sm sm:px-6">

@@ -12,7 +12,7 @@ test("workflow start saves only validated initial state", async (t) => {
   });
 
   const instance = {
-    id: "instance-1",
+    id: "11111111-1111-4111-8111-111111111111",
     workflowId: meetingBooking.id,
     workflowVersion: 1,
     revision: 0,
@@ -23,7 +23,15 @@ test("workflow start saves only validated initial state", async (t) => {
     async (_input: Parameters<WorkflowRepository["startOrResume"]>[0]) => instance,
   );
 
-  const repository = { startOrResume, findActive: async () => null, saveState: async () => null };
+  const repository = {
+    startOrResume,
+    findActive: async () => null,
+    saveState: async () => null,
+    findRun: async () => null,
+    ensureReview: async () => null,
+    findOwnedReview: async () => null,
+    approve: async () => false,
+  };
 
   const service = new WorkflowService(new WorkflowRegistry([meetingBooking]), repository);
 
@@ -74,10 +82,13 @@ test("workflow start saves only validated initial state", async (t) => {
   await t.test("saves the Meeting definition version and initial state", async () => {
     assert.deepEqual(await service.start(input), {
       id: instance.id,
+      revision: 0,
       title: "Book a meeting",
       status: "active",
       phase: "collecting",
       details: [
+        { key: "name", label: "Name", value: null },
+        { key: "email", label: "Email", value: null },
         { key: "reason", label: "Topic", value: null },
         { key: "time", label: "Time", value: null },
       ],
@@ -88,7 +99,7 @@ test("workflow start saves only validated initial state", async (t) => {
         workflowId: "meeting-booking",
         workflowVersion: 1,
         visitorKey: input.visitorKey,
-        state: { reason: null, availableSlots: [], selectedSlot: null },
+        state: { name: null, email: null, reason: null, availableSlots: [], selectedSlot: null },
         originChannel: "web",
       },
     ]);

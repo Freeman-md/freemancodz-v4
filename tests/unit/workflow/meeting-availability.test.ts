@@ -3,6 +3,8 @@ import test from "node:test";
 import { findMeetingSlots } from "@/modules/workflow/definitions/meeting-booking/tool-handlers";
 
 const state = {
+  name: null,
+  email: null,
   reason: "Discuss a project",
   availableSlots: [
     {

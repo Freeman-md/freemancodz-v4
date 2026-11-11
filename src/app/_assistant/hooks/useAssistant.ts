@@ -6,6 +6,7 @@ import {
   type ActiveWorkflow,
   type AssistantSource,
 } from "@/contracts/assistant.contract";
+import { approveWorkflow } from "../api/approve-workflow";
 import { fetchActiveWorkflow } from "../api/fetch-active-workflow";
 import { streamAssistant } from "../api/stream-assistant-response";
 import type { ChatMessage } from "../types";
@@ -28,11 +29,22 @@ export function useAssistant() {
 
   const [workflowRestoreFailed, setWorkflowRestoreFailed] = useState(false);
 
+  const [approvalError, setApprovalError] = useState<string | null>(null);
+
+  const [isApproving, setIsApproving] = useState(false);
+
+  const approvalInProgress = useRef(false);
+
   const workflowRestore = useRef<AbortController | null>(null);
+
+  const cancelWorkflowRestore = useCallback(() => {
+    workflowRestore.current?.abort();
+  }, []);
 
   const restoreWorkflow = useCallback(() => {
     const controller = new AbortController();
 
+    workflowRestore.current?.abort();
     workflowRestore.current = controller;
 
     void fetchActiveWorkflow(controller.signal)
@@ -105,6 +117,7 @@ export function useAssistant() {
       for await (const event of streamAssistant({
         message,
         previousResponseId: previousResponseId.current,
+        observedWorkflow: workflow ? { id: workflow.id, revision: workflow.revision } : undefined,
       })) {
         switch (event.type) {
           case "delta":
@@ -157,6 +170,35 @@ export function useAssistant() {
     }
   }
 
+  async function confirmReview() {
+    if (!workflow?.review || approvalInProgress.current) {return;}
+
+    approvalInProgress.current = true;
+    cancelWorkflowRestore();
+    setIsApproving(true);
+    setApprovalError(null);
+
+    try {
+      const result = await approveWorkflow({
+        reviewId: workflow.review.id,
+        expectedRevision: workflow.revision,
+      });
+
+      if (result.status === "accepted") {
+        setWorkflow(result.workflow);
+      } else {
+        setApprovalError("The review changed. Check the latest details.");
+        restoreWorkflow();
+      }
+    } catch {
+      setApprovalError("Could not confirm the request. Check its saved progress.");
+      restoreWorkflow();
+    } finally {
+      approvalInProgress.current = false;
+      setIsApproving(false);
+    }
+  }
+
   function submitDraft() {
     if (canSubmit) {
       return submitMessage(context + text);
@@ -175,6 +217,10 @@ export function useAssistant() {
     workflow,
     workflowRestoreFailed,
     restoreWorkflow,
+    cancelWorkflowRestore,
+    confirmReview,
+    approvalError,
+    isApproving,
     submitDraft,
     submitMessage,
   };

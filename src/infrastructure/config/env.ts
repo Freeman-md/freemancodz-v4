@@ -49,3 +49,9 @@ export function getGoogleCalendarConfig() {
     calendarId: requireEnv("GOOGLE_CALENDAR_ID", { trim: true }),
   };
 }
+
+export function getWorkflowRunnerSecret() {
+  const secret = process.env.WORKFLOW_RUNNER_SECRET;
+
+  return secret && secret.length >= 32 ? secret : null;
+}

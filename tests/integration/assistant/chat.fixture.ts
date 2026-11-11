@@ -12,7 +12,7 @@ import {
 import { NextRequest } from "next/server";
 import type { ResponseStreamEvent } from "openai/resources/responses/responses";
 import { CHAT_VISITOR_COOKIE } from "@/app/api/chat/constants";
-import { createChatPostHandler } from "@/app/api/chat/route";
+import { createChatPostHandler } from "@/app/api/chat/post";
 import { assistantStreamEventSchema } from "@/contracts/assistant.contract";
 import type { OpenAIResponseRequest, OpenAITransport } from "@/infrastructure/openai/types";
 import { AssistantService } from "@/modules/assistant/service";
@@ -27,7 +27,8 @@ export function createChatFixture(
     limit = { allowed: true },
     workflow = {
       listAvailable: () => [],
-      getActiveTools: async () => [],
+      getTurn: async () => ({ tools: [] }),
+      getActive: async () => null,
       start: async () => {
         throw new Error("No test workflow is registered.");
       },
@@ -35,7 +36,7 @@ export function createChatFixture(
   }: {
     search?: PortfolioSearchService["search"];
     limit?: RateLimitResult;
-    workflow?: Pick<WorkflowService, "listAvailable" | "start" | "getActiveTools">;
+    workflow?: Pick<WorkflowService, "listAvailable" | "start" | "getTurn" | "getActive">;
   } = {},
 ) {
   const requests: OpenAIResponseRequest[] = [];

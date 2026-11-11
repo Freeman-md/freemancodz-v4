@@ -1,18 +1,14 @@
 import { CalendarAvailabilityError } from "@/infrastructure/google-calendar/types";
 import { MEETING_CONFIG } from "@/modules/meeting/config";
-import type { MeetingServiceClient, MeetingSlot } from "@/modules/meeting/types";
+import type { MeetingAvailability, MeetingSlot } from "@/modules/meeting/types";
 import type { WorkflowToolResult } from "../../types";
 import {
   findSlotsArgumentsSchema,
+  identityArgumentsSchema,
   meetingStateSchema,
   selectSlotArgumentsSchema,
   topicArgumentsSchema,
 } from "./schema";
-
-export type MeetingAvailability = Pick<
-  MeetingServiceClient,
-  "findAvailableSlots" | "isSlotAvailable"
->;
 
 const londonDate = new Intl.DateTimeFormat("sv-SE", {
   timeZone: MEETING_CONFIG.timezone,
@@ -42,6 +38,17 @@ export function saveMeetingTopic(savedState: unknown, args: unknown): WorkflowTo
   const { reason } = topicArgumentsSchema.parse(args);
 
   return { state: { ...state, reason }, output: { status: "saved" } };
+}
+
+export function saveMeetingIdentity(savedState: unknown, args: unknown): WorkflowToolResult {
+  const state = meetingStateSchema.parse(savedState);
+
+  const { name, email } = identityArgumentsSchema.parse(args);
+
+  return {
+    state: { ...state, name: name ?? state.name, email: email ?? state.email },
+    output: { status: "saved" },
+  };
 }
 
 export async function findMeetingSlots(

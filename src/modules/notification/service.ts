@@ -2,7 +2,6 @@ import "server-only";
 
 import type { ContactRequest } from "@/generated/prisma/client";
 import type { Logger } from "@/infrastructure/logging/logger";
-import type { MeetingRecord } from "@/modules/meeting/types";
 
 type EmailSender = {
   send(input: {
@@ -27,21 +26,6 @@ export class NotificationService {
     private readonly logger: Logger,
   ) {}
 
-  notifyMeetingBooked(meeting: MeetingRecord): Promise<void> {
-    return this.send("meeting-booked", meeting.id, meeting.email, {
-      subject: `New meeting booked with ${meeting.name}`,
-      text: lines([
-        `Name: ${meeting.name}`,
-        `Email: ${meeting.email}`,
-        `Reason: ${meeting.reason}`,
-        `Starts: ${meeting.startsAt.toISOString()}`,
-        `Ends: ${meeting.endsAt.toISOString()}`,
-        `Timezone: ${meeting.timezone}`,
-        meeting.googleEventUrl ? `Calendar event: ${meeting.googleEventUrl}` : null,
-      ]),
-    });
-  }
-
   notifyContactSubmitted(request: ContactRequest): Promise<void> {
     return this.send("contact-submitted", request.id, request.email, {
       subject: `New message from ${request.name}`,
@@ -55,7 +39,7 @@ export class NotificationService {
   }
 
   private async send(
-    kind: "meeting-booked" | "contact-submitted",
+    kind: "contact-submitted",
     recordId: string,
     replyTo: string,
     content: { subject: string; text: string },

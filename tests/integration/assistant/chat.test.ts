@@ -41,6 +41,7 @@ test("starts workflows only after establishing browser ownership and completing 
 
   const instance: ActiveWorkflow = {
     id: randomUUID(),
+    revision: 0,
     title: "Book a meeting",
     status: "active",
     phase: "collecting",
@@ -72,7 +73,8 @@ test("starts workflows only after establishing browser ownership and completing 
           workflow: {
             listAvailable: () => (scenario === "unoffered" ? [] : [meetingBooking]),
             start,
-            getActiveTools: async () => [],
+            getTurn: async () => ({ tools: [] }),
+            getActive: async () => null,
           },
         },
       );
@@ -145,6 +147,10 @@ test("topic collection leaves unrelated questions and invalid arguments out of w
         startOrResume: async () => instance,
         findActive: async () => instance,
         saveState,
+        findRun: async () => null,
+        ensureReview: async () => null,
+        findOwnedReview: async () => null,
+        approve: async () => false,
       });
 
       const { post, requests } = createChatFixture(
@@ -157,7 +163,10 @@ test("topic collection leaves unrelated questions and invalid arguments out of w
         { workflow },
       );
 
-      const body = JSON.stringify({ message: "Hello" });
+      const body = JSON.stringify({
+        message: "Hello",
+        observedWorkflow: { id: instance.id, revision: instance.revision },
+      });
 
       const events = parseEvents(await (await post(chatRequest(body))).text());
 
@@ -192,6 +201,10 @@ test("reports Calendar unavailability without changing the active workflow", asy
     startOrResume: async () => instance,
     findActive: async () => instance,
     saveState,
+    findRun: async () => null,
+    ensureReview: async () => null,
+    findOwnedReview: async () => null,
+    approve: async () => false,
   });
 
   const { post, requests } = createChatFixture(
@@ -209,7 +222,10 @@ test("reports Calendar unavailability without changing the active workflow", asy
     { workflow },
   );
 
-  const body = JSON.stringify({ message: "What times are free on 15 June 2099?" });
+  const body = JSON.stringify({
+    message: "What times are free on 15 June 2099?",
+    observedWorkflow: { id: instance.id, revision: instance.revision },
+  });
 
   const events = parseEvents(await (await post(chatRequest(body))).text());
 

@@ -7,6 +7,14 @@ export type StoredWorkflow = Pick<
   "id" | "workflowId" | "workflowVersion" | "state" | "revision"
 >;
 
+const workflowFields = {
+  id: true,
+  workflowId: true,
+  workflowVersion: true,
+  state: true,
+  revision: true,
+} as const;
+
 export class WorkflowRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
@@ -17,8 +25,6 @@ export class WorkflowRepository {
     state: Prisma.InputJsonObject;
     originChannel: string;
   }) {
-    // Assigning the same workflow ID lets PostgreSQL return the existing row in the
-    // same statement while preserving its state and version.
     const [instance] = await this.prisma.$queryRaw<StoredWorkflow[]>`
       INSERT INTO "workflow_instances" (
         "visitor_key", "workflow_id", "workflow_version", "state", "origin_channel"
@@ -46,34 +52,151 @@ export class WorkflowRepository {
     revision: number;
     state: Prisma.InputJsonObject;
   }): Promise<StoredWorkflow | null> {
-    const [updated] = await this.prisma.workflowInstance.updateManyAndReturn({
-      where: {
-        id: input.id,
-        visitorKey: input.visitorKey,
-        status: "active",
-        revision: input.revision,
-      },
-      data: {
-        state: input.state,
-        revision: { increment: 1 },
-      },
-      select: {
-        id: true,
-        workflowId: true,
-        workflowVersion: true,
-        state: true,
-        revision: true,
-      },
-    });
+    return this.prisma.$transaction(async (tx) => {
+      const [updated] = await tx.workflowInstance.updateManyAndReturn({
+        where: {
+          id: input.id,
+          visitorKey: input.visitorKey,
+          status: "active",
+          revision: input.revision,
+          reviews: { none: { status: "consumed" } },
+        },
+        data: { state: input.state, revision: { increment: 1 } },
+        select: workflowFields,
+      });
 
-    return updated ?? null;
+      if (!updated) {
+        return null;
+      }
+
+      await tx.workflowReview.updateMany({
+        where: { instanceId: input.id, status: "pending" },
+        data: { status: "invalidated" },
+      });
+
+      return updated;
+    });
   }
 
   findActive(visitorKey: string): Promise<StoredWorkflow | null> {
     return this.prisma.workflowInstance.findFirst({
-      where: { visitorKey, status: "active" },
+      where: {
+        visitorKey,
+        OR: [{ status: "active" }, { reviews: { some: { status: "consumed" } } }],
+      },
       orderBy: [{ startedAt: "desc" }, { id: "desc" }],
-      select: { id: true, workflowId: true, workflowVersion: true, state: true, revision: true },
+      select: workflowFields,
+    });
+  }
+
+  async findRun(instanceId: string) {
+    return this.prisma.workflowRun.findFirst({
+      where: { review: { instanceId } },
+      include: { review: { select: { actionKey: true } }, steps: { orderBy: { position: "asc" } } },
+    });
+  }
+
+  ensureReview(input: {
+    instance: StoredWorkflow;
+    actionKey: string;
+    display: Prisma.InputJsonObject;
+    payload: Prisma.InputJsonObject;
+  }) {
+    return this.prisma.$transaction(async (tx) => {
+      const { id, revision, workflowVersion } = input.instance;
+
+      const [current] = await tx.$queryRaw<{ id: string }[]>`
+        SELECT id FROM workflow_instances
+        WHERE id = ${id}::uuid AND revision = ${revision} AND status = 'active'
+        FOR UPDATE
+      `;
+
+      if (!current) {
+        return null;
+      }
+
+      return tx.workflowReview.upsert({
+        where: { instanceId_revision: { instanceId: id, revision } },
+        update: {},
+        create: {
+          instanceId: id,
+          revision,
+          version: workflowVersion,
+          actionKey: input.actionKey,
+          display: input.display,
+          payload: input.payload,
+        },
+      });
+    });
+  }
+
+  async findOwnedReview(id: string, visitorKey: string) {
+    return this.prisma.workflowReview.findFirst({
+      where: { id, instance: { visitorKey } },
+      include: { instance: { select: workflowFields } },
+    });
+  }
+
+  approve(input: {
+    id: string;
+    instanceId: string;
+    visitorKey: string;
+    revision: number;
+    version: number;
+    steps: ReadonlyArray<{ key: string; label: string }>;
+  }) {
+    return this.prisma.$transaction(async (tx) => {
+      const [instance] = await tx.$queryRaw<
+        { revision: number; status: string; version: number }[]
+      >`
+        SELECT revision, status, workflow_version AS version
+        FROM workflow_instances
+        WHERE id = ${input.instanceId}::uuid AND visitor_key = ${input.visitorKey}
+        FOR UPDATE
+      `;
+
+      if (!instance || instance.version !== input.version) {
+        return false;
+      }
+
+      const review = await tx.workflowReview.findUnique({ where: { id: input.id } });
+
+      if (
+        !review ||
+        review.instanceId !== input.instanceId ||
+        review.revision !== input.revision ||
+        review.version !== input.version
+      ) {
+        return false;
+      }
+
+      if (review.status === "consumed") {
+        return true;
+      }
+
+      if (
+        review.status !== "pending" ||
+        instance.status !== "active" ||
+        instance.revision !== input.revision
+      ) {
+        return false;
+      }
+
+      await tx.workflowReview.update({ where: { id: review.id }, data: { status: "consumed" } });
+      await tx.workflowRun.create({
+        data: {
+          reviewId: review.id,
+          steps: {
+            create: input.steps.map(({ key, label }, position) => ({ key, label, position })),
+          },
+        },
+      });
+      await tx.workflowInstance.update({
+        where: { id: input.instanceId },
+        data: { revision: { increment: 1 } },
+      });
+
+      return true;
     });
   }
 }

@@ -1,4 +1,5 @@
 import "server-only";
+import { z } from "zod";
 
 export type ResendEmailInput = {
   from: string;
@@ -22,6 +23,16 @@ export class ResendClient {
   ) {}
 
   async send(input: ResendEmailInput): Promise<void> {
+    await this.requestEmail(input);
+  }
+
+  async sendWithReceipt(input: ResendEmailInput, signal: AbortSignal): Promise<string> {
+    const response = await this.requestEmail(input, signal);
+
+    return z.object({ id: z.string().min(1) }).parse(await response.json()).id;
+  }
+
+  private async requestEmail(input: ResendEmailInput, signal?: AbortSignal) {
     let config: ResendConfig;
 
     try {
@@ -47,20 +58,34 @@ export class ResendClient {
           subject: input.subject,
           text: input.text,
         }),
-        signal: AbortSignal.timeout(this.timeoutMs),
+        signal: AbortSignal.any([AbortSignal.timeout(this.timeoutMs), ...(signal ? [signal] : [])]),
       });
     } catch {
       throw new ResendClientError("network");
     }
 
     if (!response.ok) {
-      throw new ResendClientError("provider");
+      throw new ResendClientError(
+        "provider",
+        response.status === 429
+          ? "retry"
+          : response.status >= 500 || response.status === 408 || response.status === 409
+            ? "uncertain"
+            : "terminal",
+      );
     }
+
+    return response;
   }
 }
 
 export class ResendClientError extends Error {
-  constructor(readonly category: "configuration" | "network" | "provider") {
+  constructor(
+    readonly category: "configuration" | "network" | "provider",
+    readonly outcome: "retry" | "terminal" | "uncertain" = category === "configuration"
+      ? "terminal"
+      : "uncertain",
+  ) {
     super("Owner notification could not be sent.");
     this.name = "ResendClientError";
   }

@@ -21,7 +21,7 @@ export async function parseChatRequest(request: Request): Promise<AssistantReque
   let payload: unknown;
 
   try {
-    const body = await readChatBody(request);
+    const body = await readRequestBody(request);
 
     if (body === null) {
       return NextResponse.json({ error: "Request body is too large." }, { status: 413 });
@@ -44,7 +44,7 @@ export async function parseChatRequest(request: Request): Promise<AssistantReque
   return parsed.data;
 }
 
-async function readChatBody(request: Request): Promise<string | null> {
+export async function readRequestBody(request: Request): Promise<string | null> {
   if (!request.body) {
     return "";
   }

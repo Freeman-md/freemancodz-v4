@@ -41,8 +41,60 @@ model WorkflowInstance {
   completedAt        DateTime?       @map("completed_at") @db.Timestamptz(6)
   updatedAt          DateTime        @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
   contactRequest     ContactRequest?
+  reviews            WorkflowReview[]
 
   @@map("workflow_instances")
+}
+
+model WorkflowReview {
+  id             String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  instanceId     String           @map("instance_id") @db.Uuid
+  instance       WorkflowInstance @relation(fields: [instanceId], references: [id], onDelete: Restrict)
+  revision       Int
+  version        Int
+  actionKey      String           @map("action_key")
+  display        Json             @db.JsonB
+  payload        Json             @db.JsonB
+  status         String           @default("pending")
+  run            WorkflowRun?
+
+  @@unique([instanceId, revision])
+  @@map("workflow_reviews")
+}
+
+model WorkflowRun {
+  id          String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  reviewId    String         @unique @map("review_id") @db.Uuid
+  review      WorkflowReview @relation(fields: [reviewId], references: [id], onDelete: Restrict)
+  status      String         @default("queued")
+  createdAt   DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  steps       WorkflowStep[]
+
+  @@map("workflow_runs")
+}
+
+model WorkflowStep {
+  id           String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  runId        String      @map("run_id") @db.Uuid
+  run          WorkflowRun @relation(fields: [runId], references: [id], onDelete: Restrict)
+  key          String
+  position     Int
+  label        String
+  status       String      @default("queued")
+  attempts     Int         @default(0)
+  probes       Int         @default(0)
+  nextAt       DateTime    @default(now()) @map("next_at") @db.Timestamptz(6)
+  claimToken   String?     @map("claim_token") @db.Uuid
+  claimExpires DateTime?   @map("claim_expires") @db.Timestamptz(6)
+  firstEffect  DateTime?   @map("first_effect") @db.Timestamptz(6)
+  checkpoint   Json?       @db.JsonB
+  outcome      Json?       @db.JsonB
+  reason       String?
+
+  @@unique([runId, key])
+  @@unique([runId, position])
+  @@index([status, nextAt])
+  @@map("workflow_steps")
 }
 
 model ContactRequest {

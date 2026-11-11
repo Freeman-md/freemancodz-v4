@@ -14,8 +14,16 @@ function normalizePreviousResponseId(value: string | null | undefined) {
 
 export const MAX_MESSAGE_LENGTH = 500;
 
+export const workflowObservationSchema = z.strictObject({
+  id: z.uuid(),
+  revision: z.number().int().min(0).max(2_147_483_647),
+});
+
+export type WorkflowObservation = z.infer<typeof workflowObservationSchema>;
+
 export const assistantRequestSchema = z
   .object({
+    observedWorkflow: workflowObservationSchema.optional(),
     message: z.string().trim().min(1, "Message is required.").max(MAX_MESSAGE_LENGTH),
     previousResponseId: z.string().nullable().optional().transform(normalizePreviousResponseId),
   })
@@ -38,10 +46,35 @@ const sourceSchema = z
   })
   .strict();
 
-export const activeWorkflowSchema = z.strictObject({
-  id: z.uuid(),
+export const workflowReviewDisplaySchema = z.strictObject({
+  label: z.string().min(1),
+  rows: z.array(z.strictObject({ key: z.string(), label: z.string(), value: z.string() })).min(1),
+});
+
+export const workflowApprovalSchema = z.strictObject({
+  reviewId: z.uuid(),
+  expectedRevision: workflowObservationSchema.shape.revision,
+});
+
+export type WorkflowApproval = z.infer<typeof workflowApprovalSchema>;
+
+export const activeWorkflowSchema = workflowObservationSchema.extend({
   title: z.string(),
-  status: z.literal("active"),
+  status: z.enum(["active", "completed", "attention"]),
+  review: workflowReviewDisplaySchema.extend({ id: z.uuid() }).optional(),
+  run: z
+    .strictObject({
+      status: z.enum(["queued", "running", "retry", "finished", "attention"]),
+      businessStatus: z.string().optional(),
+      steps: z.array(
+        z.strictObject({
+          key: z.string(),
+          label: z.string(),
+          status: z.enum(["queued", "running", "retry", "reconciling", "succeeded", "attention"]),
+        }),
+      ),
+    })
+    .optional(),
   phase: z.enum(["collecting", "awaiting_confirmation", "processing", "completed", "cancelled"]),
   details: z.array(
     z.strictObject({
