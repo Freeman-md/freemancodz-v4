@@ -49,16 +49,16 @@ test("starts workflows only after establishing browser ownership and completing 
 
   const body = JSON.stringify({ message: "I want to book a meeting with Freeman." });
 
+  const initialState = meetingBooking.createInitialState();
+
+  const guidance = meetingBooking.getGuidance(initialState);
+
   const instance: ActiveWorkflow = {
     id: randomUUID(),
     revision: 0,
     title: "Book a meeting",
     status: "active",
-    phase: "collecting",
-    details: [
-      { key: "reason", label: "Topic", value: null },
-      { key: "time", label: "Time", value: null },
-    ],
+    ...meetingBooking.getProgress(initialState),
   };
 
   for (const scenario of ["completed", "incomplete", "unoffered", "follow-up failed"] as const) {
@@ -83,7 +83,10 @@ test("starts workflows only after establishing browser ownership and completing 
           workflow: {
             listAvailable: () => (scenario === "unoffered" ? [] : [meetingBooking]),
             start,
-            getTurn: async () => ({ tools: [] }),
+            getTurn: async (_visitorKey, observed) =>
+              observed?.id === instance.id && observed.revision === instance.revision
+                ? { tools: [], draft: observed, guidance }
+                : { tools: [] },
             getActive: async () => null,
             getApprovedResult: async () => null,
           },
@@ -128,6 +131,7 @@ test("starts workflows only after establishing browser ownership and completing 
       assert.equal(input.visitorKey, createHash("sha256").update(session.value).digest("hex"));
       assert.equal(input.workflowId, meetingBooking.id);
       assert.equal(input.originChannel, "web");
+      assert.ok(requests[1].instructions.includes(guidance));
       assert.deepEqual(requests[1].input, [
         {
           type: "function_call_output",
@@ -139,7 +143,7 @@ test("starts workflows only after establishing browser ownership and completing 
               status: "active",
               phase: "collecting",
               collected: [],
-              missing: ["Topic", "Time"],
+              missing: ["Name", "Email", "Topic", "Time"],
             },
           }),
         },

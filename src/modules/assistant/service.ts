@@ -277,7 +277,8 @@ export class AssistantService {
                   ({ tool }) => tool.name === functionCall.name,
                 );
 
-                const editsWorkflow = Boolean(workflowTool);
+                const changesWorkflow =
+                  functionCall.name === START_WORKFLOW_TOOL_NAME || Boolean(workflowTool);
 
                 const label =
                   TOOL_ACTIVITY.get(functionCall.name) ??
@@ -350,7 +351,7 @@ export class AssistantService {
 
                 let guidance = "";
 
-                if (editsWorkflow) {
+                if (changesWorkflow) {
                   workflowCalls += 1;
                   replyOptions = result.replyOptions;
 
