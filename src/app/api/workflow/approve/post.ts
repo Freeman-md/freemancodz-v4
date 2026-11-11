@@ -8,6 +8,7 @@ import { isSameWorkflowOrigin } from "../origin";
 export function createWorkflowApprovalPost(
   workflow: Pick<WorkflowService, "approve">,
   logger: Logger,
+  executeApprovedReview?: (reviewId: string) => Promise<unknown>,
 ) {
   return async function POST(request: NextRequest) {
     const headers = { "Cache-Control": "no-store" };
@@ -43,11 +44,20 @@ export function createWorkflowApprovalPost(
     }
 
     try {
-      const result = await workflow.approve(visitorKey, parsed.data);
+      const result = await workflow.approve(visitorKey, parsed.data, async (reviewId) => {
+        try {
+          await executeApprovedReview?.(reviewId);
+        } catch {
+          logger.error("workflow.approved_run_interrupted", { reviewId });
+        }
+      });
 
       switch (result.status) {
         case "accepted":
-          return NextResponse.json(result.workflow, { status: 202, headers });
+          return NextResponse.json(result.workflow, {
+            status: result.workflow.status === "active" ? 202 : 200,
+            headers,
+          });
         case "conflict":
           return NextResponse.json(
             { error: "The review changed. Check the latest details." },

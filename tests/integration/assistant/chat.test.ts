@@ -3,11 +3,13 @@ import { createHash, randomUUID } from "node:crypto";
 import { once } from "node:events";
 import test from "node:test";
 import { CHAT_VISITOR_COOKIE, MAX_CHAT_BODY_BYTES } from "@/app/api/chat/constants";
-import type { ActiveWorkflow } from "@/contracts/assistant.contract";
+import { type ActiveWorkflow, workflowReviewDisplaySchema } from "@/contracts/assistant.contract";
 import { CalendarAvailabilityError } from "@/infrastructure/google-calendar/types";
 import type { RateLimitResult } from "@/modules/rate-limit/rate-limit.types";
 import { MeetingBookingWorkflowDefinition } from "@/modules/workflow/definitions/meeting-booking/definition";
+import { meetingBookingPayloadSchema } from "@/modules/workflow/definitions/meeting-booking/schema";
 import { WorkflowRegistry } from "@/modules/workflow/registry";
+import type { StoredWorkflow } from "@/modules/workflow/repository";
 import { WorkflowService } from "@/modules/workflow/service";
 import {
   chatRequest,
@@ -118,7 +120,20 @@ test("starts workflows only after establishing browser ownership and completing 
       assert.equal(input.workflowId, meetingBooking.id);
       assert.equal(input.originChannel, "web");
       assert.deepEqual(requests[1].input, [
-        { type: "function_call_output", callId: "call_1", output: '{"status":"active"}' },
+        {
+          type: "function_call_output",
+          callId: "call_1",
+          output: JSON.stringify({
+            result: { status: "active" },
+            workflow: {
+              title: instance.title,
+              status: "active",
+              phase: "collecting",
+              collected: [],
+              missing: ["Topic", "Time"],
+            },
+          }),
+        },
       ]);
       assert.deepEqual(
         events.map(({ type }) => type),
@@ -128,6 +143,142 @@ test("starts workflows only after establishing browser ownership and completing 
       );
     });
   }
+});
+
+test("the assistant reads the saved draft on a fresh turn and sees its review after the final edit", async () => {
+  const slot = {
+    start: "2099-06-15T11:00:00.000Z",
+    end: "2099-06-15T11:30:00.000Z",
+    timezone: "Europe/London",
+  };
+
+  const booking = new MeetingBookingWorkflowDefinition(
+    { findAvailableSlots: async () => [slot], isSlotAvailable: async () => true },
+    { payloadSchema: meetingBookingPayloadSchema, steps: [], getStatus: () => undefined },
+  );
+
+  let instance: StoredWorkflow = {
+    id: randomUUID(),
+    workflowId: booking.id,
+    workflowVersion: booking.version,
+    revision: 7,
+    state: {
+      name: "Test Visitor",
+      email: "visitor@example.test",
+      reason: "Discuss a storefront",
+      availableSlots: [slot],
+      selectedSlot: null,
+    },
+  };
+
+  const reviewId = randomUUID();
+
+  const workflow = new WorkflowService(new WorkflowRegistry([booking]), {
+    startOrResume: async () => {
+      throw new Error("Unexpected restart");
+    },
+    findActive: async () => instance,
+    saveState: async ({ state, revision }) => {
+      assert.equal(revision, instance.revision);
+      instance = { ...instance, state: booking.stateSchema.parse(state), revision: revision + 1 };
+
+      return instance;
+    },
+    findRun: async () => null,
+    ensureReview: async ({ instance, actionKey, display }) => ({
+      id: reviewId,
+      instanceId: instance.id,
+      version: instance.workflowVersion,
+      revision: instance.revision,
+      actionKey,
+      display: workflowReviewDisplaySchema.parse(display),
+      payload: { private: "execution payload" },
+      status: "pending",
+    }),
+    findOwnedReview: async () => null,
+    approve: async () => false,
+    discardDraft: async () => false,
+  });
+
+  const { post, requests } = createChatFixture(
+    async ({ tools }) =>
+      tools.some(({ name }) => name === "select_meeting_slot")
+        ? providerEvents(
+            complete("resp_selection", [toolCall("select_meeting_slot", { start: slot.start })]),
+          )
+        : providerEvents(delta("Saved details available."), complete("resp_reply")),
+    { workflow },
+  );
+
+  async function send(revision: number) {
+    return parseEvents(
+      await (
+        await post(
+          chatRequest(
+            JSON.stringify({
+              message: "Please continue my booking.",
+              observedWorkflow: { id: instance.id, revision },
+            }),
+          ),
+        )
+      ).text(),
+    );
+  }
+
+  const stale = await send(6);
+
+  const first = requests[0].input[0];
+
+  assert.equal(requests[0].previousResponseId, null);
+  assert.equal(first.type, "user_message");
+  assert.deepEqual(JSON.parse(first.content).workflow, {
+    title: "Book a meeting",
+    status: "active",
+    phase: "collecting",
+    collected: [
+      { label: "Name", value: "Test Visitor" },
+      { label: "Email", value: "visitor@example.test" },
+      { label: "Topic", value: "Discuss a storefront" },
+    ],
+    missing: ["Time"],
+  });
+  assert.deepEqual(
+    requests[0].tools.map(({ name }) => name),
+    ["ask_user_choice", "search_portfolio"],
+  );
+  assert.equal(stale[0].type, "workflow_instance");
+
+  const edited = await send(7);
+
+  const updated = edited[0];
+
+  const followUp = requests[2];
+
+  const toolOutput = followUp.input[0];
+
+  assert.equal(updated.type, "workflow_instance");
+  assert.equal(updated.instance.phase, "awaiting_confirmation");
+  assert.equal(updated.instance.review?.id, reviewId);
+  assert.equal(toolOutput.type, "function_call_output");
+  assert.equal(followUp.instructions.includes("still needs: time"), false);
+  assert.deepEqual(followUp.tools, []);
+  assert.deepEqual(JSON.parse(toolOutput.output), {
+    result: { status: "selected", label: updated.instance.details[3].value },
+    workflow: {
+      title: updated.instance.title,
+      status: "active",
+      phase: "awaiting_confirmation",
+      collected: updated.instance.details.map(({ label, value }) => ({ label, value })),
+      missing: [],
+      confirmationLabel: "Confirm booking",
+    },
+  });
+
+  await send(7);
+  const restored = requests[3].input[0];
+
+  assert.equal(restored.type, "user_message");
+  assert.deepEqual(JSON.parse(restored.content).workflow, JSON.parse(toolOutput.output).workflow);
 });
 
 test("topic collection leaves unrelated questions and invalid arguments out of workflow state", async (t) => {

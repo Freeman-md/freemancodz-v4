@@ -53,6 +53,7 @@ export function AssistantWorkflowConfirmation({
         </Button>
         <Button
           variant="ghost"
+          className="hover:bg-[var(--home-chip)]"
           size="md"
           type="button"
           autoFocus={destructive}

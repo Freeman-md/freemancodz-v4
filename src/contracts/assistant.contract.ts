@@ -65,6 +65,7 @@ export const activeWorkflowSchema = workflowObservationSchema.extend({
   run: z
     .strictObject({
       status: z.enum(["queued", "running", "retry", "finished", "attention"]),
+      outcome: z.enum(["success", "failure", "pending", "uncertain"]),
       businessStatus: z.string().optional(),
       steps: z.array(
         z.strictObject({

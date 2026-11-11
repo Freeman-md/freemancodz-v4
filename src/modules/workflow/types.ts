@@ -37,16 +37,19 @@ export type WorkflowReview = {
   payload: Prisma.InputJsonObject;
 };
 
+type TerminalStepResult = { kind: "terminal"; reason: string; definiteFailure?: true };
+
 export type WorkflowStepResult =
   | { kind: "success"; outcome: Prisma.InputJsonObject }
   | { kind: "retry"; reason: string }
-  | { kind: "terminal"; reason: string }
+  | TerminalStepResult
   | { kind: "uncertain"; reason: string };
 
 export type WorkflowProbeResult =
   | { kind: "success"; outcome: Prisma.InputJsonObject }
   | { kind: "safe" }
-  | { kind: "uncertain" | "terminal"; reason: string };
+  | TerminalStepResult
+  | { kind: "uncertain"; reason: string };
 
 export type WorkflowStepInput = {
   id: string;

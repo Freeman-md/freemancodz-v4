@@ -115,9 +115,9 @@ export class WorkflowRepository {
     });
   }
 
-  async findRun(instanceId: string) {
+  async findRun(instanceId: string, reviewId?: string) {
     return this.prisma.workflowRun.findFirst({
-      where: { review: { instanceId } },
+      where: { review: { instanceId, id: reviewId } },
       include: { review: { select: { actionKey: true } }, steps: { orderBy: { position: "asc" } } },
     });
   }

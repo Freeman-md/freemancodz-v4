@@ -19,13 +19,13 @@ export class WorkflowRunner {
     private readonly batchSize = 4,
   ) {}
 
-  async runDue() {
+  async runDue(reviewId?: string) {
     const signal = AbortSignal.timeout(20_000);
 
     let handled = 0;
 
     while (handled < this.batchSize && !signal.aborted) {
-      const claim = await this.repository.claim(this.clock());
+      const claim = await this.repository.claim(this.clock(), reviewId);
 
       if (!claim) {
         break;
@@ -56,7 +56,11 @@ export class WorkflowRunner {
       ) {
         await this.repository.settle(
           step,
-          { status: "attention", reason: "definition_unavailable" },
+          {
+            status: "attention",
+            reason: "definition_unavailable",
+            outcome: { certainty: step.firstEffect ? "uncertain" : "failure" },
+          },
           this.clock(),
         );
         continue;
@@ -122,11 +126,19 @@ export class WorkflowRunner {
       case "success":
         return { status: "succeeded", outcome: result.outcome } as const;
       case "terminal":
-        return { status: "attention", reason: result.reason } as const;
+        return {
+          status: "attention",
+          reason: result.reason,
+          outcome: { certainty: result.definiteFailure ? "failure" : "uncertain" },
+        } as const;
       case "safe":
       case "retry":
         return step.attempts >= WORKFLOW_ATTEMPTS
-          ? ({ status: "attention", reason: "execution_exhausted" } as const)
+          ? ({
+              status: "attention",
+              reason: "execution_exhausted",
+              outcome: { certainty: "failure" },
+            } as const)
           : ({
               status: "retry",
               reason: result.kind === "retry" ? result.reason : undefined,
@@ -134,7 +146,11 @@ export class WorkflowRunner {
             } as const);
       case "uncertain":
         return reconcile && step.probes >= WORKFLOW_ATTEMPTS
-          ? ({ status: "attention", reason: result.reason } as const)
+          ? ({
+              status: "attention",
+              reason: result.reason,
+              outcome: { certainty: "uncertain" },
+            } as const)
           : ({
               status: "reconciling",
               reason: result.reason,

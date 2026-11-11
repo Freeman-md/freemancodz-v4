@@ -1,9 +1,19 @@
 import type { ResponseStreamEvent } from "openai/resources/responses/responses";
+import { z } from "zod";
 import type { OpenAITransport } from "@/infrastructure/openai/types";
 
 const selectedStart = "2099-06-15T11:00:00.000Z";
 
 const selectedEnd = "2099-06-15T11:30:00.000Z";
+
+const workflowInputSchema = z.object({
+  message: z.string(),
+  workflow: z.object({
+    collected: z.array(z.object({ label: z.string(), value: z.string() })),
+    missing: z.array(z.string()),
+    confirmationLabel: z.string().optional(),
+  }),
+});
 
 export const fixtureModel: OpenAITransport = {
   async streamResponse({ input, tools, previousResponseId }) {
@@ -11,7 +21,13 @@ export const fixtureModel: OpenAITransport = {
 
     const names = new Set(tools.map(({ name }) => name));
 
-    const output = last?.type === "user_message" ? last.content : "";
+    const content = last?.type === "user_message" ? last.content : "";
+
+    const contextual = content.startsWith('{"message":')
+      ? workflowInputSchema.parse(JSON.parse(content))
+      : undefined;
+
+    const output = contextual?.message ?? content;
 
     let reply = "Hello! How can I help?";
 
@@ -47,6 +63,13 @@ export const fixtureModel: OpenAITransport = {
           reply = "Your brief is ready to review.";
           break;
       }
+    } else if (contextual && output === "What are my saved details?") {
+      const { collected, missing, confirmationLabel } = contextual.workflow;
+
+      reply = collected.map(({ label, value }) => `${label}: ${value}`).join(". ");
+      reply += confirmationLabel
+        ? `. Use ${confirmationLabel} to continue.`
+        : `. Still needed: ${missing.join(", ")}.`;
     } else if (/cancel this draft/i.test(output) && names.has("request_workflow_draft_discard")) {
       action = { name: "request_workflow_draft_discard", args: {} };
     } else if (/book a meeting/i.test(output) && names.has("start_workflow")) {

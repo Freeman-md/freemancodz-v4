@@ -34,13 +34,17 @@ export function FloatingPortfolioChat() {
 
   useEffect(() => {
     if (isOpen) {
-      restoreWorkflow();
+      void restoreWorkflow();
 
       return cancelWorkflowRestore;
     }
   }, [isOpen, restoreWorkflow, cancelWorkflowRestore]);
 
   const runStatus = workflow?.run?.status;
+
+  const runResult =
+    workflow?.run?.businessStatus ??
+    (runStatus === "finished" ? "Your request is complete." : undefined);
 
   const shouldPoll = runStatus === "queued" || runStatus === "running" || runStatus === "retry";
 
@@ -133,9 +137,9 @@ export function FloatingPortfolioChat() {
               </Dialog.Close>
             </header>
 
-            {workflow && (
+            {workflow && runStatus !== "finished" && (
               <AssistantWorkflowProgress
-                key={workflow.id}
+                key={`${workflow.id}:${workflow.run ? "submitted" : "draft"}`}
                 instance={workflow}
                 onDiscard={
                   workflow.status === "active" && !workflow.run && !chat.discardConfirmation
@@ -204,13 +208,29 @@ export function FloatingPortfolioChat() {
                 key={workflow.review.id}
                 title="Review request"
                 rows={workflow.review.rows}
-                confirmLabel={chat.isApproving ? "Confirming…" : workflow.review.label}
+                confirmLabel={workflow.review.label}
                 declineLabel="Request changes"
                 disabled={chat.isApproving || chat.isLoading}
                 error={chat.approvalError}
                 onConfirm={() => void chat.confirmReview()}
                 onDecline={() => textareaRef.current?.focus()}
               />
+            )}
+
+            {(runResult || runStatus === "attention") && (
+              <div
+                role="status"
+                className="shrink-0 border-t border-[var(--assistant-line)] px-4 py-3 text-sm sm:px-6"
+              >
+                {runResult && <p className="font-medium">{runResult}</p>}
+                {runStatus === "attention" && (
+                  <p>
+                    {workflow?.run?.outcome === "failure"
+                      ? "Processing needs attention. Contact Freeman for help."
+                      : "The outcome could not be verified. Contact Freeman for help."}
+                  </p>
+                )}
+              </div>
             )}
 
             <AssistantComposer

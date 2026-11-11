@@ -63,7 +63,7 @@ export function useAssistant() {
     workflowRestore.current?.abort();
     workflowRestore.current = controller;
 
-    void fetchActiveWorkflow(controller.signal)
+    return fetchActiveWorkflow(controller.signal)
       .then((instance) => {
         if (!controller.signal.aborted) {
           setWorkflow(instance);
@@ -75,8 +75,6 @@ export function useAssistant() {
           setWorkflowRestoreFailed(true);
         }
       });
-
-    return () => controller.abort();
   }, []);
 
   const previousResponseId = useRef<string | null>(null);
@@ -213,14 +211,18 @@ export function useAssistant() {
       });
 
       if (result.status === "accepted") {
+        cancelWorkflowRestore();
         setWorkflow(result.workflow);
+        setWorkflowRestoreFailed(false);
       } else {
         setApprovalError("The review changed. Check the latest details.");
-        restoreWorkflow();
+        setWorkflow(null);
+        await restoreWorkflow();
       }
     } catch {
       setApprovalError("Could not confirm the request. Check its saved progress.");
-      restoreWorkflow();
+      setWorkflow(null);
+      await restoreWorkflow();
     } finally {
       workflowUpdateInProgress.current = false;
       setIsApproving(false);

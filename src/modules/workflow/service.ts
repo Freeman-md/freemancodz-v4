@@ -90,6 +90,7 @@ export class WorkflowService {
     observed?: WorkflowObservation,
   ): Promise<{
     tools: ActiveWorkflowTool[];
+    workflow?: ActiveWorkflow;
     guidance?: string;
     refreshed?: ActiveWorkflow;
     hasActive?: boolean;
@@ -109,10 +110,16 @@ export class WorkflowService {
 
     const run = await this.repository.findRun(instance.id);
 
+    const workflow = await this.project(instance, run);
+
+    const isStale = observed?.id !== instance.id || observed.revision !== instance.revision;
+
     if (run) {
       const inProgress = run.status === "queued" || run.status === "running";
 
       return {
+        workflow,
+        refreshed: isStale ? workflow : undefined,
         tools: [],
         hasActive: inProgress,
         guidance: inProgress
@@ -121,10 +128,11 @@ export class WorkflowService {
       };
     }
 
-    if (observed?.id !== instance.id || observed.revision !== instance.revision) {
+    if (isStale) {
       return {
+        workflow,
         tools: [],
-        refreshed: await this.project(instance),
+        refreshed: workflow,
         hasActive: true,
         guidance:
           "The request details were refreshed. Ask the visitor to check them before changing the request.",
@@ -132,6 +140,7 @@ export class WorkflowService {
     }
 
     return {
+      workflow,
       hasActive: true,
       draft: { id: instance.id, revision: instance.revision },
       guidance: definition.getGuidance(instance.state),
@@ -162,7 +171,11 @@ export class WorkflowService {
     };
   }
 
-  async approve(visitorKey: string, input: WorkflowApproval) {
+  async approve(
+    visitorKey: string,
+    input: WorkflowApproval,
+    executeApprovedReview?: (reviewId: string) => Promise<void>,
+  ) {
     const review = await this.repository.findOwnedReview(input.reviewId, visitorKey);
 
     if (!review) {
@@ -191,9 +204,21 @@ export class WorkflowService {
       steps: action.steps,
     });
 
-    return accepted
-      ? ({ status: "accepted", workflow: await this.getActive(visitorKey) } as const)
-      : ({ status: "conflict" } as const);
+    if (!accepted) {
+      return { status: "conflict" } as const;
+    }
+
+    await executeApprovedReview?.(review.id);
+
+    const savedReview = await this.repository.findOwnedReview(review.id, visitorKey);
+
+    const run = await this.repository.findRun(review.instanceId, review.id);
+
+    if (!savedReview || !run) {
+      throw new Error("The approved run could not be restored.");
+    }
+
+    return { status: "accepted", workflow: await this.project(savedReview.instance, run) } as const;
   }
 
   private resolveDefinition(instance: StoredWorkflow) {
@@ -206,7 +231,10 @@ export class WorkflowService {
     return definition;
   }
 
-  private async project(instance: StoredWorkflow): Promise<ActiveWorkflow> {
+  private async project(
+    instance: StoredWorkflow,
+    savedRun?: Awaited<ReturnType<WorkflowRepository["findRun"]>>,
+  ): Promise<ActiveWorkflow> {
     const definition = this.resolveDefinition(instance);
 
     const base = {
@@ -217,7 +245,7 @@ export class WorkflowService {
       ...definition.getProgress(instance.state),
     };
 
-    const run = await this.repository.findRun(instance.id);
+    const run = savedRun === undefined ? await this.repository.findRun(instance.id) : savedRun;
 
     if (run) {
       const current = run.steps.find(({ status }) => status !== "succeeded");
@@ -233,6 +261,31 @@ export class WorkflowService {
 
       const attention = run.status === "attention";
 
+      const uncertain =
+        current?.status === "reconciling" ||
+        (current?.status === "running" &&
+          !!current.firstEffect &&
+          !!current.claimExpires &&
+          current.claimExpires <= now);
+
+      const certainty = current?.outcome;
+
+      const definiteFailure =
+        certainty &&
+        typeof certainty === "object" &&
+        !Array.isArray(certainty) &&
+        certainty.certainty === "failure";
+
+      let outcome: NonNullable<ActiveWorkflow["run"]>["outcome"] = "pending";
+
+      if (completed) {
+        outcome = "success";
+      } else if (attention) {
+        outcome = definiteFailure ? "failure" : "uncertain";
+      } else if (uncertain) {
+        outcome = "uncertain";
+      }
+
       const action = definition.getAction?.(run.review.actionKey);
 
       const successful = new Set(
@@ -245,6 +298,7 @@ export class WorkflowService {
         phase: completed ? "completed" : "processing",
         run: {
           status: retryPending ? "retry" : run.status,
+          outcome,
           businessStatus: action?.getStatus(successful),
           steps: run.steps.map(({ key, label, status }) => ({
             key,

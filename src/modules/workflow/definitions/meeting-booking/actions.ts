@@ -81,13 +81,13 @@ export function createMeetingBookingAction(
       const booked = await store.findMeetingByGoogleEventId(eventId);
 
       if (!booked || booked.status !== "confirmed") {
-        return { kind: "terminal", reason: "booking_missing" };
+        return { kind: "terminal", reason: "booking_missing", definiteFailure: true };
       }
 
       try {
         notice = notices.prepareMeetingNotice(booked);
       } catch {
-        return { kind: "terminal", reason: "notice_configuration" };
+        return { kind: "terminal", reason: "notice_configuration", definiteFailure: true };
       }
 
       if (!(await context.saveCheckpoint(notice))) {
@@ -112,6 +112,10 @@ export function createMeetingBookingAction(
     } catch (error) {
       const kind = error instanceof ResendClientError ? error.outcome : "uncertain";
 
+      if (kind === "terminal" && !reconcile) {
+        return { kind, reason: "owner_notice_unavailable", definiteFailure: true };
+      }
+
       return { kind, reason: "owner_notice_unavailable" };
     }
   }
@@ -129,7 +133,7 @@ export function createMeetingBookingAction(
           const reservation = await store.reserve(record);
 
           if (!reservation) {
-            return { kind: "terminal", reason: "slot_reserved" };
+            return { kind: "terminal", reason: "slot_reserved", definiteFailure: true };
           }
 
           assertMatchingMeeting({ ...reservation, status: "confirmed" }, booking, eventId);
@@ -146,7 +150,7 @@ export function createMeetingBookingAction(
             return (await context.saveCheckpoint({ dispatching: false }, (tx) =>
               store.release(tx, eventId),
             ))
-              ? { kind: "terminal", reason: "slot_unavailable" }
+              ? { kind: "terminal", reason: "slot_unavailable", definiteFailure: true }
               : { kind: "uncertain", reason: "claim_lost" };
           }
 
@@ -184,7 +188,9 @@ export function createMeetingBookingAction(
                 error.outcome === "terminal" ? (tx) => store.release(tx, eventId) : undefined,
               ))
             ) {
-              return { kind: error.outcome, reason: "calendar_insert_rejected" };
+              return error.outcome === "terminal"
+                ? { kind: "terminal", reason: "calendar_insert_rejected", definiteFailure: true }
+                : { kind: "retry", reason: "calendar_insert_rejected" };
             }
 
             return { kind: "uncertain", reason: "calendar_insert_unconfirmed" };
