@@ -33,22 +33,23 @@ export function createChatPostHandler({
       return rateLimitResponse;
     }
 
+    if ("action" in parsed) {
+      return NextResponse.json({ error: "This endpoint accepts chat messages." }, { status: 400 });
+    }
+
     const session = resolveWorkflowSession(request, parsed, onVercel, getAccessSecret);
 
     if (session instanceof NextResponse) {
       return session;
     }
 
-    const response = new NextResponse(
-      assistantService.createResponse(session.input, session.encodeWorkflowId),
-      {
-        headers: {
-          "Cache-Control": "no-cache, no-transform",
-          "Content-Type": "application/x-ndjson; charset=utf-8",
-          "X-Content-Type-Options": "nosniff",
-        },
+    const response = new NextResponse(assistantService.createResponse(session.input), {
+      headers: {
+        "Cache-Control": "no-cache, no-transform",
+        "Content-Type": "application/x-ndjson; charset=utf-8",
+        "X-Content-Type-Options": "nosniff",
       },
-    );
+    });
 
     if (session.cookie) {
       response.cookies.set(session.cookie.name, session.cookie.value, {

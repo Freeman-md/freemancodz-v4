@@ -138,7 +138,7 @@ function rateLimitError(limit: number) {
 // Workflow session access
 export function resolveWorkflowSession(
   request: NextRequest,
-  parsed: AssistantRequest,
+  parsed: Extract<AssistantRequest, { message: string }>,
   onVercel: boolean,
   getAccessSecret: () => string,
 ) {
@@ -158,11 +158,7 @@ export function resolveWorkflowSession(
 
   const workflowInstanceId = reference && existingSession ? access.decode(reference) : null;
 
-  const verifiedRequest = "action" in parsed
-    ? workflowInstanceId && { ...parsed, workflowInstanceId }
-    : { ...parsed, workflowInstanceId };
-
-  if (!verifiedRequest || (reference && !workflowInstanceId)) {
+  if (reference && !workflowInstanceId) {
     return NextResponse.json(
       { error: "This workflow is unavailable in this browser session.", code: WORKFLOW_ACCESS_DENIED },
       { status: 403 },
@@ -170,8 +166,7 @@ export function resolveWorkflowSession(
   }
 
   return {
-    input: { ...verifiedRequest, signal: request.signal } satisfies AssistantResponseInput,
-    encodeWorkflowId: access.encode,
+    input: { ...parsed, workflowInstanceId, signal: request.signal } satisfies AssistantResponseInput,
     cookie: existingSession ? null : { name: cookieName, value: session, secure },
   };
 }

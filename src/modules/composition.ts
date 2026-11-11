@@ -2,39 +2,26 @@ import "server-only";
 
 import {
   getNotificationOwnerEmail,
-  getGoogleCalendarConfig,
   getRateLimitHmacSecret,
   getResendConfig,
 } from "@/infrastructure/config/env";
 import { createPrismaClient, prisma } from "@/infrastructure/database/prisma";
-import { GoogleCalendarClient } from "@/infrastructure/google-calendar/client";
 import { logger } from "@/infrastructure/logging/logger";
 import { ResendClient } from "@/infrastructure/resend/client";
 import { OpenAIClient, createOpenAIClient, getResponseModel } from "@/infrastructure/openai/client";
 import { OpenAIEmbeddings } from "@/infrastructure/openai/embeddings";
 import { AssistantService } from "./assistant/service";
-import { GLOBAL_ASSISTANT_TOOLS, PORTFOLIO_SEARCH_TOOL } from "./assistant/tools/definitions";
 import { ContactRequestRepository } from "./contact/repository";
 import { ContactService } from "./contact/service";
-import { MeetingRepository } from "./meeting/repository";
-import { MeetingService } from "./meeting/service";
 import { NotificationService } from "./notification/service";
 import { PrismaPublicPortfolioRepository } from "./portfolio/repositories/public-portfolio.repository";
 import { PrismaPortfolioSearchRepository } from "./portfolio/repositories/portfolio-search.repository";
-import {
-  PortfolioIndexService,
-  PortfolioSearchService,
-} from "./portfolio/services/portfolio-search.service";
+import { PortfolioIndexService } from "./portfolio/services/portfolio-search.service";
 import { PublicPortfolioService } from "./portfolio/services/public-portfolio.service";
 import { PrismaPortfolioSeedRepository } from "./portfolio/repositories/portfolio-seed.repository";
 import { PortfolioSeedService } from "./portfolio/seed.service";
 import { RateLimitRepository } from "./rate-limit/repository";
 import { RateLimitService } from "./rate-limit/service";
-import { MeetingBookingWorkflowDefinition } from "./workflow/definitions/meeting-booking/meeting-booking.definition";
-import { MeetingBookingWorkflowProgressProjector } from "./workflow/definitions/meeting-booking/meeting-booking.progress";
-import { WorkflowInstanceRepository } from "./workflow/repository";
-import { WorkflowService } from "./workflow/service";
-import { WorkflowDefinitionRegistry } from "./workflow/registry";
 
 // Shared infrastructure
 const openAIProvider = new OpenAIClient(createOpenAIClient, getResponseModel);
@@ -52,15 +39,9 @@ const notificationService = new NotificationService(
   logger,
 );
 
-// Contact and meetings
+// Contact
 export const contactService = new ContactService(
   new ContactRequestRepository(prisma),
-  notificationService,
-);
-const meetingService = new MeetingService(
-  new GoogleCalendarClient(getGoogleCalendarConfig),
-  new MeetingRepository(prisma),
-  logger,
   notificationService,
 );
 
@@ -91,21 +72,6 @@ export function createPortfolioIndexSession(connection: string) {
   };
 }
 
-// Workflows
-
-const meetingBookingWorkflowProgress = new MeetingBookingWorkflowProgressProjector();
-
-const workflowRegistry = new WorkflowDefinitionRegistry([
-  new MeetingBookingWorkflowDefinition(meetingService, meetingBookingWorkflowProgress),
-]);
-
-const workflowService = new WorkflowService(
-  workflowRegistry,
-  new WorkflowInstanceRepository(prisma),
-  [...GLOBAL_ASSISTANT_TOOLS, PORTFOLIO_SEARCH_TOOL].map(({ name }) => name),
-  logger,
-);
-
 // Rate limiting
 export const rateLimitService = new RateLimitService(
   new RateLimitRepository(prisma),
@@ -113,9 +79,4 @@ export const rateLimitService = new RateLimitService(
 );
 
 // Assistant
-export const assistantService = new AssistantService(
-  openAIProvider,
-  logger,
-  workflowService,
-  new PortfolioSearchService(new PrismaPortfolioSearchRepository(prisma), embeddings),
-);
+export const assistantService = new AssistantService(openAIProvider, logger);
