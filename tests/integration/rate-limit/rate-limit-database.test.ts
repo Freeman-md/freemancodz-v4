@@ -1,3 +1,4 @@
+import { assertDisposableTarget } from "../disposable-target";
 import { applyPrismaMigration } from "../apply-prisma-migration";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
@@ -57,6 +58,7 @@ test(
   "rate-limit migration, transaction semantics, concurrency, and private-table posture work on PostgreSQL",
   { skip: !adminConnectionUrl, timeout: 180_000 },
   async () => {
+    await assertDisposableTarget(adminConnectionUrl);
     const databaseName = `rate_limit_test_${randomUUID().replaceAll("-", "")}`;
 
     const adminUrl = new URL(adminConnectionUrl!);

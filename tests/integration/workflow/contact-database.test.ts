@@ -1,3 +1,4 @@
+import { assertDisposableTarget } from "../disposable-target";
 import { applyPrismaMigration } from "../apply-prisma-migration";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
@@ -36,6 +37,7 @@ test(
   "Contact migration is private and repository submission is idempotent on PostgreSQL",
   { skip: !adminConnectionUrl, timeout: 180_000 },
   async () => {
+    await assertDisposableTarget(adminConnectionUrl);
     const databaseName = `milestone21_test_${randomUUID().replaceAll("-", "")}`;
 
     const adminUrl = new URL(adminConnectionUrl!);

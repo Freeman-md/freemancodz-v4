@@ -1,3 +1,4 @@
+import { assertDisposableTarget } from "../disposable-target";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { readdir } from "node:fs/promises";
@@ -15,6 +16,7 @@ test(
     skip: !adminUrl && "Set PORTFOLIO_TEST_DATABASE_URL to disposable PostgreSQL",
   },
   async () => {
+    await assertDisposableTarget(adminUrl);
     assert.ok(adminUrl);
     const url = new URL(adminUrl);
 
@@ -36,7 +38,9 @@ test(
 
       assert.ok(migrations.includes(approvalMigration));
       for (const migration of migrations) {
-        if (migration === approvalMigration) {break;}
+        if (migration === approvalMigration) {
+          break;
+        }
 
         await applyPrismaMigration(db, migration, url.href);
       }

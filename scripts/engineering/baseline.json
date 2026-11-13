@@ -1,0 +1,214 @@
+{
+  "source": [
+    {
+      "id": "GAP-001",
+      "rule": "ARC-007",
+      "file": "src/modules/workflow/definitions/meeting-booking/actions.ts",
+      "kind": "import",
+      "target": "src/modules/meeting/service.ts",
+      "imported": "assertMatchingCalendarEvent",
+      "local": "assertMatchingCalendarEvent",
+      "typeOnly": false,
+      "syntax": "import",
+      "count": 1
+    },
+    {
+      "id": "GAP-002",
+      "rule": "ARC-007",
+      "file": "src/modules/workflow/definitions/meeting-booking/actions.ts",
+      "kind": "import",
+      "target": "src/modules/meeting/service.ts",
+      "imported": "assertMatchingMeeting",
+      "local": "assertMatchingMeeting",
+      "typeOnly": false,
+      "syntax": "import",
+      "count": 1
+    },
+    {
+      "id": "GAP-003",
+      "rule": "ARC-007",
+      "file": "src/modules/workflow/definitions/meeting-booking/schema.ts",
+      "kind": "import",
+      "target": "src/modules/meeting/config.ts",
+      "imported": "MEETING_CONFIG",
+      "local": "MEETING_CONFIG",
+      "typeOnly": false,
+      "syntax": "import",
+      "count": 1
+    },
+    {
+      "id": "GAP-004",
+      "rule": "ARC-007",
+      "file": "src/modules/workflow/definitions/meeting-booking/tool-handlers.ts",
+      "kind": "import",
+      "target": "src/modules/meeting/config.ts",
+      "imported": "MEETING_CONFIG",
+      "local": "MEETING_CONFIG",
+      "typeOnly": false,
+      "syntax": "import",
+      "count": 1
+    },
+    {
+      "id": "GAP-005",
+      "rule": "ARC-007",
+      "file": "src/modules/workflow/definitions/meeting-booking/tool-handlers.ts",
+      "kind": "import",
+      "target": "src/modules/meeting/time.ts",
+      "imported": "getLondonDate",
+      "local": "getLondonDate",
+      "typeOnly": false,
+      "syntax": "import",
+      "count": 1
+    },
+    {
+      "id": "GAP-006",
+      "rule": "ARC-007",
+      "file": "src/modules/workflow/definitions/meeting-booking/tool-handlers.ts",
+      "kind": "import",
+      "target": "src/modules/meeting/time.ts",
+      "imported": "resolveMeetingTime",
+      "local": "resolveMeetingTime",
+      "typeOnly": false,
+      "syntax": "import",
+      "count": 1
+    },
+    {
+      "id": "GAP-007",
+      "rule": "ARC-007",
+      "file": "src/modules/workflow/definitions/meeting-booking/tools.ts",
+      "kind": "import",
+      "target": "src/modules/meeting/time.ts",
+      "imported": "getLondonDate",
+      "local": "getLondonDate",
+      "typeOnly": false,
+      "syntax": "import",
+      "count": 1
+    },
+    {
+      "id": "GAP-008",
+      "rule": "ARC-006",
+      "file": "src/modules/workflow/definitions/meeting-booking/actions.ts",
+      "kind": "import",
+      "target": "src/infrastructure/resend/client.ts",
+      "imported": "ResendClientError",
+      "local": "ResendClientError",
+      "typeOnly": false,
+      "syntax": "import",
+      "count": 1
+    },
+    {
+      "id": "GAP-009",
+      "rule": "ARC-009",
+      "file": "src/app/api/chat/constants.ts",
+      "kind": "env",
+      "owner": "SECURE_CHAT_VISITOR_COOKIE",
+      "name": "NODE_ENV",
+      "count": 1
+    },
+    {
+      "id": "GAP-010",
+      "rule": "ARC-009",
+      "file": "src/app/api/chat/post.ts",
+      "kind": "env",
+      "owner": "createChatPostHandler",
+      "name": "VERCEL",
+      "count": 1
+    },
+    {
+      "id": "GAP-011",
+      "rule": "ARC-009",
+      "file": "src/app/api/workflow/origin.ts",
+      "kind": "env",
+      "owner": "isSameWorkflowOrigin",
+      "name": "VERCEL",
+      "count": 1
+    },
+    {
+      "id": "GAP-012",
+      "rule": "ARC-009",
+      "file": "src/app/_config/site-metadata.ts",
+      "kind": "env",
+      "owner": "getSiteUrl",
+      "name": "NEXT_PUBLIC_SITE_URL",
+      "count": 1
+    },
+    {
+      "id": "GAP-013",
+      "rule": "ARC-009",
+      "file": "src/entrypoints/maintenance/index-portfolio.ts",
+      "kind": "dotenv",
+      "target": "dotenv",
+      "imported": "config",
+      "local": "config",
+      "typeOnly": false,
+      "syntax": "import",
+      "count": 1,
+      "callOwners": ["run"]
+    }
+  ],
+  "format": [
+    {
+      "id": "GAP-014",
+      "rule": "STD-004",
+      "file": "src/app/_assistant/assistant.css",
+      "sha256": "25d9228347582a4665a0e9bde227068b3956c7e8d50b4b22f690423dd9cc3fbe",
+      "count": 1
+    },
+    {
+      "id": "GAP-015",
+      "rule": "STD-004",
+      "file": "src/app/_portfolio/components/SectionReveal.tsx",
+      "sha256": "1d20abdcc733008f0c2f6c5311225772e0e29e82df7d04df29427833ac1c9948",
+      "count": 1
+    },
+    {
+      "id": "GAP-016",
+      "rule": "STD-004",
+      "file": "src/modules/assistant/errors.ts",
+      "sha256": "917cdffbb64d1781984027a2d93c021f9a7e5ed0404451c5ff3172c13e48bf41",
+      "count": 1
+    },
+    {
+      "id": "GAP-017",
+      "rule": "STD-004",
+      "file": "src/modules/rate-limit/repository.ts",
+      "sha256": "3ff27a27d998c64ab539fe31a32d7edd6b20e75b36785c49705ec30bb3b5cfae",
+      "count": 1
+    },
+    {
+      "id": "GAP-018",
+      "rule": "STD-004",
+      "file": "src/modules/rate-limit/service.ts",
+      "sha256": "33ef28406528a757ae79daa03622ea1a3a37e183c09b12defa5e387888b8a61e",
+      "count": 1
+    },
+    {
+      "id": "GAP-019",
+      "rule": "STD-004",
+      "file": "tests/e2e/fixtures/request-services.ts",
+      "sha256": "cb33cf546b2304efb2437bdd6821bd0d98b3a2f9a58c3599701049f7839c167d",
+      "count": 1
+    },
+    {
+      "id": "GAP-022",
+      "rule": "STD-004",
+      "file": "README.md",
+      "sha256": "7661a191da3567dda5d8c6a3a01be77cbd6a0f1131ffee7346a963b669c5c154",
+      "count": 1
+    },
+    {
+      "id": "GAP-023",
+      "rule": "STD-004",
+      "file": "docs/integrations.md",
+      "sha256": "8afc3230db4747d7b8da81567e249d5a0a627fc79735a35231b9bf96c73732fd",
+      "count": 1
+    },
+    {
+      "id": "GAP-024",
+      "rule": "STD-004",
+      "file": "docs/portfolio-content-system.md",
+      "sha256": "0f1f5d9de4377eea8adb3ca98269993f6cad668d68dd1cd62eeca61f605e2113",
+      "count": 1
+    }
+  ]
+}

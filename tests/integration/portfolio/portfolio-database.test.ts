@@ -1,3 +1,4 @@
+import { assertDisposableTarget } from "../disposable-target";
 import { PrismaPortfolioSearchRepository } from "@/modules/portfolio/repositories/portfolio-search.repository";
 import {
   PortfolioIndexService,
@@ -58,6 +59,7 @@ async function withDatabase(
     target,
     "Set PORTFOLIO_TEST_DATABASE_URL to a disposable PostgreSQL server with pgvector.",
   );
+  await assertDisposableTarget(target);
   const admin = new Client({ connectionString: target });
 
   const name = `m24_test_${randomUUID().replaceAll("-", "")}`;

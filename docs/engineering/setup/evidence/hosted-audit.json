@@ -1,0 +1,108 @@
+{
+  "assessment_date": "2026-11-13",
+  "actor": "/root",
+  "mode": "read-only",
+  "repository": "Freeman-md/freemancodz-v4",
+  "revision": "f6ea50c13fbf245d4f0403c697c98f27cbd4f3f5",
+  "hosted_mutations": false,
+  "observations": [
+    {
+      "tool": "mcp__codex_apps__github_get_repo",
+      "result": {
+        "default_branch": "main",
+        "visibility": "public"
+      }
+    },
+    {
+      "tool": "mcp__codex_apps__github_get_commit_combined_status",
+      "revision": "f6ea50c13fbf245d4f0403c697c98f27cbd4f3f5",
+      "result": {
+        "statuses": [
+          {
+            "context": "Vercel",
+            "state": "success",
+            "target_url": "https://vercel.com/freemanmds-projects/freemancodz-v4/7Qqn9tgdRqYSQGHD22phnothgCyy"
+          }
+        ]
+      }
+    },
+    {
+      "tool": "mcp__codex_apps__github_fetch_commit_workflow_runs",
+      "result": {
+        "workflow_runs": []
+      },
+      "limitation": "PR-triggered runs, first page only"
+    },
+    {
+      "command": "gh api repos/Freeman-md/freemancodz-v4/branches/main --jq '{name: .name, protected: .protected, protection_url: .protection_url}'",
+      "attempt": "sandbox",
+      "exit_code": 1,
+      "result": "error connecting to api.github.com"
+    },
+    {
+      "command": "gh api repos/Freeman-md/freemancodz-v4/branches/main --jq '{name: .name, protected: .protected, protection_url: .protection_url}'",
+      "attempt": "approved network escalation",
+      "exit_code": 0,
+      "result": {
+        "name": "main",
+        "protected": true,
+        "protection_url": "https://api.github.com/repos/Freeman-md/freemancodz-v4/branches/main/protection"
+      }
+    },
+    {
+      "command": "gh api repos/Freeman-md/freemancodz-v4/branches/main/protection --jq '{required_status_checks: .required_status_checks, enforce_admins: .enforce_admins.enabled, required_pull_request_reviews: .required_pull_request_reviews, required_linear_history: .required_linear_history.enabled, allow_force_pushes: .allow_force_pushes.enabled, allow_deletions: .allow_deletions.enabled}'",
+      "exit_code": 1,
+      "result": {
+        "status": 404,
+        "message": "Branch not protected"
+      },
+      "interpretation": "Legacy branch protection absent; active ruleset inspected separately."
+    },
+    {
+      "command": "gh api repos/Freeman-md/freemancodz-v4/rulesets --jq '[.[] | {id, name, enforcement, target}]'",
+      "exit_code": 0,
+      "result": [
+        {
+          "enforcement": "active",
+          "id": 19097664,
+          "name": "main",
+          "target": "branch"
+        }
+      ]
+    },
+    {
+      "command": "gh api repos/Freeman-md/freemancodz-v4/rulesets/19097664 --jq '{id, name, enforcement, target, conditions, rules, bypass_actors}'",
+      "exit_code": 0,
+      "result": {
+        "bypass_actors": [],
+        "conditions": {
+          "ref_name": {
+            "exclude": [],
+            "include": ["~DEFAULT_BRANCH", "refs/heads/main"]
+          }
+        },
+        "enforcement": "active",
+        "id": 19097664,
+        "name": "main",
+        "rules": [
+          {
+            "type": "deletion"
+          },
+          {
+            "type": "non_fast_forward"
+          }
+        ],
+        "target": "branch"
+      }
+    },
+    {
+      "command": "gh api 'repos/Freeman-md/freemancodz-v4/actions/runs?per_page=5' --jq '{total_count, workflow_runs: [.workflow_runs[] | {id, name, event, head_sha, status, conclusion, html_url}]}'",
+      "exit_code": 0,
+      "result": {
+        "total_count": 0,
+        "workflow_runs": []
+      }
+    }
+  ],
+  "conclusion": "Observed main ruleset protects deletion/non-fast-forward updates, but has no required quality status check or PR review rule. No GitHub Actions runs were returned (total_count 0). Do not describe main as wholly unprotected. No hosted enforcement changes, release approval, or proof of production runtime correctness follows."
+}
