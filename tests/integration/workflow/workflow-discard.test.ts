@@ -1,3 +1,4 @@
+import { assertDisposableTarget } from "../disposable-target";
 import assert from "node:assert/strict";
 import { createHash, randomBytes } from "node:crypto";
 import test from "node:test";
@@ -22,6 +23,7 @@ test(
       "Set WORKFLOW_TEST_DATABASE_URL to a disposable migrated PostgreSQL database.",
   },
   async (t) => {
+    await assertDisposableTarget(databaseUrl);
     assert.ok(databaseUrl);
     assert.ok(["127.0.0.1", "localhost"].includes(new URL(databaseUrl).hostname));
 

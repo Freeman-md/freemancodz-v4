@@ -1,3 +1,5 @@
+import { assertDisposableApp } from "../integration/disposable-target";
+import { assertDisposableTarget } from "../integration/disposable-target";
 import assert from "node:assert/strict";
 import { createHash, randomUUID } from "node:crypto";
 import test from "node:test";
@@ -19,6 +21,8 @@ test(
   },
   async (t) => {
     assert.ok(workflowUrl && databaseUrl);
+    await assertDisposableTarget(databaseUrl);
+    await assertDisposableApp(workflowUrl);
     assert.equal(new URL(databaseUrl).hostname, "127.0.0.1");
     const db = createPrismaClient(databaseUrl);
 

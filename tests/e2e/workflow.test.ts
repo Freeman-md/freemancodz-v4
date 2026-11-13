@@ -1,3 +1,4 @@
+import { assertDisposableApp } from "../integration/disposable-target";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { activeWorkflowSchema } from "@/contracts/assistant.contract";
@@ -16,6 +17,7 @@ test(
   },
   async (t) => {
     assert.ok(workflowUrl);
+    await assertDisposableApp(workflowUrl);
     const { browserExecutables, playwrightModule } = await import(browserConfigPath);
 
     const { chromium } = await import(playwrightModule);

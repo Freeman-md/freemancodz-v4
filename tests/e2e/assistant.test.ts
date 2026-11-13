@@ -1,3 +1,4 @@
+import { assertDisposableApp } from "../integration/disposable-target";
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { AssistantStreamEvent } from "@/contracts/assistant.contract";
@@ -33,6 +34,7 @@ const sourceReply = [
 test("assistant browser journeys", { timeout: 120_000 }, async (t) => {
   const { browserExecutables, homepageUrl, playwrightModule } = await import(browserConfigPath);
 
+  await assertDisposableApp(homepageUrl);
   const { chromium, webkit } = await import(playwrightModule);
 
   const engines = [

@@ -1,3 +1,4 @@
+import { assertDisposableTarget } from "../disposable-target";
 import assert from "node:assert/strict";
 import { randomBytes } from "node:crypto";
 import test from "node:test";
@@ -24,6 +25,7 @@ test(
       "Set WORKFLOW_TEST_DATABASE_URL for a disposable migrated PostgreSQL database.",
   },
   async () => {
+    await assertDisposableTarget(databaseUrl);
     assert.ok(databaseUrl);
     const prisma = createPrismaClient(databaseUrl);
 

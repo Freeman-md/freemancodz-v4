@@ -1,0 +1,46 @@
+--- approved-proposal/docs/engineering/CODING_STANDARDS.md
++++ accepted/docs/engineering/CODING_STANDARDS.md
+@@ -1,18 +1,18 @@
+ # Freemancodz V4 coding standards
+ 
+-**PROPOSED — AWAITING APPROVAL** · Task05 · 2026-11-13.
++**ACCEPTED — OWNER APPROVED 2026-11-13** · Task 05.
+ 
+-Owner standards decision/evidence: **PENDING**. This document is not adopted. Independent standards review is pending; Task06 remains blocked until review and explicit owner standards approval. No code, configuration, agent instructions, exceptions or hosted settings are changed by this task.
++The owner approved adoption and CS-D1 through CS-D3 in [APPROVAL-002](setup/APPROVALS.md#approval-002--coding-standards-approved). The [review log](setup/REVIEWS.md#task-05--proposal-review-pass-1-ready-for-owner-decision) records the reviewed proposal and validation. The [setup checklist](ENGINEERING_SETUP_STATUS.md) records propagation and Task 06 dispatch.
+ 
+ ## Scope, authority and inputs
+ 
+-These standards describe how to implement within the accepted [architecture contract](../architecture/ARCHITECTURE.md); they do not redefine its ownership, dependency or runtime boundaries. [ADR-0001](../architecture/adr/0001-canonical-architecture-authority.md) and [ADR-0002](../architecture/adr/0002-injected-ports-and-inert-errors.md) were owner-approved in [APPROVAL-001](setup/APPROVALS.md#approval-001--d1-and-d2-approved), with independent propagation review recorded in the [setup review log](setup/REVIEWS.md#task-04--acceptance-propagation-pass). Their approval is not approval of these standards.
++These standards describe how to implement within the accepted [architecture contract](../architecture/ARCHITECTURE.md); they do not redefine its ownership, dependency or runtime boundaries. [ADR-0001](../architecture/adr/0001-canonical-architecture-authority.md) and [ADR-0002](../architecture/adr/0002-injected-ports-and-inert-errors.md) were owner-approved in [APPROVAL-001](setup/APPROVALS.md#approval-001--d1-and-d2-approved), with independent propagation review recorded in the [setup review log](setup/REVIEWS.md#task-04--acceptance-propagation-pass). APPROVAL-002 supplies the separate owner approval for these standards.
+ 
+ Executor acknowledgement: the accepted ADR scope and [Task05 handoff](ENGINEERING_SETUP_STATUS.md#task-05-execution-handoff-authorised-after-propagation-review) were read before drafting. Independent architectural-impact classification: **EXISTING APPROVED ADR**; no new architectural decision is proposed. D2's narrow technical-port/inert-error allowance applies; direct Meeting helper/config imports and the Resend client-file error import remain debt. Any unforeseen boundary change follows ARC-015/016 and pauses only dependent work.
+ 
+ Inputs inspected: [AGENTS.md](../../AGENTS.md), the [architecture skill](../../.agents/skills/nextjs-architecture/SKILL.md), [intelligence report](../CODEBASE_INTELLIGENCE.md), [controls audit](CONTROLS_AUDIT.md), `package.json`, `eslint.config.mjs`, `tsconfig.json`, `.prettierrc.json`, `.prettierignore`, `next.config.ts`, test invocation configuration and the representative files cited below. The installed Next 16.2.12 bundled documentation remains the framework reference identified in the architecture contract. These are project conventions, not additional framework requirements.
+ 
+-Basis labels distinguish authority: **I** = inherited owner/AGENTS/accepted architecture requirement, already binding; **T** = observed committed tooling or established source convention, codified here without inventing prior standards approval; **P** = newly proposed convention, awaiting this document's owner approval. Existing instructions remain binding while P rules await approval. Source examples demonstrate a pattern only; they do not establish repository-wide compliance.
++Basis labels distinguish authority: **I** = inherited owner/AGENTS/accepted architecture requirement, already binding; **T** = observed committed tooling or established source convention, codified here without inventing prior standards approval; **P** = convention first proposed in Task 05 and accepted in APPROVAL-002. The basis labels preserve where each rule originated. Source examples demonstrate a pattern only; they do not establish repository-wide compliance.
+ 
+ ## Mandatory conventions and examples
+ 
+@@ -123,9 +123,9 @@
+ 
+ A later deviation request identifies its STD/ARC rule, exact scope, reason/alternative, risks, verification and owner approval evidence. Changes to architecture follow the existing proposed-ADR lifecycle; a standards change/exception also needs explicit owner approval under the catalogue. Fixing a known source violation is separate scoped work. The accepted architecture and this proposed document grant no commit/push/merge/release or hosted-enforcement authority.
+ 
+-## Decisions requiring approval
++## Owner decisions
+ 
+-The owner's approval is requested for the proposed coding contract after independent review; inherited rules are not resubmitted. Three material refinements are separated so they can be revised without reopening D1/D2:
++The owner adopted the reviewed contract and all three refinements in APPROVAL-002. The table preserves the reviewed recommendation, trade-offs and scope for each decision.
+ 
+ | Decision                             | Recommended default                                                                                                                                                                              | Trade-off / alternative                                                                                                                                                            | Scope                                                                     |
+ | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+@@ -133,7 +133,7 @@
+ | CS-D2 — complexity criteria          | Adopt responsibility/branch/testability review without numerical size or complexity caps until repository evidence justifies a metric.                                                           | A numerical gate is easier to count but currently arbitrary and can reward fragmented state/transaction code. Review requires concrete explanations, not taste.                    | STD-009; no changed runtime limits or new architecture.                   |
+ | CS-D3 — UI and async obligations     | Make changed UI accessibility/state behaviour and explicit async completion/error ownership required review criteria, with targeted tests where meaningful.                                      | Adds focused verification work; leaving these implicit risks inaccessible actions and silent failures. Existing primitives/test seams are reused, no blanket new UI/testing stack. | STD-014/016; broader browser/DB gaps remain unverified.                   |
+ 
+-Approval evidence: **PENDING**. Adoption/propagation: **NOT DONE**. Independent standards review: **PENDING**. After review and explicit owner decision, align the approved standards/status/handoff before Task06; Task08 tooling guidance and Tasks09–16 enforcement/lifecycle work retain their own sequence and approvals. Passing document checks is not approval or enforcement.
++APPROVAL-002 records the owner decision and the approved proposal hash. The setup checklist and review log record propagation, the independent verdict and the Task 06 handoff. Tasks 08–16 supply the corresponding instruction, enforcement and lifecycle evidence in order.
+ 
+ ## Evidence identity and Task05 validation scope
+ 

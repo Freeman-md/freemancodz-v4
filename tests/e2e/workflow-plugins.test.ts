@@ -1,3 +1,4 @@
+import { assertDisposableApp, assertDisposableTarget } from "../integration/disposable-target";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import test from "node:test";
@@ -23,6 +24,17 @@ test(
   },
   async (t) => {
     assert.ok(emptyUrl && servicesUrl && dbUrl);
+    await assertDisposableTarget(dbUrl);
+    const emptyOrigin = process.env.FREEMANCODZ_FIXTURE_EMPTY_ORIGIN;
+
+    const servicesOrigin = process.env.FREEMANCODZ_FIXTURE_SERVICES_ORIGIN;
+
+    if (!emptyOrigin || !servicesOrigin) {
+      throw new Error("Disposable plugin fixture origins are required before browser access.");
+    }
+
+    await assertDisposableApp(emptyUrl, emptyOrigin);
+    await assertDisposableApp(servicesUrl, servicesOrigin);
     assert.equal(new URL(dbUrl).hostname, "127.0.0.1");
     const browserConfig = "./browser.config.mjs";
 

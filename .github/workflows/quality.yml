@@ -1,0 +1,44 @@
+name: Engineering
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    name: Engineering quality
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Check out the tested revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ github.sha }}
+      - name: Set up the repository Node runtime
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22.17.0
+      - name: Install locked dependencies and generate Prisma
+        env:
+          DATABASE_URL: postgresql://synthetic@127.0.0.1:1/verification_no_connection
+        run: npm ci
+      - name: Prepare the exact disposable database image
+        run: docker pull pgvector/pgvector:0.8.1-pg15@sha256:94aee7e88f98125114657cab98e28c5dfa8dd517a6bf83fd98b503439f1e3de6
+      - name: Run the canonical quality gate
+        run: npm run verify -- --report "$RUNNER_TEMP/quality.json"
+      - name: Require complete matching quality evidence
+        if: ${{ always() }}
+        run: npm run verify:evidence -- quality "$RUNNER_TEMP/quality.json"
+      - name: Retain the safe quality report
+        if: ${{ always() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: engineering-quality
+          path: ${{ runner.temp }}/quality.json
+          if-no-files-found: error
+          retention-days: 7

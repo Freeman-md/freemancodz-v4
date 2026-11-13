@@ -1,13 +1,15 @@
 ---
 name: nextjs-architecture
-description: Authoritative architectural standard for planning, implementing, reviewing, or refactoring this Next.js application. Use before choosing file locations, dependencies, server/client boundaries, composition, runtime contracts, and entrypoints.
+description: Practical Next.js architecture guidance linked to this repository’s accepted architecture, ADRs and coding standards. Use before planning, implementing, reviewing or choosing feature boundaries.
 ---
 
 # Next.js Architectural Standard
 
 ## Authority
 
-Apply this skill to all Next.js implementation, milestone, review, and refactor work.
+Apply this skill to all Next.js implementation, milestone, review, and refactor work. Start at [AGENTS.md](../../../AGENTS.md), then read the applicable [accepted architecture](../../../docs/architecture/ARCHITECTURE.md), [ADR registry](../../../docs/architecture/adr/README.md), [coding standards](../../../docs/engineering/CODING_STANDARDS.md), [baseline](../../../docs/engineering/COMPLIANCE_BASELINE.md) and [exceptions](../../../docs/engineering/EXCEPTIONS.md).
+
+The accepted contracts define the rules; this skill supplies practical framework guidance. D1/ADR-0001 establishes canonical authority and D2/ADR-0002 defines the exact technical-port/inert-error boundary. Existing code and recorded debt are not exceptions. Any new/revised decision or exception follows ARC-015/016: propose through the orchestrator, stop dependent work, obtain exact owner approval, propagate and acknowledge before resuming; independent review checks that approval, and owner merge approval is separate. Do not duplicate the existing milestone workflow.
 
 - Treat Next.js as the application host and framework adapter, not as the internal organisation of product logic.
 - Inspect the installed Next.js version and its bundled official documentation before making a framework-specific decision. Official framework requirements override project conventions.
@@ -31,15 +33,15 @@ src/
 
 Create only directories with real code. `src/server` is not a valid production source root and must not be reintroduced.
 
-| Location | Owns | Must not own |
-| --- | --- | --- |
-| `src/app` | Next routes, pages, layouts, metadata, framework boundaries, thin HTTP/Server Action adapters, and route-owned UI colocated in private folders | dependency construction, persistence, provider SDK work, reusable workflows, or product policy |
-| `src/modules` | Capability-owned business behaviour, persistence access, workflows, prompts, and private server types | React UI, HTTP parsing/responses, provider configuration, or framework concerns |
-| `src/infrastructure` | Environment access, Prisma, logging, and configured vendor clients/adapters | product policy, feature UI, or module orchestration |
-| `src/modules/composition.ts` | Server-only dependency assembly and configured module services | request handling, provider work, or business decisions |
-| `src/entrypoints` | Thin jobs, maintenance commands, and their terminal adapters | reusable business logic or dependency construction |
-| `src/contracts` | Runtime-validated data crossing an HTTP, stream, action, webhook, or browser/server trust boundary | private module models, persistence, or business logic |
-| `src/generated` | Generated code only | hand-authored code |
+| Location                     | Owns                                                                                                                                           | Must not own                                                                                   |
+| ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| `src/app`                    | Next routes, pages, layouts, metadata, framework boundaries, thin HTTP/Server Action adapters, and route-owned UI colocated in private folders | dependency construction, persistence, provider SDK work, reusable workflows, or product policy |
+| `src/modules`                | Capability-owned business behaviour, persistence access, workflows, prompts, and private server types                                          | React UI, HTTP parsing/responses, provider configuration, or framework concerns                |
+| `src/infrastructure`         | Environment access, Prisma, logging, and configured vendor clients/adapters                                                                    | product policy, feature UI, or module orchestration                                            |
+| `src/modules/composition.ts` | Server-only dependency assembly and configured module services                                                                                 | request handling, provider work, or business decisions                                         |
+| `src/entrypoints`            | Thin jobs, maintenance commands, and their terminal adapters                                                                                   | reusable business logic or dependency construction                                             |
+| `src/contracts`              | Runtime-validated data crossing an HTTP, stream, action, webhook, or browser/server trust boundary                                             | private module models, persistence, or business logic                                          |
+| `src/generated`              | Generated code only                                                                                                                            | hand-authored code                                                                             |
 
 `src/proxy.ts` owns the version-supported Next proxy boundary. Keep its redirect and matching behaviour externally stable unless a task explicitly changes it.
 
@@ -53,7 +55,8 @@ modules/composition.ts
 modules + infrastructure
 
 route-owned app UI → contracts + app-owned UI primitives
-modules            → contracts + own code
+modules            → contracts + own code + public types / injected operations
+                     + accepted D2 technical ports / inert error contracts
 infrastructure     → technical clients and configuration
 ```
 
@@ -64,9 +67,12 @@ Enforce these restrictions:
 - Modules other than `modules/composition.ts` must not import `app` or composition.
 - Only `app` and `entrypoints` may import `modules/composition.ts`.
 - App adapters and entrypoints select configured services; they must not construct repositories, infrastructure clients, or module services.
-- A module may use another module only through a deliberately exposed public type or injected dependency, never by reaching into its persistence implementation.
+- A module may use another module through a deliberately exposed type-only contract or injected runtime dependency. Structural inference and `Pick` are valid; a separate named/exported interface is not required. Direct repository implementations, product config, service helpers and private algorithms remain forbidden (ARC-007).
+- Business modules may import technical types only for injected contracts, including from their infrastructure owner. D2 permits runtime imports only of deliberately public inert error contracts with bounded codes/outcomes: no client implementation, environment access, I/O, runtime provider SDK import or business execution in that contract’s runtime graph. Apply the exact approved scope in [ADR-0002](../../../docs/architecture/adr/0002-injected-ports-and-inert-errors.md), not a filename-based exemption.
+- The accepted Calendar/Meeting error candidates are identified in D2. `ResendClientError` from a client-implementation file and direct Meeting helper/config imports remain recorded debt; do not copy or broaden them. Type-only `ResendClient` used as an injected `Pick` is distinct from that value import.
+- Infrastructure-internal vendor/database factories remain legitimate. Composition assembles them with modules; business modules, app adapters and entrypoints do not construct concrete clients, repositories or services.
 
-Use focused ESLint import restrictions to prevent these directions from regressing.
+Use focused import checks where operational and independent review for semantic boundaries. Current ESLint coverage is partial; consult the baseline/audit. A rule written here or an existing lint pass is not proof that every direction is mechanically enforced.
 
 ## App adapters
 
@@ -110,7 +116,7 @@ Use separate files only for distinct responsibilities or independently meaningfu
 - Constructor injection is the standard for stateful dependencies. Compose concrete dependencies in `modules/composition.ts`.
 - Do not store request-specific mutable state or use module-level memory for correctness.
 
-Suggested responsibility boundaries for the current application are: administration auth, assistant, audit, meeting, portfolio, rate limit, search index, and workflow. Do not create generic policy registries or cross-capability abstraction layers without a demonstrated need.
+Current capability ownership is in the accepted architecture. Examples such as administration auth, audit or a separate search-index module are not requirements to create absent features. Do not create generic policy registries or cross-capability abstraction layers without a demonstrated need.
 
 ### Composition
 
@@ -160,7 +166,7 @@ Before completion, verify:
 
 1. Every file has a clear owner and runtime boundary.
 2. `src/server`, `src/features`, and all old import paths are gone without compatibility wrappers.
-3. App adapters and entrypoints are thin; composition is the only production construction point.
+3. App adapters and entrypoints are thin; composition assembles production modules and technical dependencies, while infrastructure owns its internal client factories.
 4. App-owned UI, modules, infrastructure, and contracts follow the dependency direction above.
 5. Client graphs contain no server-only dependencies or secrets.
 6. Raw provider/database errors and secrets are not exposed or logged.
