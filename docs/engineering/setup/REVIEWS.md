@@ -264,3 +264,36 @@ The reviewer verified matching fresh reports on the same 288-input digest `dbcca
 - [Correction evidence](evidence/task-14-correction.md) SHA-256 `b184103c6892adc8a8ae672bf6b95ca44fa316f506ff8eba7ddae4d58567ae74`.
 
 Independent verdict **PASS for local Task 14**. R14-01 **CLOSED**. Task 15 can begin. The approved hosted trial follows separately. Release remains blocked.
+
+## Task 15 — milestone integration: PASS
+
+Executor `/root/setup_execution` connected the repository's canonical verification, architecture and independent-review checkpoints to the existing global milestone skills through `AGENTS.md` and the integration document. Reviewer `/root/setup_review` verified authoring, planning, independent execution discovery, approval propagation and separate merge handoff against actual frozen trial inputs.
+
+The reviewer recomputed the 322-file full identity, validated matching quality and acceptance, and confirmed failed/malformed/stale reports and missing independent review block readiness. An actual ownership defect returned CHANGES REQUIRED and passed a second independent review after correction. The proposed ADR held X1 and permitted unrelated X2 inventory. Real APPROVAL-001 and the historical propagation and acknowledged handoff were verified within their exact scope. R15-002 is closed. The required ADR decision remains at the pre-dispatch checkpoint.
+
+- [Milestone integration](../MILESTONE_INTEGRATION.md) SHA-256 `cd00b3fc683e0243f22d2b04e97d9d9049af554435a953e250d47aafe5ea3364`.
+- [Actual trials](evidence/task-15-trials.md) SHA-256 `6dce6a7e4fbbbeb34e25cbadf0c2efadc158290a36ebed847865f41e2a941825`.
+
+Independent verdict **PASS** for integration and isolated trials. The live milestone and installed global skills were preserved. Automatic hook/discovery behavior and future live milestone execution were not claimed. Task 16 can begin.
+
+## Tasks 12 and 14 — hosted required check trial: PASS
+
+Under [APPROVAL-003](APPROVALS.md#approval-003--draft-pr-and-required-hosted-quality-check), orchestrator `/root` published the reviewed setup to [draft PR #32](https://github.com/Freeman-md/freemancodz-v4/pull/32), then applied and read back ruleset 19097664 after an actual Linux quality success. Reviewer `/root/setup_review` independently fetched the real job metadata and original logs for all three PR runs, rehashed the 288 restored report inputs and checked all 78 published path hashes and modes. The initial and restored branch trees matched.
+
+The independent reviewer verified a required check SUCCESS, the controlled fixture's format exit 1 with required FAILURE and a blocked PR, then a fresh required SUCCESS at the restored head `b4d9dca88bae9e8ceedd183834378fd57e502422` and tested merge `54c7dfe7bcc136c127682baa3783cc1122354191`. GitHub's live effective rules require a PR and strict Actions quality from app 15368, with no bypass and the original deletion/non-fast-forward protections retained. The PR was still draft and unmerged. Main remained at the original commit. The exact restored revision had a successful Vercel Preview deployment; no Preview smoke or live-provider test was performed.
+
+- [Hosted trial receipt](evidence/hosted-quality-trial.md) SHA-256 `e46350b5fb095853fa390335acad07e8044c64830c5ca79d23cad9957e3f7939`.
+
+Independent hosted verdict **PASS** for the approved PR/required-check scope. Main-push execution remains unexercised. GitHub's required approving-review count is zero; independent review and separate human merge authorization remain workflow obligations. This verdict is tied to the restored trial tree. Final setup documentation needs fresh exact-revision checks when published. Production release remains blocked.
+
+## Task 16 — change control and engineering handoff: PASS
+
+Executor `/root/setup_execution` completed the change-control procedure and readiness record. Reviewer `/root/setup_review` independently assessed all eight tabletop cases, including unresolved authoring and executor discovery, hypothetical APPROVE before/after propagation, REVISE, REJECT, the bounded exception, actual prior approval reuse and proposed supersession. Hypothetical decisions never changed live approvals. R16-001 was corrected so engineering READY after matching verification and independent review remains separate from human merge, manual review and production deployment.
+
+The reviewer verified the frozen document hashes, 110 local references, all 16 ordered checklist rows, formatting and preservation of approved architecture, standards, ADRs, baseline and exceptions. The AGENTS change for this task is one navigation pointer. The isolated publication index contained exactly ten reviewed documentation/AGENTS paths and excluded the owner edit.
+
+- [Change control](../CHANGE_CONTROL.md) reviewed SHA-256 `0a733d73a99262224ccc2b0e74eb99290905aa4b710abbe081bfa332d245b305`.
+- [Setup status](../ENGINEERING_SETUP_STATUS.md) pre-verdict SHA-256 `f00fd4fbf570a9124997ffb793cbfd9f28237926b0545337ea2bda497f0f2370`.
+- Task 16 tabletop manifest SHA-256 `35786cb6b08dd46ac1891778b9ea07a74331a3fd3268db66a8283b508accb40f`.
+
+Independent verdict **PASS** for Task 16. Factual status propagation is authorized. The final draft revision still requires current hosted evidence and separate handoff review. Merge and production release remain separate owner decisions.

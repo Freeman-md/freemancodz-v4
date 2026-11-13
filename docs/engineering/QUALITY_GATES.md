@@ -2,7 +2,9 @@
 
 Task 12 applies existing ADR-0001/0002 and approved ARC/STD rules. It introduces no exception or application behavior change. The canonical [verification contract](VERIFICATION_CONTRACT.md) remains authoritative. Local and isolated proofs do not establish hosted enforcement.
 
-## Gate boundaries
+## Gate boundaries before the hosted trial
+
+See [observed hosted enforcement](#observed-hosted-enforcement) for the verified PR and ruleset outcomes.
 
 | Boundary / trigger               | Installation or activation                                                             | Command / observed scope                                               | Status and remaining action                                                                                         |
 | -------------------------------- | -------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
@@ -52,7 +54,7 @@ Hosted Linux execution remains unverified until an actual Actions run. Local cle
 
 ## Hosted settings and owner decision
 
-Read-only observations supplied by the orchestrator on 2026-11-13 show public `Freeman-md/freemancodz-v4`, default branch `main`, Actions enabled with default read token permissions, no visible workflow runs, no open PRs and auto-merge disabled. Main's active ruleset 19097664 includes `deletion` and `non_fast_forward`, with no required status check or PR rule. Staging was observed unprotected with an empty branch-rule query. Configuration is mutable; these observations do not prove adversarial enforcement or historical absence of CI. See the [original audit](setup/evidence/hosted-audit.json) and [fresh preflight](setup/evidence/hosted-ci-preflight.md).
+Read-only preflight observations on 2026-11-13 found public `Freeman-md/freemancodz-v4`, default branch `main`, Actions enabled with default read token permissions, no visible workflow runs, no open PRs and auto-merge disabled. At that point, main's active ruleset 19097664 contained only `deletion` and `non_fast_forward`. Staging was unprotected with an empty branch-rule query. See the [original audit](setup/evidence/hosted-audit.json) and [preflight](setup/evidence/hosted-ci-preflight.md).
 
 After independent review, obtain explicit owner authorization for publication and hosted configuration. Proposed scope:
 
@@ -62,3 +64,7 @@ After independent review, obtain explicit owner authorization for publication an
 4. Record any requested scope changes and approval evidence before hosted mutation. Publication may automatically create a Vercel Preview deployment: read-only metadata shows both Preview and Production integrations. Such a preview is not a production release or permission to promote it.
 
 The catalogue's ecommerce D2–D4 cases are inapplicable here; no such tests or product features exist. This repository's acceptance signal was genuinely PASS in Task 11. Release remains BLOCKED by unverified target/provider/deployment obligations and absent release authorization, not by invented ecommerce failures. Hosted protection, merge and release decisions stay distinct from architecture/standards approval.
+
+### Observed hosted enforcement
+
+[APPROVAL-003](setup/APPROVALS.md#approval-003--draft-pr-and-required-hosted-quality-check) authorized draft publication and the hosted update. On [draft PR #32](https://github.com/Freeman-md/freemancodz-v4/pull/32), Actions passed the initial Linux quality run. Active main ruleset 19097664 now requires a PR and the up-to-date `Engineering quality` check from GitHub Actions app 15368, with no bypass. The controlled formatting violation failed the required check and GitHub reported the draft blocked. The restored revision passed. The initial local/unverified matrix above records the pre-trial state. The [hosted trial receipt](setup/evidence/hosted-quality-trial.md) records exact revisions, checks, rules and the successful Preview. The configured main push trigger is unexercised.
